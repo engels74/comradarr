@@ -8,6 +8,7 @@ export default defineConfig({
 		sveltekit()
 	],
 	test: {
-		include: ['src/**/*.test.ts', 'tests/**/*.test.ts']
+		include: ['src/**/*.test.ts', 'tests/**/*.test.ts'],
+		exclude: ['tests/integration/**/*.test.ts', 'node_modules/**']
 	}
 });

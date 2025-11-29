@@ -44,7 +44,7 @@
 
 ## Phase 2: Authentication and Security
 
-- [ ] 3. Implement authentication system
+- [x] 3. Implement authentication system
   - [x] 3.1 Create auth schema and session management
     - Define users and sessions tables
     - Implement session creation and validation
@@ -79,11 +79,11 @@
     - Integrate with connector storage
     - _Requirements: 1.1, 36.1_
 
-  - [ ] 3.7 Write property test for connector data persistence
+  - [x] 3.7 Write property test for connector data persistence
     - **Property 20: Connector Data Persistence**
     - **Validates: Requirements 1.1**
 
-- [ ] 4. Checkpoint - Ensure all tests pass
+- [x] 4. Checkpoint - Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
 ## Phase 3: *arr API Client Infrastructure
