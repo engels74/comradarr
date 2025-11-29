@@ -89,7 +89,7 @@
 ## Phase 3: *arr API Client Infrastructure
 
 - [ ] 5. Build base API client
-  - [ ] 5.1 Create base client with authentication and timeout
+  - [x] 5.1 Create base client with authentication and timeout
     - Implement BaseArrClient class with X-Api-Key header
     - Configure AbortSignal.timeout (default 30s)
     - Add User-Agent header
