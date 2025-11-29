@@ -149,7 +149,7 @@
     - Implement getHealth method
     - _Requirements: 1.2, 1.3, 1.4, 24.1_
 
-  - [ ] 8.2 Implement library data methods
+  - [x] 8.2 Implement library data methods
     - Implement getSeries with pagination
     - Implement getEpisodes for a series
     - _Requirements: 24.1, 24.2_
