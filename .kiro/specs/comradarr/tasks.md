@@ -57,7 +57,7 @@
     - Add security headers (X-Frame-Options, X-Content-Type-Options, etc.)
     - _Requirements: 10.4, 10.5_
 
-  - [ ] 3.3 Create login/logout routes
+  - [x] 3.3 Create login/logout routes
     - Create (auth) route group with login page
     - Implement login form action with validation
     - Implement logout action
