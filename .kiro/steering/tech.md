@@ -42,14 +42,43 @@ bunx drizzle-kit migrate       # Apply pending migrations
 bunx drizzle-kit push          # Push schema directly (dev only)
 bunx drizzle-kit studio        # Open database GUI
 
-# Testing
-bun run test                   # Run all tests
-bun run test:unit              # Unit tests only
-bun run test -- path/to/file   # Single test file
+# Testing (automated with database lifecycle)
+bun run test                   # Run all tests (unit + integration)
+bun run test:unit              # Unit tests only (no database required)
+bun run test:integration       # Integration tests only (requires PostgreSQL)
+bun run test:watch             # Watch mode for unit tests
+
+# Test database management (WSL/native PostgreSQL)
+./scripts/test-db.sh install   # Install PostgreSQL on WSL (Ubuntu/Debian)
+./scripts/test-db.sh start     # Start PostgreSQL service
+./scripts/test-db.sh setup     # Create test database and run migrations
+./scripts/test-db.sh status    # Check PostgreSQL and test database status
+./scripts/test-db.sh reset     # Reset test database (teardown + setup)
+./scripts/test-db.sh teardown  # Drop test database
 
 # Type checking
-bun run check                  # Run svelte-check (tsc doesn't check .svelte files)
+bun run check                  # Run svelte-check (for .svelte files)
+bun run typecheck              # Full type check (svelte-check + tsc --noEmit)
 ```
+
+### Quality Check Workflow
+
+Before committing or creating a PR, run the complete quality check:
+
+```bash
+bun run test                   # All tests (unit + integration)
+bun run typecheck              # Full type checking
+```
+
+Or as a single command:
+```bash
+bun run test && bun run typecheck
+```
+
+**Note:** Integration tests require PostgreSQL. If PostgreSQL is not running, integration tests are automatically skipped with a warning. To enable integration tests:
+1. Install PostgreSQL: `./scripts/test-db.sh install`
+2. Start PostgreSQL: `./scripts/test-db.sh start`
+3. The test runner will automatically set up the test database on first run
 
 ---
 
@@ -103,9 +132,15 @@ Typed error classes: `NetworkError`, `AuthenticationError`, `RateLimitError`, `S
 - Use `request.text()` (not `.json()`) for webhook signature verification
 
 ### Testing
-- **Unit tests**: Vitest for business logic
-- **Component tests**: Vitest with `@vitest/browser-playwright`
+- **Unit tests**: Vitest for pure business logic (no database required)
+- **Integration tests**: Bun test for database operations (requires PostgreSQL)
 - **Property tests**: fast-check with minimum 100 iterations
 - **E2E**: Playwright with `bun run build && bun run preview`
 
 Key property tests: quality model round trip, gap/upgrade discovery correctness, priority calculation determinism, queue processing order, exponential backoff, pagination completeness, batch size limits
+
+**Test Infrastructure**:
+- `bun run test` automatically handles database lifecycle for integration tests
+- PostgreSQL is optional—integration tests skip gracefully if unavailable
+- Test database is isolated (`comradarr_test`) from development database
+- Database migrations run automatically on test setup
