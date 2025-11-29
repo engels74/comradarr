@@ -81,3 +81,14 @@ export {
 	SonarrEpisodeSchema,
 	SonarrEpisodeFileSchema
 } from './sonarr/parsers.js';
+
+// Radarr types
+export type { RadarrMovie, RadarrMovieFile } from './radarr/types.js';
+
+// Radarr parsers
+export {
+	parseRadarrMovie,
+	parsePaginatedMovies,
+	RadarrMovieSchema,
+	RadarrMovieFileSchema
+} from './radarr/parsers.js';

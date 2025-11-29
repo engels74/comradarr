@@ -122,7 +122,7 @@
     - Implement episode response parser
     - _Requirements: 27.2, 27.3_
 
-  - [ ] 6.3 Create Radarr-specific parsers
+  - [x] 6.3 Create Radarr-specific parsers
     - Implement movie response parser
     - _Requirements: 27.4_
 
