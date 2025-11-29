@@ -35,7 +35,7 @@
     - Implement serializeQuality and deserializeQuality functions
     - _Requirements: 14.4, 14.5_
 
-  - [ ] 1.6 Write property test for quality model round trip
+  - [x] 1.6 Write property test for quality model round trip
     - **Property 1: Quality Model Round Trip**
     - **Validates: Requirements 14.4, 14.5**
 
