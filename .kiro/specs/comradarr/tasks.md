@@ -144,7 +144,7 @@
 ## Phase 4: Connector Implementations
 
 - [ ] 8. Implement Sonarr connector
-  - [ ] 8.1 Create Sonarr client extending base client
+  - [x] 8.1 Create Sonarr client extending base client
     - Implement ping and getSystemStatus methods
     - Implement getHealth method
     - _Requirements: 1.2, 1.3, 1.4, 24.1_

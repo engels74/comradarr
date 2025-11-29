@@ -10,6 +10,9 @@
 // Base client
 export { BaseArrClient } from './common/base-client.js';
 
+// Sonarr client
+export { SonarrClient } from './sonarr/client.js';
+
 // Types
 export type {
 	ConnectorType,
