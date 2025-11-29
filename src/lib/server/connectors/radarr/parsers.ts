@@ -16,8 +16,10 @@ import * as v from 'valibot';
 import type { PaginatedResponse } from '../common/types';
 import {
 	type ParseResult,
+	type LenientParseResult,
 	createPaginatedResponseSchema,
-	QualityModelSchema
+	QualityModelSchema,
+	parsePaginatedResponseLenient
 } from '../common/parsers';
 import type { RadarrMovie, RadarrMovieFile } from './types';
 
@@ -174,4 +176,39 @@ export function parsePaginatedMovies(
 		error: `Invalid paginated movies response: ${result.issues.map((i) => i.message).join(', ')}`,
 		issues: result.issues
 	};
+}
+
+// =============================================================================
+// Lenient Parser Functions (Requirement 27.8)
+// =============================================================================
+
+/**
+ * Parses a paginated movies response leniently, skipping malformed records.
+ * Use this when you want to continue processing even if some movie records are invalid.
+ *
+ * @param data - Unknown data from API response
+ * @param onInvalid - Optional callback for invalid records (for logging warnings)
+ * @returns LenientParseResult with typed PaginatedResponse<RadarrMovie>, skipped count, or error
+ *
+ * @requirements 27.1, 27.4, 27.7, 27.8
+ *
+ * @example
+ * ```typescript
+ * const result = parsePaginatedMoviesLenient(
+ *   apiResponse,
+ *   (record, error) => console.warn('Skipping malformed movie:', error)
+ * );
+ * if (result.success) {
+ *   console.log(`Parsed ${result.data.records.length} movies, skipped ${result.skipped}`);
+ * }
+ * ```
+ */
+export function parsePaginatedMoviesLenient(
+	data: unknown,
+	onInvalid?: (record: unknown, error: string) => void
+): LenientParseResult<PaginatedResponse<RadarrMovie>> {
+	const result = parsePaginatedResponseLenient(data, RadarrMovieSchema, onInvalid);
+	// Type assertion needed due to exactOptionalPropertyTypes - Valibot infers
+	// optional fields as `Type | undefined` but our types use `property?: Type`
+	return result as LenientParseResult<PaginatedResponse<RadarrMovie>>;
 }

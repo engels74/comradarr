@@ -9,10 +9,11 @@
  * @requirements 27.4, 27.7, 27.8
  */
 
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import {
 	parseRadarrMovie,
 	parsePaginatedMovies,
+	parsePaginatedMoviesLenient,
 	RadarrMovieSchema
 } from '../../src/lib/server/connectors/radarr/parsers';
 
@@ -531,5 +532,122 @@ describe('Schema exports', () => {
 	it('RadarrMovieSchema should be a valid valibot schema', () => {
 		expect(RadarrMovieSchema).toBeDefined();
 		expect(typeof RadarrMovieSchema).toBe('object');
+	});
+});
+
+// =============================================================================
+// Lenient Parser Tests (Requirement 27.8)
+// =============================================================================
+
+describe('parsePaginatedMoviesLenient', () => {
+	describe('valid inputs with mixed records', () => {
+		it('should parse valid records and skip malformed ones (Req 27.8)', () => {
+			const input = {
+				page: 1,
+				pageSize: 10,
+				totalRecords: 4,
+				records: [
+					validMovie,
+					{ id: 'invalid', title: 123 }, // Invalid - wrong types
+					minimalMovie,
+					null // Invalid - not an object
+				]
+			};
+
+			const result = parsePaginatedMoviesLenient(input);
+
+			expect(result.success).toBe(true);
+			if (result.success) {
+				expect(result.data.records).toHaveLength(2);
+				expect(result.skipped).toBe(2);
+				expect(result.data.records[0]?.title).toBe('The Matrix');
+				expect(result.data.records[1]?.title).toBe('Test Movie');
+			}
+		});
+
+		it('should call onInvalid callback for malformed movies (Req 27.8)', () => {
+			const invalidMovieRecord = { id: 'not a number', title: 123 };
+			const input = {
+				page: 1,
+				pageSize: 10,
+				totalRecords: 2,
+				records: [validMovie, invalidMovieRecord]
+			};
+
+			const onInvalid = vi.fn();
+			const result = parsePaginatedMoviesLenient(input, onInvalid);
+
+			expect(result.success).toBe(true);
+			expect(onInvalid).toHaveBeenCalledTimes(1);
+			expect(onInvalid).toHaveBeenCalledWith(invalidMovieRecord, expect.any(String));
+		});
+
+		it('should return all valid when no malformed records', () => {
+			const input = {
+				page: 1,
+				pageSize: 10,
+				totalRecords: 2,
+				records: [validMovie, minimalMovie]
+			};
+
+			const result = parsePaginatedMoviesLenient(input);
+
+			expect(result.success).toBe(true);
+			if (result.success) {
+				expect(result.data.records).toHaveLength(2);
+				expect(result.skipped).toBe(0);
+			}
+		});
+
+		it('should return empty array when all records are malformed', () => {
+			const input = {
+				page: 1,
+				pageSize: 10,
+				totalRecords: 2,
+				records: [null, { invalid: 'record' }]
+			};
+
+			const result = parsePaginatedMoviesLenient(input);
+
+			expect(result.success).toBe(true);
+			if (result.success) {
+				expect(result.data.records).toHaveLength(0);
+				expect(result.skipped).toBe(2);
+			}
+		});
+
+		it('should handle wanted/missing with some malformed movies', () => {
+			const input = {
+				page: 1,
+				pageSize: 1000,
+				totalRecords: 3,
+				records: [
+					{ ...minimalMovie, id: 1 },
+					null, // Malformed
+					{ ...minimalMovie, id: 2 }
+				]
+			};
+
+			const result = parsePaginatedMoviesLenient(input);
+
+			expect(result.success).toBe(true);
+			if (result.success) {
+				expect(result.data.records).toHaveLength(2);
+				expect(result.skipped).toBe(1);
+				expect(result.data.records.every((m) => m.hasFile === false)).toBe(true);
+			}
+		});
+	});
+
+	describe('invalid pagination structure', () => {
+		it('should return error for null input', () => {
+			const result = parsePaginatedMoviesLenient(null);
+			expect(result.success).toBe(false);
+		});
+
+		it('should return error for missing pagination fields', () => {
+			const result = parsePaginatedMoviesLenient({ page: 1, pageSize: 10 });
+			expect(result.success).toBe(false);
+		});
 	});
 });

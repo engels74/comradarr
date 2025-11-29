@@ -27,6 +27,16 @@ export type ParseResult<T> =
 	| { success: false; error: string; issues?: v.BaseIssue<unknown>[] };
 
 /**
+ * Result type for lenient parser functions that skip malformed records.
+ * Includes a count of skipped records for transparency.
+ *
+ * @requirements 27.8
+ */
+export type LenientParseResult<T> =
+	| { success: true; data: T; skipped: number }
+	| { success: false; error: string; issues?: v.BaseIssue<unknown>[] };
+
+/**
  * Valibot schema for QualityModel from *arr API responses.
  * Matches the structure in $lib/utils/quality.ts
  *
@@ -278,4 +288,81 @@ export function parseRecordsWithWarnings<T extends v.GenericSchema>(
 	}
 
 	return validRecords;
+}
+
+/**
+ * Schema for paginated response metadata (without records validation).
+ * Used by lenient parser to validate structure before processing records individually.
+ */
+const PaginatedMetadataSchema = v.object({
+	page: v.number(),
+	pageSize: v.number(),
+	sortKey: v.optional(v.string(), ''),
+	sortDirection: v.optional(v.picklist(['ascending', 'descending']), 'ascending'),
+	totalRecords: v.number(),
+	records: v.array(v.unknown())
+});
+
+/**
+ * Parses a paginated response leniently, skipping malformed records with warnings.
+ * Unlike parsePaginatedResponse(), this function will return valid records even
+ * if some records in the response are malformed.
+ *
+ * @param data - Unknown data from API response
+ * @param recordSchema - Valibot schema for validating individual records
+ * @param onInvalid - Optional callback for invalid records (for logging warnings)
+ * @returns LenientParseResult with typed PaginatedResponse, skipped count, or error
+ *
+ * @requirements 27.7, 27.8
+ *
+ * @example
+ * ```typescript
+ * const result = parsePaginatedResponseLenient(
+ *   apiResponse,
+ *   MovieSchema,
+ *   (record, error) => console.warn('Skipping malformed movie:', error)
+ * );
+ * if (result.success) {
+ *   console.log(`Parsed ${result.data.records.length} movies, skipped ${result.skipped}`);
+ * }
+ * ```
+ */
+export function parsePaginatedResponseLenient<T extends v.GenericSchema>(
+	data: unknown,
+	recordSchema: T,
+	onInvalid?: (record: unknown, error: string) => void
+): LenientParseResult<PaginatedResponse<v.InferOutput<T>>> {
+	// First, validate the paginated structure (without strict record validation)
+	const metadataResult = v.safeParse(PaginatedMetadataSchema, data);
+
+	if (!metadataResult.success) {
+		return {
+			success: false,
+			error: `Invalid paginated response structure: ${metadataResult.issues.map((i) => i.message).join(', ')}`,
+			issues: metadataResult.issues
+		};
+	}
+
+	const metadata = metadataResult.output;
+	const rawRecords = metadata.records;
+	let skippedCount = 0;
+
+	// Parse each record individually, collecting valid ones and counting skipped
+	const validRecords = parseRecordsWithWarnings(rawRecords, recordSchema, (record, error) => {
+		skippedCount++;
+		if (onInvalid) {
+			onInvalid(record, error);
+		}
+	});
+
+	const paginatedResponse: PaginatedResponse<v.InferOutput<T>> = {
+		page: metadata.page,
+		pageSize: metadata.pageSize,
+		sortKey: metadata.sortKey ?? '',
+		sortDirection: metadata.sortDirection ?? 'ascending',
+		totalRecords: metadata.totalRecords,
+		records: validRecords
+	};
+
+	return { success: true, data: paginatedResponse, skipped: skippedCount };
 }

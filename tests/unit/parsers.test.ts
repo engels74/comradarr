@@ -17,6 +17,7 @@ import {
 	parseQualityModel,
 	parseCommandResponse,
 	parsePaginatedResponse,
+	parsePaginatedResponseLenient,
 	parseRecordsWithWarnings,
 	createPaginatedResponseSchema,
 	QualityModelSchema,
@@ -644,5 +645,157 @@ describe('Schema exports', () => {
 	it('CommandResponseSchema should be a valid valibot schema', () => {
 		expect(CommandResponseSchema).toBeDefined();
 		expect(typeof CommandResponseSchema).toBe('object');
+	});
+});
+
+describe('parsePaginatedResponseLenient', () => {
+	const SimpleRecordSchema = v.object({
+		id: v.number(),
+		title: v.string()
+	});
+
+	describe('valid inputs', () => {
+		it('should parse a valid paginated response with all valid records', () => {
+			const input = {
+				page: 1,
+				pageSize: 10,
+				totalRecords: 2,
+				records: [
+					{ id: 1, title: 'First' },
+					{ id: 2, title: 'Second' }
+				]
+			};
+
+			const result = parsePaginatedResponseLenient(input, SimpleRecordSchema);
+
+			expect(result.success).toBe(true);
+			if (result.success) {
+				expect(result.data.page).toBe(1);
+				expect(result.data.records).toHaveLength(2);
+				expect(result.skipped).toBe(0);
+			}
+		});
+
+		it('should skip malformed records and continue (Req 27.8)', () => {
+			const input = {
+				page: 1,
+				pageSize: 10,
+				totalRecords: 5,
+				records: [
+					{ id: 1, title: 'Valid' },
+					{ id: 'invalid', title: 'Bad ID' }, // Invalid - id should be number
+					{ id: 2, title: 'Also Valid' },
+					null, // Invalid - not an object
+					{ id: 3, title: 'Third Valid' }
+				]
+			};
+
+			const result = parsePaginatedResponseLenient(input, SimpleRecordSchema);
+
+			expect(result.success).toBe(true);
+			if (result.success) {
+				expect(result.data.records).toHaveLength(3);
+				expect(result.skipped).toBe(2);
+				expect(result.data.records[0]).toEqual({ id: 1, title: 'Valid' });
+				expect(result.data.records[1]).toEqual({ id: 2, title: 'Also Valid' });
+				expect(result.data.records[2]).toEqual({ id: 3, title: 'Third Valid' });
+			}
+		});
+
+		it('should call onInvalid callback for each malformed record (Req 27.8)', () => {
+			const input = {
+				page: 1,
+				pageSize: 10,
+				totalRecords: 3,
+				records: [
+					{ id: 1, title: 'Valid' },
+					{ id: 'invalid', title: 'Bad' },
+					{ title: 'Missing ID' }
+				]
+			};
+
+			const onInvalid = vi.fn();
+			const result = parsePaginatedResponseLenient(input, SimpleRecordSchema, onInvalid);
+
+			expect(result.success).toBe(true);
+			expect(onInvalid).toHaveBeenCalledTimes(2);
+			expect(onInvalid).toHaveBeenCalledWith({ id: 'invalid', title: 'Bad' }, expect.any(String));
+			expect(onInvalid).toHaveBeenCalledWith({ title: 'Missing ID' }, expect.any(String));
+		});
+
+		it('should return all skipped if all records are invalid', () => {
+			const input = {
+				page: 1,
+				pageSize: 10,
+				totalRecords: 3,
+				records: [null, undefined, { wrong: 'type' }]
+			};
+
+			const result = parsePaginatedResponseLenient(input, SimpleRecordSchema);
+
+			expect(result.success).toBe(true);
+			if (result.success) {
+				expect(result.data.records).toHaveLength(0);
+				expect(result.skipped).toBe(3);
+			}
+		});
+
+		it('should ignore extra unknown fields in records (Req 27.7)', () => {
+			const input = {
+				page: 1,
+				pageSize: 10,
+				totalRecords: 1,
+				records: [{ id: 1, title: 'Test', extraField: 'ignored', nested: { foo: 'bar' } }]
+			};
+
+			const result = parsePaginatedResponseLenient(input, SimpleRecordSchema);
+
+			expect(result.success).toBe(true);
+			if (result.success) {
+				expect(result.data.records).toHaveLength(1);
+				expect(result.skipped).toBe(0);
+				expect(result.data.records[0]).toEqual({ id: 1, title: 'Test' });
+			}
+		});
+
+		it('should handle empty records array', () => {
+			const input = {
+				page: 1,
+				pageSize: 10,
+				totalRecords: 0,
+				records: []
+			};
+
+			const result = parsePaginatedResponseLenient(input, SimpleRecordSchema);
+
+			expect(result.success).toBe(true);
+			if (result.success) {
+				expect(result.data.records).toHaveLength(0);
+				expect(result.skipped).toBe(0);
+			}
+		});
+	});
+
+	describe('invalid pagination structure', () => {
+		it('should return error for null input', () => {
+			const result = parsePaginatedResponseLenient(null, SimpleRecordSchema);
+			expect(result.success).toBe(false);
+		});
+
+		it('should return error for missing pagination fields', () => {
+			const result = parsePaginatedResponseLenient(
+				{ page: 1, pageSize: 10 }, // missing totalRecords, records
+				SimpleRecordSchema
+			);
+			expect(result.success).toBe(false);
+		});
+
+		it('should return error for non-array records field', () => {
+			const result = parsePaginatedResponseLenient(
+				{ page: 1, pageSize: 10, totalRecords: 1, records: 'not an array' },
+				SimpleRecordSchema
+			);
+			expect(result.success).toBe(false);
+		});
 	});
 });

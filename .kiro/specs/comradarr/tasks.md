@@ -126,15 +126,16 @@
     - Implement movie response parser
     - _Requirements: 27.4_
 
-  - [ ] 6.4 Implement parser robustness
+  - [x] 6.4 Implement parser robustness
     - Ignore unknown fields in responses
     - Skip malformed records with warning
     - _Requirements: 27.7, 27.8_
 
-  - [ ] 6.5 Write property test for API response parsing
+  - [x] 6.5 Write property test for API response parsing
     - **Property 13: API Response Parsing Completeness**
     - **Property 14: Parser Robustness to Extra Fields**
     - **Property 15: Parser Graceful Degradation**
+    - **Property 16: Lenient Paginated Parsing**
     - **Validates: Requirements 27.1-27.8**
 
 - [ ] 7. Checkpoint - Ensure all tests pass

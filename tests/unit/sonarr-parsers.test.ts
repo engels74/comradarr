@@ -12,11 +12,14 @@
  */
 
 import { describe, it, expect } from 'vitest';
+import { vi } from 'vitest';
 import {
 	parseSonarrSeries,
 	parseSonarrEpisode,
 	parsePaginatedSeries,
 	parsePaginatedEpisodes,
+	parsePaginatedSeriesLenient,
+	parsePaginatedEpisodesLenient,
 	SonarrSeriesSchema,
 	SonarrEpisodeSchema
 } from '../../src/lib/server/connectors/sonarr/parsers';
@@ -766,5 +769,196 @@ describe('Schema exports', () => {
 	it('SonarrEpisodeSchema should be a valid valibot schema', () => {
 		expect(SonarrEpisodeSchema).toBeDefined();
 		expect(typeof SonarrEpisodeSchema).toBe('object');
+	});
+});
+
+// =============================================================================
+// Lenient Parser Tests (Requirement 27.8)
+// =============================================================================
+
+describe('parsePaginatedSeriesLenient', () => {
+	describe('valid inputs with mixed records', () => {
+		it('should parse valid records and skip malformed ones (Req 27.8)', () => {
+			const input = {
+				page: 1,
+				pageSize: 10,
+				totalRecords: 4,
+				records: [
+					validSeries,
+					{ id: 'invalid', title: 123 }, // Invalid - wrong types
+					minimalSeries,
+					null // Invalid - not an object
+				]
+			};
+
+			const result = parsePaginatedSeriesLenient(input);
+
+			expect(result.success).toBe(true);
+			if (result.success) {
+				expect(result.data.records).toHaveLength(2);
+				expect(result.skipped).toBe(2);
+				expect(result.data.records[0]?.title).toBe('Breaking Bad');
+				expect(result.data.records[1]?.title).toBe('Test Series');
+			}
+		});
+
+		it('should call onInvalid callback for malformed series (Req 27.8)', () => {
+			const invalidSeries = { id: 'not a number', title: 123 };
+			const input = {
+				page: 1,
+				pageSize: 10,
+				totalRecords: 2,
+				records: [validSeries, invalidSeries]
+			};
+
+			const onInvalid = vi.fn();
+			const result = parsePaginatedSeriesLenient(input, onInvalid);
+
+			expect(result.success).toBe(true);
+			expect(onInvalid).toHaveBeenCalledTimes(1);
+			expect(onInvalid).toHaveBeenCalledWith(invalidSeries, expect.any(String));
+		});
+
+		it('should return all valid when no malformed records', () => {
+			const input = {
+				page: 1,
+				pageSize: 10,
+				totalRecords: 2,
+				records: [validSeries, minimalSeries]
+			};
+
+			const result = parsePaginatedSeriesLenient(input);
+
+			expect(result.success).toBe(true);
+			if (result.success) {
+				expect(result.data.records).toHaveLength(2);
+				expect(result.skipped).toBe(0);
+			}
+		});
+
+		it('should return empty array when all records are malformed', () => {
+			const input = {
+				page: 1,
+				pageSize: 10,
+				totalRecords: 2,
+				records: [null, { invalid: 'record' }]
+			};
+
+			const result = parsePaginatedSeriesLenient(input);
+
+			expect(result.success).toBe(true);
+			if (result.success) {
+				expect(result.data.records).toHaveLength(0);
+				expect(result.skipped).toBe(2);
+			}
+		});
+	});
+
+	describe('invalid pagination structure', () => {
+		it('should return error for null input', () => {
+			const result = parsePaginatedSeriesLenient(null);
+			expect(result.success).toBe(false);
+		});
+
+		it('should return error for missing pagination fields', () => {
+			const result = parsePaginatedSeriesLenient({ page: 1, pageSize: 10 });
+			expect(result.success).toBe(false);
+		});
+	});
+});
+
+describe('parsePaginatedEpisodesLenient', () => {
+	describe('valid inputs with mixed records', () => {
+		it('should parse valid records and skip malformed ones (Req 27.8)', () => {
+			const input = {
+				page: 1,
+				pageSize: 10,
+				totalRecords: 4,
+				records: [
+					validEpisode,
+					{ id: 'invalid', seriesId: 'invalid' }, // Invalid - wrong types
+					minimalEpisode,
+					{ notAnEpisode: true } // Invalid - missing required fields
+				]
+			};
+
+			const result = parsePaginatedEpisodesLenient(input);
+
+			expect(result.success).toBe(true);
+			if (result.success) {
+				expect(result.data.records).toHaveLength(2);
+				expect(result.skipped).toBe(2);
+				expect(result.data.records[0]?.title).toBe('Pilot');
+				expect(result.data.records[1]?.id).toBe(1);
+			}
+		});
+
+		it('should call onInvalid callback for malformed episodes (Req 27.8)', () => {
+			const invalidEpisode = { id: 'not a number', seriesId: 'invalid' };
+			const input = {
+				page: 1,
+				pageSize: 10,
+				totalRecords: 2,
+				records: [validEpisode, invalidEpisode]
+			};
+
+			const onInvalid = vi.fn();
+			const result = parsePaginatedEpisodesLenient(input, onInvalid);
+
+			expect(result.success).toBe(true);
+			expect(onInvalid).toHaveBeenCalledTimes(1);
+			expect(onInvalid).toHaveBeenCalledWith(invalidEpisode, expect.any(String));
+		});
+
+		it('should return all valid when no malformed records', () => {
+			const input = {
+				page: 1,
+				pageSize: 10,
+				totalRecords: 2,
+				records: [validEpisode, minimalEpisode]
+			};
+
+			const result = parsePaginatedEpisodesLenient(input);
+
+			expect(result.success).toBe(true);
+			if (result.success) {
+				expect(result.data.records).toHaveLength(2);
+				expect(result.skipped).toBe(0);
+			}
+		});
+
+		it('should handle wanted/missing with some malformed episodes', () => {
+			const input = {
+				page: 1,
+				pageSize: 1000,
+				totalRecords: 3,
+				records: [
+					{ ...minimalEpisode, id: 1 },
+					null, // Malformed
+					{ ...minimalEpisode, id: 2 }
+				]
+			};
+
+			const result = parsePaginatedEpisodesLenient(input);
+
+			expect(result.success).toBe(true);
+			if (result.success) {
+				expect(result.data.records).toHaveLength(2);
+				expect(result.skipped).toBe(1);
+				expect(result.data.records.every((e) => e.hasFile === false)).toBe(true);
+			}
+		});
+	});
+
+	describe('invalid pagination structure', () => {
+		it('should return error for null input', () => {
+			const result = parsePaginatedEpisodesLenient(null);
+			expect(result.success).toBe(false);
+		});
+
+		it('should return error for missing pagination fields', () => {
+			const result = parsePaginatedEpisodesLenient({ page: 1, pageSize: 10 });
+			expect(result.success).toBe(false);
+		});
 	});
 });

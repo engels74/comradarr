@@ -17,8 +17,10 @@ import * as v from 'valibot';
 import type { PaginatedResponse } from '../common/types';
 import {
 	type ParseResult,
+	type LenientParseResult,
 	createPaginatedResponseSchema,
-	QualityModelSchema
+	QualityModelSchema,
+	parsePaginatedResponseLenient
 } from '../common/parsers';
 import type {
 	SonarrSeries,
@@ -358,4 +360,70 @@ export function parsePaginatedEpisodes(
 		error: `Invalid paginated episodes response: ${result.issues.map((i) => i.message).join(', ')}`,
 		issues: result.issues
 	};
+}
+
+// =============================================================================
+// Lenient Parser Functions (Requirement 27.8)
+// =============================================================================
+
+/**
+ * Parses a paginated series response leniently, skipping malformed records.
+ * Use this when you want to continue processing even if some series records are invalid.
+ *
+ * @param data - Unknown data from API response
+ * @param onInvalid - Optional callback for invalid records (for logging warnings)
+ * @returns LenientParseResult with typed PaginatedResponse<SonarrSeries>, skipped count, or error
+ *
+ * @requirements 27.1, 27.2, 27.7, 27.8
+ *
+ * @example
+ * ```typescript
+ * const result = parsePaginatedSeriesLenient(
+ *   apiResponse,
+ *   (record, error) => console.warn('Skipping malformed series:', error)
+ * );
+ * if (result.success) {
+ *   console.log(`Parsed ${result.data.records.length} series, skipped ${result.skipped}`);
+ * }
+ * ```
+ */
+export function parsePaginatedSeriesLenient(
+	data: unknown,
+	onInvalid?: (record: unknown, error: string) => void
+): LenientParseResult<PaginatedResponse<SonarrSeries>> {
+	const result = parsePaginatedResponseLenient(data, SonarrSeriesSchema, onInvalid);
+	// Type assertion needed due to exactOptionalPropertyTypes - Valibot infers
+	// optional fields as `Type | undefined` but our types use `property?: Type`
+	return result as LenientParseResult<PaginatedResponse<SonarrSeries>>;
+}
+
+/**
+ * Parses a paginated episodes response leniently, skipping malformed records.
+ * Use this when you want to continue processing even if some episode records are invalid.
+ *
+ * @param data - Unknown data from API response
+ * @param onInvalid - Optional callback for invalid records (for logging warnings)
+ * @returns LenientParseResult with typed PaginatedResponse<SonarrEpisode>, skipped count, or error
+ *
+ * @requirements 27.1, 27.3, 27.7, 27.8
+ *
+ * @example
+ * ```typescript
+ * const result = parsePaginatedEpisodesLenient(
+ *   apiResponse,
+ *   (record, error) => console.warn('Skipping malformed episode:', error)
+ * );
+ * if (result.success) {
+ *   console.log(`Parsed ${result.data.records.length} episodes, skipped ${result.skipped}`);
+ * }
+ * ```
+ */
+export function parsePaginatedEpisodesLenient(
+	data: unknown,
+	onInvalid?: (record: unknown, error: string) => void
+): LenientParseResult<PaginatedResponse<SonarrEpisode>> {
+	const result = parsePaginatedResponseLenient(data, SonarrEpisodeSchema, onInvalid);
+	// Type assertion needed due to exactOptionalPropertyTypes - Valibot infers
+	// optional fields as `Type | undefined` but our types use `property?: Type`
+	return result as LenientParseResult<PaginatedResponse<SonarrEpisode>>;
 }

@@ -16,6 +16,7 @@ import {
 	parseQualityModel,
 	parseCommandResponse,
 	parsePaginatedResponse,
+	parsePaginatedResponseLenient,
 	parseRecordsWithWarnings,
 	QualityModelSchema
 } from '../../src/lib/server/connectors/common/parsers';
@@ -430,6 +431,149 @@ describe('API Response Parsers - Property Tests', () => {
 						expect(['queued', 'started', 'completed', 'failed']).toContain(result.data.status);
 					}
 				}),
+				{ numRuns: 100 }
+			);
+		});
+	});
+
+	describe('Property 16: Lenient Paginated Parsing (Req 27.8)', () => {
+		/**
+		 * Arbitrary for generating invalid records
+		 */
+		const invalidRecordArbitrary = fc.oneof(
+			fc.constant(null),
+			fc.constant(undefined),
+			fc.string(),
+			fc.integer(),
+			fc.record({ invalid: fc.string() })
+		);
+
+		it('parsePaginatedResponseLenient skipped count matches actual invalid records', () => {
+			fc.assert(
+				fc.property(
+					fc.array(simpleRecordArbitrary, { minLength: 0, maxLength: 5 }),
+					fc.array(invalidRecordArbitrary, { minLength: 0, maxLength: 5 }),
+					(validRecords, invalidRecords) => {
+						// Mix valid and invalid records
+						const mixedRecords = [...validRecords, ...invalidRecords];
+
+						const input = {
+							page: 1,
+							pageSize: 1000,
+							totalRecords: mixedRecords.length,
+							records: mixedRecords
+						};
+
+						const result = parsePaginatedResponseLenient(input, SimpleRecordSchema);
+
+						expect(result.success).toBe(true);
+						if (result.success) {
+							// Skipped count should match invalid records count
+							expect(result.skipped).toBe(invalidRecords.length);
+							// Valid records count should match
+							expect(result.data.records).toHaveLength(validRecords.length);
+						}
+					}
+				),
+				{ numRuns: 100 }
+			);
+		});
+
+		it('parsePaginatedResponseLenient preserves all valid records', () => {
+			fc.assert(
+				fc.property(
+					fc.array(simpleRecordArbitrary, { minLength: 1, maxLength: 10 }),
+					(validRecords) => {
+						// Add some invalid records
+						const mixedRecords = [
+							...validRecords,
+							null,
+							{ wrong: 'type' },
+							'string'
+						];
+
+						const input = {
+							page: 1,
+							pageSize: 1000,
+							totalRecords: mixedRecords.length,
+							records: mixedRecords
+						};
+
+						const result = parsePaginatedResponseLenient(input, SimpleRecordSchema);
+
+						expect(result.success).toBe(true);
+						if (result.success) {
+							// All valid records should be preserved
+							expect(result.data.records).toHaveLength(validRecords.length);
+							for (let i = 0; i < validRecords.length; i++) {
+								expect(result.data.records[i]).toEqual(validRecords[i]);
+							}
+						}
+					}
+				),
+				{ numRuns: 100 }
+			);
+		});
+
+		it('parsePaginatedResponseLenient invokes callback for each invalid record', () => {
+			fc.assert(
+				fc.property(
+					fc.array(simpleRecordArbitrary, { minLength: 1, maxLength: 5 }),
+					fc.array(invalidRecordArbitrary, { minLength: 1, maxLength: 5 }),
+					(validRecords, invalidRecords) => {
+						const mixedRecords = [...validRecords, ...invalidRecords];
+
+						const input = {
+							page: 1,
+							pageSize: 1000,
+							totalRecords: mixedRecords.length,
+							records: mixedRecords
+						};
+
+						let callbackCount = 0;
+						const result = parsePaginatedResponseLenient(
+							input,
+							SimpleRecordSchema,
+							() => {
+								callbackCount++;
+							}
+						);
+
+						expect(result.success).toBe(true);
+						// Callback should be invoked for each invalid record
+						expect(callbackCount).toBe(invalidRecords.length);
+					}
+				),
+				{ numRuns: 100 }
+			);
+		});
+
+		it('parsePaginatedResponseLenient never throws for any input', () => {
+			fc.assert(
+				fc.property(fc.anything(), (input) => {
+					// Should never throw, even for completely invalid input
+					expect(() =>
+						parsePaginatedResponseLenient(input, SimpleRecordSchema)
+					).not.toThrow();
+				}),
+				{ numRuns: 100 }
+			);
+		});
+
+		it('parsePaginatedResponseLenient returns success for valid pagination structure regardless of record validity', () => {
+			fc.assert(
+				fc.property(
+					paginatedResponseArbitrary(fc.anything()),
+					(paginatedResponse) => {
+						const result = parsePaginatedResponseLenient(
+							paginatedResponse,
+							SimpleRecordSchema
+						);
+
+						// Should succeed as long as pagination structure is valid
+						expect(result.success).toBe(true);
+					}
+				),
 				{ numRuns: 100 }
 			);
 		});
