@@ -9,7 +9,7 @@
     - Set up strict TypeScript configuration in tsconfig.json
     - _Requirements: 30.1, 30.2_
 
-  - [ ] 1.2 Configure UnoCSS and shadcn-svelte
+  - [x] 1.2 Configure UnoCSS and shadcn-svelte
     - Install UnoCSS with presetWind, presetAnimations, presetShadcn
     - Configure uno.config.ts with shortcuts for buttons, cards, status indicators
     - Initialize shadcn-svelte components
