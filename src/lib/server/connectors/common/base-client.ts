@@ -6,12 +6,14 @@
  * - Configurable request timeout (default: 30s)
  * - User-Agent header
  * - Typed error handling
+ * - Automatic retry with exponential backoff
  *
  * @module connectors/common/base-client
- * @requirements 23.1, 23.2
+ * @requirements 23.1, 23.2, 23.5
  */
 
-import type { BaseClientConfig, RequestOptions, SystemStatus, HealthCheck } from './types.js';
+import type { BaseClientConfig, RequestOptions, SystemStatus, HealthCheck, RetryConfig } from './types.js';
+import { withRetry, DEFAULT_RETRY_CONFIG } from './retry.js';
 import {
 	type ArrClientError,
 	NetworkError,
@@ -19,6 +21,8 @@ import {
 	RateLimitError,
 	ServerError,
 	TimeoutError,
+	NotFoundError,
+	SSLError,
 	isArrClientError
 } from './errors.js';
 
@@ -61,6 +65,9 @@ export class BaseArrClient {
 	/** User-Agent header value */
 	protected readonly userAgent: string;
 
+	/** Retry configuration for failed requests */
+	protected readonly retryConfig: Required<RetryConfig>;
+
 	/**
 	 * Create a new BaseArrClient instance
 	 *
@@ -73,6 +80,7 @@ export class BaseArrClient {
 		this.apiKey = config.apiKey;
 		this.timeout = config.timeout ?? DEFAULT_TIMEOUT;
 		this.userAgent = config.userAgent ?? DEFAULT_USER_AGENT;
+		this.retryConfig = { ...DEFAULT_RETRY_CONFIG, ...config.retry };
 	}
 
 	/**
@@ -136,7 +144,7 @@ export class BaseArrClient {
 
 			// Handle error responses
 			if (!response.ok) {
-				throw this.handleErrorResponse(response);
+				throw this.handleErrorResponse(response, endpoint);
 			}
 
 			// Parse JSON response
@@ -148,16 +156,39 @@ export class BaseArrClient {
 	}
 
 	/**
+	 * Make an HTTP request with automatic retry logic
+	 *
+	 * Wraps the standard request method with retry behavior:
+	 * - Retries on network errors, server errors (5xx), timeouts, and rate limits
+	 * - Does NOT retry on authentication errors (401), not found (404), or SSL errors
+	 * - Uses exponential backoff with configurable delays
+	 * - Respects Retry-After header for rate limit errors
+	 *
+	 * @param endpoint - API endpoint path
+	 * @param options - Request options (method, body, timeout, signal)
+	 * @returns Parsed JSON response
+	 * @throws {ArrClientError} After all retries exhausted or for non-retryable errors
+	 * @requirements 23.5
+	 */
+	protected async requestWithRetry<T>(endpoint: string, options: RequestOptions = {}): Promise<T> {
+		return withRetry(() => this.request<T>(endpoint, options), this.retryConfig);
+	}
+
+	/**
 	 * Convert HTTP error responses to typed errors
 	 *
 	 * @param response - Failed HTTP response
+	 * @param endpoint - The API endpoint that was called (for error context)
 	 * @returns Typed error based on status code
-	 * @requirements 28.1, 28.3, 28.4
+	 * @requirements 28.1, 28.2, 28.3, 28.4
 	 */
-	private handleErrorResponse(response: Response): ArrClientError {
+	private handleErrorResponse(response: Response, endpoint: string): ArrClientError {
 		switch (response.status) {
 			case 401:
 				return new AuthenticationError();
+
+			case 404:
+				return new NotFoundError(endpoint);
 
 			case 429: {
 				const retryAfterHeader = response.headers.get('Retry-After');
@@ -182,7 +213,7 @@ export class BaseArrClient {
 	 * @param error - The caught error
 	 * @param timeout - Timeout value for timeout error creation
 	 * @returns Typed error
-	 * @requirements 23.4, 28.5
+	 * @requirements 23.4, 28.5, 28.6
 	 */
 	private categorizeError(error: unknown, timeout: number): ArrClientError {
 		// Already a typed error, pass through
@@ -204,6 +235,18 @@ export class BaseArrClient {
 		if (error instanceof TypeError) {
 			const message = error.message.toLowerCase();
 
+			// SSL certificate errors
+			if (
+				message.includes('ssl') ||
+				message.includes('certificate') ||
+				message.includes('cert_') ||
+				message.includes('unable_to_verify') ||
+				message.includes('self signed') ||
+				message.includes('self-signed')
+			) {
+				return new SSLError(error.message);
+			}
+
 			// Connection refused
 			if (message.includes('fetch failed') || message.includes('econnrefused')) {
 				return new NetworkError('Connection refused', 'connection_refused');
@@ -212,6 +255,21 @@ export class BaseArrClient {
 			// DNS failure
 			if (message.includes('getaddrinfo') || message.includes('dns') || message.includes('enotfound')) {
 				return new NetworkError('DNS lookup failed', 'dns_failure');
+			}
+		}
+
+		// Check for SSL errors in other error types
+		if (error instanceof Error) {
+			const message = error.message.toLowerCase();
+			if (
+				message.includes('ssl') ||
+				message.includes('certificate') ||
+				message.includes('cert_') ||
+				message.includes('unable_to_verify') ||
+				message.includes('self signed') ||
+				message.includes('self-signed')
+			) {
+				return new SSLError(error.message);
 			}
 		}
 

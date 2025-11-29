@@ -11,6 +11,28 @@
 export type ConnectorType = 'sonarr' | 'radarr' | 'whisparr';
 
 /**
+ * Configuration for retry behavior with exponential backoff
+ *
+ * @requirements 23.5
+ */
+export interface RetryConfig {
+	/** Maximum number of retry attempts (default: 3) */
+	maxRetries?: number;
+
+	/** Base delay between retries in milliseconds (default: 1000) */
+	baseDelay?: number;
+
+	/** Maximum delay between retries in milliseconds (default: 30000) */
+	maxDelay?: number;
+
+	/** Backoff multiplier (default: 2) */
+	multiplier?: number;
+
+	/** Whether to add jitter to delays to prevent thundering herd (default: true) */
+	jitter?: boolean;
+}
+
+/**
  * Configuration for BaseArrClient
  */
 export interface BaseClientConfig {
@@ -25,6 +47,12 @@ export interface BaseClientConfig {
 
 	/** User-Agent header value (default: 'Comradarr/1.0') */
 	userAgent?: string;
+
+	/** Whether to verify SSL certificates (default: true) */
+	sslVerify?: boolean;
+
+	/** Retry configuration for failed requests */
+	retry?: RetryConfig;
 }
 
 /**

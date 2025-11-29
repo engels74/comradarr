@@ -7,9 +7,11 @@
  * - RateLimitError: HTTP 429 with optional Retry-After (retryable)
  * - ServerError: HTTP 5xx (retryable)
  * - TimeoutError: Request timeout (retryable)
+ * - NotFoundError: HTTP 404 (not retryable)
+ * - SSLError: SSL certificate validation failure (not retryable)
  *
  * @module connectors/common/errors
- * @requirements 23.3, 23.4, 28.1, 28.2, 28.3, 28.4, 28.5
+ * @requirements 23.3, 23.4, 28.1, 28.2, 28.3, 28.4, 28.5, 28.6
  */
 
 /**
@@ -21,7 +23,9 @@ export type ErrorCategory =
 	| 'rate_limit'
 	| 'server'
 	| 'timeout'
-	| 'validation';
+	| 'validation'
+	| 'not_found'
+	| 'ssl';
 
 /**
  * Network error cause types
@@ -155,6 +159,42 @@ export class ValidationError extends ArrClientError {
 	) {
 		super(message);
 		this.name = 'ValidationError';
+	}
+}
+
+/**
+ * Not found errors (HTTP 404)
+ * NOT retryable - the resource does not exist
+ *
+ * @requirements 28.2
+ */
+export class NotFoundError extends ArrClientError {
+	readonly category = 'not_found' as const;
+	readonly retryable = false;
+
+	constructor(
+		/** The resource that was not found */
+		public readonly resource: string,
+		message?: string
+	) {
+		super(message ?? `Resource not found: ${resource}`);
+		this.name = 'NotFoundError';
+	}
+}
+
+/**
+ * SSL certificate validation errors
+ * NOT retryable by default - indicates configuration issue
+ *
+ * @requirements 28.6
+ */
+export class SSLError extends ArrClientError {
+	readonly category = 'ssl' as const;
+	readonly retryable = false;
+
+	constructor(message: string = 'SSL certificate validation failed') {
+		super(message);
+		this.name = 'SSLError';
 	}
 }
 

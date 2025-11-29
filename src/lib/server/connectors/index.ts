@@ -20,8 +20,12 @@ export type {
 	PaginatedResponse,
 	PaginationOptions,
 	CommandResponse,
-	CommandStatus
+	CommandStatus,
+	RetryConfig
 } from './common/types.js';
+
+// Retry utilities
+export { withRetry, calculateBackoffDelay, DEFAULT_RETRY_CONFIG } from './common/retry.js';
 
 // Errors
 export {
@@ -32,6 +36,8 @@ export {
 	ServerError,
 	TimeoutError,
 	ValidationError,
+	NotFoundError,
+	SSLError,
 	isArrClientError,
 	isRetryableError
 } from './common/errors.js';

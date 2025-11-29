@@ -17,13 +17,17 @@ import {
 	AuthenticationError,
 	RateLimitError,
 	ServerError,
-	TimeoutError
+	TimeoutError,
+	NotFoundError,
+	SSLError
 } from '../../src/lib/server/connectors/index';
 
 // Helper to create a mock fetch that satisfies TypeScript
 function createMockFetch(impl: Mock): typeof fetch {
 	return impl as unknown as typeof fetch;
 }
+
+import type { RetryConfig } from '../../src/lib/server/connectors/index';
 
 // Create a test subclass to expose protected methods
 class TestableBaseArrClient extends BaseArrClient {
@@ -47,12 +51,24 @@ class TestableBaseArrClient extends BaseArrClient {
 		return this.userAgent;
 	}
 
+	public get exposedRetryConfig(): Required<RetryConfig> {
+		return this.retryConfig;
+	}
+
 	// Expose request method for testing
 	public async exposedRequest<T>(
 		endpoint: string,
 		options?: { method?: 'GET' | 'POST' | 'PUT' | 'DELETE'; body?: unknown; timeout?: number }
 	): Promise<T> {
 		return this.request<T>(endpoint, options);
+	}
+
+	// Expose requestWithRetry method for testing
+	public async exposedRequestWithRetry<T>(
+		endpoint: string,
+		options?: { method?: 'GET' | 'POST' | 'PUT' | 'DELETE'; body?: unknown; timeout?: number }
+	): Promise<T> {
+		return this.requestWithRetry<T>(endpoint, options);
 	}
 }
 
@@ -392,6 +408,58 @@ describe('BaseArrClient HTTP Requests', () => {
 				expect(error).toBeInstanceOf(TimeoutError);
 			}
 		});
+
+		it('should throw NotFoundError for HTTP 404', async () => {
+			globalThis.fetch = createMockFetch(
+				vi.fn().mockResolvedValue(
+					new Response('Not Found', {
+						status: 404,
+						statusText: 'Not Found'
+					})
+				)
+			);
+
+			const client = new TestableBaseArrClient(validConfig);
+
+			try {
+				await client.exposedRequest('series/12345');
+				expect.fail('Should have thrown NotFoundError');
+			} catch (error) {
+				expect(error).toBeInstanceOf(NotFoundError);
+				expect((error as NotFoundError).resource).toBe('series/12345');
+				expect((error as NotFoundError).retryable).toBe(false);
+			}
+		});
+
+		it('should throw SSLError for SSL certificate errors', async () => {
+			const sslError = new TypeError('self signed certificate in certificate chain');
+			globalThis.fetch = createMockFetch(vi.fn().mockRejectedValue(sslError));
+
+			const client = new TestableBaseArrClient(validConfig);
+
+			try {
+				await client.exposedRequest('system/status');
+				expect.fail('Should have thrown SSLError');
+			} catch (error) {
+				expect(error).toBeInstanceOf(SSLError);
+				expect((error as SSLError).retryable).toBe(false);
+			}
+		});
+
+		it('should throw SSLError for certificate validation failure', async () => {
+			const sslError = new TypeError('unable to verify the first certificate');
+			globalThis.fetch = createMockFetch(vi.fn().mockRejectedValue(sslError));
+
+			const client = new TestableBaseArrClient(validConfig);
+
+			try {
+				await client.exposedRequest('system/status');
+				expect.fail('Should have thrown SSLError');
+			} catch (error) {
+				expect(error).toBeInstanceOf(SSLError);
+				expect((error as SSLError).category).toBe('ssl');
+			}
+		});
 	});
 
 	describe('Successful Responses', () => {
@@ -555,5 +623,236 @@ describe('Error Properties', () => {
 			expect(error.retryable).toBe(true);
 			expect(error.timestamp).toBeInstanceOf(Date);
 		});
+	});
+
+	describe('NotFoundError', () => {
+		it('should have correct properties', () => {
+			const error = new NotFoundError('series/12345');
+
+			expect(error.name).toBe('NotFoundError');
+			expect(error.message).toBe('Resource not found: series/12345');
+			expect(error.resource).toBe('series/12345');
+			expect(error.category).toBe('not_found');
+			expect(error.retryable).toBe(false);
+			expect(error.timestamp).toBeInstanceOf(Date);
+		});
+
+		it('should accept custom message', () => {
+			const error = new NotFoundError('series/12345', 'Series does not exist');
+
+			expect(error.message).toBe('Series does not exist');
+			expect(error.resource).toBe('series/12345');
+		});
+	});
+
+	describe('SSLError', () => {
+		it('should have correct properties with default message', () => {
+			const error = new SSLError();
+
+			expect(error.name).toBe('SSLError');
+			expect(error.message).toBe('SSL certificate validation failed');
+			expect(error.category).toBe('ssl');
+			expect(error.retryable).toBe(false);
+			expect(error.timestamp).toBeInstanceOf(Date);
+		});
+
+		it('should accept custom message', () => {
+			const error = new SSLError('self signed certificate in certificate chain');
+
+			expect(error.message).toBe('self signed certificate in certificate chain');
+		});
+	});
+});
+
+describe('BaseArrClient Retry Configuration', () => {
+	const validConfig = {
+		baseUrl: 'http://localhost:8989',
+		apiKey: 'test-api-key-12345'
+	};
+
+	describe('Default retry config', () => {
+		it('should use default retry configuration when not provided', () => {
+			const client = new TestableBaseArrClient(validConfig);
+
+			expect(client.exposedRetryConfig.maxRetries).toBe(3);
+			expect(client.exposedRetryConfig.baseDelay).toBe(1000);
+			expect(client.exposedRetryConfig.maxDelay).toBe(30000);
+			expect(client.exposedRetryConfig.multiplier).toBe(2);
+			expect(client.exposedRetryConfig.jitter).toBe(true);
+		});
+	});
+
+	describe('Custom retry config', () => {
+		it('should use custom retry configuration when provided', () => {
+			const client = new TestableBaseArrClient({
+				...validConfig,
+				retry: {
+					maxRetries: 5,
+					baseDelay: 500,
+					maxDelay: 10000,
+					multiplier: 1.5,
+					jitter: false
+				}
+			});
+
+			expect(client.exposedRetryConfig.maxRetries).toBe(5);
+			expect(client.exposedRetryConfig.baseDelay).toBe(500);
+			expect(client.exposedRetryConfig.maxDelay).toBe(10000);
+			expect(client.exposedRetryConfig.multiplier).toBe(1.5);
+			expect(client.exposedRetryConfig.jitter).toBe(false);
+		});
+
+		it('should merge partial retry config with defaults', () => {
+			const client = new TestableBaseArrClient({
+				...validConfig,
+				retry: {
+					maxRetries: 5
+				}
+			});
+
+			expect(client.exposedRetryConfig.maxRetries).toBe(5);
+			expect(client.exposedRetryConfig.baseDelay).toBe(1000); // default
+			expect(client.exposedRetryConfig.maxDelay).toBe(30000); // default
+			expect(client.exposedRetryConfig.multiplier).toBe(2); // default
+			expect(client.exposedRetryConfig.jitter).toBe(true); // default
+		});
+	});
+});
+
+describe('BaseArrClient.requestWithRetry()', () => {
+	const validConfig = {
+		baseUrl: 'http://localhost:8989',
+		apiKey: 'test-api-key-12345'
+	};
+
+	let originalFetch: typeof fetch;
+
+	beforeEach(() => {
+		originalFetch = globalThis.fetch;
+		vi.useFakeTimers();
+	});
+
+	afterEach(() => {
+		globalThis.fetch = originalFetch;
+		vi.restoreAllMocks();
+		vi.useRealTimers();
+	});
+
+	it('should return data on successful request', async () => {
+		const mockData = { status: 'ok' };
+
+		globalThis.fetch = createMockFetch(
+			vi.fn().mockResolvedValue(
+				new Response(JSON.stringify(mockData), {
+					status: 200,
+					headers: { 'Content-Type': 'application/json' }
+				})
+			)
+		);
+
+		const client = new TestableBaseArrClient(validConfig);
+		const result = await client.exposedRequestWithRetry<typeof mockData>('system/status');
+
+		expect(result).toEqual(mockData);
+	});
+
+	it('should retry on server error and succeed', async () => {
+		const mockData = { status: 'ok' };
+		let callCount = 0;
+
+		globalThis.fetch = createMockFetch(
+			vi.fn().mockImplementation(async () => {
+				callCount++;
+				if (callCount === 1) {
+					return new Response('Server Error', { status: 500 });
+				}
+				return new Response(JSON.stringify(mockData), {
+					status: 200,
+					headers: { 'Content-Type': 'application/json' }
+				});
+			})
+		);
+
+		const client = new TestableBaseArrClient({
+			...validConfig,
+			retry: { maxRetries: 3, jitter: false }
+		});
+
+		const resultPromise = (async () => {
+			const promise = client.exposedRequestWithRetry<typeof mockData>('system/status');
+			await vi.runAllTimersAsync();
+			return promise;
+		})();
+
+		const result = await resultPromise;
+		expect(result).toEqual(mockData);
+		expect(callCount).toBe(2);
+	});
+
+	it('should not retry on authentication error', async () => {
+		let callCount = 0;
+
+		globalThis.fetch = createMockFetch(
+			vi.fn().mockImplementation(async () => {
+				callCount++;
+				return new Response('Unauthorized', { status: 401 });
+			})
+		);
+
+		const client = new TestableBaseArrClient({
+			...validConfig,
+			retry: { maxRetries: 3 }
+		});
+
+		await expect(client.exposedRequestWithRetry('system/status')).rejects.toThrow(AuthenticationError);
+		expect(callCount).toBe(1);
+	});
+
+	it('should not retry on not found error', async () => {
+		let callCount = 0;
+
+		globalThis.fetch = createMockFetch(
+			vi.fn().mockImplementation(async () => {
+				callCount++;
+				return new Response('Not Found', { status: 404 });
+			})
+		);
+
+		const client = new TestableBaseArrClient({
+			...validConfig,
+			retry: { maxRetries: 3 }
+		});
+
+		await expect(client.exposedRequestWithRetry('series/123')).rejects.toThrow(NotFoundError);
+		expect(callCount).toBe(1);
+	});
+
+	it('should exhaust retries and throw last error', async () => {
+		let callCount = 0;
+
+		globalThis.fetch = createMockFetch(
+			vi.fn().mockImplementation(async () => {
+				callCount++;
+				return new Response('Service Unavailable', { status: 503 });
+			})
+		);
+
+		const client = new TestableBaseArrClient({
+			...validConfig,
+			retry: { maxRetries: 2, jitter: false }
+		});
+
+		// Create promise and immediately set up error handling
+		let caughtError: unknown;
+		const promise = client.exposedRequestWithRetry('system/status').catch((e) => {
+			caughtError = e;
+		});
+
+		// Advance timers to complete all retries
+		await vi.runAllTimersAsync();
+		await promise;
+
+		expect(caughtError).toBeInstanceOf(ServerError);
+		expect(callCount).toBe(3); // 1 initial + 2 retries
 	});
 });
