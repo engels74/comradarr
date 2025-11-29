@@ -3,7 +3,7 @@
 ## Phase 1: Project Foundation
 
 - [ ] 1. Initialize SvelteKit project with Bun
-  - [ ] 1.1 Create SvelteKit project with TypeScript
+  - [x] 1.1 Create SvelteKit project with TypeScript
     - Run `bun create svelte@latest comradarr` with TypeScript option
     - Configure svelte-adapter-bun in svelte.config.js
     - Set up strict TypeScript configuration in tsconfig.json
