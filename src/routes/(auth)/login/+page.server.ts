@@ -1,7 +1,7 @@
 /**
  * Login page server-side logic.
  *
- * Requirements: 10.1, 10.2
+ * Requirements: 10.1, 10.2, 35.1-35.5
  */
 
 import { fail, redirect } from '@sveltejs/kit';
@@ -11,9 +11,11 @@ import { verifyPassword } from '$lib/server/auth/password';
 import { createSession } from '$lib/server/auth/session';
 import {
 	getUserByUsername,
-	isAccountLocked,
+	checkAndResetLockout,
+	getRemainingLockoutTime,
 	recordFailedLogin,
-	recordSuccessfulLogin
+	recordSuccessfulLogin,
+	MAX_FAILED_ATTEMPTS
 } from '$lib/server/db/queries/auth';
 import type { Actions, PageServerLoad } from './$types';
 
@@ -75,10 +77,13 @@ export const actions: Actions = {
 			});
 		}
 
-		// Check if account is locked
-		if (isAccountLocked(user)) {
+		// Check if account is locked (with auto-reset for expired lockouts - Req 35.3, 35.4)
+		const isLocked = await checkAndResetLockout(user);
+		if (isLocked) {
+			const remainingSeconds = getRemainingLockoutTime(user);
+			const remainingMinutes = Math.ceil((remainingSeconds ?? 0) / 60);
 			return fail(400, {
-				error: 'Account is temporarily locked. Please try again later.',
+				error: `Account is locked. Try again in ${remainingMinutes} minute${remainingMinutes !== 1 ? 's' : ''}.`,
 				username
 			});
 		}
@@ -86,11 +91,26 @@ export const actions: Actions = {
 		// Verify password
 		const isValid = await verifyPassword(password, user.passwordHash);
 		if (!isValid) {
-			// Record failed login attempt
-			await recordFailedLogin(user.id);
+			// Record failed login attempt (may trigger lockout - Req 35.1, 35.2)
+			const loginResult = await recordFailedLogin(user.id);
+
+			// If account was just locked, inform the user
+			if (loginResult.isLocked) {
+				return fail(400, {
+					error: `Too many failed attempts. Account is locked for ${loginResult.lockoutMinutes} minutes.`,
+					username
+				});
+			}
+
+			// Show remaining attempts warning
+			const remainingAttempts = MAX_FAILED_ATTEMPTS - loginResult.attemptCount;
+			const warningMessage =
+				remainingAttempts <= 2
+					? ` (${remainingAttempts} attempt${remainingAttempts !== 1 ? 's' : ''} remaining)`
+					: '';
 
 			return fail(400, {
-				error: 'Invalid username or password',
+				error: `Invalid username or password${warningMessage}`,
 				username
 			});
 		}

@@ -1,12 +1,30 @@
 /**
  * Database queries for authentication operations.
  *
- * Requirements: 10.1, 10.2, 35.1-35.5 (schema support)
+ * Requirements: 10.1, 10.2, 35.1-35.5
  */
 
 import { db } from '$lib/server/db';
 import { users, type User, type NewUser } from '$lib/server/db/schema';
 import { eq, sql } from 'drizzle-orm';
+import {
+	MAX_FAILED_ATTEMPTS,
+	LOCKOUT_DURATION_MINUTES,
+	isAccountLocked,
+	getRemainingLockoutTime,
+	calculateLockoutExpiry,
+	shouldTriggerLockout
+} from '$lib/server/auth/lockout';
+
+// Re-export lockout utilities for backward compatibility
+export {
+	MAX_FAILED_ATTEMPTS,
+	LOCKOUT_DURATION_MINUTES,
+	isAccountLocked,
+	getRemainingLockoutTime,
+	calculateLockoutExpiry,
+	shouldTriggerLockout
+};
 
 /**
  * Gets a user by username for login.
@@ -58,19 +76,52 @@ export async function createUser(data: {
 }
 
 /**
- * Records a failed login attempt (for lockout feature - Req 35.1).
+ * Result of a failed login attempt.
+ */
+export interface FailedLoginResult {
+	/** Whether the account is now locked */
+	isLocked: boolean;
+	/** Lockout duration in minutes (only set if isLocked is true) */
+	lockoutMinutes?: number;
+	/** Current failed attempt count */
+	attemptCount: number;
+}
+
+/**
+ * Records a failed login attempt and triggers lockout if threshold exceeded (Req 35.1, 35.2).
  *
  * @param userId - The user ID that failed login
+ * @returns Result containing lockout status and attempt count
  */
-export async function recordFailedLogin(userId: number): Promise<void> {
-	await db
+export async function recordFailedLogin(userId: number): Promise<FailedLoginResult> {
+	// Increment the counter and get the new value
+	const result = await db
 		.update(users)
 		.set({
 			failedLoginAttempts: sql`${users.failedLoginAttempts} + 1`,
 			lastFailedLogin: new Date(),
 			updatedAt: new Date()
 		})
-		.where(eq(users.id, userId));
+		.where(eq(users.id, userId))
+		.returning({ failedLoginAttempts: users.failedLoginAttempts });
+
+	const newCount = result[0]?.failedLoginAttempts ?? 0;
+
+	// Check if should lock account (Req 35.2)
+	if (shouldTriggerLockout(newCount)) {
+		const lockUntil = calculateLockoutExpiry();
+		await lockUserAccount(userId, lockUntil);
+		return {
+			isLocked: true,
+			lockoutMinutes: LOCKOUT_DURATION_MINUTES,
+			attemptCount: newCount
+		};
+	}
+
+	return {
+		isLocked: false,
+		attemptCount: newCount
+	};
 }
 
 /**
@@ -108,14 +159,34 @@ export async function lockUserAccount(userId: number, until: Date): Promise<void
 }
 
 /**
- * Checks if a user account is currently locked (Req 35.3).
+ * Checks if account is locked, and resets lockout if expired (Req 35.3, 35.4).
  *
- * @param user - User object with lockedUntil field
- * @returns true if account is locked, false otherwise
+ * This function should be called at login time to automatically reset
+ * the failed attempt counter when the lockout period has expired.
+ *
+ * @param user - User object with lockout fields
+ * @returns true if account is still locked, false if not locked or lockout expired
  */
-export function isAccountLocked(user: { lockedUntil: Date | null }): boolean {
+export async function checkAndResetLockout(user: User): Promise<boolean> {
 	if (!user.lockedUntil) return false;
-	return user.lockedUntil > new Date();
+
+	const now = new Date();
+	if (user.lockedUntil > now) {
+		return true; // Still locked
+	}
+
+	// Lockout expired - reset counter (Req 35.4)
+	await db
+		.update(users)
+		.set({
+			failedLoginAttempts: 0,
+			lockedUntil: null,
+			lastFailedLogin: null,
+			updatedAt: now
+		})
+		.where(eq(users.id, user.id));
+
+	return false;
 }
 
 /**

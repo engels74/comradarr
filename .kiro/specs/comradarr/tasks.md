@@ -68,7 +68,7 @@
     - Redirect unauthenticated users to login
     - _Requirements: 10.4_
 
-  - [ ] 3.5 Implement account lockout
+  - [x] 3.5 Implement account lockout
     - Track failed login attempts
     - Lock account after threshold failures
     - Reset counter on successful login
