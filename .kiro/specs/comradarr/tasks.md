@@ -106,7 +106,7 @@
     - Skip retry for non-retryable errors
     - _Requirements: 23.5_
 
-  - [ ] 5.4 Write property test for exponential backoff calculation
+  - [x] 5.4 Write property test for exponential backoff calculation
     - **Property 7: Exponential Backoff Calculation**
     - **Validates: Requirements 5.5**
 
