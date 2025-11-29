@@ -117,7 +117,7 @@
     - Implement command response parser
     - _Requirements: 27.1, 27.5, 27.6_
 
-  - [ ] 6.2 Create Sonarr-specific parsers
+  - [x] 6.2 Create Sonarr-specific parsers
     - Implement series response parser
     - Implement episode response parser
     - _Requirements: 27.2, 27.3_

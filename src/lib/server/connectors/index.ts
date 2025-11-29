@@ -57,3 +57,27 @@ export {
 } from './common/parsers.js';
 
 export type { ParseResult } from './common/parsers.js';
+
+// Sonarr types
+export type {
+	SonarrSeries,
+	SonarrSeason,
+	SonarrSeasonStatistics,
+	SonarrSeriesStatistics,
+	SonarrEpisode,
+	SonarrEpisodeFile
+} from './sonarr/types.js';
+
+// Sonarr parsers
+export {
+	parseSonarrSeries,
+	parseSonarrEpisode,
+	parsePaginatedSeries,
+	parsePaginatedEpisodes,
+	SonarrSeriesSchema,
+	SonarrSeasonSchema,
+	SonarrSeasonStatisticsSchema,
+	SonarrSeriesStatisticsSchema,
+	SonarrEpisodeSchema,
+	SonarrEpisodeFileSchema
+} from './sonarr/parsers.js';
