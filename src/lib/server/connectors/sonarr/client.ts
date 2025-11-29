@@ -5,13 +5,24 @@
  * Inherits ping(), getSystemStatus(), and getHealth() from base class.
  *
  * @module connectors/sonarr/client
- * @requirements 1.2, 1.3, 1.4, 24.1, 24.2
+ * @requirements 1.2, 1.3, 1.4, 24.1, 24.2, 24.3, 24.4
  */
 
 import { BaseArrClient } from '../common/base-client.js';
-import type { BaseClientConfig } from '../common/types.js';
-import { parseSonarrSeries, parseSonarrEpisode } from './parsers.js';
+import type { BaseClientConfig, PaginationOptions } from '../common/types.js';
+import { parseSonarrSeries, parseSonarrEpisode, parsePaginatedEpisodesLenient } from './parsers.js';
 import type { SonarrSeries, SonarrEpisode } from './types.js';
+
+/**
+ * Options for fetching wanted episodes (missing or cutoff unmet)
+ */
+export interface WantedOptions extends PaginationOptions {
+	/**
+	 * Filter by monitored status (default: true)
+	 * When true, only returns episodes from monitored series
+	 */
+	monitored?: boolean;
+}
 
 /**
  * Sonarr API client for TV series management
@@ -113,9 +124,120 @@ export class SonarrClient extends BaseArrClient {
 		return episodes;
 	}
 
-	// Future Sonarr-specific methods (tasks 8.3-8.4):
-	// - getWantedMissing()
-	// - getWantedCutoff()
+	/**
+	 * Fetch all paginated episodes from a wanted endpoint
+	 *
+	 * Handles pagination automatically, fetching all pages until complete.
+	 * Uses pageSize of 1000 per Requirement 2.5 (pagination batches).
+	 *
+	 * @param endpoint - The wanted endpoint ('wanted/missing' or 'wanted/cutoff')
+	 * @param options - Pagination and filter options
+	 * @returns Array of all wanted episodes across all pages
+	 * @throws {ArrClientError} On API error
+	 * @throws {Error} If response parsing fails
+	 */
+	private async fetchAllWantedEpisodes(
+		endpoint: string,
+		options?: WantedOptions
+	): Promise<SonarrEpisode[]> {
+		const pageSize = options?.pageSize ?? 1000;
+		const monitored = options?.monitored ?? true;
+		const sortKey = options?.sortKey ?? 'airDateUtc';
+		const sortDirection = options?.sortDirection ?? 'descending';
+
+		let page = options?.page ?? 1;
+		const allEpisodes: SonarrEpisode[] = [];
+
+		while (true) {
+			const queryParams = new URLSearchParams({
+				page: String(page),
+				pageSize: String(pageSize),
+				monitored: String(monitored),
+				sortKey,
+				sortDirection
+			});
+
+			const response = await this.requestWithRetry<unknown>(
+				`${endpoint}?${queryParams.toString()}`
+			);
+
+			const result = parsePaginatedEpisodesLenient(response);
+			if (!result.success) {
+				throw new Error(result.error);
+			}
+
+			allEpisodes.push(...result.data.records);
+
+			// Check if we've fetched all records (Requirement 29.2)
+			// Continue until page * pageSize >= totalRecords
+			if (page * pageSize >= result.data.totalRecords) {
+				break;
+			}
+
+			page++;
+		}
+
+		return allEpisodes;
+	}
+
+	/**
+	 * Get all missing episodes from Sonarr
+	 *
+	 * Fetches episodes where monitored=true AND hasFile=false.
+	 * Automatically paginates to retrieve all results.
+	 *
+	 * @param options - Pagination and filter options
+	 * @returns Array of all missing episodes
+	 * @throws {ArrClientError} On API error (network, auth, rate limit, etc.)
+	 * @requirements 24.3
+	 *
+	 * @example
+	 * ```typescript
+	 * const client = new SonarrClient({ baseUrl, apiKey });
+	 * const missing = await client.getWantedMissing();
+	 * console.log(`Found ${missing.length} missing episodes`);
+	 *
+	 * // With custom options
+	 * const recentMissing = await client.getWantedMissing({
+	 *   pageSize: 50,
+	 *   monitored: true
+	 * });
+	 * ```
+	 */
+	async getWantedMissing(options?: WantedOptions): Promise<SonarrEpisode[]> {
+		return this.fetchAllWantedEpisodes('wanted/missing', options);
+	}
+
+	/**
+	 * Get all upgrade candidates from Sonarr
+	 *
+	 * Fetches episodes where monitored=true AND qualityCutoffNotMet=true.
+	 * These are episodes that exist but could be upgraded to better quality.
+	 * Automatically paginates to retrieve all results.
+	 *
+	 * @param options - Pagination and filter options
+	 * @returns Array of all upgrade candidate episodes
+	 * @throws {ArrClientError} On API error (network, auth, rate limit, etc.)
+	 * @requirements 24.4
+	 *
+	 * @example
+	 * ```typescript
+	 * const client = new SonarrClient({ baseUrl, apiKey });
+	 * const upgrades = await client.getWantedCutoff();
+	 * console.log(`Found ${upgrades.length} upgrade candidates`);
+	 *
+	 * // With custom options
+	 * const upgradesByDate = await client.getWantedCutoff({
+	 *   sortKey: 'airDateUtc',
+	 *   sortDirection: 'ascending'
+	 * });
+	 * ```
+	 */
+	async getWantedCutoff(options?: WantedOptions): Promise<SonarrEpisode[]> {
+		return this.fetchAllWantedEpisodes('wanted/cutoff', options);
+	}
+
+	// Future Sonarr-specific methods (task 8.4):
 	// - sendEpisodeSearch()
 	// - sendSeasonSearch()
 	// - getCommandStatus()

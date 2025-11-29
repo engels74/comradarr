@@ -708,3 +708,554 @@ describe('SonarrClient.getEpisodes()', () => {
 		expect(result[0]?.airDateUtc).toBeUndefined();
 	});
 });
+
+describe('SonarrClient.getWantedMissing()', () => {
+	const validConfig = {
+		baseUrl: 'http://localhost:8989',
+		apiKey: 'test-api-key-12345'
+	};
+
+	let originalFetch: typeof fetch;
+
+	beforeEach(() => {
+		originalFetch = globalThis.fetch;
+	});
+
+	afterEach(() => {
+		globalThis.fetch = originalFetch;
+		vi.restoreAllMocks();
+	});
+
+	it('should return array of missing episodes from Sonarr', async () => {
+		const mockResponse = {
+			page: 1,
+			pageSize: 1000,
+			sortKey: 'airDateUtc',
+			sortDirection: 'descending',
+			totalRecords: 2,
+			records: [
+				{
+					id: 101,
+					seriesId: 1,
+					seasonNumber: 1,
+					episodeNumber: 1,
+					title: 'Pilot',
+					airDateUtc: '2008-01-20T00:00:00Z',
+					hasFile: false,
+					monitored: true,
+					qualityCutoffNotMet: false
+				},
+				{
+					id: 102,
+					seriesId: 1,
+					seasonNumber: 1,
+					episodeNumber: 2,
+					title: 'Second Episode',
+					airDateUtc: '2008-01-27T00:00:00Z',
+					hasFile: false,
+					monitored: true,
+					qualityCutoffNotMet: false
+				}
+			]
+		};
+
+		globalThis.fetch = createMockFetch(
+			vi.fn().mockResolvedValue(
+				new Response(JSON.stringify(mockResponse), {
+					status: 200,
+					headers: { 'Content-Type': 'application/json' }
+				})
+			)
+		);
+
+		const client = new SonarrClient(validConfig);
+		const result = await client.getWantedMissing();
+
+		expect(result).toHaveLength(2);
+		expect(result[0]?.title).toBe('Pilot');
+		expect(result[0]?.hasFile).toBe(false);
+		expect(result[1]?.title).toBe('Second Episode');
+	});
+
+	it('should return empty array when no missing episodes exist', async () => {
+		const mockResponse = {
+			page: 1,
+			pageSize: 1000,
+			sortKey: 'airDateUtc',
+			sortDirection: 'descending',
+			totalRecords: 0,
+			records: []
+		};
+
+		globalThis.fetch = createMockFetch(
+			vi.fn().mockResolvedValue(
+				new Response(JSON.stringify(mockResponse), {
+					status: 200,
+					headers: { 'Content-Type': 'application/json' }
+				})
+			)
+		);
+
+		const client = new SonarrClient(validConfig);
+		const result = await client.getWantedMissing();
+
+		expect(result).toEqual([]);
+	});
+
+	it('should call /api/v3/wanted/missing with correct query parameters', async () => {
+		let capturedUrl: string | undefined;
+
+		const mockResponse = {
+			page: 1,
+			pageSize: 1000,
+			sortKey: 'airDateUtc',
+			sortDirection: 'descending',
+			totalRecords: 0,
+			records: []
+		};
+
+		globalThis.fetch = createMockFetch(
+			vi.fn().mockImplementation(async (url: string) => {
+				capturedUrl = url;
+				return new Response(JSON.stringify(mockResponse), {
+					status: 200,
+					headers: { 'Content-Type': 'application/json' }
+				});
+			})
+		);
+
+		const client = new SonarrClient(validConfig);
+		await client.getWantedMissing();
+
+		expect(capturedUrl).toContain('/api/v3/wanted/missing');
+		expect(capturedUrl).toContain('page=1');
+		expect(capturedUrl).toContain('pageSize=1000');
+		expect(capturedUrl).toContain('monitored=true');
+	});
+
+	it('should use custom options when provided', async () => {
+		let capturedUrl: string | undefined;
+
+		const mockResponse = {
+			page: 2,
+			pageSize: 50,
+			sortKey: 'seriesTitle',
+			sortDirection: 'ascending',
+			totalRecords: 50,
+			records: []
+		};
+
+		globalThis.fetch = createMockFetch(
+			vi.fn().mockImplementation(async (url: string) => {
+				capturedUrl = url;
+				return new Response(JSON.stringify(mockResponse), {
+					status: 200,
+					headers: { 'Content-Type': 'application/json' }
+				});
+			})
+		);
+
+		const client = new SonarrClient(validConfig);
+		await client.getWantedMissing({
+			page: 2,
+			pageSize: 50,
+			sortKey: 'seriesTitle',
+			sortDirection: 'ascending',
+			monitored: false
+		});
+
+		expect(capturedUrl).toContain('page=2');
+		expect(capturedUrl).toContain('pageSize=50');
+		expect(capturedUrl).toContain('sortKey=seriesTitle');
+		expect(capturedUrl).toContain('sortDirection=ascending');
+		expect(capturedUrl).toContain('monitored=false');
+	});
+
+	it('should handle pagination across multiple pages', async () => {
+		let callCount = 0;
+
+		const page1Response = {
+			page: 1,
+			pageSize: 2,
+			sortKey: 'airDateUtc',
+			sortDirection: 'descending',
+			totalRecords: 5,
+			records: [
+				{ id: 1, seriesId: 1, seasonNumber: 1, episodeNumber: 1, hasFile: false, monitored: true, qualityCutoffNotMet: false },
+				{ id: 2, seriesId: 1, seasonNumber: 1, episodeNumber: 2, hasFile: false, monitored: true, qualityCutoffNotMet: false }
+			]
+		};
+
+		const page2Response = {
+			page: 2,
+			pageSize: 2,
+			sortKey: 'airDateUtc',
+			sortDirection: 'descending',
+			totalRecords: 5,
+			records: [
+				{ id: 3, seriesId: 1, seasonNumber: 1, episodeNumber: 3, hasFile: false, monitored: true, qualityCutoffNotMet: false },
+				{ id: 4, seriesId: 1, seasonNumber: 1, episodeNumber: 4, hasFile: false, monitored: true, qualityCutoffNotMet: false }
+			]
+		};
+
+		const page3Response = {
+			page: 3,
+			pageSize: 2,
+			sortKey: 'airDateUtc',
+			sortDirection: 'descending',
+			totalRecords: 5,
+			records: [
+				{ id: 5, seriesId: 1, seasonNumber: 1, episodeNumber: 5, hasFile: false, monitored: true, qualityCutoffNotMet: false }
+			]
+		};
+
+		globalThis.fetch = createMockFetch(
+			vi.fn().mockImplementation(async () => {
+				callCount++;
+				let response;
+				if (callCount === 1) response = page1Response;
+				else if (callCount === 2) response = page2Response;
+				else response = page3Response;
+
+				return new Response(JSON.stringify(response), {
+					status: 200,
+					headers: { 'Content-Type': 'application/json' }
+				});
+			})
+		);
+
+		const client = new SonarrClient(validConfig);
+		const result = await client.getWantedMissing({ pageSize: 2 });
+
+		expect(callCount).toBe(3); // Should make 3 requests to get all 5 items
+		expect(result).toHaveLength(5);
+		expect(result[0]?.id).toBe(1);
+		expect(result[4]?.id).toBe(5);
+	});
+
+	it('should skip malformed episode records', async () => {
+		const mockResponse = {
+			page: 1,
+			pageSize: 1000,
+			sortKey: 'airDateUtc',
+			sortDirection: 'descending',
+			totalRecords: 3,
+			records: [
+				{ id: 1, seriesId: 1, seasonNumber: 1, episodeNumber: 1, hasFile: false, monitored: true, qualityCutoffNotMet: false },
+				{ id: 2, seriesId: 1 }, // Invalid: missing required fields
+				{ id: 3, seriesId: 1, seasonNumber: 1, episodeNumber: 3, hasFile: false, monitored: true, qualityCutoffNotMet: false }
+			]
+		};
+
+		globalThis.fetch = createMockFetch(
+			vi.fn().mockResolvedValue(
+				new Response(JSON.stringify(mockResponse), {
+					status: 200,
+					headers: { 'Content-Type': 'application/json' }
+				})
+			)
+		);
+
+		const client = new SonarrClient(validConfig);
+		const result = await client.getWantedMissing();
+
+		// Should skip the malformed record
+		expect(result).toHaveLength(2);
+		expect(result[0]?.id).toBe(1);
+		expect(result[1]?.id).toBe(3);
+	});
+
+	it('should include X-Api-Key header', async () => {
+		let capturedHeaders: Headers | undefined;
+
+		const mockResponse = {
+			page: 1,
+			pageSize: 1000,
+			sortKey: 'airDateUtc',
+			sortDirection: 'descending',
+			totalRecords: 0,
+			records: []
+		};
+
+		globalThis.fetch = createMockFetch(
+			vi.fn().mockImplementation(async (_url: string, init?: RequestInit) => {
+				capturedHeaders = new Headers(init?.headers);
+				return new Response(JSON.stringify(mockResponse), {
+					status: 200,
+					headers: { 'Content-Type': 'application/json' }
+				});
+			})
+		);
+
+		const client = new SonarrClient(validConfig);
+		await client.getWantedMissing();
+
+		expect(capturedHeaders?.get('X-Api-Key')).toBe('test-api-key-12345');
+	});
+});
+
+describe('SonarrClient.getWantedCutoff()', () => {
+	const validConfig = {
+		baseUrl: 'http://localhost:8989',
+		apiKey: 'test-api-key-12345'
+	};
+
+	let originalFetch: typeof fetch;
+
+	beforeEach(() => {
+		originalFetch = globalThis.fetch;
+	});
+
+	afterEach(() => {
+		globalThis.fetch = originalFetch;
+		vi.restoreAllMocks();
+	});
+
+	it('should return array of upgrade candidate episodes from Sonarr', async () => {
+		const mockResponse = {
+			page: 1,
+			pageSize: 1000,
+			sortKey: 'airDateUtc',
+			sortDirection: 'descending',
+			totalRecords: 2,
+			records: [
+				{
+					id: 201,
+					seriesId: 2,
+					seasonNumber: 1,
+					episodeNumber: 1,
+					title: 'Episode One',
+					airDateUtc: '2020-01-01T00:00:00Z',
+					hasFile: true,
+					monitored: true,
+					qualityCutoffNotMet: true
+				},
+				{
+					id: 202,
+					seriesId: 2,
+					seasonNumber: 1,
+					episodeNumber: 2,
+					title: 'Episode Two',
+					airDateUtc: '2020-01-08T00:00:00Z',
+					hasFile: true,
+					monitored: true,
+					qualityCutoffNotMet: true
+				}
+			]
+		};
+
+		globalThis.fetch = createMockFetch(
+			vi.fn().mockResolvedValue(
+				new Response(JSON.stringify(mockResponse), {
+					status: 200,
+					headers: { 'Content-Type': 'application/json' }
+				})
+			)
+		);
+
+		const client = new SonarrClient(validConfig);
+		const result = await client.getWantedCutoff();
+
+		expect(result).toHaveLength(2);
+		expect(result[0]?.title).toBe('Episode One');
+		expect(result[0]?.qualityCutoffNotMet).toBe(true);
+		expect(result[1]?.title).toBe('Episode Two');
+	});
+
+	it('should return empty array when no upgrade candidates exist', async () => {
+		const mockResponse = {
+			page: 1,
+			pageSize: 1000,
+			sortKey: 'airDateUtc',
+			sortDirection: 'descending',
+			totalRecords: 0,
+			records: []
+		};
+
+		globalThis.fetch = createMockFetch(
+			vi.fn().mockResolvedValue(
+				new Response(JSON.stringify(mockResponse), {
+					status: 200,
+					headers: { 'Content-Type': 'application/json' }
+				})
+			)
+		);
+
+		const client = new SonarrClient(validConfig);
+		const result = await client.getWantedCutoff();
+
+		expect(result).toEqual([]);
+	});
+
+	it('should call /api/v3/wanted/cutoff with correct query parameters', async () => {
+		let capturedUrl: string | undefined;
+
+		const mockResponse = {
+			page: 1,
+			pageSize: 1000,
+			sortKey: 'airDateUtc',
+			sortDirection: 'descending',
+			totalRecords: 0,
+			records: []
+		};
+
+		globalThis.fetch = createMockFetch(
+			vi.fn().mockImplementation(async (url: string) => {
+				capturedUrl = url;
+				return new Response(JSON.stringify(mockResponse), {
+					status: 200,
+					headers: { 'Content-Type': 'application/json' }
+				});
+			})
+		);
+
+		const client = new SonarrClient(validConfig);
+		await client.getWantedCutoff();
+
+		expect(capturedUrl).toContain('/api/v3/wanted/cutoff');
+		expect(capturedUrl).toContain('page=1');
+		expect(capturedUrl).toContain('pageSize=1000');
+		expect(capturedUrl).toContain('monitored=true');
+	});
+
+	it('should use custom options when provided', async () => {
+		let capturedUrl: string | undefined;
+
+		const mockResponse = {
+			page: 1,
+			pageSize: 25,
+			sortKey: 'seriesTitle',
+			sortDirection: 'ascending',
+			totalRecords: 10,
+			records: []
+		};
+
+		globalThis.fetch = createMockFetch(
+			vi.fn().mockImplementation(async (url: string) => {
+				capturedUrl = url;
+				return new Response(JSON.stringify(mockResponse), {
+					status: 200,
+					headers: { 'Content-Type': 'application/json' }
+				});
+			})
+		);
+
+		const client = new SonarrClient(validConfig);
+		await client.getWantedCutoff({
+			pageSize: 25,
+			sortKey: 'seriesTitle',
+			sortDirection: 'ascending'
+		});
+
+		expect(capturedUrl).toContain('pageSize=25');
+		expect(capturedUrl).toContain('sortKey=seriesTitle');
+		expect(capturedUrl).toContain('sortDirection=ascending');
+	});
+
+	it('should handle pagination across multiple pages', async () => {
+		let callCount = 0;
+
+		const page1Response = {
+			page: 1,
+			pageSize: 2,
+			sortKey: 'airDateUtc',
+			sortDirection: 'descending',
+			totalRecords: 3,
+			records: [
+				{ id: 1, seriesId: 1, seasonNumber: 1, episodeNumber: 1, hasFile: true, monitored: true, qualityCutoffNotMet: true },
+				{ id: 2, seriesId: 1, seasonNumber: 1, episodeNumber: 2, hasFile: true, monitored: true, qualityCutoffNotMet: true }
+			]
+		};
+
+		const page2Response = {
+			page: 2,
+			pageSize: 2,
+			sortKey: 'airDateUtc',
+			sortDirection: 'descending',
+			totalRecords: 3,
+			records: [
+				{ id: 3, seriesId: 1, seasonNumber: 1, episodeNumber: 3, hasFile: true, monitored: true, qualityCutoffNotMet: true }
+			]
+		};
+
+		globalThis.fetch = createMockFetch(
+			vi.fn().mockImplementation(async () => {
+				callCount++;
+				const response = callCount === 1 ? page1Response : page2Response;
+
+				return new Response(JSON.stringify(response), {
+					status: 200,
+					headers: { 'Content-Type': 'application/json' }
+				});
+			})
+		);
+
+		const client = new SonarrClient(validConfig);
+		const result = await client.getWantedCutoff({ pageSize: 2 });
+
+		expect(callCount).toBe(2); // Should make 2 requests to get all 3 items
+		expect(result).toHaveLength(3);
+		expect(result[0]?.id).toBe(1);
+		expect(result[2]?.id).toBe(3);
+	});
+
+	it('should skip malformed episode records', async () => {
+		const mockResponse = {
+			page: 1,
+			pageSize: 1000,
+			sortKey: 'airDateUtc',
+			sortDirection: 'descending',
+			totalRecords: 3,
+			records: [
+				{ id: 1, seriesId: 1, seasonNumber: 1, episodeNumber: 1, hasFile: true, monitored: true, qualityCutoffNotMet: true },
+				{ id: 2, badRecord: true }, // Invalid: missing required fields
+				{ id: 3, seriesId: 1, seasonNumber: 1, episodeNumber: 3, hasFile: true, monitored: true, qualityCutoffNotMet: true }
+			]
+		};
+
+		globalThis.fetch = createMockFetch(
+			vi.fn().mockResolvedValue(
+				new Response(JSON.stringify(mockResponse), {
+					status: 200,
+					headers: { 'Content-Type': 'application/json' }
+				})
+			)
+		);
+
+		const client = new SonarrClient(validConfig);
+		const result = await client.getWantedCutoff();
+
+		// Should skip the malformed record
+		expect(result).toHaveLength(2);
+		expect(result[0]?.id).toBe(1);
+		expect(result[1]?.id).toBe(3);
+	});
+
+	it('should include X-Api-Key header', async () => {
+		let capturedHeaders: Headers | undefined;
+
+		const mockResponse = {
+			page: 1,
+			pageSize: 1000,
+			sortKey: 'airDateUtc',
+			sortDirection: 'descending',
+			totalRecords: 0,
+			records: []
+		};
+
+		globalThis.fetch = createMockFetch(
+			vi.fn().mockImplementation(async (_url: string, init?: RequestInit) => {
+				capturedHeaders = new Headers(init?.headers);
+				return new Response(JSON.stringify(mockResponse), {
+					status: 200,
+					headers: { 'Content-Type': 'application/json' }
+				});
+			})
+		);
+
+		const client = new SonarrClient(validConfig);
+		await client.getWantedCutoff();
+
+		expect(capturedHeaders?.get('X-Api-Key')).toBe('test-api-key-12345');
+	});
+});

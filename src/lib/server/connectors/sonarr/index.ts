@@ -9,6 +9,7 @@
 
 // Client
 export { SonarrClient } from './client.js';
+export type { WantedOptions } from './client.js';
 
 // Types
 export type {

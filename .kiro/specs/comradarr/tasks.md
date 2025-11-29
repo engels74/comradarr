@@ -154,7 +154,7 @@
     - Implement getEpisodes for a series
     - _Requirements: 24.1, 24.2_
 
-  - [ ] 8.3 Implement wanted endpoints
+  - [x] 8.3 Implement wanted endpoints
     - Implement getWantedMissing with pagination
     - Implement getWantedCutoff with pagination
     - _Requirements: 24.3, 24.4_
