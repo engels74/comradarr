@@ -63,7 +63,7 @@
     - Implement logout action
     - _Requirements: 10.1, 10.2_
 
-  - [ ] 3.4 Implement route protection
+  - [x] 3.4 Implement route protection
     - Create (app) route group layout with auth guard
     - Redirect unauthenticated users to login
     - _Requirements: 10.4_
