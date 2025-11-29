@@ -1259,3 +1259,549 @@ describe('SonarrClient.getWantedCutoff()', () => {
 		expect(capturedHeaders?.get('X-Api-Key')).toBe('test-api-key-12345');
 	});
 });
+
+describe('SonarrClient.sendEpisodeSearch()', () => {
+	const validConfig = {
+		baseUrl: 'http://localhost:8989',
+		apiKey: 'test-api-key-12345'
+	};
+
+	let originalFetch: typeof fetch;
+
+	beforeEach(() => {
+		originalFetch = globalThis.fetch;
+	});
+
+	afterEach(() => {
+		globalThis.fetch = originalFetch;
+		vi.restoreAllMocks();
+	});
+
+	it('should POST to /api/v3/command with EpisodeSearch name and episodeIds', async () => {
+		let capturedUrl: string | undefined;
+		let capturedBody: unknown;
+
+		const mockResponse = {
+			id: 12345,
+			name: 'EpisodeSearch',
+			status: 'queued',
+			queued: '2024-01-15T12:00:00Z'
+		};
+
+		globalThis.fetch = createMockFetch(
+			vi.fn().mockImplementation(async (url: string, init?: RequestInit) => {
+				capturedUrl = url;
+				capturedBody = init?.body ? JSON.parse(init.body as string) : undefined;
+				return new Response(JSON.stringify(mockResponse), {
+					status: 200,
+					headers: { 'Content-Type': 'application/json' }
+				});
+			})
+		);
+
+		const client = new SonarrClient(validConfig);
+		await client.sendEpisodeSearch([101, 102, 103]);
+
+		expect(capturedUrl).toBe('http://localhost:8989/api/v3/command');
+		expect(capturedBody).toEqual({
+			name: 'EpisodeSearch',
+			episodeIds: [101, 102, 103]
+		});
+	});
+
+	it('should return parsed CommandResponse with queued status', async () => {
+		const mockResponse = {
+			id: 12345,
+			name: 'EpisodeSearch',
+			status: 'queued',
+			queued: '2024-01-15T12:00:00Z',
+			trigger: 'manual'
+		};
+
+		globalThis.fetch = createMockFetch(
+			vi.fn().mockResolvedValue(
+				new Response(JSON.stringify(mockResponse), {
+					status: 200,
+					headers: { 'Content-Type': 'application/json' }
+				})
+			)
+		);
+
+		const client = new SonarrClient(validConfig);
+		const result = await client.sendEpisodeSearch([101]);
+
+		expect(result.id).toBe(12345);
+		expect(result.name).toBe('EpisodeSearch');
+		expect(result.status).toBe('queued');
+	});
+
+	it('should use POST method', async () => {
+		let capturedMethod: string | undefined;
+
+		const mockResponse = {
+			id: 12345,
+			name: 'EpisodeSearch',
+			status: 'queued',
+			queued: '2024-01-15T12:00:00Z'
+		};
+
+		globalThis.fetch = createMockFetch(
+			vi.fn().mockImplementation(async (_url: string, init?: RequestInit) => {
+				capturedMethod = init?.method;
+				return new Response(JSON.stringify(mockResponse), {
+					status: 200,
+					headers: { 'Content-Type': 'application/json' }
+				});
+			})
+		);
+
+		const client = new SonarrClient(validConfig);
+		await client.sendEpisodeSearch([101]);
+
+		expect(capturedMethod).toBe('POST');
+	});
+
+	it('should include X-Api-Key header', async () => {
+		let capturedHeaders: Headers | undefined;
+
+		const mockResponse = {
+			id: 12345,
+			name: 'EpisodeSearch',
+			status: 'queued',
+			queued: '2024-01-15T12:00:00Z'
+		};
+
+		globalThis.fetch = createMockFetch(
+			vi.fn().mockImplementation(async (_url: string, init?: RequestInit) => {
+				capturedHeaders = new Headers(init?.headers);
+				return new Response(JSON.stringify(mockResponse), {
+					status: 200,
+					headers: { 'Content-Type': 'application/json' }
+				});
+			})
+		);
+
+		const client = new SonarrClient(validConfig);
+		await client.sendEpisodeSearch([101]);
+
+		expect(capturedHeaders?.get('X-Api-Key')).toBe('test-api-key-12345');
+	});
+
+	it('should handle single episode ID', async () => {
+		let capturedBody: unknown;
+
+		const mockResponse = {
+			id: 12345,
+			name: 'EpisodeSearch',
+			status: 'queued',
+			queued: '2024-01-15T12:00:00Z'
+		};
+
+		globalThis.fetch = createMockFetch(
+			vi.fn().mockImplementation(async (_url: string, init?: RequestInit) => {
+				capturedBody = init?.body ? JSON.parse(init.body as string) : undefined;
+				return new Response(JSON.stringify(mockResponse), {
+					status: 200,
+					headers: { 'Content-Type': 'application/json' }
+				});
+			})
+		);
+
+		const client = new SonarrClient(validConfig);
+		await client.sendEpisodeSearch([999]);
+
+		expect(capturedBody).toEqual({
+			name: 'EpisodeSearch',
+			episodeIds: [999]
+		});
+	});
+
+	it('should handle empty episode IDs array', async () => {
+		let capturedBody: unknown;
+
+		const mockResponse = {
+			id: 12345,
+			name: 'EpisodeSearch',
+			status: 'queued',
+			queued: '2024-01-15T12:00:00Z'
+		};
+
+		globalThis.fetch = createMockFetch(
+			vi.fn().mockImplementation(async (_url: string, init?: RequestInit) => {
+				capturedBody = init?.body ? JSON.parse(init.body as string) : undefined;
+				return new Response(JSON.stringify(mockResponse), {
+					status: 200,
+					headers: { 'Content-Type': 'application/json' }
+				});
+			})
+		);
+
+		const client = new SonarrClient(validConfig);
+		await client.sendEpisodeSearch([]);
+
+		expect(capturedBody).toEqual({
+			name: 'EpisodeSearch',
+			episodeIds: []
+		});
+	});
+});
+
+describe('SonarrClient.sendSeasonSearch()', () => {
+	const validConfig = {
+		baseUrl: 'http://localhost:8989',
+		apiKey: 'test-api-key-12345'
+	};
+
+	let originalFetch: typeof fetch;
+
+	beforeEach(() => {
+		originalFetch = globalThis.fetch;
+	});
+
+	afterEach(() => {
+		globalThis.fetch = originalFetch;
+		vi.restoreAllMocks();
+	});
+
+	it('should POST to /api/v3/command with SeasonSearch name, seriesId, and seasonNumber', async () => {
+		let capturedUrl: string | undefined;
+		let capturedBody: unknown;
+
+		const mockResponse = {
+			id: 12346,
+			name: 'SeasonSearch',
+			status: 'queued',
+			queued: '2024-01-15T12:00:00Z'
+		};
+
+		globalThis.fetch = createMockFetch(
+			vi.fn().mockImplementation(async (url: string, init?: RequestInit) => {
+				capturedUrl = url;
+				capturedBody = init?.body ? JSON.parse(init.body as string) : undefined;
+				return new Response(JSON.stringify(mockResponse), {
+					status: 200,
+					headers: { 'Content-Type': 'application/json' }
+				});
+			})
+		);
+
+		const client = new SonarrClient(validConfig);
+		await client.sendSeasonSearch(123, 2);
+
+		expect(capturedUrl).toBe('http://localhost:8989/api/v3/command');
+		expect(capturedBody).toEqual({
+			name: 'SeasonSearch',
+			seriesId: 123,
+			seasonNumber: 2
+		});
+	});
+
+	it('should return parsed CommandResponse with queued status', async () => {
+		const mockResponse = {
+			id: 12346,
+			name: 'SeasonSearch',
+			status: 'queued',
+			queued: '2024-01-15T12:00:00Z',
+			trigger: 'manual'
+		};
+
+		globalThis.fetch = createMockFetch(
+			vi.fn().mockResolvedValue(
+				new Response(JSON.stringify(mockResponse), {
+					status: 200,
+					headers: { 'Content-Type': 'application/json' }
+				})
+			)
+		);
+
+		const client = new SonarrClient(validConfig);
+		const result = await client.sendSeasonSearch(123, 1);
+
+		expect(result.id).toBe(12346);
+		expect(result.name).toBe('SeasonSearch');
+		expect(result.status).toBe('queued');
+	});
+
+	it('should use POST method', async () => {
+		let capturedMethod: string | undefined;
+
+		const mockResponse = {
+			id: 12346,
+			name: 'SeasonSearch',
+			status: 'queued',
+			queued: '2024-01-15T12:00:00Z'
+		};
+
+		globalThis.fetch = createMockFetch(
+			vi.fn().mockImplementation(async (_url: string, init?: RequestInit) => {
+				capturedMethod = init?.method;
+				return new Response(JSON.stringify(mockResponse), {
+					status: 200,
+					headers: { 'Content-Type': 'application/json' }
+				});
+			})
+		);
+
+		const client = new SonarrClient(validConfig);
+		await client.sendSeasonSearch(123, 1);
+
+		expect(capturedMethod).toBe('POST');
+	});
+
+	it('should include X-Api-Key header', async () => {
+		let capturedHeaders: Headers | undefined;
+
+		const mockResponse = {
+			id: 12346,
+			name: 'SeasonSearch',
+			status: 'queued',
+			queued: '2024-01-15T12:00:00Z'
+		};
+
+		globalThis.fetch = createMockFetch(
+			vi.fn().mockImplementation(async (_url: string, init?: RequestInit) => {
+				capturedHeaders = new Headers(init?.headers);
+				return new Response(JSON.stringify(mockResponse), {
+					status: 200,
+					headers: { 'Content-Type': 'application/json' }
+				});
+			})
+		);
+
+		const client = new SonarrClient(validConfig);
+		await client.sendSeasonSearch(123, 1);
+
+		expect(capturedHeaders?.get('X-Api-Key')).toBe('test-api-key-12345');
+	});
+
+	it('should handle season 0 (specials)', async () => {
+		let capturedBody: unknown;
+
+		const mockResponse = {
+			id: 12346,
+			name: 'SeasonSearch',
+			status: 'queued',
+			queued: '2024-01-15T12:00:00Z'
+		};
+
+		globalThis.fetch = createMockFetch(
+			vi.fn().mockImplementation(async (_url: string, init?: RequestInit) => {
+				capturedBody = init?.body ? JSON.parse(init.body as string) : undefined;
+				return new Response(JSON.stringify(mockResponse), {
+					status: 200,
+					headers: { 'Content-Type': 'application/json' }
+				});
+			})
+		);
+
+		const client = new SonarrClient(validConfig);
+		await client.sendSeasonSearch(123, 0);
+
+		expect(capturedBody).toEqual({
+			name: 'SeasonSearch',
+			seriesId: 123,
+			seasonNumber: 0
+		});
+	});
+});
+
+describe('SonarrClient.getCommandStatus()', () => {
+	const validConfig = {
+		baseUrl: 'http://localhost:8989',
+		apiKey: 'test-api-key-12345'
+	};
+
+	let originalFetch: typeof fetch;
+
+	beforeEach(() => {
+		originalFetch = globalThis.fetch;
+	});
+
+	afterEach(() => {
+		globalThis.fetch = originalFetch;
+		vi.restoreAllMocks();
+	});
+
+	it('should GET from /api/v3/command/{id}', async () => {
+		let capturedUrl: string | undefined;
+
+		const mockResponse = {
+			id: 12345,
+			name: 'EpisodeSearch',
+			status: 'completed',
+			queued: '2024-01-15T12:00:00Z',
+			started: '2024-01-15T12:00:01Z',
+			ended: '2024-01-15T12:00:10Z'
+		};
+
+		globalThis.fetch = createMockFetch(
+			vi.fn().mockImplementation(async (url: string) => {
+				capturedUrl = url;
+				return new Response(JSON.stringify(mockResponse), {
+					status: 200,
+					headers: { 'Content-Type': 'application/json' }
+				});
+			})
+		);
+
+		const client = new SonarrClient(validConfig);
+		await client.getCommandStatus(12345);
+
+		expect(capturedUrl).toBe('http://localhost:8989/api/v3/command/12345');
+	});
+
+	it('should return parsed CommandResponse with queued status', async () => {
+		const mockResponse = {
+			id: 12345,
+			name: 'EpisodeSearch',
+			status: 'queued',
+			queued: '2024-01-15T12:00:00Z'
+		};
+
+		globalThis.fetch = createMockFetch(
+			vi.fn().mockResolvedValue(
+				new Response(JSON.stringify(mockResponse), {
+					status: 200,
+					headers: { 'Content-Type': 'application/json' }
+				})
+			)
+		);
+
+		const client = new SonarrClient(validConfig);
+		const result = await client.getCommandStatus(12345);
+
+		expect(result.id).toBe(12345);
+		expect(result.status).toBe('queued');
+	});
+
+	it('should return parsed CommandResponse with started status', async () => {
+		const mockResponse = {
+			id: 12345,
+			name: 'EpisodeSearch',
+			status: 'started',
+			queued: '2024-01-15T12:00:00Z',
+			started: '2024-01-15T12:00:01Z'
+		};
+
+		globalThis.fetch = createMockFetch(
+			vi.fn().mockResolvedValue(
+				new Response(JSON.stringify(mockResponse), {
+					status: 200,
+					headers: { 'Content-Type': 'application/json' }
+				})
+			)
+		);
+
+		const client = new SonarrClient(validConfig);
+		const result = await client.getCommandStatus(12345);
+
+		expect(result.status).toBe('started');
+		expect(result.started).toBe('2024-01-15T12:00:01Z');
+	});
+
+	it('should return parsed CommandResponse with completed status', async () => {
+		const mockResponse = {
+			id: 12345,
+			name: 'EpisodeSearch',
+			status: 'completed',
+			queued: '2024-01-15T12:00:00Z',
+			started: '2024-01-15T12:00:01Z',
+			ended: '2024-01-15T12:00:10Z',
+			duration: '00:00:09.0000000'
+		};
+
+		globalThis.fetch = createMockFetch(
+			vi.fn().mockResolvedValue(
+				new Response(JSON.stringify(mockResponse), {
+					status: 200,
+					headers: { 'Content-Type': 'application/json' }
+				})
+			)
+		);
+
+		const client = new SonarrClient(validConfig);
+		const result = await client.getCommandStatus(12345);
+
+		expect(result.status).toBe('completed');
+		expect(result.ended).toBe('2024-01-15T12:00:10Z');
+	});
+
+	it('should return parsed CommandResponse with failed status', async () => {
+		const mockResponse = {
+			id: 12345,
+			name: 'EpisodeSearch',
+			status: 'failed',
+			queued: '2024-01-15T12:00:00Z',
+			started: '2024-01-15T12:00:01Z',
+			ended: '2024-01-15T12:00:05Z',
+			message: 'No indexers available'
+		};
+
+		globalThis.fetch = createMockFetch(
+			vi.fn().mockResolvedValue(
+				new Response(JSON.stringify(mockResponse), {
+					status: 200,
+					headers: { 'Content-Type': 'application/json' }
+				})
+			)
+		);
+
+		const client = new SonarrClient(validConfig);
+		const result = await client.getCommandStatus(12345);
+
+		expect(result.status).toBe('failed');
+		expect(result.message).toBe('No indexers available');
+	});
+
+	it('should include X-Api-Key header', async () => {
+		let capturedHeaders: Headers | undefined;
+
+		const mockResponse = {
+			id: 12345,
+			name: 'EpisodeSearch',
+			status: 'completed',
+			queued: '2024-01-15T12:00:00Z'
+		};
+
+		globalThis.fetch = createMockFetch(
+			vi.fn().mockImplementation(async (_url: string, init?: RequestInit) => {
+				capturedHeaders = new Headers(init?.headers);
+				return new Response(JSON.stringify(mockResponse), {
+					status: 200,
+					headers: { 'Content-Type': 'application/json' }
+				});
+			})
+		);
+
+		const client = new SonarrClient(validConfig);
+		await client.getCommandStatus(12345);
+
+		expect(capturedHeaders?.get('X-Api-Key')).toBe('test-api-key-12345');
+	});
+
+	it('should use GET method (default)', async () => {
+		let capturedMethod: string | undefined;
+
+		const mockResponse = {
+			id: 12345,
+			name: 'EpisodeSearch',
+			status: 'completed',
+			queued: '2024-01-15T12:00:00Z'
+		};
+
+		globalThis.fetch = createMockFetch(
+			vi.fn().mockImplementation(async (_url: string, init?: RequestInit) => {
+				capturedMethod = init?.method;
+				return new Response(JSON.stringify(mockResponse), {
+					status: 200,
+					headers: { 'Content-Type': 'application/json' }
+				});
+			})
+		);
+
+		const client = new SonarrClient(validConfig);
+		await client.getCommandStatus(12345);
+
+		expect(capturedMethod).toBe('GET');
+	});
+});

@@ -5,12 +5,13 @@
  * Inherits ping(), getSystemStatus(), and getHealth() from base class.
  *
  * @module connectors/sonarr/client
- * @requirements 1.2, 1.3, 1.4, 24.1, 24.2, 24.3, 24.4
+ * @requirements 1.2, 1.3, 1.4, 24.1, 24.2, 24.3, 24.4, 24.5, 24.6, 24.7
  */
 
 import { BaseArrClient } from '../common/base-client.js';
-import type { BaseClientConfig, PaginationOptions } from '../common/types.js';
+import type { BaseClientConfig, PaginationOptions, CommandResponse } from '../common/types.js';
 import { parseSonarrSeries, parseSonarrEpisode, parsePaginatedEpisodesLenient } from './parsers.js';
+import { parseCommandResponse } from '../common/parsers.js';
 import type { SonarrSeries, SonarrEpisode } from './types.js';
 
 /**
@@ -237,8 +238,132 @@ export class SonarrClient extends BaseArrClient {
 		return this.fetchAllWantedEpisodes('wanted/cutoff', options);
 	}
 
-	// Future Sonarr-specific methods (task 8.4):
-	// - sendEpisodeSearch()
-	// - sendSeasonSearch()
-	// - getCommandStatus()
+	/**
+	 * Trigger a search for specific episodes
+	 *
+	 * Sends an EpisodeSearch command to Sonarr to search for the specified episodes.
+	 * The command is executed asynchronously - use getCommandStatus() to poll for completion.
+	 *
+	 * @param episodeIds - Array of episode IDs to search for (max 10 per batch per Requirement 29.4)
+	 * @returns Command response with initial execution status
+	 * @throws {ArrClientError} On API error (network, auth, rate limit, etc.)
+	 * @throws {Error} If response parsing fails
+	 * @requirements 24.5
+	 *
+	 * @example
+	 * ```typescript
+	 * const client = new SonarrClient({ baseUrl, apiKey });
+	 * const command = await client.sendEpisodeSearch([101, 102, 103]);
+	 * console.log(`Command ${command.id} status: ${command.status}`);
+	 *
+	 * // Poll for completion
+	 * const result = await client.getCommandStatus(command.id);
+	 * if (result.status === 'completed') {
+	 *   console.log('Search completed');
+	 * }
+	 * ```
+	 */
+	async sendEpisodeSearch(episodeIds: number[]): Promise<CommandResponse> {
+		const response = await this.requestWithRetry<unknown>('command', {
+			method: 'POST',
+			body: {
+				name: 'EpisodeSearch',
+				episodeIds
+			}
+		});
+
+		const result = parseCommandResponse(response);
+		if (!result.success) {
+			throw new Error(result.error);
+		}
+		return result.data;
+	}
+
+	/**
+	 * Trigger a search for an entire season
+	 *
+	 * Sends a SeasonSearch command to Sonarr to search for all episodes in a season.
+	 * Use this for season pack searches when multiple episodes are missing.
+	 * The command is executed asynchronously - use getCommandStatus() to poll for completion.
+	 *
+	 * @param seriesId - The Sonarr internal series ID
+	 * @param seasonNumber - The season number to search (0 for specials)
+	 * @returns Command response with initial execution status
+	 * @throws {ArrClientError} On API error (network, auth, rate limit, etc.)
+	 * @throws {Error} If response parsing fails
+	 * @requirements 24.6
+	 *
+	 * @example
+	 * ```typescript
+	 * const client = new SonarrClient({ baseUrl, apiKey });
+	 * const command = await client.sendSeasonSearch(123, 1);
+	 * console.log(`Command ${command.id} status: ${command.status}`);
+	 *
+	 * // Poll for completion
+	 * const result = await client.getCommandStatus(command.id);
+	 * if (result.status === 'completed') {
+	 *   console.log('Season search completed');
+	 * }
+	 * ```
+	 */
+	async sendSeasonSearch(seriesId: number, seasonNumber: number): Promise<CommandResponse> {
+		const response = await this.requestWithRetry<unknown>('command', {
+			method: 'POST',
+			body: {
+				name: 'SeasonSearch',
+				seriesId,
+				seasonNumber
+			}
+		});
+
+		const result = parseCommandResponse(response);
+		if (!result.success) {
+			throw new Error(result.error);
+		}
+		return result.data;
+	}
+
+	/**
+	 * Get the current status of a command
+	 *
+	 * Polls Sonarr for the current execution status of a previously submitted command.
+	 * Use this to track command progress and determine when a search completes.
+	 *
+	 * @param commandId - The command ID returned from sendEpisodeSearch or sendSeasonSearch
+	 * @returns Command response with current status (queued, started, completed, failed)
+	 * @throws {ArrClientError} On API error (network, auth, rate limit, etc.)
+	 * @throws {NotFoundError} If command ID does not exist
+	 * @throws {Error} If response parsing fails
+	 * @requirements 24.7
+	 *
+	 * @example
+	 * ```typescript
+	 * const client = new SonarrClient({ baseUrl, apiKey });
+	 *
+	 * // Start a search
+	 * const command = await client.sendEpisodeSearch([101]);
+	 *
+	 * // Poll until complete
+	 * let status = await client.getCommandStatus(command.id);
+	 * while (status.status === 'queued' || status.status === 'started') {
+	 *   await new Promise(resolve => setTimeout(resolve, 1000));
+	 *   status = await client.getCommandStatus(command.id);
+	 * }
+	 *
+	 * if (status.status === 'completed') {
+	 *   console.log('Search completed successfully');
+	 * } else {
+	 *   console.log('Search failed:', status.message);
+	 * }
+	 * ```
+	 */
+	async getCommandStatus(commandId: number): Promise<CommandResponse> {
+		const response = await this.requestWithRetry<unknown>(`command/${commandId}`);
+
+		const result = parseCommandResponse(response);
+		if (!result.success) {
+			throw new Error(result.error);
+		}
+		return result.data;
+	}
 }

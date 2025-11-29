@@ -143,7 +143,7 @@
 
 ## Phase 4: Connector Implementations
 
-- [ ] 8. Implement Sonarr connector
+- [x] 8. Implement Sonarr connector
   - [x] 8.1 Create Sonarr client extending base client
     - Implement ping and getSystemStatus methods
     - Implement getHealth method
@@ -159,7 +159,7 @@
     - Implement getWantedCutoff with pagination
     - _Requirements: 24.3, 24.4_
 
-  - [ ] 8.4 Implement search commands
+  - [x] 8.4 Implement search commands
     - Implement sendEpisodeSearch command
     - Implement sendSeasonSearch command
     - Implement getCommandStatus polling
