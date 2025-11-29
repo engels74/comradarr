@@ -15,7 +15,7 @@
     - Initialize shadcn-svelte components
     - _Requirements: 22.1, 22.4_
 
-  - [ ] 1.3 Set up Drizzle ORM and database schema
+  - [x] 1.3 Set up Drizzle ORM and database schema
     - Install drizzle-orm and drizzle-kit
     - Create drizzle.config.ts with timestamp prefix migrations
     - Create database client in $lib/server/db/index.ts with Bun native SQL driver
