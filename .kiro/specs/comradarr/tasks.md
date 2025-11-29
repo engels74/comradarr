@@ -21,7 +21,7 @@
     - Create database client in $lib/server/db/index.ts with Bun native SQL driver
     - _Requirements: 13.4, 14.1, 14.2, 14.3_
 
-  - [ ] 1.4 Create core database schema
+  - [x] 1.4 Create core database schema
     - Define connectors table with encrypted API key field
     - Define series, seasons, episodes tables for Sonarr/Whisparr
     - Define movies table for Radarr
