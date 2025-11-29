@@ -2,7 +2,7 @@
 
 ## Phase 1: Project Foundation
 
-- [ ] 1. Initialize SvelteKit project with Bun
+- [x] 1. Initialize SvelteKit project with Bun
   - [x] 1.1 Create SvelteKit project with TypeScript
     - Run `bun create svelte@latest comradarr` with TypeScript option
     - Configure svelte-adapter-bun in svelte.config.js
@@ -39,13 +39,13 @@
     - **Property 1: Quality Model Round Trip**
     - **Validates: Requirements 14.4, 14.5**
 
-- [ ] 2. Checkpoint - Ensure all tests pass
+- [x] 2. Checkpoint - Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
 ## Phase 2: Authentication and Security
 
 - [ ] 3. Implement authentication system
-  - [ ] 3.1 Create auth schema and session management
+  - [x] 3.1 Create auth schema and session management
     - Define users and sessions tables
     - Implement session creation and validation
     - Configure Argon2id password hashing

@@ -7,8 +7,9 @@
  * - movies: Radarr content mirror
  * - searchRegistry, requestQueue, searchHistory: Search state tracking
  * - syncState: Sync tracking per connector
+ * - users, sessions: Authentication (Requirements 10.1, 10.2)
  *
- * Requirements: 14.1, 14.2, 14.3
+ * Requirements: 10.1, 10.2, 14.1, 14.2, 14.3
  */
 
 import {
@@ -261,6 +262,51 @@ export const syncState = pgTable('sync_state', {
 });
 
 // =============================================================================
+// Users Table (Requirements 10.1, 10.2)
+// =============================================================================
+
+export const users = pgTable('users', {
+	id: integer('id').primaryKey().generatedAlwaysAsIdentity(),
+	username: varchar('username', { length: 100 }).notNull().unique(),
+	passwordHash: text('password_hash').notNull(), // Argon2id hash
+	displayName: varchar('display_name', { length: 100 }),
+	role: varchar('role', { length: 20 }).notNull().default('user'), // 'admin' | 'user'
+
+	// Account lockout fields (for Requirements 35.1-35.5, logic implemented later)
+	failedLoginAttempts: integer('failed_login_attempts').notNull().default(0),
+	lockedUntil: timestamp('locked_until', { withTimezone: true }),
+	lastFailedLogin: timestamp('last_failed_login', { withTimezone: true }),
+
+	// Audit timestamps
+	lastLogin: timestamp('last_login', { withTimezone: true }),
+	createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+	updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow()
+});
+
+// =============================================================================
+// Sessions Table (Requirements 10.1, 10.2)
+// =============================================================================
+
+export const sessions = pgTable(
+	'sessions',
+	{
+		id: varchar('id', { length: 64 }).primaryKey(), // Secure random hex token
+		userId: integer('user_id')
+			.notNull()
+			.references(() => users.id, { onDelete: 'cascade' }),
+		expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+		createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+		lastAccessedAt: timestamp('last_accessed_at', { withTimezone: true }).notNull().defaultNow(),
+		userAgent: varchar('user_agent', { length: 500 }),
+		ipAddress: varchar('ip_address', { length: 45 }) // IPv6 max length
+	},
+	(table) => [
+		index('sessions_user_idx').on(table.userId),
+		index('sessions_expires_idx').on(table.expiresAt)
+	]
+);
+
+// =============================================================================
 // Type Exports (Drizzle inference)
 // =============================================================================
 
@@ -290,3 +336,9 @@ export type NewSearchHistory = typeof searchHistory.$inferInsert;
 
 export type SyncState = typeof syncState.$inferSelect;
 export type NewSyncState = typeof syncState.$inferInsert;
+
+export type User = typeof users.$inferSelect;
+export type NewUser = typeof users.$inferInsert;
+
+export type Session = typeof sessions.$inferSelect;
+export type NewSession = typeof sessions.$inferInsert;

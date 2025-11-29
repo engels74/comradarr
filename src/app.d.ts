@@ -7,7 +7,12 @@ declare global {
 			code?: string;
 		}
 		interface Locals {
-			user: { id: string; name: string } | null;
+			user: {
+				id: number;
+				username: string;
+				displayName: string | null;
+				role: string;
+			} | null;
 			correlationId: string;
 		}
 		// interface PageData {}
