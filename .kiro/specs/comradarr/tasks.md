@@ -74,7 +74,7 @@
     - Reset counter on successful login
     - _Requirements: 35.1, 35.2, 35.3, 35.4, 35.5_
 
-  - [ ] 3.6 Implement API key encryption
+  - [x] 3.6 Implement API key encryption
     - Create encrypt/decrypt functions using AES-256-GCM
     - Integrate with connector storage
     - _Requirements: 1.1, 36.1_
