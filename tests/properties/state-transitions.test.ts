@@ -125,6 +125,38 @@ describe('State Transitions (Requirements 5.5, 5.6)', () => {
 				{ numRuns: 100 }
 			);
 		});
+
+		it('shouldMarkExhausted returns false for attempts below max', () => {
+			fc.assert(
+				fc.property(attemptCountBelowMaxArbitrary, (attemptCount) => {
+					// For any attempt count below MAX_ATTEMPTS, shouldMarkExhausted returns false
+					expect(shouldMarkExhausted(attemptCount)).toBe(false);
+				}),
+				{ numRuns: 100 }
+			);
+		});
+
+		it('shouldMarkExhausted returns true for attempts at or above max', () => {
+			fc.assert(
+				fc.property(attemptCountAtOrAboveMaxArbitrary, (attemptCount) => {
+					// For any attempt count at or above MAX_ATTEMPTS, shouldMarkExhausted returns true
+					expect(shouldMarkExhausted(attemptCount)).toBe(true);
+				}),
+				{ numRuns: 100 }
+			);
+		});
+
+		it('shouldMarkExhausted is deterministic', () => {
+			fc.assert(
+				fc.property(attemptCountArbitrary, (attemptCount) => {
+					// Same input always produces same output
+					const result1 = shouldMarkExhausted(attemptCount);
+					const result2 = shouldMarkExhausted(attemptCount);
+					expect(result1).toBe(result2);
+				}),
+				{ numRuns: 100 }
+			);
+		});
 	});
 
 	describe('Property: Next Eligible Time Calculation', () => {

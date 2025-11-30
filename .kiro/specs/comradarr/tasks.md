@@ -311,7 +311,7 @@
     - **Property 5: Priority Calculation Determinism**
     - **Validates: Requirements 5.1**
 
-- [ ] 20. Implement queue management
+- [x] 20. Implement queue management
   - [x] 20.1 Create queue service
     - Implement enqueue with priority calculation
     - Implement dequeue in priority order
@@ -324,12 +324,12 @@
     - Mark exhausted at max attempts
     - _Requirements: 5.5, 5.6_
 
-  - [ ] 20.3 Write property tests for queue
+  - [x] 20.3 Write property tests for queue
     - **Property 6: Queue Processing Order**
     - **Property 8: Exhaustion at Max Attempts**
     - **Validates: Requirements 5.2, 5.6**
 
-- [ ] 21. Checkpoint - Ensure all tests pass
+- [x] 21. Checkpoint - Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
 ## Phase 9: Episode Batching
