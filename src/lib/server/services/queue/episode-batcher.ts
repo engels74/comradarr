@@ -79,12 +79,14 @@ export interface BatchingConfig {
  * - `season_currently_airing`: Requirement 6.2 - EpisodeSearch
  * - `below_missing_threshold`: Requirement 6.3 - EpisodeSearch
  * - `no_missing_episodes`: Edge case - no search needed
+ * - `season_pack_fallback`: Requirement 6.5 - EpisodeSearch fallback after season pack failure
  */
 export type BatchingReason =
 	| 'season_fully_aired_high_missing'
 	| 'season_currently_airing'
 	| 'below_missing_threshold'
-	| 'no_missing_episodes';
+	| 'no_missing_episodes'
+	| 'season_pack_fallback';
 
 /**
  * Result of a batching decision.
@@ -323,6 +325,56 @@ export function determineBatchingDecision(
 		command: 'SeasonSearch',
 		reason: 'season_fully_aired_high_missing'
 	};
+}
+
+/**
+ * Extended batching decision that considers season pack failure history.
+ *
+ * If a previous SeasonSearch (season pack) failed for this season,
+ * this function will return EpisodeSearch to fall back to individual
+ * episode searches, regardless of the normal decision logic.
+ *
+ * This function is pure (no side effects) and deterministic (same inputs = same output).
+ *
+ * @param stats - Season statistics (totalEpisodes, downloadedEpisodes, nextAiring)
+ * @param seasonPackFailed - Whether a season pack search previously failed for this season
+ * @param config - Optional batching configuration (uses defaults if not provided)
+ * @returns Batching decision with command and reason
+ *
+ * @example
+ * ```typescript
+ * // Season pack previously failed → force EpisodeSearch fallback
+ * const result = determineBatchingDecisionWithFallback(
+ *   { totalEpisodes: 10, downloadedEpisodes: 4, nextAiring: null },
+ *   true  // season pack failed
+ * );
+ * // { command: 'EpisodeSearch', reason: 'season_pack_fallback' }
+ *
+ * // No previous failure → normal decision logic
+ * const result = determineBatchingDecisionWithFallback(
+ *   { totalEpisodes: 10, downloadedEpisodes: 4, nextAiring: null },
+ *   false
+ * );
+ * // { command: 'SeasonSearch', reason: 'season_fully_aired_high_missing' }
+ * ```
+ *
+ * @requirements 6.5
+ */
+export function determineBatchingDecisionWithFallback(
+	stats: SeasonStatistics,
+	seasonPackFailed: boolean,
+	config?: Partial<BatchingConfig>
+): BatchingDecision {
+	// Requirement 6.5: If season pack search previously failed, fall back to individual episodes
+	if (seasonPackFailed) {
+		return {
+			command: 'EpisodeSearch',
+			reason: 'season_pack_fallback'
+		};
+	}
+
+	// Otherwise, use normal decision logic
+	return determineBatchingDecision(stats, config);
 }
 
 // =============================================================================

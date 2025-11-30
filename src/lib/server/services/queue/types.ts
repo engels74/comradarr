@@ -345,7 +345,7 @@ export type FailureCategory =
 /**
  * Input for marking a search as failed.
  *
- * @requirements 5.5
+ * @requirements 5.5, 6.5
  */
 export interface MarkSearchFailedInput {
 	/** ID of the search registry entry */
@@ -353,6 +353,13 @@ export interface MarkSearchFailedInput {
 
 	/** Category of the failure */
 	failureCategory: FailureCategory;
+
+	/**
+	 * Whether this failure was from a SeasonSearch (season pack) command.
+	 * If true and failureCategory is 'no_results', will mark all episodes
+	 * in the season for EpisodeSearch fallback (Requirement 6.5).
+	 */
+	wasSeasonPackSearch?: boolean;
 }
 
 /**

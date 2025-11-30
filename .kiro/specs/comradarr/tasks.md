@@ -345,7 +345,7 @@
     - Limit batch size to 10 episodes per command
     - _Requirements: 6.4, 29.4, 29.5_
 
-  - [ ] 22.3 Implement season pack fallback
+  - [x] 22.3 Implement season pack fallback
     - Track season pack search failures
     - Fall back to individual episodes after cooldown
     - _Requirements: 6.5_

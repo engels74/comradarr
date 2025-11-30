@@ -17,8 +17,8 @@
  */
 
 import { db } from '$lib/server/db';
-import { searchRegistry } from '$lib/server/db/schema';
-import { and, eq, lte, sql } from 'drizzle-orm';
+import { episodes, searchRegistry } from '$lib/server/db/schema';
+import { and, eq, inArray, lte, sql } from 'drizzle-orm';
 import type {
 	MarkSearchFailedInput,
 	ReenqueueCooldownResult,
@@ -39,15 +39,18 @@ export { calculateNextEligibleTime, shouldMarkExhausted } from './backoff';
  * 2. Increments the attempt count
  * 3. If max attempts reached: transitions to 'exhausted'
  * 4. Otherwise: calculates next eligible time and transitions to 'cooldown'
+ * 5. If wasSeasonPackSearch is true and failureCategory is 'no_results',
+ *    marks all episodes in the same season for EpisodeSearch fallback (Requirement 6.5)
  *
- * @param input - The search registry ID and failure category
+ * @param input - The search registry ID, failure category, and optional season pack flag
  * @returns State transition result with new state and timing info
  *
  * @example
  * ```typescript
  * const result = await markSearchFailed({
  *   searchRegistryId: 123,
- *   failureCategory: 'no_results'
+ *   failureCategory: 'no_results',
+ *   wasSeasonPackSearch: true  // Triggers fallback for all season episodes
  * });
  *
  * if (result.success) {
@@ -59,20 +62,23 @@ export { calculateNextEligibleTime, shouldMarkExhausted } from './backoff';
  * }
  * ```
  *
- * @requirements 5.5, 5.6
+ * @requirements 5.5, 5.6, 6.5
  */
 export async function markSearchFailed(
 	input: MarkSearchFailedInput
 ): Promise<StateTransitionResult> {
-	const { searchRegistryId, failureCategory } = input;
+	const { searchRegistryId, failureCategory, wasSeasonPackSearch } = input;
 
 	try {
-		// Fetch current registry entry
+		// Fetch current registry entry with content info for season pack fallback
 		const current = await db
 			.select({
 				id: searchRegistry.id,
 				state: searchRegistry.state,
-				attemptCount: searchRegistry.attemptCount
+				attemptCount: searchRegistry.attemptCount,
+				contentType: searchRegistry.contentType,
+				contentId: searchRegistry.contentId,
+				connectorId: searchRegistry.connectorId
 			})
 			.from(searchRegistry)
 			.where(eq(searchRegistry.id, searchRegistryId))
@@ -105,6 +111,16 @@ export async function markSearchFailed(
 		// Increment attempt count
 		const newAttemptCount = entry.attemptCount + 1;
 		const now = new Date();
+
+		// Requirement 6.5: If season pack search failed with no_results,
+		// mark all episodes in the season for EpisodeSearch fallback
+		if (
+			wasSeasonPackSearch === true &&
+			failureCategory === 'no_results' &&
+			entry.contentType === 'episode'
+		) {
+			await markSeasonPackFailedForSeason(entry.contentId, entry.connectorId, now);
+		}
 
 		// Check if max attempts reached
 		if (shouldMarkExhausted(newAttemptCount)) {
@@ -160,6 +176,67 @@ export async function markSearchFailed(
 			error: error instanceof Error ? error.message : String(error)
 		};
 	}
+}
+
+/**
+ * Mark all episodes in a season as having failed season pack search.
+ *
+ * When a SeasonSearch fails with 'no_results', this function sets
+ * seasonPackFailed=true for all search registry entries associated
+ * with episodes in the same season. This ensures future batching
+ * decisions will use EpisodeSearch instead of SeasonSearch.
+ *
+ * @param episodeContentId - The content ID of the episode whose season pack search failed
+ * @param connectorId - The connector ID for filtering search registry entries
+ * @param now - Current timestamp for updatedAt
+ *
+ * @requirements 6.5
+ */
+async function markSeasonPackFailedForSeason(
+	episodeContentId: number,
+	connectorId: number,
+	now: Date
+): Promise<void> {
+	// Look up the episode's seasonId
+	const episodeRecord = await db
+		.select({ seasonId: episodes.seasonId })
+		.from(episodes)
+		.where(eq(episodes.id, episodeContentId))
+		.limit(1);
+
+	if (episodeRecord.length === 0) {
+		// Episode not found, cannot determine season - skip fallback marking
+		return;
+	}
+
+	const seasonId = episodeRecord[0]!.seasonId;
+
+	// Find all episode IDs in the same season
+	const seasonEpisodes = await db
+		.select({ id: episodes.id })
+		.from(episodes)
+		.where(eq(episodes.seasonId, seasonId));
+
+	if (seasonEpisodes.length === 0) {
+		return;
+	}
+
+	const episodeIds = seasonEpisodes.map((e) => e.id);
+
+	// Update all search registry entries for these episodes to mark season pack failed
+	await db
+		.update(searchRegistry)
+		.set({
+			seasonPackFailed: true,
+			updatedAt: now
+		})
+		.where(
+			and(
+				eq(searchRegistry.connectorId, connectorId),
+				eq(searchRegistry.contentType, 'episode'),
+				inArray(searchRegistry.contentId, episodeIds)
+			)
+		);
 }
 
 /**

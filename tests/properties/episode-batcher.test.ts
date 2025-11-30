@@ -20,6 +20,7 @@ import { describe, it, expect } from 'vitest';
 import * as fc from 'fast-check';
 import {
 	determineBatchingDecision,
+	determineBatchingDecisionWithFallback,
 	calculateMissingPercent,
 	calculateMissingCount,
 	isSeasonFullyAired,
@@ -877,6 +878,172 @@ describe('Property 17: Search Command Batch Size Limits (Requirements 29.4, 29.5
 			expect(batches[0]!.arrMovieIds.length).toBe(3);
 			expect(batches[1]!.arrMovieIds.length).toBe(3);
 			expect(batches[2]!.arrMovieIds.length).toBe(2);
+		});
+	});
+});
+
+// =============================================================================
+// Requirement 6.5: Season Pack Fallback
+// =============================================================================
+
+describe('Requirement 6.5: Season Pack Fallback', () => {
+	/**
+	 * Arbitrary for stats that would normally trigger SeasonSearch.
+	 * These are fully aired seasons with high missing counts.
+	 */
+	const seasonSearchQualifyingStatsArbitrary: fc.Arbitrary<SeasonStatistics> = fc
+		.integer({ min: 10, max: 100 }) // Enough episodes to meet thresholds
+		.chain((totalEpisodes) => {
+			// Calculate minimum missing to meet both thresholds
+			const minMissingCount = DEFAULT_CONFIG.seasonSearchMinMissingCount;
+			const minMissingPercent = DEFAULT_CONFIG.seasonSearchMinMissingPercent;
+			const minMissingForPercent = Math.ceil((totalEpisodes * minMissingPercent) / 100);
+			const minMissing = Math.max(minMissingCount, minMissingForPercent);
+
+			// Ensure we have enough missing episodes
+			if (minMissing > totalEpisodes) {
+				// Not enough episodes, generate with 100% missing
+				return fc.record({
+					totalEpisodes: fc.constant(totalEpisodes),
+					downloadedEpisodes: fc.constant(0),
+					nextAiring: fc.constant(null) // Fully aired
+				});
+			}
+
+			return fc.record({
+				totalEpisodes: fc.constant(totalEpisodes),
+				// Downloaded should leave at least minMissing missing
+				downloadedEpisodes: fc.integer({ min: 0, max: totalEpisodes - minMissing }),
+				nextAiring: fc.constant(null) // Fully aired
+			});
+		});
+
+	describe('determineBatchingDecisionWithFallback()', () => {
+		it('returns EpisodeSearch with season_pack_fallback reason when seasonPackFailed is true', () => {
+			fc.assert(
+				fc.property(seasonStatsArbitrary, (stats) => {
+					const result = determineBatchingDecisionWithFallback(stats, true);
+					expect(result.command).toBe('EpisodeSearch');
+					expect(result.reason).toBe('season_pack_fallback');
+				}),
+				{ numRuns: 100 }
+			);
+		});
+
+		it('forces EpisodeSearch even when stats would qualify for SeasonSearch', () => {
+			fc.assert(
+				fc.property(seasonSearchQualifyingStatsArbitrary, (stats) => {
+					// Verify these stats would normally trigger SeasonSearch
+					const normalResult = determineBatchingDecision(stats);
+					if (normalResult.command !== 'SeasonSearch') {
+						// Skip if stats don't qualify for SeasonSearch
+						return;
+					}
+
+					// With seasonPackFailed=true, should force EpisodeSearch
+					const fallbackResult = determineBatchingDecisionWithFallback(stats, true);
+					expect(fallbackResult.command).toBe('EpisodeSearch');
+					expect(fallbackResult.reason).toBe('season_pack_fallback');
+				}),
+				{ numRuns: 100 }
+			);
+		});
+
+		it('delegates to normal logic when seasonPackFailed is false', () => {
+			fc.assert(
+				fc.property(seasonStatsArbitrary, batchingConfigArbitrary, (stats, config) => {
+					const normalResult = determineBatchingDecision(stats, config);
+					const fallbackResult = determineBatchingDecisionWithFallback(stats, false, config);
+
+					// Should produce identical results when no fallback
+					expect(fallbackResult.command).toBe(normalResult.command);
+					expect(fallbackResult.reason).toBe(normalResult.reason);
+				}),
+				{ numRuns: 100 }
+			);
+		});
+
+		it('fallback decision is deterministic', () => {
+			fc.assert(
+				fc.property(
+					seasonStatsArbitrary,
+					fc.boolean(),
+					batchingConfigArbitrary,
+					(stats, seasonPackFailed, config) => {
+						const result1 = determineBatchingDecisionWithFallback(stats, seasonPackFailed, config);
+						const result2 = determineBatchingDecisionWithFallback(stats, seasonPackFailed, config);
+
+						expect(result1.command).toBe(result2.command);
+						expect(result1.reason).toBe(result2.reason);
+					}
+				),
+				{ numRuns: 100 }
+			);
+		});
+
+		it('respects config when seasonPackFailed is false', () => {
+			const lowThresholdConfig: BatchingConfig = {
+				seasonSearchMinMissingPercent: 10,
+				seasonSearchMinMissingCount: 1
+			};
+
+			const stats: SeasonStatistics = {
+				totalEpisodes: 10,
+				downloadedEpisodes: 8, // 2 missing = 20%
+				nextAiring: null
+			};
+
+			// With low thresholds and no fallback, should get SeasonSearch
+			const result = determineBatchingDecisionWithFallback(stats, false, lowThresholdConfig);
+			expect(result.command).toBe('SeasonSearch');
+
+			// With fallback flag, should force EpisodeSearch
+			const fallbackResult = determineBatchingDecisionWithFallback(stats, true, lowThresholdConfig);
+			expect(fallbackResult.command).toBe('EpisodeSearch');
+			expect(fallbackResult.reason).toBe('season_pack_fallback');
+		});
+	});
+
+	describe('Edge cases', () => {
+		it('handles zero episodes with fallback flag', () => {
+			const stats: SeasonStatistics = {
+				totalEpisodes: 0,
+				downloadedEpisodes: 0,
+				nextAiring: null
+			};
+
+			// Even with fallback flag, zero episodes should return no_missing_episodes
+			// The fallback check happens first but the normal logic handles this edge case
+			const result = determineBatchingDecisionWithFallback(stats, true);
+			// With seasonPackFailed=true, fallback takes precedence
+			expect(result.command).toBe('EpisodeSearch');
+			expect(result.reason).toBe('season_pack_fallback');
+		});
+
+		it('handles currently airing season with fallback flag', () => {
+			const stats: SeasonStatistics = {
+				totalEpisodes: 10,
+				downloadedEpisodes: 5,
+				nextAiring: new Date('2025-12-01')
+			};
+
+			// With fallback flag, should still return fallback reason (takes precedence)
+			const result = determineBatchingDecisionWithFallback(stats, true);
+			expect(result.command).toBe('EpisodeSearch');
+			expect(result.reason).toBe('season_pack_fallback');
+		});
+
+		it('handles all episodes downloaded with fallback flag', () => {
+			const stats: SeasonStatistics = {
+				totalEpisodes: 10,
+				downloadedEpisodes: 10,
+				nextAiring: null
+			};
+
+			// With fallback flag, should still return fallback reason
+			const result = determineBatchingDecisionWithFallback(stats, true);
+			expect(result.command).toBe('EpisodeSearch');
+			expect(result.reason).toBe('season_pack_fallback');
 		});
 	});
 });
