@@ -383,7 +383,7 @@
     - Pause dispatch when limits reached
     - _Requirements: 7.1, 7.2, 7.7_
 
-  - [ ] 24.4 Implement HTTP 429 handling
+  - [x] 24.4 Implement HTTP 429 handling
     - Catch RateLimitError from connector clients
     - Respect Retry-After header when present
     - Set pausedUntil in throttle_state

@@ -113,3 +113,13 @@ export {
 	createEpisodeBatches,
 	createMovieBatches
 } from './episode-batcher';
+
+// Search dispatcher - Types (Requirement 7.3)
+export type {
+	DispatchOptions,
+	DispatchResult,
+	DispatchFailureReason
+} from './search-dispatcher';
+
+// Search dispatcher - Functions (Requirement 7.3)
+export { dispatchSearch, dispatchBatch } from './search-dispatcher';
