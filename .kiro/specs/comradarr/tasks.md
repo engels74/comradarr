@@ -180,7 +180,7 @@
     - Implement getWantedCutoff with pagination
     - _Requirements: 25.2, 25.3_
 
-  - [ ] 9.4 Implement search commands
+  - [x] 9.4 Implement search commands
     - Implement sendMoviesSearch command
     - Implement getCommandStatus polling
     - _Requirements: 25.4, 25.5_

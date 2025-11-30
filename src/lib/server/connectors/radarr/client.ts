@@ -5,11 +5,12 @@
  * Inherits ping(), getSystemStatus(), and getHealth() from base class.
  *
  * @module connectors/radarr/client
- * @requirements 25.1, 25.2, 25.3, 25.6
+ * @requirements 25.1, 25.2, 25.3, 25.4, 25.5, 25.6
  */
 
 import { BaseArrClient } from '../common/base-client.js';
-import type { BaseClientConfig, PaginationOptions } from '../common/types.js';
+import type { BaseClientConfig, PaginationOptions, CommandResponse } from '../common/types.js';
+import { parseCommandResponse } from '../common/parsers.js';
 import { parseRadarrMovie, parsePaginatedMoviesLenient } from './parsers.js';
 import type { RadarrMovie } from './types.js';
 
@@ -258,5 +259,90 @@ export class RadarrClient extends BaseArrClient {
 	 */
 	async getWantedCutoff(options?: WantedOptions): Promise<RadarrMovie[]> {
 		return this.fetchAllWantedMovies('wanted/cutoff', options);
+	}
+
+	/**
+	 * Trigger a search for specific movies
+	 *
+	 * Sends a MoviesSearch command to Radarr to search for the specified movies.
+	 * The command is executed asynchronously - use getCommandStatus() to poll for completion.
+	 *
+	 * @param movieIds - Array of movie IDs to search for (max 10 per batch per Requirement 29.5)
+	 * @returns Command response with initial execution status
+	 * @throws {ArrClientError} On API error (network, auth, rate limit, etc.)
+	 * @throws {Error} If response parsing fails
+	 * @requirements 25.4
+	 *
+	 * @example
+	 * ```typescript
+	 * const client = new RadarrClient({ baseUrl, apiKey });
+	 * const command = await client.sendMoviesSearch([1, 2, 3]);
+	 * console.log(`Command ${command.id} status: ${command.status}`);
+	 *
+	 * // Poll for completion
+	 * const result = await client.getCommandStatus(command.id);
+	 * if (result.status === 'completed') {
+	 *   console.log('Search completed');
+	 * }
+	 * ```
+	 */
+	async sendMoviesSearch(movieIds: number[]): Promise<CommandResponse> {
+		const response = await this.requestWithRetry<unknown>('command', {
+			method: 'POST',
+			body: {
+				name: 'MoviesSearch',
+				movieIds
+			}
+		});
+
+		const result = parseCommandResponse(response);
+		if (!result.success) {
+			throw new Error(result.error);
+		}
+		return result.data;
+	}
+
+	/**
+	 * Get the current status of a command
+	 *
+	 * Polls Radarr for the current execution status of a previously submitted command.
+	 * Use this to track command progress and determine when a search completes.
+	 *
+	 * @param commandId - The command ID returned from sendMoviesSearch
+	 * @returns Command response with current status (queued, started, completed, failed)
+	 * @throws {ArrClientError} On API error (network, auth, rate limit, etc.)
+	 * @throws {NotFoundError} If command ID does not exist
+	 * @throws {Error} If response parsing fails
+	 * @requirements 25.5
+	 *
+	 * @example
+	 * ```typescript
+	 * const client = new RadarrClient({ baseUrl, apiKey });
+	 *
+	 * // Start a search
+	 * const command = await client.sendMoviesSearch([1]);
+	 *
+	 * // Poll until complete
+	 * let status = await client.getCommandStatus(command.id);
+	 * while (status.status === 'queued' || status.status === 'started') {
+	 *   await new Promise(resolve => setTimeout(resolve, 1000));
+	 *   status = await client.getCommandStatus(command.id);
+	 * }
+	 *
+	 * if (status.status === 'completed') {
+	 *   console.log('Search completed successfully');
+	 * } else {
+	 *   console.log('Search failed:', status.message);
+	 * }
+	 * ```
+	 */
+	async getCommandStatus(commandId: number): Promise<CommandResponse> {
+		const response = await this.requestWithRetry<unknown>(`command/${commandId}`);
+
+		const result = parseCommandResponse(response);
+		if (!result.success) {
+			throw new Error(result.error);
+		}
+		return result.data;
 	}
 }

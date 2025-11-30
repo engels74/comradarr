@@ -1270,3 +1270,419 @@ describe('RadarrClient.getWantedCutoff()', () => {
 		expect(capturedHeaders?.get('X-Api-Key')).toBe('test-api-key-12345');
 	});
 });
+
+describe('RadarrClient.sendMoviesSearch()', () => {
+	const validConfig = {
+		baseUrl: 'http://localhost:7878',
+		apiKey: 'test-api-key-12345'
+	};
+
+	let originalFetch: typeof fetch;
+
+	beforeEach(() => {
+		originalFetch = globalThis.fetch;
+	});
+
+	afterEach(() => {
+		globalThis.fetch = originalFetch;
+		vi.restoreAllMocks();
+	});
+
+	it('should POST to /api/v3/command with MoviesSearch name and movieIds', async () => {
+		let capturedUrl: string | undefined;
+		let capturedBody: unknown;
+
+		const mockResponse = {
+			id: 12345,
+			name: 'MoviesSearch',
+			status: 'queued',
+			queued: '2024-01-15T12:00:00Z'
+		};
+
+		globalThis.fetch = createMockFetch(
+			vi.fn().mockImplementation(async (url: string, init?: RequestInit) => {
+				capturedUrl = url;
+				capturedBody = init?.body ? JSON.parse(init.body as string) : undefined;
+				return new Response(JSON.stringify(mockResponse), {
+					status: 200,
+					headers: { 'Content-Type': 'application/json' }
+				});
+			})
+		);
+
+		const client = new RadarrClient(validConfig);
+		await client.sendMoviesSearch([1, 2, 3]);
+
+		expect(capturedUrl).toBe('http://localhost:7878/api/v3/command');
+		expect(capturedBody).toEqual({
+			name: 'MoviesSearch',
+			movieIds: [1, 2, 3]
+		});
+	});
+
+	it('should return parsed CommandResponse with queued status', async () => {
+		const mockResponse = {
+			id: 12345,
+			name: 'MoviesSearch',
+			status: 'queued',
+			queued: '2024-01-15T12:00:00Z',
+			trigger: 'manual'
+		};
+
+		globalThis.fetch = createMockFetch(
+			vi.fn().mockResolvedValue(
+				new Response(JSON.stringify(mockResponse), {
+					status: 200,
+					headers: { 'Content-Type': 'application/json' }
+				})
+			)
+		);
+
+		const client = new RadarrClient(validConfig);
+		const result = await client.sendMoviesSearch([1]);
+
+		expect(result.id).toBe(12345);
+		expect(result.name).toBe('MoviesSearch');
+		expect(result.status).toBe('queued');
+	});
+
+	it('should use POST method', async () => {
+		let capturedMethod: string | undefined;
+
+		const mockResponse = {
+			id: 12345,
+			name: 'MoviesSearch',
+			status: 'queued',
+			queued: '2024-01-15T12:00:00Z'
+		};
+
+		globalThis.fetch = createMockFetch(
+			vi.fn().mockImplementation(async (_url: string, init?: RequestInit) => {
+				capturedMethod = init?.method;
+				return new Response(JSON.stringify(mockResponse), {
+					status: 200,
+					headers: { 'Content-Type': 'application/json' }
+				});
+			})
+		);
+
+		const client = new RadarrClient(validConfig);
+		await client.sendMoviesSearch([1]);
+
+		expect(capturedMethod).toBe('POST');
+	});
+
+	it('should include X-Api-Key header', async () => {
+		let capturedHeaders: Headers | undefined;
+
+		const mockResponse = {
+			id: 12345,
+			name: 'MoviesSearch',
+			status: 'queued',
+			queued: '2024-01-15T12:00:00Z'
+		};
+
+		globalThis.fetch = createMockFetch(
+			vi.fn().mockImplementation(async (_url: string, init?: RequestInit) => {
+				capturedHeaders = new Headers(init?.headers);
+				return new Response(JSON.stringify(mockResponse), {
+					status: 200,
+					headers: { 'Content-Type': 'application/json' }
+				});
+			})
+		);
+
+		const client = new RadarrClient(validConfig);
+		await client.sendMoviesSearch([1]);
+
+		expect(capturedHeaders?.get('X-Api-Key')).toBe('test-api-key-12345');
+	});
+
+	it('should handle single movie ID', async () => {
+		let capturedBody: unknown;
+
+		const mockResponse = {
+			id: 12345,
+			name: 'MoviesSearch',
+			status: 'queued',
+			queued: '2024-01-15T12:00:00Z'
+		};
+
+		globalThis.fetch = createMockFetch(
+			vi.fn().mockImplementation(async (_url: string, init?: RequestInit) => {
+				capturedBody = init?.body ? JSON.parse(init.body as string) : undefined;
+				return new Response(JSON.stringify(mockResponse), {
+					status: 200,
+					headers: { 'Content-Type': 'application/json' }
+				});
+			})
+		);
+
+		const client = new RadarrClient(validConfig);
+		await client.sendMoviesSearch([999]);
+
+		expect(capturedBody).toEqual({
+			name: 'MoviesSearch',
+			movieIds: [999]
+		});
+	});
+
+	it('should handle empty movie IDs array', async () => {
+		let capturedBody: unknown;
+
+		const mockResponse = {
+			id: 12345,
+			name: 'MoviesSearch',
+			status: 'queued',
+			queued: '2024-01-15T12:00:00Z'
+		};
+
+		globalThis.fetch = createMockFetch(
+			vi.fn().mockImplementation(async (_url: string, init?: RequestInit) => {
+				capturedBody = init?.body ? JSON.parse(init.body as string) : undefined;
+				return new Response(JSON.stringify(mockResponse), {
+					status: 200,
+					headers: { 'Content-Type': 'application/json' }
+				});
+			})
+		);
+
+		const client = new RadarrClient(validConfig);
+		await client.sendMoviesSearch([]);
+
+		expect(capturedBody).toEqual({
+			name: 'MoviesSearch',
+			movieIds: []
+		});
+	});
+
+	it('should handle multiple movie IDs (batch)', async () => {
+		let capturedBody: unknown;
+
+		const mockResponse = {
+			id: 12345,
+			name: 'MoviesSearch',
+			status: 'queued',
+			queued: '2024-01-15T12:00:00Z'
+		};
+
+		globalThis.fetch = createMockFetch(
+			vi.fn().mockImplementation(async (_url: string, init?: RequestInit) => {
+				capturedBody = init?.body ? JSON.parse(init.body as string) : undefined;
+				return new Response(JSON.stringify(mockResponse), {
+					status: 200,
+					headers: { 'Content-Type': 'application/json' }
+				});
+			})
+		);
+
+		const client = new RadarrClient(validConfig);
+		await client.sendMoviesSearch([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+
+		expect(capturedBody).toEqual({
+			name: 'MoviesSearch',
+			movieIds: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+		});
+	});
+});
+
+describe('RadarrClient.getCommandStatus()', () => {
+	const validConfig = {
+		baseUrl: 'http://localhost:7878',
+		apiKey: 'test-api-key-12345'
+	};
+
+	let originalFetch: typeof fetch;
+
+	beforeEach(() => {
+		originalFetch = globalThis.fetch;
+	});
+
+	afterEach(() => {
+		globalThis.fetch = originalFetch;
+		vi.restoreAllMocks();
+	});
+
+	it('should GET from /api/v3/command/{id}', async () => {
+		let capturedUrl: string | undefined;
+
+		const mockResponse = {
+			id: 12345,
+			name: 'MoviesSearch',
+			status: 'completed',
+			queued: '2024-01-15T12:00:00Z',
+			started: '2024-01-15T12:00:01Z',
+			ended: '2024-01-15T12:00:10Z'
+		};
+
+		globalThis.fetch = createMockFetch(
+			vi.fn().mockImplementation(async (url: string) => {
+				capturedUrl = url;
+				return new Response(JSON.stringify(mockResponse), {
+					status: 200,
+					headers: { 'Content-Type': 'application/json' }
+				});
+			})
+		);
+
+		const client = new RadarrClient(validConfig);
+		await client.getCommandStatus(12345);
+
+		expect(capturedUrl).toBe('http://localhost:7878/api/v3/command/12345');
+	});
+
+	it('should return parsed CommandResponse with queued status', async () => {
+		const mockResponse = {
+			id: 12345,
+			name: 'MoviesSearch',
+			status: 'queued',
+			queued: '2024-01-15T12:00:00Z'
+		};
+
+		globalThis.fetch = createMockFetch(
+			vi.fn().mockResolvedValue(
+				new Response(JSON.stringify(mockResponse), {
+					status: 200,
+					headers: { 'Content-Type': 'application/json' }
+				})
+			)
+		);
+
+		const client = new RadarrClient(validConfig);
+		const result = await client.getCommandStatus(12345);
+
+		expect(result.id).toBe(12345);
+		expect(result.status).toBe('queued');
+	});
+
+	it('should return parsed CommandResponse with started status', async () => {
+		const mockResponse = {
+			id: 12345,
+			name: 'MoviesSearch',
+			status: 'started',
+			queued: '2024-01-15T12:00:00Z',
+			started: '2024-01-15T12:00:01Z'
+		};
+
+		globalThis.fetch = createMockFetch(
+			vi.fn().mockResolvedValue(
+				new Response(JSON.stringify(mockResponse), {
+					status: 200,
+					headers: { 'Content-Type': 'application/json' }
+				})
+			)
+		);
+
+		const client = new RadarrClient(validConfig);
+		const result = await client.getCommandStatus(12345);
+
+		expect(result.status).toBe('started');
+		expect(result.started).toBe('2024-01-15T12:00:01Z');
+	});
+
+	it('should return parsed CommandResponse with completed status', async () => {
+		const mockResponse = {
+			id: 12345,
+			name: 'MoviesSearch',
+			status: 'completed',
+			queued: '2024-01-15T12:00:00Z',
+			started: '2024-01-15T12:00:01Z',
+			ended: '2024-01-15T12:00:10Z',
+			duration: '00:00:09.0000000'
+		};
+
+		globalThis.fetch = createMockFetch(
+			vi.fn().mockResolvedValue(
+				new Response(JSON.stringify(mockResponse), {
+					status: 200,
+					headers: { 'Content-Type': 'application/json' }
+				})
+			)
+		);
+
+		const client = new RadarrClient(validConfig);
+		const result = await client.getCommandStatus(12345);
+
+		expect(result.status).toBe('completed');
+		expect(result.ended).toBe('2024-01-15T12:00:10Z');
+	});
+
+	it('should return parsed CommandResponse with failed status', async () => {
+		const mockResponse = {
+			id: 12345,
+			name: 'MoviesSearch',
+			status: 'failed',
+			queued: '2024-01-15T12:00:00Z',
+			started: '2024-01-15T12:00:01Z',
+			ended: '2024-01-15T12:00:05Z',
+			message: 'No indexers available'
+		};
+
+		globalThis.fetch = createMockFetch(
+			vi.fn().mockResolvedValue(
+				new Response(JSON.stringify(mockResponse), {
+					status: 200,
+					headers: { 'Content-Type': 'application/json' }
+				})
+			)
+		);
+
+		const client = new RadarrClient(validConfig);
+		const result = await client.getCommandStatus(12345);
+
+		expect(result.status).toBe('failed');
+		expect(result.message).toBe('No indexers available');
+	});
+
+	it('should include X-Api-Key header', async () => {
+		let capturedHeaders: Headers | undefined;
+
+		const mockResponse = {
+			id: 12345,
+			name: 'MoviesSearch',
+			status: 'completed',
+			queued: '2024-01-15T12:00:00Z'
+		};
+
+		globalThis.fetch = createMockFetch(
+			vi.fn().mockImplementation(async (_url: string, init?: RequestInit) => {
+				capturedHeaders = new Headers(init?.headers);
+				return new Response(JSON.stringify(mockResponse), {
+					status: 200,
+					headers: { 'Content-Type': 'application/json' }
+				});
+			})
+		);
+
+		const client = new RadarrClient(validConfig);
+		await client.getCommandStatus(12345);
+
+		expect(capturedHeaders?.get('X-Api-Key')).toBe('test-api-key-12345');
+	});
+
+	it('should use GET method (default)', async () => {
+		let capturedMethod: string | undefined;
+
+		const mockResponse = {
+			id: 12345,
+			name: 'MoviesSearch',
+			status: 'completed',
+			queued: '2024-01-15T12:00:00Z'
+		};
+
+		globalThis.fetch = createMockFetch(
+			vi.fn().mockImplementation(async (_url: string, init?: RequestInit) => {
+				capturedMethod = init?.method;
+				return new Response(JSON.stringify(mockResponse), {
+					status: 200,
+					headers: { 'Content-Type': 'application/json' }
+				});
+			})
+		);
+
+		const client = new RadarrClient(validConfig);
+		await client.getCommandStatus(12345);
+
+		expect(capturedMethod).toBe('GET');
+	});
+});
