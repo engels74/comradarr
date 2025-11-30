@@ -278,9 +278,10 @@
     - Create search registry entries for new gaps
     - _Requirements: 3.1, 3.2, 3.3_
 
-  - [ ] 17.2 Create upgrade detector
+  - [x] 17.2 Create upgrade detector
     - Query content mirror for monitored items with qualityCutoffNotMet=true
     - Create search registry entries for new upgrade candidates
+    - Consider how Radarr/Sonarr/Whisparr works with Custom Format Scores
     - _Requirements: 4.1, 4.2, 4.3_
 
   - [ ] 17.3 Implement registry cleanup on success

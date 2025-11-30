@@ -20,3 +20,6 @@ export type {
 
 // Gap detection
 export { discoverGaps, getGapStats } from './gap-detector';
+
+// Upgrade detection
+export { discoverUpgrades, getUpgradeStats } from './upgrade-detector';
