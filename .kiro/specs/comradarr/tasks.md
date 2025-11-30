@@ -335,7 +335,7 @@
 ## Phase 9: Episode Batching
 
 - [ ] 22. Implement batching logic
-  - [ ] 22.1 Create batching decision logic
+  - [x] 22.1 Create batching decision logic
     - Analyze season statistics (total, downloaded, nextAiring)
     - Decide SeasonSearch vs EpisodeSearch based on thresholds
     - _Requirements: 6.1, 6.2, 6.3_

@@ -165,3 +165,45 @@ export const STATE_TRANSITION_CONFIG = {
 
 /** Type for the state transition config constants */
 export type StateTransitionConfigType = typeof STATE_TRANSITION_CONFIG;
+
+// =============================================================================
+// Episode Batching Configuration (Requirement 6.1, 6.2, 6.3)
+// =============================================================================
+
+/**
+ * Episode batching configuration constants.
+ *
+ * Defines thresholds for determining when to use SeasonSearch (season pack)
+ * versus individual EpisodeSearch commands.
+ *
+ * Decision logic:
+ * - SeasonSearch: Season fully aired AND missing% >= threshold AND missingCount >= minCount
+ * - EpisodeSearch: Season currently airing OR below threshold
+ *
+ * @requirements 6.1, 6.2, 6.3
+ */
+export const BATCHING_CONFIG = {
+	/**
+	 * Minimum missing percentage to qualify for SeasonSearch (0-100).
+	 * Only fully aired seasons with this % or more missing will use SeasonSearch.
+	 * @default 50
+	 */
+	SEASON_SEARCH_MIN_MISSING_PERCENT: 50,
+
+	/**
+	 * Minimum missing episode count to qualify for SeasonSearch.
+	 * Prevents using SeasonSearch for seasons with very few missing episodes.
+	 * @default 3
+	 */
+	SEASON_SEARCH_MIN_MISSING_COUNT: 3,
+
+	/**
+	 * Maximum episodes allowed per EpisodeSearch command.
+	 * This is an API limit from *arr applications.
+	 * @default 10
+	 */
+	MAX_EPISODES_PER_SEARCH: 10
+} as const;
+
+/** Type for the batching config constants */
+export type BatchingConfigType = typeof BATCHING_CONFIG;

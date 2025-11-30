@@ -6,6 +6,7 @@
  * - Priority comparison: sorting items by priority
  * - Queue management: enqueue, dequeue, pause/resume, clear
  * - State transitions: searching → cooldown/exhausted, cooldown → pending
+ * - Episode batching: deciding SeasonSearch vs EpisodeSearch
  *
  * Priority is calculated based on:
  * - Content age (newer content scores higher)
@@ -15,7 +16,7 @@
  * - Search type (gaps prioritized over upgrades)
  *
  * @module services/queue
- * @requirements 5.1, 5.2, 5.5, 5.6
+ * @requirements 5.1, 5.2, 5.5, 5.6, 6.1, 6.2, 6.3
  */
 
 // Types - Priority
@@ -53,9 +54,15 @@ export {
 	DEFAULT_PRIORITY_WEIGHTS,
 	PRIORITY_CONSTANTS,
 	QUEUE_CONFIG,
-	STATE_TRANSITION_CONFIG
+	STATE_TRANSITION_CONFIG,
+	BATCHING_CONFIG
 } from './config';
-export type { PriorityConstantsType, QueueConfigType, StateTransitionConfigType } from './config';
+export type {
+	PriorityConstantsType,
+	QueueConfigType,
+	StateTransitionConfigType,
+	BatchingConfigType
+} from './config';
 
 // Priority calculation
 export { calculatePriority, comparePriority } from './priority-calculator';
@@ -80,3 +87,20 @@ export {
 	reenqueueEligibleCooldownItems,
 	getSearchState
 } from './state-transitions';
+
+// Episode batching - Types
+export type {
+	EpisodeSearchCommand,
+	SeasonStatistics,
+	BatchingConfig,
+	BatchingReason,
+	BatchingDecision
+} from './episode-batcher';
+
+// Episode batching - Functions
+export {
+	determineBatchingDecision,
+	calculateMissingPercent,
+	calculateMissingCount,
+	isSeasonFullyAired
+} from './episode-batcher';
