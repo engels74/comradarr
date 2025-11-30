@@ -8,11 +8,12 @@
  * since it's a fork of Sonarr for adult content management.
  *
  * @module connectors/whisparr/client
- * @requirements 26.1, 26.2, 26.3, 26.4
+ * @requirements 26.1, 26.2, 26.3, 26.4, 26.5
  */
 
 import { BaseArrClient } from '../common/base-client.js';
-import type { BaseClientConfig, PaginationOptions } from '../common/types.js';
+import type { BaseClientConfig, PaginationOptions, CommandResponse } from '../common/types.js';
+import { parseCommandResponse } from '../common/parsers.js';
 import {
 	parseWhisparrSeries,
 	parseWhisparrEpisode,
@@ -244,8 +245,132 @@ export class WhisparrClient extends BaseArrClient {
 		return this.fetchAllWantedEpisodes('wanted/cutoff', options);
 	}
 
-	// Additional Whisparr-specific methods will be added in task 10.3:
-	// - sendEpisodeSearch(episodeIds: number[]): Promise<CommandResponse>
-	// - sendSeasonSearch(seriesId: number, seasonNumber: number): Promise<CommandResponse>
-	// - getCommandStatus(commandId: number): Promise<CommandResponse>
+	/**
+	 * Trigger a search for specific episodes
+	 *
+	 * Sends an EpisodeSearch command to Whisparr to search for the specified episodes.
+	 * The command is executed asynchronously - use getCommandStatus() to poll for completion.
+	 *
+	 * @param episodeIds - Array of episode IDs to search for (max 10 per batch per Req 29.4)
+	 * @returns Command response with initial execution status
+	 * @throws {ArrClientError} On API error (network, auth, rate limit, etc.)
+	 * @throws {Error} If response parsing fails
+	 * @requirements 26.5
+	 *
+	 * @example
+	 * ```typescript
+	 * const client = new WhisparrClient({ baseUrl, apiKey });
+	 * const command = await client.sendEpisodeSearch([101, 102, 103]);
+	 * console.log(`Command ${command.id} status: ${command.status}`);
+	 *
+	 * // Poll for completion
+	 * const result = await client.getCommandStatus(command.id);
+	 * if (result.status === 'completed') {
+	 *   console.log('Search completed');
+	 * }
+	 * ```
+	 */
+	async sendEpisodeSearch(episodeIds: number[]): Promise<CommandResponse> {
+		const response = await this.requestWithRetry<unknown>('command', {
+			method: 'POST',
+			body: {
+				name: 'EpisodeSearch',
+				episodeIds
+			}
+		});
+
+		const result = parseCommandResponse(response);
+		if (!result.success) {
+			throw new Error(result.error);
+		}
+		return result.data;
+	}
+
+	/**
+	 * Trigger a search for an entire season
+	 *
+	 * Sends a SeasonSearch command to Whisparr to search for all episodes in a season.
+	 * Use this for season pack searches when multiple episodes are missing.
+	 * The command is executed asynchronously - use getCommandStatus() to poll for completion.
+	 *
+	 * @param seriesId - The Whisparr internal series ID
+	 * @param seasonNumber - The season number to search (0 for specials)
+	 * @returns Command response with initial execution status
+	 * @throws {ArrClientError} On API error (network, auth, rate limit, etc.)
+	 * @throws {Error} If response parsing fails
+	 * @requirements 26.5
+	 *
+	 * @example
+	 * ```typescript
+	 * const client = new WhisparrClient({ baseUrl, apiKey });
+	 * const command = await client.sendSeasonSearch(123, 1);
+	 * console.log(`Command ${command.id} status: ${command.status}`);
+	 *
+	 * // Poll for completion
+	 * const result = await client.getCommandStatus(command.id);
+	 * if (result.status === 'completed') {
+	 *   console.log('Season search completed');
+	 * }
+	 * ```
+	 */
+	async sendSeasonSearch(seriesId: number, seasonNumber: number): Promise<CommandResponse> {
+		const response = await this.requestWithRetry<unknown>('command', {
+			method: 'POST',
+			body: {
+				name: 'SeasonSearch',
+				seriesId,
+				seasonNumber
+			}
+		});
+
+		const result = parseCommandResponse(response);
+		if (!result.success) {
+			throw new Error(result.error);
+		}
+		return result.data;
+	}
+
+	/**
+	 * Get the current status of a command
+	 *
+	 * Polls Whisparr for the current execution status of a previously submitted command.
+	 * Use this to track command progress and determine when a search completes.
+	 *
+	 * @param commandId - The command ID returned from sendEpisodeSearch or sendSeasonSearch
+	 * @returns Command response with current status (queued, started, completed, failed)
+	 * @throws {ArrClientError} On API error (network, auth, rate limit, etc.)
+	 * @throws {NotFoundError} If command ID does not exist
+	 * @throws {Error} If response parsing fails
+	 * @requirements 26.5
+	 *
+	 * @example
+	 * ```typescript
+	 * const client = new WhisparrClient({ baseUrl, apiKey });
+	 *
+	 * // Start a search
+	 * const command = await client.sendEpisodeSearch([101]);
+	 *
+	 * // Poll until complete
+	 * let status = await client.getCommandStatus(command.id);
+	 * while (status.status === 'queued' || status.status === 'started') {
+	 *   await new Promise(resolve => setTimeout(resolve, 1000));
+	 *   status = await client.getCommandStatus(command.id);
+	 * }
+	 *
+	 * if (status.status === 'completed') {
+	 *   console.log('Search completed successfully');
+	 * } else {
+	 *   console.log('Search failed:', status.message);
+	 * }
+	 * ```
+	 */
+	async getCommandStatus(commandId: number): Promise<CommandResponse> {
+		const response = await this.requestWithRetry<unknown>(`command/${commandId}`);
+
+		const result = parseCommandResponse(response);
+		if (!result.success) {
+			throw new Error(result.error);
+		}
+		return result.data;
+	}
 }

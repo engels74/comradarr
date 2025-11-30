@@ -88,7 +88,7 @@
 
 ## Phase 3: *arr API Client Infrastructure
 
-- [ ] 5. Build base API client
+- [x] 5. Build base API client
   - [x] 5.1 Create base client with authentication and timeout
     - Implement BaseArrClient class with X-Api-Key header
     - Configure AbortSignal.timeout (default 30s)
@@ -110,7 +110,7 @@
     - **Property 7: Exponential Backoff Calculation**
     - **Validates: Requirements 5.5**
 
-- [ ] 6. Implement API response parsing
+- [x] 6. Implement API response parsing
   - [x] 6.1 Create response parsers for common types
     - Implement pagination response parser
     - Implement quality model parser
@@ -165,7 +165,7 @@
     - Implement getCommandStatus polling
     - _Requirements: 24.5, 24.6, 24.7_
 
-- [ ] 9. Implement Radarr connector
+- [x] 9. Implement Radarr connector
   - [x] 9.1 Create Radarr client extending base client
     - Implement ping, getSystemStatus, getHealth methods
     - Implement API version detection
@@ -185,7 +185,7 @@
     - Implement getCommandStatus polling
     - _Requirements: 25.4, 25.5_
 
-- [ ] 10. Implement Whisparr connector
+- [x] 10. Implement Whisparr connector
   - [x] 10.1 Create Whisparr client extending base client
     - Implement ping, getSystemStatus, getHealth methods
     - _Requirements: 26.1_
@@ -195,7 +195,7 @@
     - Implement getWantedMissing, getWantedCutoff
     - _Requirements: 26.2, 26.3, 26.4_
 
-  - [ ] 10.3 Implement search commands
+  - [x] 10.3 Implement search commands
     - Implement sendEpisodeSearch, sendSeasonSearch
     - _Requirements: 26.5_
 
