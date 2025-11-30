@@ -6,8 +6,10 @@
  * - Inherited methods (ping, getSystemStatus, getHealth)
  * - API version detection (detectApiVersion)
  * - Library data retrieval (getMovies)
+ * - Wanted missing movies (getWantedMissing)
+ * - Wanted cutoff/upgrade candidates (getWantedCutoff)
  *
- * @requirements 25.1, 25.6
+ * @requirements 25.1, 25.2, 25.3, 25.6
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach, type Mock } from 'vitest';
@@ -700,5 +702,571 @@ describe('RadarrClient.getMovies()', () => {
 		expect(result[0]?.imdbId).toBeUndefined();
 		expect(result[0]?.movieFileId).toBeUndefined();
 		expect(result[0]?.status).toBeUndefined();
+	});
+});
+
+describe('RadarrClient.getWantedMissing()', () => {
+	const validConfig = {
+		baseUrl: 'http://localhost:7878',
+		apiKey: 'test-api-key-12345'
+	};
+
+	let originalFetch: typeof fetch;
+
+	beforeEach(() => {
+		originalFetch = globalThis.fetch;
+	});
+
+	afterEach(() => {
+		globalThis.fetch = originalFetch;
+		vi.restoreAllMocks();
+	});
+
+	it('should return array of missing movies from Radarr', async () => {
+		const mockResponse = {
+			page: 1,
+			pageSize: 1000,
+			sortKey: 'title',
+			sortDirection: 'descending',
+			totalRecords: 2,
+			records: [
+				{
+					id: 1,
+					title: 'The Matrix',
+					tmdbId: 603,
+					imdbId: 'tt0133093',
+					year: 1999,
+					hasFile: false,
+					monitored: true,
+					qualityCutoffNotMet: false
+				},
+				{
+					id: 2,
+					title: 'Inception',
+					tmdbId: 27205,
+					imdbId: 'tt1375666',
+					year: 2010,
+					hasFile: false,
+					monitored: true,
+					qualityCutoffNotMet: false
+				}
+			]
+		};
+
+		globalThis.fetch = createMockFetch(
+			vi.fn().mockResolvedValue(
+				new Response(JSON.stringify(mockResponse), {
+					status: 200,
+					headers: { 'Content-Type': 'application/json' }
+				})
+			)
+		);
+
+		const client = new RadarrClient(validConfig);
+		const result = await client.getWantedMissing();
+
+		expect(result).toHaveLength(2);
+		expect(result[0]?.title).toBe('The Matrix');
+		expect(result[0]?.hasFile).toBe(false);
+		expect(result[1]?.title).toBe('Inception');
+	});
+
+	it('should return empty array when no missing movies exist', async () => {
+		const mockResponse = {
+			page: 1,
+			pageSize: 1000,
+			sortKey: 'title',
+			sortDirection: 'descending',
+			totalRecords: 0,
+			records: []
+		};
+
+		globalThis.fetch = createMockFetch(
+			vi.fn().mockResolvedValue(
+				new Response(JSON.stringify(mockResponse), {
+					status: 200,
+					headers: { 'Content-Type': 'application/json' }
+				})
+			)
+		);
+
+		const client = new RadarrClient(validConfig);
+		const result = await client.getWantedMissing();
+
+		expect(result).toEqual([]);
+	});
+
+	it('should call /api/v3/wanted/missing with correct query parameters', async () => {
+		let capturedUrl: string | undefined;
+
+		const mockResponse = {
+			page: 1,
+			pageSize: 1000,
+			sortKey: 'title',
+			sortDirection: 'descending',
+			totalRecords: 0,
+			records: []
+		};
+
+		globalThis.fetch = createMockFetch(
+			vi.fn().mockImplementation(async (url: string) => {
+				capturedUrl = url;
+				return new Response(JSON.stringify(mockResponse), {
+					status: 200,
+					headers: { 'Content-Type': 'application/json' }
+				});
+			})
+		);
+
+		const client = new RadarrClient(validConfig);
+		await client.getWantedMissing();
+
+		expect(capturedUrl).toContain('/api/v3/wanted/missing');
+		expect(capturedUrl).toContain('page=1');
+		expect(capturedUrl).toContain('pageSize=1000');
+		expect(capturedUrl).toContain('monitored=true');
+	});
+
+	it('should use custom options when provided', async () => {
+		let capturedUrl: string | undefined;
+
+		const mockResponse = {
+			page: 2,
+			pageSize: 50,
+			sortKey: 'year',
+			sortDirection: 'ascending',
+			totalRecords: 50,
+			records: []
+		};
+
+		globalThis.fetch = createMockFetch(
+			vi.fn().mockImplementation(async (url: string) => {
+				capturedUrl = url;
+				return new Response(JSON.stringify(mockResponse), {
+					status: 200,
+					headers: { 'Content-Type': 'application/json' }
+				});
+			})
+		);
+
+		const client = new RadarrClient(validConfig);
+		await client.getWantedMissing({
+			page: 2,
+			pageSize: 50,
+			sortKey: 'year',
+			sortDirection: 'ascending',
+			monitored: false
+		});
+
+		expect(capturedUrl).toContain('page=2');
+		expect(capturedUrl).toContain('pageSize=50');
+		expect(capturedUrl).toContain('sortKey=year');
+		expect(capturedUrl).toContain('sortDirection=ascending');
+		expect(capturedUrl).toContain('monitored=false');
+	});
+
+	it('should handle pagination across multiple pages', async () => {
+		let callCount = 0;
+
+		const page1Response = {
+			page: 1,
+			pageSize: 2,
+			sortKey: 'title',
+			sortDirection: 'descending',
+			totalRecords: 5,
+			records: [
+				{ id: 1, title: 'Movie 1', tmdbId: 1, year: 2020, hasFile: false, monitored: true, qualityCutoffNotMet: false },
+				{ id: 2, title: 'Movie 2', tmdbId: 2, year: 2020, hasFile: false, monitored: true, qualityCutoffNotMet: false }
+			]
+		};
+
+		const page2Response = {
+			page: 2,
+			pageSize: 2,
+			sortKey: 'title',
+			sortDirection: 'descending',
+			totalRecords: 5,
+			records: [
+				{ id: 3, title: 'Movie 3', tmdbId: 3, year: 2020, hasFile: false, monitored: true, qualityCutoffNotMet: false },
+				{ id: 4, title: 'Movie 4', tmdbId: 4, year: 2020, hasFile: false, monitored: true, qualityCutoffNotMet: false }
+			]
+		};
+
+		const page3Response = {
+			page: 3,
+			pageSize: 2,
+			sortKey: 'title',
+			sortDirection: 'descending',
+			totalRecords: 5,
+			records: [
+				{ id: 5, title: 'Movie 5', tmdbId: 5, year: 2020, hasFile: false, monitored: true, qualityCutoffNotMet: false }
+			]
+		};
+
+		globalThis.fetch = createMockFetch(
+			vi.fn().mockImplementation(async () => {
+				callCount++;
+				let response;
+				if (callCount === 1) response = page1Response;
+				else if (callCount === 2) response = page2Response;
+				else response = page3Response;
+
+				return new Response(JSON.stringify(response), {
+					status: 200,
+					headers: { 'Content-Type': 'application/json' }
+				});
+			})
+		);
+
+		const client = new RadarrClient(validConfig);
+		const result = await client.getWantedMissing({ pageSize: 2 });
+
+		expect(callCount).toBe(3); // Should make 3 requests to get all 5 items
+		expect(result).toHaveLength(5);
+		expect(result[0]?.id).toBe(1);
+		expect(result[4]?.id).toBe(5);
+	});
+
+	it('should skip malformed movie records', async () => {
+		const mockResponse = {
+			page: 1,
+			pageSize: 1000,
+			sortKey: 'title',
+			sortDirection: 'descending',
+			totalRecords: 3,
+			records: [
+				{ id: 1, title: 'Valid Movie 1', tmdbId: 1, year: 2020, hasFile: false, monitored: true, qualityCutoffNotMet: false },
+				{ id: 2, title: 'Invalid Movie' }, // Invalid: missing required fields
+				{ id: 3, title: 'Valid Movie 2', tmdbId: 3, year: 2020, hasFile: false, monitored: true, qualityCutoffNotMet: false }
+			]
+		};
+
+		globalThis.fetch = createMockFetch(
+			vi.fn().mockResolvedValue(
+				new Response(JSON.stringify(mockResponse), {
+					status: 200,
+					headers: { 'Content-Type': 'application/json' }
+				})
+			)
+		);
+
+		const client = new RadarrClient(validConfig);
+		const result = await client.getWantedMissing();
+
+		// Should skip the malformed record
+		expect(result).toHaveLength(2);
+		expect(result[0]?.id).toBe(1);
+		expect(result[1]?.id).toBe(3);
+	});
+
+	it('should include X-Api-Key header', async () => {
+		let capturedHeaders: Headers | undefined;
+
+		const mockResponse = {
+			page: 1,
+			pageSize: 1000,
+			sortKey: 'title',
+			sortDirection: 'descending',
+			totalRecords: 0,
+			records: []
+		};
+
+		globalThis.fetch = createMockFetch(
+			vi.fn().mockImplementation(async (_url: string, init?: RequestInit) => {
+				capturedHeaders = new Headers(init?.headers);
+				return new Response(JSON.stringify(mockResponse), {
+					status: 200,
+					headers: { 'Content-Type': 'application/json' }
+				});
+			})
+		);
+
+		const client = new RadarrClient(validConfig);
+		await client.getWantedMissing();
+
+		expect(capturedHeaders?.get('X-Api-Key')).toBe('test-api-key-12345');
+	});
+});
+
+describe('RadarrClient.getWantedCutoff()', () => {
+	const validConfig = {
+		baseUrl: 'http://localhost:7878',
+		apiKey: 'test-api-key-12345'
+	};
+
+	let originalFetch: typeof fetch;
+
+	beforeEach(() => {
+		originalFetch = globalThis.fetch;
+	});
+
+	afterEach(() => {
+		globalThis.fetch = originalFetch;
+		vi.restoreAllMocks();
+	});
+
+	it('should return array of upgrade candidate movies from Radarr', async () => {
+		const mockResponse = {
+			page: 1,
+			pageSize: 1000,
+			sortKey: 'title',
+			sortDirection: 'descending',
+			totalRecords: 2,
+			records: [
+				{
+					id: 1,
+					title: 'The Dark Knight',
+					tmdbId: 155,
+					imdbId: 'tt0468569',
+					year: 2008,
+					hasFile: true,
+					monitored: true,
+					qualityCutoffNotMet: true
+				},
+				{
+					id: 2,
+					title: 'Interstellar',
+					tmdbId: 157336,
+					imdbId: 'tt0816692',
+					year: 2014,
+					hasFile: true,
+					monitored: true,
+					qualityCutoffNotMet: true
+				}
+			]
+		};
+
+		globalThis.fetch = createMockFetch(
+			vi.fn().mockResolvedValue(
+				new Response(JSON.stringify(mockResponse), {
+					status: 200,
+					headers: { 'Content-Type': 'application/json' }
+				})
+			)
+		);
+
+		const client = new RadarrClient(validConfig);
+		const result = await client.getWantedCutoff();
+
+		expect(result).toHaveLength(2);
+		expect(result[0]?.title).toBe('The Dark Knight');
+		expect(result[0]?.qualityCutoffNotMet).toBe(true);
+		expect(result[1]?.title).toBe('Interstellar');
+	});
+
+	it('should return empty array when no upgrade candidates exist', async () => {
+		const mockResponse = {
+			page: 1,
+			pageSize: 1000,
+			sortKey: 'title',
+			sortDirection: 'descending',
+			totalRecords: 0,
+			records: []
+		};
+
+		globalThis.fetch = createMockFetch(
+			vi.fn().mockResolvedValue(
+				new Response(JSON.stringify(mockResponse), {
+					status: 200,
+					headers: { 'Content-Type': 'application/json' }
+				})
+			)
+		);
+
+		const client = new RadarrClient(validConfig);
+		const result = await client.getWantedCutoff();
+
+		expect(result).toEqual([]);
+	});
+
+	it('should call /api/v3/wanted/cutoff with correct query parameters', async () => {
+		let capturedUrl: string | undefined;
+
+		const mockResponse = {
+			page: 1,
+			pageSize: 1000,
+			sortKey: 'title',
+			sortDirection: 'descending',
+			totalRecords: 0,
+			records: []
+		};
+
+		globalThis.fetch = createMockFetch(
+			vi.fn().mockImplementation(async (url: string) => {
+				capturedUrl = url;
+				return new Response(JSON.stringify(mockResponse), {
+					status: 200,
+					headers: { 'Content-Type': 'application/json' }
+				});
+			})
+		);
+
+		const client = new RadarrClient(validConfig);
+		await client.getWantedCutoff();
+
+		expect(capturedUrl).toContain('/api/v3/wanted/cutoff');
+		expect(capturedUrl).toContain('page=1');
+		expect(capturedUrl).toContain('pageSize=1000');
+		expect(capturedUrl).toContain('monitored=true');
+	});
+
+	it('should use custom options when provided', async () => {
+		let capturedUrl: string | undefined;
+
+		const mockResponse = {
+			page: 2,
+			pageSize: 50,
+			sortKey: 'year',
+			sortDirection: 'ascending',
+			totalRecords: 50,
+			records: []
+		};
+
+		globalThis.fetch = createMockFetch(
+			vi.fn().mockImplementation(async (url: string) => {
+				capturedUrl = url;
+				return new Response(JSON.stringify(mockResponse), {
+					status: 200,
+					headers: { 'Content-Type': 'application/json' }
+				});
+			})
+		);
+
+		const client = new RadarrClient(validConfig);
+		await client.getWantedCutoff({
+			page: 2,
+			pageSize: 50,
+			sortKey: 'year',
+			sortDirection: 'ascending',
+			monitored: false
+		});
+
+		expect(capturedUrl).toContain('page=2');
+		expect(capturedUrl).toContain('pageSize=50');
+		expect(capturedUrl).toContain('sortKey=year');
+		expect(capturedUrl).toContain('sortDirection=ascending');
+		expect(capturedUrl).toContain('monitored=false');
+	});
+
+	it('should handle pagination across multiple pages', async () => {
+		let callCount = 0;
+
+		const page1Response = {
+			page: 1,
+			pageSize: 2,
+			sortKey: 'title',
+			sortDirection: 'descending',
+			totalRecords: 5,
+			records: [
+				{ id: 1, title: 'Movie 1', tmdbId: 1, year: 2020, hasFile: true, monitored: true, qualityCutoffNotMet: true },
+				{ id: 2, title: 'Movie 2', tmdbId: 2, year: 2020, hasFile: true, monitored: true, qualityCutoffNotMet: true }
+			]
+		};
+
+		const page2Response = {
+			page: 2,
+			pageSize: 2,
+			sortKey: 'title',
+			sortDirection: 'descending',
+			totalRecords: 5,
+			records: [
+				{ id: 3, title: 'Movie 3', tmdbId: 3, year: 2020, hasFile: true, monitored: true, qualityCutoffNotMet: true },
+				{ id: 4, title: 'Movie 4', tmdbId: 4, year: 2020, hasFile: true, monitored: true, qualityCutoffNotMet: true }
+			]
+		};
+
+		const page3Response = {
+			page: 3,
+			pageSize: 2,
+			sortKey: 'title',
+			sortDirection: 'descending',
+			totalRecords: 5,
+			records: [
+				{ id: 5, title: 'Movie 5', tmdbId: 5, year: 2020, hasFile: true, monitored: true, qualityCutoffNotMet: true }
+			]
+		};
+
+		globalThis.fetch = createMockFetch(
+			vi.fn().mockImplementation(async () => {
+				callCount++;
+				let response;
+				if (callCount === 1) response = page1Response;
+				else if (callCount === 2) response = page2Response;
+				else response = page3Response;
+
+				return new Response(JSON.stringify(response), {
+					status: 200,
+					headers: { 'Content-Type': 'application/json' }
+				});
+			})
+		);
+
+		const client = new RadarrClient(validConfig);
+		const result = await client.getWantedCutoff({ pageSize: 2 });
+
+		expect(callCount).toBe(3); // Should make 3 requests to get all 5 items
+		expect(result).toHaveLength(5);
+		expect(result[0]?.id).toBe(1);
+		expect(result[4]?.id).toBe(5);
+	});
+
+	it('should skip malformed movie records', async () => {
+		const mockResponse = {
+			page: 1,
+			pageSize: 1000,
+			sortKey: 'title',
+			sortDirection: 'descending',
+			totalRecords: 3,
+			records: [
+				{ id: 1, title: 'Valid Movie 1', tmdbId: 1, year: 2020, hasFile: true, monitored: true, qualityCutoffNotMet: true },
+				{ id: 2, title: 'Invalid Movie' }, // Invalid: missing required fields
+				{ id: 3, title: 'Valid Movie 2', tmdbId: 3, year: 2020, hasFile: true, monitored: true, qualityCutoffNotMet: true }
+			]
+		};
+
+		globalThis.fetch = createMockFetch(
+			vi.fn().mockResolvedValue(
+				new Response(JSON.stringify(mockResponse), {
+					status: 200,
+					headers: { 'Content-Type': 'application/json' }
+				})
+			)
+		);
+
+		const client = new RadarrClient(validConfig);
+		const result = await client.getWantedCutoff();
+
+		// Should skip the malformed record
+		expect(result).toHaveLength(2);
+		expect(result[0]?.id).toBe(1);
+		expect(result[1]?.id).toBe(3);
+	});
+
+	it('should include X-Api-Key header', async () => {
+		let capturedHeaders: Headers | undefined;
+
+		const mockResponse = {
+			page: 1,
+			pageSize: 1000,
+			sortKey: 'title',
+			sortDirection: 'descending',
+			totalRecords: 0,
+			records: []
+		};
+
+		globalThis.fetch = createMockFetch(
+			vi.fn().mockImplementation(async (_url: string, init?: RequestInit) => {
+				capturedHeaders = new Headers(init?.headers);
+				return new Response(JSON.stringify(mockResponse), {
+					status: 200,
+					headers: { 'Content-Type': 'application/json' }
+				});
+			})
+		);
+
+		const client = new RadarrClient(validConfig);
+		await client.getWantedCutoff();
+
+		expect(capturedHeaders?.get('X-Api-Key')).toBe('test-api-key-12345');
 	});
 });

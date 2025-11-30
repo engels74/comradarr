@@ -175,7 +175,7 @@
     - Implement getMovies with pagination
     - _Requirements: 25.1_
 
-  - [ ] 9.3 Implement wanted endpoints
+  - [x] 9.3 Implement wanted endpoints
     - Implement getWantedMissing with pagination
     - Implement getWantedCutoff with pagination
     - _Requirements: 25.2, 25.3_
