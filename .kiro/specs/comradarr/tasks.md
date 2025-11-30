@@ -171,7 +171,7 @@
     - Implement API version detection
     - _Requirements: 25.6_
 
-  - [ ] 9.2 Implement library data methods
+  - [x] 9.2 Implement library data methods
     - Implement getMovies with pagination
     - _Requirements: 25.1_
 

@@ -5,11 +5,13 @@
  * Inherits ping(), getSystemStatus(), and getHealth() from base class.
  *
  * @module connectors/radarr/client
- * @requirements 25.6
+ * @requirements 25.1, 25.6
  */
 
 import { BaseArrClient } from '../common/base-client.js';
 import type { BaseClientConfig } from '../common/types.js';
+import { parseRadarrMovie } from './parsers.js';
+import type { RadarrMovie } from './types.js';
 
 /**
  * API version detection result
@@ -31,6 +33,7 @@ export interface ApiVersionInfo {
  * - System status retrieval via getSystemStatus()
  * - Health check via getHealth()
  * - API version detection via detectApiVersion()
+ * - Library data retrieval via getMovies()
  *
  * @example
  * ```typescript
@@ -43,6 +46,7 @@ export interface ApiVersionInfo {
  * const status = await client.getSystemStatus();
  * const health = await client.getHealth();
  * const version = await client.detectApiVersion();
+ * const movies = await client.getMovies();
  * ```
  */
 export class RadarrClient extends BaseArrClient {
@@ -98,5 +102,37 @@ export class RadarrClient extends BaseArrClient {
 			majorVersion: Number.isNaN(majorVersion) ? 3 : majorVersion,
 			apiVersion
 		};
+	}
+
+	/**
+	 * Get all movies from Radarr
+	 *
+	 * Fetches the complete library of movies from Radarr.
+	 * Each movie is validated and malformed records are skipped.
+	 *
+	 * @returns Array of all movies in the library
+	 * @throws {ArrClientError} On API error (network, auth, rate limit, etc.)
+	 * @requirements 25.1
+	 *
+	 * @example
+	 * ```typescript
+	 * const client = new RadarrClient({ baseUrl, apiKey });
+	 * const movies = await client.getMovies();
+	 * console.log(`Found ${movies.length} movies`);
+	 * ```
+	 */
+	async getMovies(): Promise<RadarrMovie[]> {
+		const response = await this.requestWithRetry<unknown[]>('movie');
+
+		const movies: RadarrMovie[] = [];
+		for (const item of response) {
+			const result = parseRadarrMovie(item);
+			if (result.success) {
+				movies.push(result.data);
+			}
+			// Malformed records are skipped per Requirement 27.8
+		}
+
+		return movies;
 	}
 }
