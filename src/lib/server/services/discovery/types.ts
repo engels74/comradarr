@@ -5,8 +5,12 @@
  * candidates (items below quality cutoff) in the content mirror and creates
  * search registry entries for them.
  *
+ * Also handles cleanup of resolved registries:
+ * - Gap registries cleaned when hasFile becomes true (Requirement 3.4)
+ * - Upgrade registries cleaned when qualityCutoffNotMet becomes false (Requirement 4.4)
+ *
  * @module services/discovery/types
- * @requirements 3.1, 3.2, 3.3, 4.1, 4.2, 4.3
+ * @requirements 3.1, 3.2, 3.3, 3.4, 4.1, 4.2, 4.3, 4.4
  */
 
 /**
@@ -30,6 +34,11 @@ export interface GapDiscoveryResult {
 	registriesCreated: number;
 	/** Number of gaps that already had search registry entries (skipped) */
 	registriesSkipped: number;
+	/**
+	 * Number of gap registries deleted because content now has hasFile=true.
+	 * @requirements 3.4
+	 */
+	registriesResolved: number;
 	/** Duration of the discovery operation in milliseconds */
 	durationMs: number;
 	/** Error message if discovery failed */
@@ -58,6 +67,11 @@ export interface UpgradeDiscoveryResult {
 	registriesCreated: number;
 	/** Number of upgrades that already had search registry entries (skipped) */
 	registriesSkipped: number;
+	/**
+	 * Number of upgrade registries deleted because content now has qualityCutoffNotMet=false.
+	 * @requirements 4.4
+	 */
+	registriesResolved: number;
 	/** Duration of the discovery operation in milliseconds */
 	durationMs: number;
 	/** Error message if discovery failed */

@@ -2,16 +2,18 @@
  * Gap detector service for identifying missing content.
  *
  * Queries the content mirror for monitored items with hasFile=false
- * and creates search registry entries for new gaps.
+ * and creates search registry entries for new gaps. Also cleans up
+ * gap registries when content has been successfully downloaded.
  *
  * @module services/discovery/gap-detector
- * @requirements 3.1, 3.2, 3.3
+ * @requirements 3.1, 3.2, 3.3, 3.4
  */
 
 import { db } from '$lib/server/db';
 import { connectors, episodes, movies, searchRegistry } from '$lib/server/db/schema';
 import { and, eq, isNull, sql } from 'drizzle-orm';
 import type { GapDiscoveryResult, DiscoveryOptions, DiscoveryStats } from './types';
+import { cleanupResolvedGapRegistries } from '../sync/search-state-cleanup';
 
 /**
  * Default batch size for inserting search registry entries.
@@ -63,12 +65,17 @@ export async function discoverGaps(
 				gapsFound: 0,
 				registriesCreated: 0,
 				registriesSkipped: 0,
+				registriesResolved: 0,
 				durationMs: Date.now() - startTime,
 				error: `Connector ${connectorId} not found`
 			};
 		}
 
 		const connectorType = connector[0]!.type as 'sonarr' | 'radarr' | 'whisparr';
+
+		// Clean up gap registries where content now has hasFile=true
+		// This handles requirement 3.4: delete registry when hasFile becomes true
+		const registriesResolved = await cleanupResolvedGapRegistries(connectorId);
 
 		// Discover gaps based on connector type
 		let stats: DiscoveryStats;
@@ -91,6 +98,7 @@ export async function discoverGaps(
 			gapsFound,
 			registriesCreated,
 			registriesSkipped,
+			registriesResolved,
 			durationMs: Date.now() - startTime
 		};
 	} catch (error) {
@@ -101,6 +109,7 @@ export async function discoverGaps(
 			gapsFound: 0,
 			registriesCreated: 0,
 			registriesSkipped: 0,
+			registriesResolved: 0,
 			durationMs: Date.now() - startTime,
 			error: error instanceof Error ? error.message : String(error)
 		};

@@ -4,6 +4,7 @@
  * Validates requirements:
  * - 4.1: Identify all monitored items where qualityCutoffNotMet equals true
  * - 4.3: Create search registry entry with state "pending" and search type "upgrade"
+ * - 4.4: Delete search registry entry when qualityCutoffNotMet becomes false
  *
  * Property 3: Upgrade Discovery Correctness
  * - For any content mirror state, upgrade discovery should return exactly the set
@@ -640,6 +641,224 @@ describe('Property 3: Upgrade Discovery Correctness - Property-Based Tests', () 
 					}
 				),
 				{ numRuns: 30 }
+			);
+		});
+	});
+});
+
+// ============================================================================
+// Registry Cleanup on Success Tests (Requirement 4.4)
+// ============================================================================
+
+describe('Upgrade Registry Cleanup on Success', () => {
+	describe('Episode Upgrade Cleanup', () => {
+		it('should delete upgrade registry when qualityCutoffNotMet becomes false', async () => {
+			// Create test series and season
+			const seriesId = await insertTestSeries(testSonarrConnectorId, 1, 'Test Series');
+			const seasonId = await insertTestSeason(seriesId, 1);
+
+			// Create episode with qualityCutoffNotMet=true (upgrade candidate)
+			const episodeId = await insertTestEpisode(
+				testSonarrConnectorId,
+				seasonId,
+				101,
+				1,
+				1,
+				true,
+				true,
+				true
+			);
+
+			// Run discovery - creates registry
+			const result1 = await discoverUpgrades(testSonarrConnectorId);
+			expect(result1.registriesCreated).toBe(1);
+			expect(result1.registriesResolved).toBe(0);
+
+			// Verify registry was created
+			let registryCount = await countSearchRegistry(testSonarrConnectorId, 'upgrade');
+			expect(registryCount).toBe(1);
+
+			// Update episode qualityCutoffNotMet to false (simulating successful upgrade)
+			await db
+				.update(episodes)
+				.set({ qualityCutoffNotMet: false })
+				.where(eq(episodes.id, episodeId));
+
+			// Run discovery again - should clean up resolved registry
+			const result2 = await discoverUpgrades(testSonarrConnectorId);
+			expect(result2.registriesResolved).toBe(1);
+			expect(result2.upgradesFound).toBe(0);
+
+			// Verify registry was deleted
+			registryCount = await countSearchRegistry(testSonarrConnectorId, 'upgrade');
+			expect(registryCount).toBe(0);
+		});
+
+		it('should NOT delete upgrade registry while qualityCutoffNotMet is still true', async () => {
+			// Create test series and season
+			const seriesId = await insertTestSeries(testSonarrConnectorId, 1, 'Test Series');
+			const seasonId = await insertTestSeason(seriesId, 1);
+
+			// Create episode with qualityCutoffNotMet=true (upgrade candidate)
+			await insertTestEpisode(testSonarrConnectorId, seasonId, 101, 1, 1, true, true, true);
+
+			// Run discovery - creates registry
+			const result1 = await discoverUpgrades(testSonarrConnectorId);
+			expect(result1.registriesCreated).toBe(1);
+
+			// Run discovery again without changing qualityCutoffNotMet
+			const result2 = await discoverUpgrades(testSonarrConnectorId);
+			expect(result2.registriesResolved).toBe(0);
+			expect(result2.registriesSkipped).toBe(1);
+
+			// Verify registry still exists
+			const registryCount = await countSearchRegistry(testSonarrConnectorId, 'upgrade');
+			expect(registryCount).toBe(1);
+		});
+	});
+
+	describe('Movie Upgrade Cleanup', () => {
+		it('should delete upgrade registry when qualityCutoffNotMet becomes false', async () => {
+			// Create movie with qualityCutoffNotMet=true (upgrade candidate)
+			const movieId = await insertTestMovie(
+				testRadarrConnectorId,
+				201,
+				'Upgrade Movie',
+				true,
+				true,
+				true
+			);
+
+			// Run discovery - creates registry
+			const result1 = await discoverUpgrades(testRadarrConnectorId);
+			expect(result1.registriesCreated).toBe(1);
+			expect(result1.registriesResolved).toBe(0);
+
+			// Verify registry was created
+			let registryCount = await countSearchRegistry(testRadarrConnectorId, 'upgrade');
+			expect(registryCount).toBe(1);
+
+			// Update movie qualityCutoffNotMet to false (simulating successful upgrade)
+			await db
+				.update(movies)
+				.set({ qualityCutoffNotMet: false })
+				.where(eq(movies.id, movieId));
+
+			// Run discovery again - should clean up resolved registry
+			const result2 = await discoverUpgrades(testRadarrConnectorId);
+			expect(result2.registriesResolved).toBe(1);
+			expect(result2.upgradesFound).toBe(0);
+
+			// Verify registry was deleted
+			registryCount = await countSearchRegistry(testRadarrConnectorId, 'upgrade');
+			expect(registryCount).toBe(0);
+		});
+
+		it('should handle mixed resolved and unresolved upgrades', async () => {
+			// Create two movies with qualityCutoffNotMet=true (upgrade candidates)
+			const movieId1 = await insertTestMovie(testRadarrConnectorId, 201, 'Movie 1', true, true, true);
+			await insertTestMovie(testRadarrConnectorId, 202, 'Movie 2', true, true, true);
+
+			// Run discovery - creates 2 registries
+			const result1 = await discoverUpgrades(testRadarrConnectorId);
+			expect(result1.registriesCreated).toBe(2);
+
+			// Verify registries were created
+			let registryCount = await countSearchRegistry(testRadarrConnectorId, 'upgrade');
+			expect(registryCount).toBe(2);
+
+			// Update only one movie qualityCutoffNotMet to false
+			await db
+				.update(movies)
+				.set({ qualityCutoffNotMet: false })
+				.where(eq(movies.id, movieId1));
+
+			// Run discovery again
+			const result2 = await discoverUpgrades(testRadarrConnectorId);
+			expect(result2.registriesResolved).toBe(1); // One resolved
+			expect(result2.upgradesFound).toBe(1); // One still an upgrade candidate
+			expect(result2.registriesSkipped).toBe(1); // One already has registry
+
+			// Verify only one registry remains
+			registryCount = await countSearchRegistry(testRadarrConnectorId, 'upgrade');
+			expect(registryCount).toBe(1);
+		});
+	});
+});
+
+// ============================================================================
+// Property 4: Search Registry Cleanup on Success - Property-Based Tests
+// ============================================================================
+
+describe('Property 4: Upgrade Registry Cleanup on Success - Property-Based Tests', () => {
+	const movieCleanupArbitrary = fc.record({
+		arrId: fc.integer({ min: 1, max: 100000 }),
+		title: fc.string({ minLength: 1, maxLength: 50 }),
+		resolveAfterFirstDiscovery: fc.boolean()
+	});
+
+	describe('Movie Upgrade Cleanup Property', () => {
+		it('upgrade registries should be deleted exactly when qualityCutoffNotMet becomes false', async () => {
+			await fc.assert(
+				fc.asyncProperty(
+					fc.array(movieCleanupArbitrary, { minLength: 1, maxLength: 10 }),
+					async (moviesData) => {
+						// Deduplicate by arrId
+						const uniqueMovies = moviesData.filter(
+							(m, i, arr) => arr.findIndex((x) => x.arrId === m.arrId) === i
+						);
+
+						// Clean up before each iteration
+						await cleanupConnectorData(testRadarrConnectorId);
+
+						// Insert all movies as upgrade candidates (hasFile=true, qualityCutoffNotMet=true, monitored=true)
+						const movieIds: number[] = [];
+						for (const movie of uniqueMovies) {
+							const id = await insertTestMovie(
+								testRadarrConnectorId,
+								movie.arrId,
+								movie.title,
+								true,
+								true,
+								true
+							);
+							movieIds.push(id);
+						}
+
+						// First discovery - creates registries for all upgrade candidates
+						const result1 = await discoverUpgrades(testRadarrConnectorId);
+						expect(result1.registriesCreated).toBe(uniqueMovies.length);
+
+						// Determine which movies to "resolve" (set qualityCutoffNotMet=false)
+						const moviesToResolve = uniqueMovies.filter((m) => m.resolveAfterFirstDiscovery);
+						const movieIdsToResolve = moviesToResolve.map(
+							(m) => movieIds[uniqueMovies.findIndex((x) => x.arrId === m.arrId)]!
+						);
+
+						// Resolve the selected movies
+						for (const movieId of movieIdsToResolve) {
+							await db
+								.update(movies)
+								.set({ qualityCutoffNotMet: false })
+								.where(eq(movies.id, movieId));
+						}
+
+						// Run discovery again
+						const result2 = await discoverUpgrades(testRadarrConnectorId);
+
+						// Verify correct number resolved
+						expect(result2.registriesResolved).toBe(moviesToResolve.length);
+
+						// Verify remaining upgrade count
+						const remainingUpgrades = uniqueMovies.length - moviesToResolve.length;
+						expect(result2.upgradesFound).toBe(remainingUpgrades);
+
+						// Verify registry count matches remaining upgrades
+						const registryCount = await countSearchRegistry(testRadarrConnectorId, 'upgrade');
+						expect(registryCount).toBe(remainingUpgrades);
+					}
+				),
+				{ numRuns: 50 }
 			);
 		});
 	});

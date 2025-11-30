@@ -3,19 +3,21 @@
  *
  * Queries the content mirror for monitored items with hasFile=true AND
  * qualityCutoffNotMet=true and creates search registry entries for new
- * upgrade candidates.
+ * upgrade candidates. Also cleans up upgrade registries when content quality
+ * has reached the cutoff.
  *
  * The qualityCutoffNotMet flag comes from the *arr API and already accounts
  * for Custom Format scores in Radarr/Sonarr v3+.
  *
  * @module services/discovery/upgrade-detector
- * @requirements 4.1, 4.2, 4.3
+ * @requirements 4.1, 4.2, 4.3, 4.4
  */
 
 import { db } from '$lib/server/db';
 import { connectors, episodes, movies, searchRegistry } from '$lib/server/db/schema';
 import { and, eq, isNull, sql } from 'drizzle-orm';
 import type { UpgradeDiscoveryResult, DiscoveryOptions, DiscoveryStats } from './types';
+import { cleanupResolvedUpgradeRegistries } from '../sync/search-state-cleanup';
 
 /**
  * Default batch size for inserting search registry entries.
@@ -67,12 +69,17 @@ export async function discoverUpgrades(
 				upgradesFound: 0,
 				registriesCreated: 0,
 				registriesSkipped: 0,
+				registriesResolved: 0,
 				durationMs: Date.now() - startTime,
 				error: `Connector ${connectorId} not found`
 			};
 		}
 
 		const connectorType = connector[0]!.type as 'sonarr' | 'radarr' | 'whisparr';
+
+		// Clean up upgrade registries where content now has qualityCutoffNotMet=false
+		// This handles requirement 4.4: delete registry when qualityCutoffNotMet becomes false
+		const registriesResolved = await cleanupResolvedUpgradeRegistries(connectorId);
 
 		// Discover upgrades based on connector type
 		let stats: DiscoveryStats;
@@ -95,6 +102,7 @@ export async function discoverUpgrades(
 			upgradesFound,
 			registriesCreated,
 			registriesSkipped,
+			registriesResolved,
 			durationMs: Date.now() - startTime
 		};
 	} catch (error) {
@@ -105,6 +113,7 @@ export async function discoverUpgrades(
 			upgradesFound: 0,
 			registriesCreated: 0,
 			registriesSkipped: 0,
+			registriesResolved: 0,
 			durationMs: Date.now() - startTime,
 			error: error instanceof Error ? error.message : String(error)
 		};

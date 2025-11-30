@@ -284,7 +284,7 @@
     - Consider how Radarr/Sonarr/Whisparr works with Custom Format Scores
     - _Requirements: 4.1, 4.2, 4.3_
 
-  - [ ] 17.3 Implement registry cleanup on success
+  - [x] 17.3 Implement registry cleanup on success
     - Delete search registry when hasFile becomes true
     - Delete search registry when qualityCutoffNotMet becomes false
     - _Requirements: 3.4, 4.4_
