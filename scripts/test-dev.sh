@@ -294,7 +294,8 @@ create_admin_user() {
     cd "$PROJECT_ROOT"
 
     # Create a temporary TypeScript file to hash password and insert user
-    local temp_script=$(mktemp /tmp/create-admin-XXXXXX.ts)
+    local temp_script
+    temp_script=$(mktemp /tmp/create-admin-XXXXXX.ts)
 
     cat > "$temp_script" << 'SCRIPT_EOF'
 import { hash } from '@node-rs/argon2';
