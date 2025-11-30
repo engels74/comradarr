@@ -243,7 +243,7 @@
 
 ## Phase 6: Sync Service
 
-- [ ] 15. Implement sync service
+- [x] 15. Implement sync service
   - [x] 15.1 Create incremental sync logic
     - Fetch series/movies from connector
     - Update content mirror with changes
@@ -263,11 +263,11 @@
     - Mark connector unhealthy after threshold
     - _Requirements: 2.6_
 
-  - [ ] 15.4 Write property test for sync reconciliation
+  - [x] 15.4 Write property test for sync reconciliation
     - **Property 18: Sync Reconciliation Correctness**
     - **Validates: Requirements 2.2**
 
-- [ ] 16. Checkpoint - Ensure all tests pass
+- [x] 16. Checkpoint - Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
 ## Phase 7: Discovery Service

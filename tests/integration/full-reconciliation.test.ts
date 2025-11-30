@@ -14,6 +14,7 @@
  */
 
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'bun:test';
+import * as fc from 'fast-check';
 import { db } from '../../src/lib/server/db';
 import {
 	connectors,
@@ -23,7 +24,7 @@ import {
 	movies,
 	searchRegistry
 } from '../../src/lib/server/db/schema';
-import { eq, and, sql } from 'drizzle-orm';
+import { eq, and, sql, inArray } from 'drizzle-orm';
 import {
 	deleteSearchRegistryForContent,
 	deleteSearchRegistryForEpisodes,
@@ -494,6 +495,405 @@ describe('Property 18: Sync Reconciliation Correctness', () => {
 			for (const entry of remainingRegistry) {
 				expect(remainingMovieIds).toContain(entry.contentId);
 			}
+		});
+	});
+});
+
+// ============================================================================
+// Property-Based Tests for Sync Reconciliation
+// ============================================================================
+
+/**
+ * Movie data structure for property testing
+ */
+interface MovieData {
+	arrId: number;
+	title: string;
+	year: number;
+	hasFile: boolean;
+	qualityCutoffNotMet: boolean;
+}
+
+/**
+ * Arbitrary for generating movie data with unique arrIds in property-safe range
+ */
+const movieDataArbitrary: fc.Arbitrary<MovieData> = fc.record({
+	arrId: fc.integer({ min: 10000, max: 99999 }),
+	title: fc.string({ minLength: 1, maxLength: 50 }).filter((s) => s.trim().length > 0),
+	year: fc.integer({ min: 1900, max: 2030 }),
+	hasFile: fc.boolean(),
+	qualityCutoffNotMet: fc.boolean()
+});
+
+/**
+ * Deduplicate movies by arrId, keeping first occurrence
+ */
+function deduplicateByArrId(items: MovieData[]): MovieData[] {
+	const seen = new Set<number>();
+	return items.filter((item) => {
+		if (seen.has(item.arrId)) {
+			return false;
+		}
+		seen.add(item.arrId);
+		return true;
+	});
+}
+
+/**
+ * Insert movies from property test data
+ */
+async function insertMoviesFromData(
+	connectorId: number,
+	moviesData: MovieData[]
+): Promise<Map<number, number>> {
+	const arrIdToDbId = new Map<number, number>();
+
+	for (const movieData of moviesData) {
+		const result = await db
+			.insert(movies)
+			.values({
+				connectorId,
+				arrId: movieData.arrId,
+				title: movieData.title,
+				year: movieData.year,
+				monitored: true,
+				hasFile: movieData.hasFile,
+				qualityCutoffNotMet: movieData.qualityCutoffNotMet
+			})
+			.returning({ id: movies.id });
+
+		arrIdToDbId.set(movieData.arrId, result[0]!.id);
+	}
+
+	return arrIdToDbId;
+}
+
+/**
+ * Get all movies for a connector, mapped by arrId
+ */
+async function getMoviesByConnector(
+	connectorId: number
+): Promise<Map<number, { id: number; arrId: number; title: string; hasFile: boolean }>> {
+	const result = await db
+		.select({
+			id: movies.id,
+			arrId: movies.arrId,
+			title: movies.title,
+			hasFile: movies.hasFile
+		})
+		.from(movies)
+		.where(eq(movies.connectorId, connectorId));
+
+	const map = new Map<number, { id: number; arrId: number; title: string; hasFile: boolean }>();
+	for (const row of result) {
+		map.set(row.arrId, row);
+	}
+	return map;
+}
+
+/**
+ * Simulate reconciliation upsert: insert new items, update existing ones
+ */
+async function simulateReconciliationUpsert(
+	connectorId: number,
+	apiItems: MovieData[]
+): Promise<void> {
+	for (const item of apiItems) {
+		await db
+			.insert(movies)
+			.values({
+				connectorId,
+				arrId: item.arrId,
+				title: item.title,
+				year: item.year,
+				monitored: true,
+				hasFile: item.hasFile,
+				qualityCutoffNotMet: item.qualityCutoffNotMet
+			})
+			.onConflictDoUpdate({
+				target: [movies.connectorId, movies.arrId],
+				set: {
+					title: sql`excluded.title`,
+					year: sql`excluded.year`,
+					hasFile: sql`excluded.has_file`,
+					qualityCutoffNotMet: sql`excluded.quality_cutoff_not_met`,
+					updatedAt: sql`now()`
+				}
+			});
+	}
+}
+
+/**
+ * Simulate reconciliation delete: remove items not in API response
+ */
+async function simulateReconciliationDelete(
+	connectorId: number,
+	apiArrIds: Set<number>
+): Promise<number[]> {
+	// Get existing movies
+	const existing = await db
+		.select({ id: movies.id, arrId: movies.arrId })
+		.from(movies)
+		.where(eq(movies.connectorId, connectorId));
+
+	// Find IDs to delete (in DB but not in API)
+	const toDeleteDbIds: number[] = [];
+	for (const movie of existing) {
+		if (!apiArrIds.has(movie.arrId)) {
+			toDeleteDbIds.push(movie.id);
+		}
+	}
+
+	// Delete search state for movies being deleted
+	if (toDeleteDbIds.length > 0) {
+		await deleteSearchRegistryForMovies(connectorId, toDeleteDbIds);
+
+		// Delete the movies using inArray for proper array handling
+		await db.delete(movies).where(
+			and(eq(movies.connectorId, connectorId), inArray(movies.id, toDeleteDbIds))
+		);
+	}
+
+	return toDeleteDbIds;
+}
+
+// Property test connector (separate from example tests)
+let propertyTestConnectorId: number;
+
+describe('Property 18: Sync Reconciliation - Property-Based Tests (Requirement 2.2)', () => {
+	beforeAll(async () => {
+		process.env.SECRET_KEY = TEST_SECRET_KEY;
+		propertyTestConnectorId = await createTestConnector('radarr', 'Property Test Radarr');
+	});
+
+	afterAll(async () => {
+		await cleanupConnectorData(propertyTestConnectorId);
+		await db.delete(connectors).where(eq(connectors.id, propertyTestConnectorId));
+
+		if (originalSecretKey !== undefined) {
+			process.env.SECRET_KEY = originalSecretKey;
+		} else {
+			delete process.env.SECRET_KEY;
+		}
+	});
+
+	beforeEach(async () => {
+		await cleanupConnectorData(propertyTestConnectorId);
+	});
+
+	describe('Property 18.1: All API items exist in content mirror after reconciliation', () => {
+		it('should insert/update all items from API response with matching data', async () => {
+			await fc.assert(
+				fc.asyncProperty(
+					fc.array(movieDataArbitrary, { minLength: 1, maxLength: 10 }).map(deduplicateByArrId),
+					async (apiItems) => {
+						// Clean up before each iteration
+						await cleanupConnectorData(propertyTestConnectorId);
+
+						// Execute: Simulate reconciliation upsert
+						await simulateReconciliationUpsert(propertyTestConnectorId, apiItems);
+
+						// Assert: All API items exist in content mirror
+						const dbMovies = await getMoviesByConnector(propertyTestConnectorId);
+
+						// Count should match
+						expect(dbMovies.size).toBe(apiItems.length);
+
+						// Each API item should exist with matching data
+						for (const apiItem of apiItems) {
+							const dbMovie = dbMovies.get(apiItem.arrId);
+							expect(dbMovie).toBeDefined();
+							expect(dbMovie!.title).toBe(apiItem.title);
+							expect(dbMovie!.hasFile).toBe(apiItem.hasFile);
+						}
+					}
+				),
+				{ numRuns: 100 }
+			);
+		});
+
+		it('should update existing items when API provides new data', async () => {
+			await fc.assert(
+				fc.asyncProperty(
+					fc.array(movieDataArbitrary, { minLength: 1, maxLength: 5 }).map(deduplicateByArrId),
+					fc.array(movieDataArbitrary, { minLength: 1, maxLength: 5 }).map(deduplicateByArrId),
+					async (existingItems, apiUpdates) => {
+						await cleanupConnectorData(propertyTestConnectorId);
+
+						// Setup: Insert existing items
+						await insertMoviesFromData(propertyTestConnectorId, existingItems);
+
+						// Create API items with some overlapping arrIds (updates) and some new
+						const apiItems: MovieData[] = [];
+						const existingArrIds = new Set(existingItems.map((i) => i.arrId));
+
+						// Add updates for some existing items
+						for (const update of apiUpdates) {
+							// Reuse some existing arrIds for updates
+							if (existingItems.length > 0 && apiItems.length < existingItems.length) {
+								const existingItem = existingItems[apiItems.length % existingItems.length]!;
+								apiItems.push({
+									...update,
+									arrId: existingItem.arrId // Use existing arrId to force update
+								});
+							} else {
+								// Use update's arrId if not already used
+								if (!existingArrIds.has(update.arrId)) {
+									apiItems.push(update);
+								}
+							}
+						}
+
+						if (apiItems.length === 0) return; // Skip if no valid items
+
+						// Execute: Simulate reconciliation upsert
+						await simulateReconciliationUpsert(propertyTestConnectorId, apiItems);
+
+						// Assert: All API items exist with their new data
+						const dbMovies = await getMoviesByConnector(propertyTestConnectorId);
+
+						for (const apiItem of apiItems) {
+							const dbMovie = dbMovies.get(apiItem.arrId);
+							expect(dbMovie).toBeDefined();
+							expect(dbMovie!.title).toBe(apiItem.title);
+							expect(dbMovie!.hasFile).toBe(apiItem.hasFile);
+						}
+					}
+				),
+				{ numRuns: 100 }
+			);
+		});
+	});
+
+	describe('Property 18.2: Non-API items are deleted from content mirror', () => {
+		it('items in mirror but not in API response should be deleted', async () => {
+			await fc.assert(
+				fc.asyncProperty(
+					fc.array(movieDataArbitrary, { minLength: 2, maxLength: 10 }).map(deduplicateByArrId),
+					fc.integer({ min: 0, max: 100 }), // percentage to keep
+					async (existingItems, keepPercentage) => {
+						await cleanupConnectorData(propertyTestConnectorId);
+
+						if (existingItems.length === 0) return;
+
+						// Setup: Insert existing items
+						await insertMoviesFromData(propertyTestConnectorId, existingItems);
+
+						// Determine which items to "keep" in API response
+						const keepCount = Math.max(
+							0,
+							Math.floor((existingItems.length * keepPercentage) / 100)
+						);
+						const apiItems = existingItems.slice(0, keepCount);
+						const apiArrIds = new Set(apiItems.map((i) => i.arrId));
+
+						// Execute: Simulate reconciliation delete
+						await simulateReconciliationDelete(propertyTestConnectorId, apiArrIds);
+
+						// Assert: Only API items remain
+						const dbMovies = await getMoviesByConnector(propertyTestConnectorId);
+						expect(dbMovies.size).toBe(apiItems.length);
+
+						// All remaining movies should be in API response
+						for (const [arrId] of dbMovies) {
+							expect(apiArrIds.has(arrId)).toBe(true);
+						}
+					}
+				),
+				{ numRuns: 100 }
+			);
+		});
+	});
+
+	describe('Property 18.3: No orphaned search state entries after reconciliation', () => {
+		it('search registry entries should be deleted when content is deleted', async () => {
+			await fc.assert(
+				fc.asyncProperty(
+					fc.array(movieDataArbitrary, { minLength: 2, maxLength: 10 }).map(deduplicateByArrId),
+					fc.integer({ min: 20, max: 80 }), // percentage to keep (ensure some deletions)
+					async (existingItems, keepPercentage) => {
+						await cleanupConnectorData(propertyTestConnectorId);
+
+						if (existingItems.length < 2) return;
+
+						// Setup: Insert existing items with search registry entries
+						const arrIdToDbId = await insertMoviesFromData(
+							propertyTestConnectorId,
+							existingItems
+						);
+
+						// Create search registry entries for all movies
+						for (const [, dbId] of arrIdToDbId) {
+							await insertTestSearchRegistry(propertyTestConnectorId, 'movie', dbId, 'gap');
+						}
+
+						// Determine which items to "keep" in API response
+						const keepCount = Math.max(
+							1,
+							Math.floor((existingItems.length * keepPercentage) / 100)
+						);
+						const apiItems = existingItems.slice(0, keepCount);
+						const apiArrIds = new Set(apiItems.map((i) => i.arrId));
+
+						// Execute: Simulate reconciliation delete
+						await simulateReconciliationDelete(propertyTestConnectorId, apiArrIds);
+
+						// Assert: Search registry count matches remaining movies
+						const remainingMovieCount = await countMovies(propertyTestConnectorId);
+						const remainingRegistryCount = await countSearchRegistry(propertyTestConnectorId);
+
+						expect(remainingMovieCount).toBe(apiItems.length);
+						expect(remainingRegistryCount).toBe(apiItems.length);
+
+						// Verify no orphaned entries: all registry entries reference existing movies
+						const registryEntries = await db
+							.select({ contentId: searchRegistry.contentId })
+							.from(searchRegistry)
+							.where(eq(searchRegistry.connectorId, propertyTestConnectorId));
+
+						const remainingDbIds = await db
+							.select({ id: movies.id })
+							.from(movies)
+							.where(eq(movies.connectorId, propertyTestConnectorId));
+
+						const validDbIds = new Set(remainingDbIds.map((r) => r.id));
+
+						for (const entry of registryEntries) {
+							expect(validDbIds.has(entry.contentId)).toBe(true);
+						}
+					}
+				),
+				{ numRuns: 100 }
+			);
+		});
+
+		it('should handle complete deletion (all items removed)', async () => {
+			await fc.assert(
+				fc.asyncProperty(
+					fc.array(movieDataArbitrary, { minLength: 1, maxLength: 5 }).map(deduplicateByArrId),
+					async (existingItems) => {
+						await cleanupConnectorData(propertyTestConnectorId);
+
+						// Setup: Insert existing items with search registry
+						const arrIdToDbId = await insertMoviesFromData(
+							propertyTestConnectorId,
+							existingItems
+						);
+
+						for (const [, dbId] of arrIdToDbId) {
+							await insertTestSearchRegistry(propertyTestConnectorId, 'movie', dbId, 'gap');
+						}
+
+						// Execute: Simulate reconciliation with empty API response
+						await simulateReconciliationDelete(propertyTestConnectorId, new Set());
+
+						// Assert: No movies or search registry entries remain
+						expect(await countMovies(propertyTestConnectorId)).toBe(0);
+						expect(await countSearchRegistry(propertyTestConnectorId)).toBe(0);
+					}
+				),
+				{ numRuns: 100 }
+			);
 		});
 	});
 });
