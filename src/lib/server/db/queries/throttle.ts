@@ -418,3 +418,9 @@ export function isThrottleProfile(
 ): config is ThrottleProfile {
 	return 'id' in config;
 }
+
+// =============================================================================
+// Re-export Throttle State Queries
+// =============================================================================
+
+export * from './throttle-state';
