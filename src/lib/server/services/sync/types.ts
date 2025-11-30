@@ -2,8 +2,10 @@
  * Type definitions for the sync service.
  *
  * @module services/sync/types
- * @requirements 2.1, 2.2
+ * @requirements 2.1, 2.2, 2.6
  */
+
+import type { HealthStatus } from './health';
 
 /**
  * Result of an incremental sync operation.
@@ -21,6 +23,10 @@ export interface SyncResult {
 	durationMs: number;
 	/** Error message if sync failed */
 	error?: string;
+	/** Number of attempts made (1 if no retries needed) */
+	attempts?: number;
+	/** Final connector health status after sync */
+	healthStatus?: HealthStatus;
 }
 
 /**
@@ -30,7 +36,7 @@ export interface SyncResult {
  * items that no longer exist in the *arr application and cleaning up
  * associated search state.
  *
- * @requirements 2.2
+ * @requirements 2.2, 2.6
  */
 export interface ReconciliationResult {
 	/** Whether the reconciliation completed successfully */
@@ -51,6 +57,10 @@ export interface ReconciliationResult {
 	durationMs: number;
 	/** Error message if reconciliation failed */
 	error?: string;
+	/** Number of attempts made (1 if no retries needed) */
+	attempts?: number;
+	/** Final connector health status after reconciliation */
+	healthStatus?: HealthStatus;
 }
 
 /**
@@ -61,6 +71,8 @@ export interface SyncOptions {
 	concurrency?: number;
 	/** Delay between API requests in ms to avoid rate limits (default: 100) */
 	requestDelayMs?: number;
+	/** Skip retry wrapper and execute sync directly (useful for testing or forced sync) */
+	skipRetry?: boolean;
 }
 
 /**

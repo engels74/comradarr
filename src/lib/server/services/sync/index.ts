@@ -18,3 +18,17 @@ export {
 	deleteSearchRegistryForEpisodes,
 	deleteSearchRegistryForMovies
 } from './search-state-cleanup';
+
+// Sync failure handling (Requirement 2.6)
+export { SYNC_CONFIG, type SyncConfig } from './config';
+// Re-export pure utility functions (usable in unit tests without database)
+export {
+	determineHealthStatus,
+	shouldRetrySync,
+	calculateSyncBackoffDelay,
+	type HealthStatus,
+	type SyncFailureContext
+} from './health-utils';
+// Re-export database-dependent functions
+export { updateHealthFromSyncResult } from './health';
+export { withSyncRetry, type SyncAttemptResult, type SyncRetryOptions } from './with-sync-retry';

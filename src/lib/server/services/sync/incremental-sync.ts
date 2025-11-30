@@ -5,12 +5,12 @@
  * Routes to appropriate handler based on connector type and manages sync state.
  *
  * @module services/sync/incremental-sync
- * @requirements 2.1
+ * @requirements 2.1, 2.6
  */
 
 import { db } from '$lib/server/db';
 import { syncState, type Connector } from '$lib/server/db/schema';
-import { eq, sql } from 'drizzle-orm';
+import { sql } from 'drizzle-orm';
 import {
 	getDecryptedApiKey,
 	updateConnectorLastSync
@@ -20,6 +20,7 @@ import { RadarrClient } from '$lib/server/connectors/radarr/client';
 import { WhisparrClient } from '$lib/server/connectors/whisparr/client';
 import { syncSonarrContent } from './handlers/sonarr';
 import { syncRadarrMovies } from './handlers/radarr';
+import { withSyncRetry } from './with-sync-retry';
 import type { SyncResult, SyncOptions } from './types';
 
 /**
@@ -27,15 +28,17 @@ import type { SyncResult, SyncOptions } from './types';
  *
  * This function:
  * 1. Validates the connector is enabled
- * 2. Decrypts the API key
- * 3. Creates the appropriate client based on connector type
- * 4. Calls the type-specific sync handler
- * 5. Updates sync state on success/failure
- * 6. Updates the connector's lastSync timestamp
+ * 2. Optionally wraps with retry logic (unless skipRetry is set)
+ * 3. Decrypts the API key
+ * 4. Creates the appropriate client based on connector type
+ * 5. Calls the type-specific sync handler
+ * 6. Updates sync state on success/failure
+ * 7. Updates connector health status based on consecutive failures
+ * 8. Updates the connector's lastSync timestamp
  *
  * @param connector - The connector to sync
  * @param options - Optional sync configuration
- * @returns Result of the sync operation
+ * @returns Result of the sync operation including health status
  *
  * @example
  * ```typescript
@@ -44,10 +47,13 @@ import type { SyncResult, SyncOptions } from './types';
  *
  * if (result.success) {
  *   console.log(`Synced ${result.itemsSynced} items in ${result.durationMs}ms`);
+ *   console.log(`Health status: ${result.healthStatus}`);
  * } else {
- *   console.error(`Sync failed: ${result.error}`);
+ *   console.error(`Sync failed after ${result.attempts} attempts: ${result.error}`);
  * }
  * ```
+ *
+ * @requirements 2.1, 2.6
  */
 export async function runIncrementalSync(
 	connector: Connector,
@@ -63,10 +69,55 @@ export async function runIncrementalSync(
 			connectorType: connector.type as 'sonarr' | 'radarr' | 'whisparr',
 			itemsSynced: 0,
 			durationMs: Date.now() - startTime,
-			error: 'Connector is disabled'
+			error: 'Connector is disabled',
+			attempts: 1,
+			healthStatus: 'unknown'
 		};
 	}
 
+	// Execute with or without retry wrapper
+	if (options?.skipRetry === true) {
+		// Direct execution without retry wrapper (for testing or forced sync)
+		return executeIncrementalSync(connector, options, startTime);
+	}
+
+	// Use retry wrapper for normal execution
+	const retryResult = await withSyncRetry(
+		connector.id,
+		() => executeIncrementalSync(connector, options, startTime)
+	);
+
+	if (retryResult.success && retryResult.data !== undefined) {
+		return {
+			...retryResult.data,
+			attempts: retryResult.attempts,
+			healthStatus: retryResult.finalHealthStatus
+		};
+	}
+
+	return {
+		success: false,
+		connectorId: connector.id,
+		connectorType: connector.type as 'sonarr' | 'radarr' | 'whisparr',
+		itemsSynced: 0,
+		durationMs: Date.now() - startTime,
+		error: retryResult.error instanceof Error ? retryResult.error.message : 'Unknown error',
+		attempts: retryResult.attempts,
+		healthStatus: retryResult.finalHealthStatus
+	};
+}
+
+/**
+ * Execute the incremental sync logic without retry wrapper.
+ * This is the core sync implementation that can be wrapped with retry logic.
+ *
+ * @internal
+ */
+async function executeIncrementalSync(
+	connector: Connector,
+	options: SyncOptions | undefined,
+	startTime: number
+): Promise<SyncResult> {
 	try {
 		// Decrypt API key
 		const apiKey = await getDecryptedApiKey(connector);
@@ -118,14 +169,9 @@ export async function runIncrementalSync(
 		// Update sync state on failure
 		await updateSyncState(connector.id, false);
 
-		return {
-			success: false,
-			connectorId: connector.id,
-			connectorType: connector.type as 'sonarr' | 'radarr' | 'whisparr',
-			itemsSynced: 0,
-			durationMs: Date.now() - startTime,
-			error: error instanceof Error ? error.message : 'Unknown error'
-		};
+		// Re-throw to let the retry wrapper handle it
+		// If skipRetry was used, the error will propagate up
+		throw error;
 	}
 }
 

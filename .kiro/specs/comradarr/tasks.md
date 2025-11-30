@@ -257,7 +257,7 @@
     - Cascade delete search state for removed items
     - _Requirements: 2.2_
 
-  - [ ] 15.3 Implement sync failure handling
+  - [x] 15.3 Implement sync failure handling
     - Retry with exponential backoff
     - Track consecutive failures
     - Mark connector unhealthy after threshold

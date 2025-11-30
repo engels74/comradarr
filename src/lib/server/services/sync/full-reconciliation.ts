@@ -6,7 +6,7 @@
  * deletes content that no longer exists in the *arr application.
  *
  * @module services/sync/full-reconciliation
- * @requirements 2.2
+ * @requirements 2.2, 2.6
  */
 
 import { db } from '$lib/server/db';
@@ -21,6 +21,7 @@ import { RadarrClient } from '$lib/server/connectors/radarr/client';
 import { WhisparrClient } from '$lib/server/connectors/whisparr/client';
 import { reconcileSonarrContent } from './handlers/sonarr-reconcile';
 import { reconcileRadarrMovies } from './handlers/radarr-reconcile';
+import { withSyncRetry } from './with-sync-retry';
 import type { ReconciliationResult, SyncOptions } from './types';
 
 /**
@@ -34,15 +35,17 @@ import type { ReconciliationResult, SyncOptions } from './types';
  *
  * This function:
  * 1. Validates the connector is enabled
- * 2. Decrypts the API key
- * 3. Creates the appropriate client based on connector type
- * 4. Calls the type-specific reconciliation handler
- * 5. Updates syncState.lastReconciliation timestamp
- * 6. Updates the connector's lastSync timestamp
+ * 2. Optionally wraps with retry logic (unless skipRetry is set)
+ * 3. Decrypts the API key
+ * 4. Creates the appropriate client based on connector type
+ * 5. Calls the type-specific reconciliation handler
+ * 6. Updates sync state and connector health status
+ * 7. Updates syncState.lastReconciliation timestamp
+ * 8. Updates the connector's lastSync timestamp
  *
  * @param connector - The connector to reconcile
  * @param options - Optional sync configuration
- * @returns Detailed result of the reconciliation operation
+ * @returns Detailed result of the reconciliation operation including health status
  *
  * @example
  * ```typescript
@@ -51,12 +54,13 @@ import type { ReconciliationResult, SyncOptions } from './types';
  *
  * if (result.success) {
  *   console.log(`Created: ${result.itemsCreated}, Updated: ${result.itemsUpdated}, Deleted: ${result.itemsDeleted}`);
+ *   console.log(`Health status: ${result.healthStatus}`);
  * } else {
- *   console.error(`Reconciliation failed: ${result.error}`);
+ *   console.error(`Reconciliation failed after ${result.attempts} attempts: ${result.error}`);
  * }
  * ```
  *
- * @requirements 2.2 - Full reconciliation with deletion of removed items and cascade to search state
+ * @requirements 2.2, 2.6
  */
 export async function runFullReconciliation(
 	connector: Connector,
@@ -75,10 +79,60 @@ export async function runFullReconciliation(
 			itemsDeleted: 0,
 			searchStateDeleted: 0,
 			durationMs: Date.now() - startTime,
-			error: 'Connector is disabled'
+			error: 'Connector is disabled',
+			attempts: 1,
+			healthStatus: 'unknown'
 		};
 	}
 
+	// Execute with or without retry wrapper
+	if (options?.skipRetry === true) {
+		// Direct execution without retry wrapper (for testing or forced sync)
+		return executeFullReconciliation(connector, options, startTime);
+	}
+
+	// Use retry wrapper for normal execution
+	// Fewer retries for full reconciliation since it's expensive
+	const retryResult = await withSyncRetry(
+		connector.id,
+		() => executeFullReconciliation(connector, options, startTime),
+		{ maxRetries: 2 }
+	);
+
+	if (retryResult.success && retryResult.data !== undefined) {
+		return {
+			...retryResult.data,
+			attempts: retryResult.attempts,
+			healthStatus: retryResult.finalHealthStatus
+		};
+	}
+
+	return {
+		success: false,
+		connectorId: connector.id,
+		connectorType: connector.type as 'sonarr' | 'radarr' | 'whisparr',
+		itemsCreated: 0,
+		itemsUpdated: 0,
+		itemsDeleted: 0,
+		searchStateDeleted: 0,
+		durationMs: Date.now() - startTime,
+		error: retryResult.error instanceof Error ? retryResult.error.message : 'Unknown error',
+		attempts: retryResult.attempts,
+		healthStatus: retryResult.finalHealthStatus
+	};
+}
+
+/**
+ * Execute the full reconciliation logic without retry wrapper.
+ * This is the core reconciliation implementation that can be wrapped with retry logic.
+ *
+ * @internal
+ */
+async function executeFullReconciliation(
+	connector: Connector,
+	options: SyncOptions | undefined,
+	startTime: number
+): Promise<ReconciliationResult> {
 	try {
 		// Decrypt API key
 		const apiKey = await getDecryptedApiKey(connector);
@@ -148,17 +202,9 @@ export async function runFullReconciliation(
 		// Update sync state on failure
 		await updateReconciliationState(connector.id, false);
 
-		return {
-			success: false,
-			connectorId: connector.id,
-			connectorType: connector.type as 'sonarr' | 'radarr' | 'whisparr',
-			itemsCreated: 0,
-			itemsUpdated: 0,
-			itemsDeleted: 0,
-			searchStateDeleted: 0,
-			durationMs: Date.now() - startTime,
-			error: error instanceof Error ? error.message : 'Unknown error'
-		};
+		// Re-throw to let the retry wrapper handle it
+		// If skipRetry was used, the error will propagate up
+		throw error;
 	}
 }
 
