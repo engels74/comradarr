@@ -190,7 +190,7 @@
     - Implement ping, getSystemStatus, getHealth methods
     - _Requirements: 26.1_
 
-  - [ ] 10.2 Implement library and wanted methods
+  - [x] 10.2 Implement library and wanted methods
     - Implement getSeries, getEpisodes
     - Implement getWantedMissing, getWantedCutoff
     - _Requirements: 26.2, 26.3, 26.4_

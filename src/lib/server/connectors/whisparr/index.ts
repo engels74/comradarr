@@ -12,6 +12,7 @@
 
 // Client
 export { WhisparrClient } from './client.js';
+export type { WantedOptions } from './client.js';
 
 // Types
 export type {
@@ -29,6 +30,8 @@ export {
 	parseWhisparrEpisode,
 	parsePaginatedWhisparrSeries,
 	parsePaginatedWhisparrEpisodes,
+	parsePaginatedWhisparrSeriesLenient,
+	parsePaginatedWhisparrEpisodesLenient,
 	WhisparrSeriesSchema,
 	WhisparrSeasonSchema,
 	WhisparrSeasonStatisticsSchema,
