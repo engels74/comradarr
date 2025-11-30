@@ -36,6 +36,7 @@ export const connectors = pgTable('connectors', {
 	apiKeyEncrypted: text('api_key_encrypted').notNull(), // AES-256-GCM encrypted
 	enabled: boolean('enabled').notNull().default(true),
 	healthStatus: varchar('health_status', { length: 20 }).notNull().default('unknown'), // 'healthy' | 'degraded' | 'unhealthy' | 'offline' | 'unknown'
+	queuePaused: boolean('queue_paused').notNull().default(false), // Whether queue processing is paused for this connector
 	lastSync: timestamp('last_sync', { withTimezone: true }),
 	createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 	updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow()

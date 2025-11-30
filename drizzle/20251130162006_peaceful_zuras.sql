@@ -1,0 +1,1 @@
+ALTER TABLE "connectors" ADD COLUMN "queue_paused" boolean DEFAULT false NOT NULL;

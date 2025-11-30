@@ -15,6 +15,13 @@
       "when": 1764438674899,
       "tag": "20251129175114_even_luckman",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1764519606617,
+      "tag": "20251130162006_peaceful_zuras",
+      "breakpoints": true
     }
   ]
 }

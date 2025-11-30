@@ -15,13 +15,16 @@
 
 import { describe, it, expect } from 'vitest';
 import * as fc from 'fast-check';
+// Import directly from specific files to avoid loading database-dependent queue-service.ts
 import {
 	calculatePriority,
-	comparePriority,
+	comparePriority
+} from '../../src/lib/server/services/queue/priority-calculator';
+import {
 	DEFAULT_PRIORITY_WEIGHTS,
 	PRIORITY_CONSTANTS
-} from '../../src/lib/server/services/queue';
-import type { PriorityInput, PriorityWeights } from '../../src/lib/server/services/queue';
+} from '../../src/lib/server/services/queue/config';
+import type { PriorityInput, PriorityWeights } from '../../src/lib/server/services/queue/types';
 
 /**
  * Arbitrary generator for SearchType.

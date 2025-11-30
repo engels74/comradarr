@@ -158,3 +158,148 @@ export interface PriorityResult {
 	 */
 	breakdown: PriorityBreakdown;
 }
+
+// =============================================================================
+// Queue Service Types (Requirement 5.2)
+// =============================================================================
+
+/**
+ * A single item in the request queue with joined data from search registry.
+ *
+ * @requirements 5.2
+ */
+export interface QueueItem {
+	/** Request queue row ID */
+	id: number;
+
+	/** Reference to the search registry entry */
+	searchRegistryId: number;
+
+	/** Connector this item belongs to */
+	connectorId: number;
+
+	/** Type of content (episode or movie) */
+	contentType: ContentType;
+
+	/** Reference to the content (episodes.id or movies.id) */
+	contentId: number;
+
+	/** Type of search (gap or upgrade) */
+	searchType: SearchType;
+
+	/** Calculated priority score (higher = more urgent) */
+	priority: number;
+
+	/** When this item was scheduled for processing */
+	scheduledAt: Date;
+}
+
+/**
+ * Result of an enqueue operation.
+ *
+ * @requirements 5.2
+ */
+export interface EnqueueResult {
+	/** Whether the operation completed successfully */
+	success: boolean;
+
+	/** Connector ID the items were enqueued for */
+	connectorId: number;
+
+	/** Number of items successfully enqueued */
+	itemsEnqueued: number;
+
+	/** Number of items skipped (already queued or not eligible) */
+	itemsSkipped: number;
+
+	/** Duration of the operation in milliseconds */
+	durationMs: number;
+
+	/** Error message if success is false */
+	error?: string;
+}
+
+/**
+ * Result of a dequeue operation.
+ *
+ * @requirements 5.2
+ */
+export interface DequeueResult {
+	/** Whether the operation completed successfully */
+	success: boolean;
+
+	/** Connector ID the items were dequeued from */
+	connectorId: number;
+
+	/** Items dequeued, in priority order (highest priority first) */
+	items: QueueItem[];
+
+	/** Duration of the operation in milliseconds */
+	durationMs: number;
+
+	/** Error message if success is false */
+	error?: string;
+}
+
+/**
+ * Result of a queue control operation (pause/resume/clear).
+ *
+ * @requirements 5.2
+ */
+export interface QueueControlResult {
+	/** Whether the operation completed successfully */
+	success: boolean;
+
+	/** Connector ID affected (null for global operations) */
+	connectorId: number | null;
+
+	/** Number of items affected by the operation */
+	itemsAffected: number;
+
+	/** Duration of the operation in milliseconds */
+	durationMs: number;
+
+	/** Error message if success is false */
+	error?: string;
+}
+
+/**
+ * Queue status information for a connector.
+ *
+ * @requirements 5.2
+ */
+export interface QueueStatus {
+	/** Connector ID */
+	connectorId: number;
+
+	/** Whether queue processing is paused */
+	isPaused: boolean;
+
+	/** Number of items currently in the queue */
+	queueDepth: number;
+
+	/** Timestamp of the next scheduled item (null if queue is empty) */
+	nextScheduledAt: Date | null;
+}
+
+/**
+ * Options for the enqueue operation.
+ */
+export interface EnqueueOptions {
+	/** Batch size for database operations (default: 1000) */
+	batchSize?: number;
+
+	/** When to schedule items for processing (default: now) */
+	scheduledAt?: Date;
+}
+
+/**
+ * Options for the dequeue operation.
+ */
+export interface DequeueOptions {
+	/** Maximum number of items to dequeue (default: 10, max: 100) */
+	limit?: number;
+
+	/** Only dequeue items scheduled at or before this time (default: now) */
+	scheduledBefore?: Date;
+}

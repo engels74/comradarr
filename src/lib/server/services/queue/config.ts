@@ -79,3 +79,41 @@ export const PRIORITY_CONSTANTS = {
 
 /** Type for the priority constants */
 export type PriorityConstantsType = typeof PRIORITY_CONSTANTS;
+
+// =============================================================================
+// Queue Service Configuration (Requirement 5.2)
+// =============================================================================
+
+/**
+ * Queue service configuration constants.
+ *
+ * Defines batch sizes and limits for queue operations.
+ *
+ * @requirements 5.2
+ */
+export const QUEUE_CONFIG = {
+	/**
+	 * Default batch size for database operations.
+	 * Controls how many items are inserted/updated per query.
+	 */
+	DEFAULT_BATCH_SIZE: 1000,
+
+	/**
+	 * Chunk size for priority calculation.
+	 * Controls how many items are processed per iteration.
+	 */
+	PRIORITY_CHUNK_SIZE: 500,
+
+	/**
+	 * Default number of items to dequeue in a single call.
+	 */
+	DEFAULT_DEQUEUE_LIMIT: 10,
+
+	/**
+	 * Maximum number of items that can be dequeued in a single call.
+	 */
+	MAX_DEQUEUE_LIMIT: 100
+} as const;
+
+/** Type for the queue config constants */
+export type QueueConfigType = typeof QUEUE_CONFIG;
