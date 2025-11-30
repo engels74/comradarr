@@ -411,7 +411,7 @@
 ## Phase 11: Prowlarr Health Monitoring (Optional)
 
 - [ ] 26. Implement Prowlarr integration
-  - [ ] 26.1 Create Prowlarr client
+  - [x] 26.1 Create Prowlarr client
     - Add prowlarr_instances table (URL, encrypted API key)
     - Implement ProwlarrClient with getIndexerStatus()
     - Parse disabledTill timestamps for rate-limited indexers

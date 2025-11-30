@@ -10,8 +10,9 @@
  * - searchRegistry, requestQueue, searchHistory: Search state tracking
  * - syncState: Sync tracking per connector
  * - users, sessions: Authentication (Requirements 10.1, 10.2)
+ * - prowlarrInstances: Prowlarr connections for indexer health monitoring (Requirements 38.1)
  *
- * Requirements: 7.1, 7.4, 7.5, 10.1, 10.2, 14.1, 14.2, 14.3
+ * Requirements: 7.1, 7.4, 7.5, 10.1, 10.2, 14.1, 14.2, 14.3, 38.1
  */
 
 import {
@@ -353,6 +354,22 @@ export const sessions = pgTable(
 );
 
 // =============================================================================
+// Prowlarr Instances Table (Requirements 38.1)
+// =============================================================================
+
+export const prowlarrInstances = pgTable('prowlarr_instances', {
+	id: integer('id').primaryKey().generatedAlwaysAsIdentity(),
+	name: varchar('name', { length: 100 }).notNull(),
+	url: varchar('url', { length: 500 }).notNull(),
+	apiKeyEncrypted: text('api_key_encrypted').notNull(), // AES-256-GCM encrypted
+	enabled: boolean('enabled').notNull().default(true),
+	healthStatus: varchar('health_status', { length: 20 }).notNull().default('unknown'), // 'healthy' | 'degraded' | 'unhealthy' | 'offline' | 'unknown'
+	lastHealthCheck: timestamp('last_health_check', { withTimezone: true }),
+	createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+	updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow()
+});
+
+// =============================================================================
 // Type Exports (Drizzle inference)
 // =============================================================================
 
@@ -394,3 +411,6 @@ export type NewUser = typeof users.$inferInsert;
 
 export type Session = typeof sessions.$inferSelect;
 export type NewSession = typeof sessions.$inferInsert;
+
+export type ProwlarrInstance = typeof prowlarrInstances.$inferSelect;
+export type NewProwlarrInstance = typeof prowlarrInstances.$inferInsert;
