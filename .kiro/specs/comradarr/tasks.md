@@ -300,14 +300,14 @@
 
 ## Phase 8: Queue Service
 
-- [ ] 19. Implement priority calculation
-  - [ ] 19.1 Create priority calculator
+- [x] 19. Implement priority calculation
+  - [x] 19.1 Create priority calculator
     - Factor in content age, missing duration, user priority
     - Apply failure penalty
     - Apply search type factor (gaps vs upgrades)
     - _Requirements: 5.1_
 
-  - [ ] 19.2 Write property test for priority calculation
+  - [x] 19.2 Write property test for priority calculation
     - **Property 5: Priority Calculation Determinism**
     - **Validates: Requirements 5.1**
 
