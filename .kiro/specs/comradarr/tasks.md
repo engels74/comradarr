@@ -214,7 +214,7 @@
 
 ## Phase 5: Connector Management UI
 
-- [ ] 13. Create connector management pages
+- [x] 13. Create connector management pages
   - [x] 13.1 Create connector list page
     - Display connectors with status indicator, name, type, URL
     - Show quick stats (gaps, queue depth)
@@ -233,7 +233,7 @@
     - Show sync history and status
     - _Requirements: 16.4, 16.5_
 
-  - [ ] 13.4 Implement connector CRUD operations
+  - [x] 13.4 Implement connector CRUD operations
     - Create server actions for add, edit, delete
     - Implement test connection action
     - _Requirements: 1.1, 1.2_

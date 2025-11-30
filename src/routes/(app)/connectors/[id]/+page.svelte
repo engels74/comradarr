@@ -12,6 +12,7 @@
 	import { enhance } from '$app/forms';
 	import * as Card from '$lib/components/ui/card';
 	import * as Table from '$lib/components/ui/table';
+	import * as Dialog from '$lib/components/ui/dialog';
 	import { Button } from '$lib/components/ui/button';
 	import { Badge } from '$lib/components/ui/badge';
 	import { Separator } from '$lib/components/ui/separator';
@@ -75,6 +76,10 @@
 	let isTestingConnection = $state(false);
 	let isTriggeringSync = $state(false);
 	let isClearingFailedSearches = $state(false);
+	let isDeleting = $state(false);
+
+	// Dialog state
+	let deleteDialogOpen = $state(false);
 </script>
 
 <svelte:head>
@@ -102,6 +107,9 @@
 			{#if !data.connector.enabled}
 				<Badge variant="secondary">Disabled</Badge>
 			{/if}
+		</div>
+		<div class="flex gap-2">
+			<Button href="/connectors/{data.connector.id}/edit" variant="outline">Edit</Button>
 		</div>
 	</div>
 
@@ -394,6 +402,58 @@
 					</Table.Body>
 				</Table.Root>
 			{/if}
+		</Card.Content>
+	</Card.Root>
+
+	<!-- Danger Zone -->
+	<Card.Root class="mt-6 border-destructive/50">
+		<Card.Header>
+			<Card.Title class="text-destructive">Danger Zone</Card.Title>
+		</Card.Header>
+		<Card.Content>
+			<div class="flex items-center justify-between">
+				<div>
+					<p class="font-medium">Delete Connector</p>
+					<p class="text-sm text-muted-foreground">
+						Permanently delete this connector and all associated data.
+					</p>
+				</div>
+				<Dialog.Root bind:open={deleteDialogOpen}>
+					<Dialog.Trigger>
+						{#snippet child({ props })}
+							<Button {...props} variant="destructive">Delete</Button>
+						{/snippet}
+					</Dialog.Trigger>
+					<Dialog.Content>
+						<Dialog.Header>
+							<Dialog.Title>Delete Connector</Dialog.Title>
+							<Dialog.Description>
+								Are you sure you want to delete <strong>{data.connector.name}</strong>? This will
+								permanently remove the connector and all associated data including synced content,
+								search history, and queue items. This action cannot be undone.
+							</Dialog.Description>
+						</Dialog.Header>
+						<Dialog.Footer>
+							<Button variant="outline" onclick={() => (deleteDialogOpen = false)}>Cancel</Button>
+							<form
+								method="POST"
+								action="?/delete"
+								use:enhance={() => {
+									isDeleting = true;
+									return async ({ update }) => {
+										await update();
+										isDeleting = false;
+									};
+								}}
+							>
+								<Button type="submit" variant="destructive" disabled={isDeleting}>
+									{isDeleting ? 'Deleting...' : 'Delete Connector'}
+								</Button>
+							</form>
+						</Dialog.Footer>
+					</Dialog.Content>
+				</Dialog.Root>
+			</div>
 		</Card.Content>
 	</Card.Root>
 </div>

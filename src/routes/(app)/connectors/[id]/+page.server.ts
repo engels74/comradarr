@@ -4,7 +4,7 @@
  * Requirements: 16.4, 16.5
  */
 
-import { error, fail } from '@sveltejs/kit';
+import { error, fail, redirect } from '@sveltejs/kit';
 import type { PageServerLoad, Actions } from './$types';
 import {
 	getConnector,
@@ -14,7 +14,8 @@ import {
 	getSearchStateDistribution,
 	getRecentSearchHistory,
 	clearFailedSearches,
-	updateConnectorHealth
+	updateConnectorHealth,
+	deleteConnector
 } from '$lib/server/db/queries/connectors';
 import {
 	SonarrClient,
@@ -216,5 +217,27 @@ export const actions: Actions = {
 			success: true,
 			message: `Cleared ${clearedCount} failed search${clearedCount === 1 ? '' : 'es'}.`
 		};
+	},
+
+	/**
+	 * Delete the connector and all associated data.
+	 * Redirects to the connector list on success.
+	 */
+	delete: async ({ params }) => {
+		const id = Number(params.id);
+
+		if (isNaN(id)) {
+			return fail(400, { error: 'Invalid connector ID' });
+		}
+
+		const connector = await getConnector(id);
+
+		if (!connector) {
+			return fail(404, { error: 'Connector not found' });
+		}
+
+		await deleteConnector(id);
+
+		redirect(303, '/connectors');
 	}
 };
