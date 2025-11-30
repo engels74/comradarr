@@ -221,7 +221,7 @@
     - Add enable/disable toggle
     - _Requirements: 16.1_
 
-  - [ ] 13.2 Create add connector form
+  - [x] 13.2 Create add connector form
     - Implement form with type selection, URL, API key inputs
     - Add test connection button
     - Validate with Valibot schema
