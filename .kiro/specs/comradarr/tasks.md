@@ -272,7 +272,7 @@
 
 ## Phase 7: Discovery Service
 
-- [ ] 17. Implement discovery service
+- [x] 17. Implement discovery service
   - [x] 17.1 Create gap detector
     - Query content mirror for monitored items with hasFile=false
     - Create search registry entries for new gaps
@@ -289,7 +289,7 @@
     - Delete search registry when qualityCutoffNotMet becomes false
     - _Requirements: 3.4, 4.4_
 
-  - [ ] 17.4 Write property tests for discovery
+  - [x] 17.4 Write property tests for discovery
     - **Property 2: Gap Discovery Correctness**
     - **Property 3: Upgrade Discovery Correctness**
     - **Property 4: Search Registry Cleanup on Success**
