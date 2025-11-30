@@ -369,7 +369,7 @@
     - Run migration with Moderate as default profile
     - _Requirements: 7.1, 7.5_
 
-  - [ ] 24.2 Implement preset templates
+  - [x] 24.2 Implement preset templates
     - Create presets.ts with Conservative/Moderate/Aggressive constants
     - Implement profile resolution (connector -> default -> fallback)
     - Create CRUD queries for profiles
