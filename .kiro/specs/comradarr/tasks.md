@@ -362,7 +362,7 @@
 ## Phase 10: Throttle Profiles
 
 - [ ] 24. Implement throttle profile management
-  - [ ] 24.1 Create throttle profile and state schema
+  - [x] 24.1 Create throttle profile and state schema
     - Add throttle_profiles table with preset seeding
     - Add throttle_state table for runtime tracking
     - Add throttle_profile_id FK to connectors table

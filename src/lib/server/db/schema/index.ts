@@ -2,14 +2,16 @@
  * Core database schema for Comradarr
  *
  * Tables defined:
+ * - throttleProfiles: Rate-limiting configuration presets (Requirements 7.1, 7.5)
  * - connectors: *arr application connections with encrypted API keys
+ * - throttleState: Runtime rate-limiting state per connector (Requirements 7.1, 7.4)
  * - series, seasons, episodes: Sonarr/Whisparr content mirror
  * - movies: Radarr content mirror
  * - searchRegistry, requestQueue, searchHistory: Search state tracking
  * - syncState: Sync tracking per connector
  * - users, sessions: Authentication (Requirements 10.1, 10.2)
  *
- * Requirements: 10.1, 10.2, 14.1, 14.2, 14.3
+ * Requirements: 7.1, 7.4, 7.5, 10.1, 10.2, 14.1, 14.2, 14.3
  */
 
 import {
@@ -25,6 +27,24 @@ import {
 } from 'drizzle-orm/pg-core';
 
 // =============================================================================
+// Throttle Profiles Table (Requirements 7.1, 7.5)
+// =============================================================================
+
+export const throttleProfiles = pgTable('throttle_profiles', {
+	id: integer('id').primaryKey().generatedAlwaysAsIdentity(),
+	name: varchar('name', { length: 50 }).notNull().unique(),
+	description: text('description'),
+	requestsPerMinute: integer('requests_per_minute').notNull(),
+	dailyBudget: integer('daily_budget'), // null = unlimited
+	batchSize: integer('batch_size').notNull(),
+	batchCooldownSeconds: integer('batch_cooldown_seconds').notNull(),
+	rateLimitPauseSeconds: integer('rate_limit_pause_seconds').notNull(),
+	isDefault: boolean('is_default').notNull().default(false),
+	createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+	updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow()
+});
+
+// =============================================================================
 // Connectors Table
 // =============================================================================
 
@@ -37,7 +57,31 @@ export const connectors = pgTable('connectors', {
 	enabled: boolean('enabled').notNull().default(true),
 	healthStatus: varchar('health_status', { length: 20 }).notNull().default('unknown'), // 'healthy' | 'degraded' | 'unhealthy' | 'offline' | 'unknown'
 	queuePaused: boolean('queue_paused').notNull().default(false), // Whether queue processing is paused for this connector
+	throttleProfileId: integer('throttle_profile_id').references(() => throttleProfiles.id, {
+		onDelete: 'set null'
+	}), // FK to throttle profile (null = use default)
 	lastSync: timestamp('last_sync', { withTimezone: true }),
+	createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+	updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow()
+});
+
+// =============================================================================
+// Throttle State Table (Requirements 7.1, 7.4)
+// =============================================================================
+
+export const throttleState = pgTable('throttle_state', {
+	id: integer('id').primaryKey().generatedAlwaysAsIdentity(),
+	connectorId: integer('connector_id')
+		.notNull()
+		.references(() => connectors.id, { onDelete: 'cascade' })
+		.unique(),
+	requestsThisMinute: integer('requests_this_minute').notNull().default(0),
+	requestsToday: integer('requests_today').notNull().default(0),
+	minuteWindowStart: timestamp('minute_window_start', { withTimezone: true }),
+	dayWindowStart: timestamp('day_window_start', { withTimezone: true }),
+	pausedUntil: timestamp('paused_until', { withTimezone: true }),
+	pauseReason: varchar('pause_reason', { length: 50 }), // 'rate_limit' | 'daily_budget_exhausted' | 'manual'
+	lastRequestAt: timestamp('last_request_at', { withTimezone: true }),
 	createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 	updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow()
 });
@@ -312,8 +356,14 @@ export const sessions = pgTable(
 // Type Exports (Drizzle inference)
 // =============================================================================
 
+export type ThrottleProfile = typeof throttleProfiles.$inferSelect;
+export type NewThrottleProfile = typeof throttleProfiles.$inferInsert;
+
 export type Connector = typeof connectors.$inferSelect;
 export type NewConnector = typeof connectors.$inferInsert;
+
+export type ThrottleState = typeof throttleState.$inferSelect;
+export type NewThrottleState = typeof throttleState.$inferInsert;
 
 export type Series = typeof series.$inferSelect;
 export type NewSeries = typeof series.$inferInsert;
