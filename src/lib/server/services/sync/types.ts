@@ -2,7 +2,7 @@
  * Type definitions for the sync service.
  *
  * @module services/sync/types
- * @requirements 2.1
+ * @requirements 2.1, 2.2
  */
 
 /**
@@ -20,6 +20,36 @@ export interface SyncResult {
 	/** Duration of the sync operation in milliseconds */
 	durationMs: number;
 	/** Error message if sync failed */
+	error?: string;
+}
+
+/**
+ * Result of a full reconciliation operation.
+ *
+ * Full reconciliation differs from incremental sync by also deleting
+ * items that no longer exist in the *arr application and cleaning up
+ * associated search state.
+ *
+ * @requirements 2.2
+ */
+export interface ReconciliationResult {
+	/** Whether the reconciliation completed successfully */
+	success: boolean;
+	/** ID of the connector that was reconciled */
+	connectorId: number;
+	/** Type of the connector */
+	connectorType: 'sonarr' | 'radarr' | 'whisparr';
+	/** Number of new items created in content mirror */
+	itemsCreated: number;
+	/** Number of existing items updated */
+	itemsUpdated: number;
+	/** Number of items deleted from content mirror */
+	itemsDeleted: number;
+	/** Number of search registry entries deleted for removed content */
+	searchStateDeleted: number;
+	/** Duration of the reconciliation operation in milliseconds */
+	durationMs: number;
+	/** Error message if reconciliation failed */
 	error?: string;
 }
 
