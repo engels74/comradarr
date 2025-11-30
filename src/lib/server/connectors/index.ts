@@ -17,6 +17,9 @@ export { SonarrClient } from './sonarr/client.js';
 export { RadarrClient } from './radarr/client.js';
 export type { ApiVersionInfo } from './radarr/client.js';
 
+// Whisparr client
+export { WhisparrClient } from './whisparr/client.js';
+
 // Types
 export type {
 	ConnectorType,
@@ -100,3 +103,27 @@ export {
 	RadarrMovieSchema,
 	RadarrMovieFileSchema
 } from './radarr/parsers.js';
+
+// Whisparr types
+export type {
+	WhisparrSeries,
+	WhisparrSeason,
+	WhisparrSeasonStatistics,
+	WhisparrSeriesStatistics,
+	WhisparrEpisode,
+	WhisparrEpisodeFile
+} from './whisparr/types.js';
+
+// Whisparr parsers
+export {
+	parseWhisparrSeries,
+	parseWhisparrEpisode,
+	parsePaginatedWhisparrSeries,
+	parsePaginatedWhisparrEpisodes,
+	WhisparrSeriesSchema,
+	WhisparrSeasonSchema,
+	WhisparrSeasonStatisticsSchema,
+	WhisparrSeriesStatisticsSchema,
+	WhisparrEpisodeSchema,
+	WhisparrEpisodeFileSchema
+} from './whisparr/parsers.js';

@@ -186,7 +186,7 @@
     - _Requirements: 25.4, 25.5_
 
 - [ ] 10. Implement Whisparr connector
-  - [ ] 10.1 Create Whisparr client extending base client
+  - [x] 10.1 Create Whisparr client extending base client
     - Implement ping, getSystemStatus, getHealth methods
     - _Requirements: 26.1_
 
