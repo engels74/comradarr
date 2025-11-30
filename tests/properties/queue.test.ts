@@ -87,9 +87,23 @@ const queueItemArbitrary: fc.Arbitrary<TestQueueItem> = fc.record({
 });
 
 /**
- * Arbitrary for an array of queue items (simulating a queue).
+ * Arbitrary for an array of queue items with UNIQUE IDs (simulating a queue).
+ * Uses index-based IDs to guarantee uniqueness for tests that rely on ID lookups.
  */
-const queueArbitrary = fc.array(queueItemArbitrary, { minLength: 0, maxLength: 100 });
+const queueArbitrary = fc
+	.array(
+		fc.record({
+			priority: priorityArbitrary,
+			scheduledAt: scheduledAtArbitrary
+		}),
+		{ minLength: 0, maxLength: 100 }
+	)
+	.map((items) =>
+		items.map((item, index) => ({
+			...item,
+			id: index + 1 // Unique IDs: 1, 2, 3, ...
+		}))
+	);
 
 describe('Queue Processing Order (Requirements 5.2)', () => {
 	describe('Property 6: Priority Ordering', () => {

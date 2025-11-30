@@ -104,6 +104,87 @@ export interface BatchingDecision {
 }
 
 // =============================================================================
+// Episode Grouping Types (Requirements 6.4, 29.4)
+// =============================================================================
+
+/**
+ * Episode with series information for grouping.
+ *
+ * Used to batch episodes by series before creating search commands.
+ *
+ * @requirements 6.4
+ */
+export interface EpisodeForGrouping {
+	/**
+	 * Episode content ID (from episodes.id in the content mirror).
+	 */
+	episodeId: number;
+
+	/**
+	 * Series ID for grouping (from series.id in the content mirror).
+	 */
+	seriesId: number;
+
+	/**
+	 * *arr application episode ID (for EpisodeSearch API calls).
+	 */
+	arrEpisodeId: number;
+}
+
+/**
+ * Movie for batching.
+ *
+ * Used to create batched movie search commands.
+ *
+ * @requirements 29.5
+ */
+export interface MovieForBatching {
+	/**
+	 * Movie content ID (from movies.id in the content mirror).
+	 */
+	movieId: number;
+
+	/**
+	 * *arr application movie ID (for MoviesSearch API calls).
+	 */
+	arrMovieId: number;
+}
+
+/**
+ * A batch of episode IDs to search (grouped by series).
+ *
+ * Each batch contains episodes from a single series,
+ * with at most MAX_EPISODES_PER_SEARCH episodes.
+ *
+ * @requirements 6.4, 29.4
+ */
+export interface EpisodeBatch {
+	/**
+	 * Series ID that all episodes in this batch belong to.
+	 */
+	seriesId: number;
+
+	/**
+	 * *arr application episode IDs to search (max 10).
+	 */
+	arrEpisodeIds: number[];
+}
+
+/**
+ * A batch of movie IDs to search.
+ *
+ * Each batch contains at most MAX_MOVIES_PER_SEARCH movies.
+ *
+ * @requirements 29.5
+ */
+export interface MovieBatch {
+	/**
+	 * *arr application movie IDs to search (max 10).
+	 */
+	arrMovieIds: number[];
+}
+
+// =============================================================================
 // Helper Functions
 // =============================================================================
 
@@ -242,4 +323,161 @@ export function determineBatchingDecision(
 		command: 'SeasonSearch',
 		reason: 'season_fully_aired_high_missing'
 	};
+}
+
+// =============================================================================
+// Episode Grouping Functions (Requirements 6.4, 29.4, 29.5)
+// =============================================================================
+
+/**
+ * Groups episodes by their series ID.
+ *
+ * This function is pure (no side effects) and deterministic (same inputs = same output).
+ *
+ * @param episodes - Array of episodes with series information
+ * @returns Map of seriesId to array of episodes belonging to that series
+ *
+ * @example
+ * ```typescript
+ * const episodes = [
+ *   { episodeId: 1, seriesId: 100, arrEpisodeId: 1001 },
+ *   { episodeId: 2, seriesId: 100, arrEpisodeId: 1002 },
+ *   { episodeId: 3, seriesId: 200, arrEpisodeId: 2001 }
+ * ];
+ * const grouped = groupEpisodesBySeries(episodes);
+ * // Map {
+ * //   100 => [{ episodeId: 1, ... }, { episodeId: 2, ... }],
+ * //   200 => [{ episodeId: 3, ... }]
+ * // }
+ * ```
+ *
+ * @requirements 6.4
+ */
+export function groupEpisodesBySeries(
+	episodes: readonly EpisodeForGrouping[]
+): Map<number, EpisodeForGrouping[]> {
+	const grouped = new Map<number, EpisodeForGrouping[]>();
+
+	for (const episode of episodes) {
+		const existing = grouped.get(episode.seriesId);
+		if (existing) {
+			existing.push(episode);
+		} else {
+			grouped.set(episode.seriesId, [episode]);
+		}
+	}
+
+	return grouped;
+}
+
+/**
+ * Creates episode batches grouped by series with a maximum batch size.
+ *
+ * Each batch contains only episodes from a single series, and no batch
+ * exceeds the maximum size (default: MAX_EPISODES_PER_SEARCH = 10).
+ *
+ * This function is pure (no side effects) and deterministic (same inputs = same output).
+ *
+ * @param episodes - Array of episodes with series information
+ * @param maxBatchSize - Maximum episodes per batch (default: MAX_EPISODES_PER_SEARCH)
+ * @returns Array of episode batches, each grouped by series
+ *
+ * @example
+ * ```typescript
+ * // 12 episodes from series 100, 3 episodes from series 200
+ * const batches = createEpisodeBatches(episodes);
+ * // [
+ * //   { seriesId: 100, arrEpisodeIds: [1001, 1002, ..., 1010] },  // 10 episodes
+ * //   { seriesId: 100, arrEpisodeIds: [1011, 1012] },             // 2 episodes
+ * //   { seriesId: 200, arrEpisodeIds: [2001, 2002, 2003] }        // 3 episodes
+ * // ]
+ * ```
+ *
+ * @requirements 6.4, 29.4
+ */
+export function createEpisodeBatches(
+	episodes: readonly EpisodeForGrouping[],
+	maxBatchSize: number = BATCHING_CONFIG.MAX_EPISODES_PER_SEARCH
+): EpisodeBatch[] {
+	// Edge case: empty input
+	if (episodes.length === 0) {
+		return [];
+	}
+
+	// Edge case: invalid batch size
+	if (maxBatchSize <= 0) {
+		return [];
+	}
+
+	const batches: EpisodeBatch[] = [];
+	const groupedBySeries = groupEpisodesBySeries(episodes);
+
+	// Process each series group
+	for (const [seriesId, seriesEpisodes] of groupedBySeries) {
+		// Split series episodes into batches of maxBatchSize
+		for (let i = 0; i < seriesEpisodes.length; i += maxBatchSize) {
+			const batchEpisodes = seriesEpisodes.slice(i, i + maxBatchSize);
+			batches.push({
+				seriesId,
+				arrEpisodeIds: batchEpisodes.map((ep) => ep.arrEpisodeId)
+			});
+		}
+	}
+
+	return batches;
+}
+
+/**
+ * Creates movie batches with a maximum batch size.
+ *
+ * Unlike episodes, movies don't have a parent grouping container,
+ * so batching is simply splitting into chunks of the maximum size.
+ *
+ * This function is pure (no side effects) and deterministic (same inputs = same output).
+ *
+ * @param movies - Array of movies to batch
+ * @param maxBatchSize - Maximum movies per batch (default: MAX_MOVIES_PER_SEARCH)
+ * @returns Array of movie batches
+ *
+ * @example
+ * ```typescript
+ * const movies = [
+ *   { movieId: 1, arrMovieId: 101 },
+ *   { movieId: 2, arrMovieId: 102 },
+ *   // ... 12 total movies
+ * ];
+ * const batches = createMovieBatches(movies);
+ * // [
+ * //   { arrMovieIds: [101, 102, ..., 110] },  // 10 movies
+ * //   { arrMovieIds: [111, 112] }              // 2 movies
+ * // ]
+ * ```
+ *
+ * @requirements 29.5
+ */
+export function createMovieBatches(
+	movies: readonly MovieForBatching[],
+	maxBatchSize: number = BATCHING_CONFIG.MAX_MOVIES_PER_SEARCH
+): MovieBatch[] {
+	// Edge case: empty input
+	if (movies.length === 0) {
+		return [];
+	}
+
+	// Edge case: invalid batch size
+	if (maxBatchSize <= 0) {
+		return [];
+	}
+
+	const batches: MovieBatch[] = [];
+
+	// Split movies into batches of maxBatchSize
+	for (let i = 0; i < movies.length; i += maxBatchSize) {
+		const batchMovies = movies.slice(i, i + maxBatchSize);
+		batches.push({
+			arrMovieIds: batchMovies.map((movie) => movie.arrMovieId)
+		});
+	}
+
+	return batches;
 }

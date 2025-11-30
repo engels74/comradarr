@@ -23,8 +23,13 @@ import {
 	calculateMissingPercent,
 	calculateMissingCount,
 	isSeasonFullyAired,
+	groupEpisodesBySeries,
+	createEpisodeBatches,
+	createMovieBatches,
 	type SeasonStatistics,
-	type BatchingConfig
+	type BatchingConfig,
+	type EpisodeForGrouping,
+	type MovieForBatching
 } from '$lib/server/services/queue/episode-batcher';
 import { BATCHING_CONFIG } from '$lib/server/services/queue/config';
 
@@ -498,5 +503,380 @@ describe('Edge Cases', () => {
 		const result = determineBatchingDecision(stats);
 		expect(result.command).toBe('SeasonSearch');
 		expect(result.reason).toBe('season_fully_aired_high_missing');
+	});
+});
+
+// =============================================================================
+// Episode Grouping Arbitraries
+// =============================================================================
+
+/**
+ * Arbitrary for a positive integer ID.
+ */
+const positiveIdArbitrary = fc.integer({ min: 1, max: 100000 });
+
+/**
+ * Arbitrary for series IDs (limited range for easier grouping verification).
+ */
+const seriesIdArbitrary = fc.integer({ min: 1, max: 10 });
+
+/**
+ * Arbitrary for a single EpisodeForGrouping.
+ */
+const episodeForGroupingArbitrary: fc.Arbitrary<EpisodeForGrouping> = fc.record({
+	episodeId: positiveIdArbitrary,
+	seriesId: seriesIdArbitrary,
+	arrEpisodeId: positiveIdArbitrary
+});
+
+/**
+ * Arbitrary for a list of episodes for grouping.
+ */
+const episodesForGroupingArbitrary = fc.array(episodeForGroupingArbitrary, { minLength: 0, maxLength: 100 });
+
+/**
+ * Arbitrary for a single MovieForBatching.
+ */
+const movieForBatchingArbitrary: fc.Arbitrary<MovieForBatching> = fc.record({
+	movieId: positiveIdArbitrary,
+	arrMovieId: positiveIdArbitrary
+});
+
+/**
+ * Arbitrary for a list of movies for batching.
+ */
+const moviesForBatchingArbitrary = fc.array(movieForBatchingArbitrary, { minLength: 0, maxLength: 100 });
+
+/**
+ * Arbitrary for valid batch size.
+ */
+const batchSizeArbitrary = fc.integer({ min: 1, max: 20 });
+
+// =============================================================================
+// Property 10: Episode Grouping by Series
+// =============================================================================
+
+describe('Property 10: Episode Grouping by Series (Requirement 6.4)', () => {
+	describe('groupEpisodesBySeries()', () => {
+		it('all episodes in each group belong to the same series', () => {
+			fc.assert(
+				fc.property(episodesForGroupingArbitrary, (episodes) => {
+					const grouped = groupEpisodesBySeries(episodes);
+
+					for (const [seriesId, seriesEpisodes] of grouped) {
+						for (const episode of seriesEpisodes) {
+							expect(episode.seriesId).toBe(seriesId);
+						}
+					}
+				}),
+				{ numRuns: 100 }
+			);
+		});
+
+		it('total episode count is preserved after grouping', () => {
+			fc.assert(
+				fc.property(episodesForGroupingArbitrary, (episodes) => {
+					const grouped = groupEpisodesBySeries(episodes);
+
+					let totalGrouped = 0;
+					for (const seriesEpisodes of grouped.values()) {
+						totalGrouped += seriesEpisodes.length;
+					}
+
+					expect(totalGrouped).toBe(episodes.length);
+				}),
+				{ numRuns: 100 }
+			);
+		});
+
+		it('grouping is deterministic', () => {
+			fc.assert(
+				fc.property(episodesForGroupingArbitrary, (episodes) => {
+					const grouped1 = groupEpisodesBySeries(episodes);
+					const grouped2 = groupEpisodesBySeries(episodes);
+
+					expect(grouped1.size).toBe(grouped2.size);
+					for (const [seriesId, episodes1] of grouped1) {
+						const episodes2 = grouped2.get(seriesId);
+						expect(episodes2).toBeDefined();
+						expect(episodes1.length).toBe(episodes2!.length);
+					}
+				}),
+				{ numRuns: 100 }
+			);
+		});
+
+		it('returns empty map for empty input', () => {
+			const grouped = groupEpisodesBySeries([]);
+			expect(grouped.size).toBe(0);
+		});
+	});
+
+	describe('createEpisodeBatches()', () => {
+		it('all episodes in each batch belong to the same series', () => {
+			fc.assert(
+				fc.property(episodesForGroupingArbitrary, batchSizeArbitrary, (episodes, batchSize) => {
+					const batches = createEpisodeBatches(episodes, batchSize);
+
+					// Verify each batch has a valid seriesId
+					// Note: we can't directly verify episode-to-series mapping since we only have arrEpisodeIds
+					// But we can verify that the batch structure is correct
+					for (const batch of batches) {
+						expect(typeof batch.seriesId).toBe('number');
+						expect(batch.seriesId).toBeGreaterThan(0);
+						expect(Array.isArray(batch.arrEpisodeIds)).toBe(true);
+					}
+				}),
+				{ numRuns: 100 }
+			);
+		});
+
+		it('no batch mixes episodes from different series', () => {
+			// Generate episodes with unique arrEpisodeIds to avoid lookup conflicts
+			const uniqueEpisodesArbitrary = fc
+				.array(fc.record({
+					episodeId: positiveIdArbitrary,
+					seriesId: seriesIdArbitrary
+				}), { minLength: 0, maxLength: 100 })
+				.map((items) =>
+					// Assign unique arrEpisodeIds based on index
+					items.map((item, index) => ({
+						...item,
+						arrEpisodeId: index + 1
+					}))
+				);
+
+			fc.assert(
+				fc.property(uniqueEpisodesArbitrary, batchSizeArbitrary, (episodes, batchSize) => {
+					const batches = createEpisodeBatches(episodes, batchSize);
+
+					// Create a reverse lookup: arrEpisodeId -> seriesId
+					const episodeToSeries = new Map<number, number>();
+					for (const ep of episodes) {
+						episodeToSeries.set(ep.arrEpisodeId, ep.seriesId);
+					}
+
+					// Verify each batch only contains episodes from its stated series
+					for (const batch of batches) {
+						for (const arrEpisodeId of batch.arrEpisodeIds) {
+							const actualSeriesId = episodeToSeries.get(arrEpisodeId);
+							expect(actualSeriesId).toBe(batch.seriesId);
+						}
+					}
+				}),
+				{ numRuns: 100 }
+			);
+		});
+
+		it('total episode count is preserved across all batches', () => {
+			fc.assert(
+				fc.property(episodesForGroupingArbitrary, batchSizeArbitrary, (episodes, batchSize) => {
+					const batches = createEpisodeBatches(episodes, batchSize);
+
+					let totalBatched = 0;
+					for (const batch of batches) {
+						totalBatched += batch.arrEpisodeIds.length;
+					}
+
+					expect(totalBatched).toBe(episodes.length);
+				}),
+				{ numRuns: 100 }
+			);
+		});
+
+		it('batching is deterministic', () => {
+			fc.assert(
+				fc.property(episodesForGroupingArbitrary, batchSizeArbitrary, (episodes, batchSize) => {
+					const batches1 = createEpisodeBatches(episodes, batchSize);
+					const batches2 = createEpisodeBatches(episodes, batchSize);
+
+					expect(batches1.length).toBe(batches2.length);
+					for (let i = 0; i < batches1.length; i++) {
+						expect(batches1[i]!.seriesId).toBe(batches2[i]!.seriesId);
+						expect(batches1[i]!.arrEpisodeIds).toEqual(batches2[i]!.arrEpisodeIds);
+					}
+				}),
+				{ numRuns: 100 }
+			);
+		});
+
+		it('returns empty array for empty input', () => {
+			const batches = createEpisodeBatches([]);
+			expect(batches).toEqual([]);
+		});
+
+		it('returns empty array for invalid batch size', () => {
+			const episodes: EpisodeForGrouping[] = [
+				{ episodeId: 1, seriesId: 1, arrEpisodeId: 1001 }
+			];
+			expect(createEpisodeBatches(episodes, 0)).toEqual([]);
+			expect(createEpisodeBatches(episodes, -1)).toEqual([]);
+		});
+	});
+});
+
+// =============================================================================
+// Property 17: Search Command Batch Size Limits
+// =============================================================================
+
+describe('Property 17: Search Command Batch Size Limits (Requirements 29.4, 29.5)', () => {
+	describe('EpisodeBatch size limits', () => {
+		it('no EpisodeBatch contains more than maxBatchSize episodes', () => {
+			fc.assert(
+				fc.property(episodesForGroupingArbitrary, batchSizeArbitrary, (episodes, batchSize) => {
+					const batches = createEpisodeBatches(episodes, batchSize);
+
+					for (const batch of batches) {
+						expect(batch.arrEpisodeIds.length).toBeLessThanOrEqual(batchSize);
+					}
+				}),
+				{ numRuns: 100 }
+			);
+		});
+
+		it('default batch size is MAX_EPISODES_PER_SEARCH (10)', () => {
+			fc.assert(
+				fc.property(
+					fc.array(episodeForGroupingArbitrary, { minLength: 15, maxLength: 50 }),
+					(episodes) => {
+						const batches = createEpisodeBatches(episodes);
+
+						for (const batch of batches) {
+							expect(batch.arrEpisodeIds.length).toBeLessThanOrEqual(
+								BATCHING_CONFIG.MAX_EPISODES_PER_SEARCH
+							);
+						}
+					}
+				),
+				{ numRuns: 100 }
+			);
+		});
+
+		it('each non-empty batch contains at least 1 episode', () => {
+			fc.assert(
+				fc.property(
+					fc.array(episodeForGroupingArbitrary, { minLength: 1, maxLength: 50 }),
+					batchSizeArbitrary,
+					(episodes, batchSize) => {
+						const batches = createEpisodeBatches(episodes, batchSize);
+
+						for (const batch of batches) {
+							expect(batch.arrEpisodeIds.length).toBeGreaterThanOrEqual(1);
+						}
+					}
+				),
+				{ numRuns: 100 }
+			);
+		});
+
+		it('respects custom batch size configuration', () => {
+			const customBatchSize = 5;
+			const episodes: EpisodeForGrouping[] = Array.from({ length: 12 }, (_, i) => ({
+				episodeId: i + 1,
+				seriesId: 1, // All same series
+				arrEpisodeId: 1000 + i + 1
+			}));
+
+			const batches = createEpisodeBatches(episodes, customBatchSize);
+
+			// Should create 3 batches: 5, 5, 2
+			expect(batches.length).toBe(3);
+			expect(batches[0]!.arrEpisodeIds.length).toBe(5);
+			expect(batches[1]!.arrEpisodeIds.length).toBe(5);
+			expect(batches[2]!.arrEpisodeIds.length).toBe(2);
+		});
+	});
+
+	describe('MovieBatch size limits', () => {
+		it('no MovieBatch contains more than maxBatchSize movies', () => {
+			fc.assert(
+				fc.property(moviesForBatchingArbitrary, batchSizeArbitrary, (movies, batchSize) => {
+					const batches = createMovieBatches(movies, batchSize);
+
+					for (const batch of batches) {
+						expect(batch.arrMovieIds.length).toBeLessThanOrEqual(batchSize);
+					}
+				}),
+				{ numRuns: 100 }
+			);
+		});
+
+		it('default batch size is MAX_MOVIES_PER_SEARCH (10)', () => {
+			fc.assert(
+				fc.property(
+					fc.array(movieForBatchingArbitrary, { minLength: 15, maxLength: 50 }),
+					(movies) => {
+						const batches = createMovieBatches(movies);
+
+						for (const batch of batches) {
+							expect(batch.arrMovieIds.length).toBeLessThanOrEqual(
+								BATCHING_CONFIG.MAX_MOVIES_PER_SEARCH
+							);
+						}
+					}
+				),
+				{ numRuns: 100 }
+			);
+		});
+
+		it('total movie count is preserved across all batches', () => {
+			fc.assert(
+				fc.property(moviesForBatchingArbitrary, batchSizeArbitrary, (movies, batchSize) => {
+					const batches = createMovieBatches(movies, batchSize);
+
+					let totalBatched = 0;
+					for (const batch of batches) {
+						totalBatched += batch.arrMovieIds.length;
+					}
+
+					expect(totalBatched).toBe(movies.length);
+				}),
+				{ numRuns: 100 }
+			);
+		});
+
+		it('batching is deterministic', () => {
+			fc.assert(
+				fc.property(moviesForBatchingArbitrary, batchSizeArbitrary, (movies, batchSize) => {
+					const batches1 = createMovieBatches(movies, batchSize);
+					const batches2 = createMovieBatches(movies, batchSize);
+
+					expect(batches1.length).toBe(batches2.length);
+					for (let i = 0; i < batches1.length; i++) {
+						expect(batches1[i]!.arrMovieIds).toEqual(batches2[i]!.arrMovieIds);
+					}
+				}),
+				{ numRuns: 100 }
+			);
+		});
+
+		it('returns empty array for empty input', () => {
+			const batches = createMovieBatches([]);
+			expect(batches).toEqual([]);
+		});
+
+		it('returns empty array for invalid batch size', () => {
+			const movies: MovieForBatching[] = [
+				{ movieId: 1, arrMovieId: 101 }
+			];
+			expect(createMovieBatches(movies, 0)).toEqual([]);
+			expect(createMovieBatches(movies, -1)).toEqual([]);
+		});
+
+		it('respects custom batch size configuration', () => {
+			const customBatchSize = 3;
+			const movies: MovieForBatching[] = Array.from({ length: 8 }, (_, i) => ({
+				movieId: i + 1,
+				arrMovieId: 100 + i + 1
+			}));
+
+			const batches = createMovieBatches(movies, customBatchSize);
+
+			// Should create 3 batches: 3, 3, 2
+			expect(batches.length).toBe(3);
+			expect(batches[0]!.arrMovieIds.length).toBe(3);
+			expect(batches[1]!.arrMovieIds.length).toBe(3);
+			expect(batches[2]!.arrMovieIds.length).toBe(2);
+		});
 	});
 });

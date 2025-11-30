@@ -340,7 +340,7 @@
     - Decide SeasonSearch vs EpisodeSearch based on thresholds
     - _Requirements: 6.1, 6.2, 6.3_
 
-  - [ ] 22.2 Implement episode grouping
+  - [x] 22.2 Implement episode grouping
     - Group episodes by series
     - Limit batch size to 10 episodes per command
     - _Requirements: 6.4, 29.4, 29.5_

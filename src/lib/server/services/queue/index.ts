@@ -94,7 +94,12 @@ export type {
 	SeasonStatistics,
 	BatchingConfig,
 	BatchingReason,
-	BatchingDecision
+	BatchingDecision,
+	// Episode grouping types (Requirements 6.4, 29.4, 29.5)
+	EpisodeForGrouping,
+	MovieForBatching,
+	EpisodeBatch,
+	MovieBatch
 } from './episode-batcher';
 
 // Episode batching - Functions
@@ -102,5 +107,9 @@ export {
 	determineBatchingDecision,
 	calculateMissingPercent,
 	calculateMissingCount,
-	isSeasonFullyAired
+	isSeasonFullyAired,
+	// Episode grouping functions (Requirements 6.4, 29.4, 29.5)
+	groupEpisodesBySeries,
+	createEpisodeBatches,
+	createMovieBatches
 } from './episode-batcher';

@@ -202,7 +202,14 @@ export const BATCHING_CONFIG = {
 	 * This is an API limit from *arr applications.
 	 * @default 10
 	 */
-	MAX_EPISODES_PER_SEARCH: 10
+	MAX_EPISODES_PER_SEARCH: 10,
+
+	/**
+	 * Maximum movies allowed per MoviesSearch command.
+	 * This is an API limit from *arr applications.
+	 * @default 10
+	 */
+	MAX_MOVIES_PER_SEARCH: 10
 } as const;
 
 /** Type for the batching config constants */
