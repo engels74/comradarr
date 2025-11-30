@@ -273,7 +273,7 @@
 ## Phase 7: Discovery Service
 
 - [ ] 17. Implement discovery service
-  - [ ] 17.1 Create gap detector
+  - [x] 17.1 Create gap detector
     - Query content mirror for monitored items with hasFile=false
     - Create search registry entries for new gaps
     - _Requirements: 3.1, 3.2, 3.3_
