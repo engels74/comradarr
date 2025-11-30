@@ -117,3 +117,51 @@ export const QUEUE_CONFIG = {
 
 /** Type for the queue config constants */
 export type QueueConfigType = typeof QUEUE_CONFIG;
+
+// =============================================================================
+// State Transition Configuration (Requirement 5.5, 5.6)
+// =============================================================================
+
+/**
+ * State transition configuration constants.
+ *
+ * Defines cooldown timing and exhaustion thresholds for
+ * the search state machine transitions.
+ *
+ * @requirements 5.5, 5.6
+ */
+export const STATE_TRANSITION_CONFIG = {
+	/**
+	 * Maximum search attempts before marking exhausted.
+	 * After this many failures, the item is marked as exhausted
+	 * and will not be retried automatically.
+	 */
+	MAX_ATTEMPTS: 5,
+
+	/**
+	 * Base cooldown delay in milliseconds (1 hour).
+	 * This is the initial delay after the first failure.
+	 */
+	COOLDOWN_BASE_DELAY: 3600000,
+
+	/**
+	 * Maximum cooldown delay in milliseconds (24 hours).
+	 * Delays are capped at this value regardless of attempt count.
+	 */
+	COOLDOWN_MAX_DELAY: 86400000,
+
+	/**
+	 * Backoff multiplier for cooldown calculation.
+	 * Each subsequent failure multiplies the delay by this factor.
+	 */
+	COOLDOWN_MULTIPLIER: 2,
+
+	/**
+	 * Whether to apply jitter to cooldown delays.
+	 * Jitter adds ±25% randomness to prevent thundering herd.
+	 */
+	COOLDOWN_JITTER: true
+} as const;
+
+/** Type for the state transition config constants */
+export type StateTransitionConfigType = typeof STATE_TRANSITION_CONFIG;

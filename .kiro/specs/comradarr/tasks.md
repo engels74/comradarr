@@ -318,7 +318,7 @@
     - Implement pause/resume/clear operations
     - _Requirements: 5.2_
 
-  - [ ] 20.2 Implement search state transitions
+  - [x] 20.2 Implement search state transitions
     - Transition pending → queued → searching → cooldown/exhausted
     - Calculate next eligible time on failure
     - Mark exhausted at max attempts

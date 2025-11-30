@@ -5,6 +5,7 @@
  * - Priority calculation: scoring search items based on multiple factors
  * - Priority comparison: sorting items by priority
  * - Queue management: enqueue, dequeue, pause/resume, clear
+ * - State transitions: searching → cooldown/exhausted, cooldown → pending
  *
  * Priority is calculated based on:
  * - Content age (newer content scores higher)
@@ -14,7 +15,7 @@
  * - Search type (gaps prioritized over upgrades)
  *
  * @module services/queue
- * @requirements 5.1, 5.2
+ * @requirements 5.1, 5.2, 5.5, 5.6
  */
 
 // Types - Priority
@@ -38,9 +39,23 @@ export type {
 	DequeueOptions
 } from './types';
 
+// Types - State Transitions
+export type {
+	SearchState,
+	FailureCategory,
+	MarkSearchFailedInput,
+	StateTransitionResult,
+	ReenqueueCooldownResult
+} from './types';
+
 // Configuration
-export { DEFAULT_PRIORITY_WEIGHTS, PRIORITY_CONSTANTS, QUEUE_CONFIG } from './config';
-export type { PriorityConstantsType, QueueConfigType } from './config';
+export {
+	DEFAULT_PRIORITY_WEIGHTS,
+	PRIORITY_CONSTANTS,
+	QUEUE_CONFIG,
+	STATE_TRANSITION_CONFIG
+} from './config';
+export type { PriorityConstantsType, QueueConfigType, StateTransitionConfigType } from './config';
 
 // Priority calculation
 export { calculatePriority, comparePriority } from './priority-calculator';
@@ -54,3 +69,14 @@ export {
 	clearQueue,
 	getQueueStatus
 } from './queue-service';
+
+// State transitions (pure functions)
+export { calculateNextEligibleTime, shouldMarkExhausted } from './backoff';
+
+// State transitions (database operations)
+export {
+	markSearchFailed,
+	markSearchExhausted,
+	reenqueueEligibleCooldownItems,
+	getSearchState
+} from './state-transitions';

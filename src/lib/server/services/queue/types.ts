@@ -303,3 +303,107 @@ export interface DequeueOptions {
 	/** Only dequeue items scheduled at or before this time (default: now) */
 	scheduledBefore?: Date;
 }
+
+// =============================================================================
+// State Transition Types (Requirement 5.5, 5.6)
+// =============================================================================
+
+/**
+ * Valid states for a search registry entry.
+ *
+ * State machine flow:
+ * - pending: Discovered but not yet queued for search
+ * - queued: Added to request queue, waiting for dispatch
+ * - searching: Search command sent to *arr application
+ * - cooldown: Failed search, waiting for retry eligibility
+ * - exhausted: Max attempts reached, no more automatic retries
+ *
+ * @requirements 5.5, 5.6
+ */
+export type SearchState = 'pending' | 'queued' | 'searching' | 'cooldown' | 'exhausted';
+
+/**
+ * Categories of search failures.
+ *
+ * Used to track and report on failure reasons.
+ *
+ * - `no_results`: Search completed but found no matching releases
+ * - `network_error`: Connection or DNS failure
+ * - `rate_limited`: HTTP 429 from indexer or *arr application
+ * - `server_error`: HTTP 5xx from *arr application
+ * - `timeout`: Request timed out
+ *
+ * @requirements 5.5
+ */
+export type FailureCategory =
+	| 'no_results'
+	| 'network_error'
+	| 'rate_limited'
+	| 'server_error'
+	| 'timeout';
+
+/**
+ * Input for marking a search as failed.
+ *
+ * @requirements 5.5
+ */
+export interface MarkSearchFailedInput {
+	/** ID of the search registry entry */
+	searchRegistryId: number;
+
+	/** Category of the failure */
+	failureCategory: FailureCategory;
+}
+
+/**
+ * Result of a state transition operation.
+ *
+ * @requirements 5.5, 5.6
+ */
+export interface StateTransitionResult {
+	/** Whether the operation completed successfully */
+	success: boolean;
+
+	/** ID of the search registry entry that was transitioned */
+	searchRegistryId: number;
+
+	/** State before the transition */
+	previousState: SearchState;
+
+	/** State after the transition */
+	newState: SearchState;
+
+	/** Current attempt count after transition */
+	attemptCount?: number;
+
+	/** Next eligible time for retry (for cooldown state) */
+	nextEligible?: Date;
+
+	/** Error message if success is false */
+	error?: string;
+}
+
+/**
+ * Result of re-enqueue operation for cooldown items.
+ *
+ * @requirements 5.5
+ */
+export interface ReenqueueCooldownResult {
+	/** Whether the operation completed successfully */
+	success: boolean;
+
+	/** Connector ID if filtered (undefined for all connectors) */
+	connectorId?: number;
+
+	/** Number of items transitioned from cooldown to pending */
+	itemsReenqueued: number;
+
+	/** Number of items still in cooldown (not yet eligible) */
+	itemsSkipped: number;
+
+	/** Duration of the operation in milliseconds */
+	durationMs: number;
+
+	/** Error message if success is false */
+	error?: string;
+}
