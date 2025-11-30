@@ -166,7 +166,7 @@
     - _Requirements: 24.5, 24.6, 24.7_
 
 - [ ] 9. Implement Radarr connector
-  - [ ] 9.1 Create Radarr client extending base client
+  - [x] 9.1 Create Radarr client extending base client
     - Implement ping, getSystemStatus, getHealth methods
     - Implement API version detection
     - _Requirements: 25.6_

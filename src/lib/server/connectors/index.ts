@@ -13,6 +13,10 @@ export { BaseArrClient } from './common/base-client.js';
 // Sonarr client
 export { SonarrClient } from './sonarr/client.js';
 
+// Radarr client
+export { RadarrClient } from './radarr/client.js';
+export type { ApiVersionInfo } from './radarr/client.js';
+
 // Types
 export type {
 	ConnectorType,
@@ -92,6 +96,7 @@ export type { RadarrMovie, RadarrMovieFile } from './radarr/types.js';
 export {
 	parseRadarrMovie,
 	parsePaginatedMovies,
+	parsePaginatedMoviesLenient,
 	RadarrMovieSchema,
 	RadarrMovieFileSchema
 } from './radarr/parsers.js';
