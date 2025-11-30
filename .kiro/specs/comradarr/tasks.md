@@ -334,7 +334,7 @@
 
 ## Phase 9: Episode Batching
 
-- [ ] 22. Implement batching logic
+- [x] 22. Implement batching logic
   - [x] 22.1 Create batching decision logic
     - Analyze season statistics (total, downloaded, nextAiring)
     - Decide SeasonSearch vs EpisodeSearch based on thresholds
@@ -350,13 +350,13 @@
     - Fall back to individual episodes after cooldown
     - _Requirements: 6.5_
 
-  - [ ] 22.4 Write property tests for batching
+  - [x] 22.4 Write property tests for batching
     - **Property 9: Episode Batching Decision**
     - **Property 10: Episode Grouping by Series**
     - **Property 17: Search Command Batch Size Limits**
     - **Validates: Requirements 6.1, 6.2, 6.3, 6.4, 29.4, 29.5**
 
-- [ ] 23. Checkpoint - Ensure all tests pass
+- [x] 23. Checkpoint - Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
 ## Phase 10: Throttle Profiles
