@@ -6,6 +6,10 @@
 # Runs both unit tests (vitest) and integration tests (bun test) with
 # FULLY AUTOMATIC PostgreSQL and test database lifecycle management.
 #
+# Supported Platforms:
+#   - macOS (Intel and Apple Silicon) via Homebrew
+#   - Ubuntu/Debian Linux (including WSL)
+#
 # Usage:
 #   ./scripts/test-all.sh           # Run all tests (unit + integration)
 #   ./scripts/test-all.sh --unit    # Run unit tests only (no database required)
@@ -14,7 +18,7 @@
 #   ./scripts/test-all.sh --no-auto-install  # Don't auto-install PostgreSQL
 #
 # The script will automatically:
-#   1. Install PostgreSQL if not installed (WSL/Ubuntu/Debian)
+#   1. Install PostgreSQL if not installed (apt on Linux, Homebrew on macOS)
 #   2. Start PostgreSQL if not running
 #   3. Create test database and user if needed
 #   4. Run migrations if database schema is outdated
@@ -57,31 +61,130 @@ log_warn() { echo -e "${YELLOW}[WARN]${NC} $1"; }
 log_error() { echo -e "${RED}[✗]${NC} $1" >&2; }
 
 # =============================================================================
-# PostgreSQL Auto-Setup Functions
+# OS Detection
 # =============================================================================
 
-# Check if running on a supported Linux distribution
-check_linux_support() {
-    if [[ ! -f /etc/os-release ]]; then
-        return 1
-    fi
-    source /etc/os-release
-    case "$ID" in
-        ubuntu|debian|linuxmint|pop) return 0 ;;
-        *) return 1 ;;
+# Detect operating system
+detect_os() {
+    case "$(uname -s)" in
+        Darwin)
+            echo "macos"
+            ;;
+        Linux)
+            echo "linux"
+            ;;
+        *)
+            echo "unsupported"
+            ;;
     esac
 }
 
-# Install PostgreSQL automatically (requires sudo)
+OS_TYPE="$(detect_os)"
+
+# Detect Linux distribution (if on Linux)
+detect_linux_distro() {
+    if [[ "$OS_TYPE" != "linux" ]]; then
+        echo "none"
+        return
+    fi
+    if [[ -f /etc/os-release ]]; then
+        # shellcheck source=/dev/null
+        source /etc/os-release
+        case "$ID" in
+            ubuntu|debian|linuxmint|pop) echo "debian" ;;
+            *) echo "unknown" ;;
+        esac
+    else
+        echo "unknown"
+    fi
+}
+
+LINUX_DISTRO="$(detect_linux_distro)"
+
+# Detect Homebrew PostgreSQL version (macOS)
+detect_brew_postgres() {
+    if [[ "$OS_TYPE" != "macos" ]]; then
+        echo ""
+        return
+    fi
+    for ver in 17 16 15 14; do
+        if brew list "postgresql@${ver}" &>/dev/null; then
+            echo "postgresql@${ver}"
+            return
+        fi
+    done
+    if brew list postgresql &>/dev/null; then
+        echo "postgresql"
+        return
+    fi
+    echo ""
+}
+
+# =============================================================================
+# PostgreSQL Auto-Setup Functions
+# =============================================================================
+
+# Install PostgreSQL automatically
 auto_install_postgres() {
     log_info "PostgreSQL not found. Installing automatically..."
 
-    if ! check_linux_support; then
-        log_error "Automatic installation only supported on Ubuntu/Debian-based systems"
-        log_info "Please install PostgreSQL manually for your distribution"
+    case "$OS_TYPE" in
+        macos)
+            auto_install_postgres_macos
+            return $?
+            ;;
+        linux)
+            if [[ "$LINUX_DISTRO" == "debian" ]]; then
+                auto_install_postgres_linux
+                return $?
+            else
+                log_error "Automatic installation only supported on Ubuntu/Debian-based systems"
+                log_info "Please install PostgreSQL manually for your distribution"
+                return 1
+            fi
+            ;;
+        *)
+            log_error "Unsupported operating system: $(uname -s)"
+            log_info "Supported platforms: macOS, Ubuntu/Debian Linux"
+            return 1
+            ;;
+    esac
+}
+
+# Install PostgreSQL on macOS via Homebrew
+auto_install_postgres_macos() {
+    # Check if Homebrew is installed
+    if ! command -v brew &> /dev/null; then
+        log_error "Homebrew is not installed. Please install it first:"
+        log_info "  /bin/bash -c \"\$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)\""
         return 1
     fi
 
+    # Check if already installed
+    local existing_pg
+    existing_pg="$(detect_brew_postgres)"
+    if [[ -n "$existing_pg" ]]; then
+        log_info "PostgreSQL is already installed: $existing_pg"
+        return 0
+    fi
+
+    # Install PostgreSQL 16
+    log_info "Installing PostgreSQL 16 via Homebrew..."
+    if ! brew install postgresql@16; then
+        log_error "Failed to install PostgreSQL"
+        return 1
+    fi
+
+    # Link to PATH
+    brew link postgresql@16 --force 2>/dev/null || true
+
+    log_success "PostgreSQL installed successfully!"
+    log_info "Version: $(psql --version)"
+    return 0
+}
+
+# Install PostgreSQL on Linux (Ubuntu/Debian)
+auto_install_postgres_linux() {
     # Check if we can use sudo
     if ! sudo -n true 2>/dev/null; then
         log_info "Sudo password required for PostgreSQL installation"
@@ -110,10 +213,23 @@ auto_install_postgres() {
 auto_start_postgres() {
     log_info "Starting PostgreSQL service..."
 
-    # Try to start the service
-    if ! sudo service postgresql start 2>/dev/null; then
-        log_error "Failed to start PostgreSQL service"
-        return 1
+    # Try to start the service (platform-aware)
+    if [[ "$OS_TYPE" == "macos" ]]; then
+        local pg_formula
+        pg_formula="$(detect_brew_postgres)"
+        if [[ -z "$pg_formula" ]]; then
+            log_error "PostgreSQL is not installed via Homebrew"
+            return 1
+        fi
+        if ! brew services start "$pg_formula" 2>/dev/null; then
+            log_error "Failed to start PostgreSQL service"
+            return 1
+        fi
+    else
+        if ! sudo service postgresql start 2>/dev/null; then
+            log_error "Failed to start PostgreSQL service"
+            return 1
+        fi
     fi
 
     # Wait for PostgreSQL to be ready (max 30 seconds)
@@ -132,13 +248,34 @@ auto_start_postgres() {
     return 0
 }
 
+# Execute SQL as superuser (handles platform differences)
+run_psql_superuser() {
+    local sql="$1"
+    local db="${2:-postgres}"
+
+    if [[ "$OS_TYPE" == "macos" ]]; then
+        psql -d "$db" -q -c "$sql" 2>/dev/null
+    else
+        sudo -u postgres psql ${db:+-d "$db"} -q -c "$sql" 2>/dev/null
+    fi
+}
+
+# List databases (platform-aware)
+list_databases() {
+    if [[ "$OS_TYPE" == "macos" ]]; then
+        psql -d postgres -lqt 2>/dev/null
+    else
+        sudo -u postgres psql -lqt 2>/dev/null
+    fi
+}
+
 # Set up the test database (create user, database, run migrations)
 auto_setup_database() {
     log_info "Setting up test database..."
 
     # Create test user if it doesn't exist
     log_info "Ensuring test user '${TEST_DB_USER}' exists..."
-    if ! sudo -u postgres psql -q -c "
+    if ! run_psql_superuser "
         DO \$\$
         BEGIN
             IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = '${TEST_DB_USER}') THEN
@@ -148,28 +285,28 @@ auto_setup_database() {
             END IF;
         END
         \$\$;
-    " 2>/dev/null; then
+    "; then
         log_error "Failed to create/update test user"
         return 1
     fi
 
     # Check if database exists
     local db_exists=false
-    if sudo -u postgres psql -lqt 2>/dev/null | cut -d \| -f 1 | grep -qw "$TEST_DB_NAME"; then
+    if list_databases | cut -d \| -f 1 | grep -qw "$TEST_DB_NAME"; then
         db_exists=true
     fi
 
     if [ "$db_exists" = false ]; then
         # Create test database
         log_info "Creating test database '${TEST_DB_NAME}'..."
-        if ! sudo -u postgres psql -q -c "CREATE DATABASE ${TEST_DB_NAME} OWNER ${TEST_DB_USER};" 2>/dev/null; then
+        if ! run_psql_superuser "CREATE DATABASE ${TEST_DB_NAME} OWNER ${TEST_DB_USER};"; then
             log_error "Failed to create test database"
             return 1
         fi
 
         # Grant privileges
-        sudo -u postgres psql -q -c "GRANT ALL PRIVILEGES ON DATABASE ${TEST_DB_NAME} TO ${TEST_DB_USER};" 2>/dev/null
-        sudo -u postgres psql -q -d "$TEST_DB_NAME" -c "GRANT ALL ON SCHEMA public TO ${TEST_DB_USER};" 2>/dev/null
+        run_psql_superuser "GRANT ALL PRIVILEGES ON DATABASE ${TEST_DB_NAME} TO ${TEST_DB_USER};"
+        run_psql_superuser "GRANT ALL ON SCHEMA public TO ${TEST_DB_USER};" "$TEST_DB_NAME"
 
         log_success "Test database created"
     else
@@ -263,6 +400,10 @@ while [[ $# -gt 0 ]]; do
         -h|--help)
             echo "Usage: $0 [OPTIONS]"
             echo ""
+            echo "Supported Platforms:"
+            echo "  - macOS (Intel and Apple Silicon) via Homebrew"
+            echo "  - Ubuntu/Debian Linux (including WSL)"
+            echo ""
             echo "Options:"
             echo "  --unit              Run unit tests only (no database required)"
             echo "  --integration       Run integration tests only"
@@ -271,7 +412,7 @@ while [[ $# -gt 0 ]]; do
             echo "  -h, --help          Show this help message"
             echo ""
             echo "By default, the script will automatically:"
-            echo "  - Install PostgreSQL if not installed (Ubuntu/Debian)"
+            echo "  - Install PostgreSQL if not installed (apt on Linux, Homebrew on macOS)"
             echo "  - Start PostgreSQL if not running"
             echo "  - Create test database and run migrations"
             exit 0
