@@ -361,7 +361,7 @@
 
 ## Phase 10: Throttle Profiles
 
-- [ ] 24. Implement throttle profile management
+- [x] 24. Implement throttle profile management
   - [x] 24.1 Create throttle profile and state schema
     - Add throttle_profiles table with preset seeding
     - Add throttle_state table for runtime tracking
@@ -390,13 +390,13 @@
     - Apply extended cooldown from profile config
     - _Requirements: 7.3_
 
-  - [ ] 24.5 Implement counter reset logic
+  - [x] 24.5 Implement counter reset logic
     - Reset per-minute counter when window expires
     - Reset daily counter at midnight UTC
     - Add scheduled jobs for periodic resets
     - _Requirements: 7.4_
 
-  - [ ] 24.6 Write property tests for throttling
+  - [x] 24.6 Write property tests for throttling
     - **Property 11: Throttle Profile Enforcement**
       - Requests in any minute window <= requestsPerMinute
       - Daily requests <= dailyBudget (when not unlimited)
@@ -405,7 +405,7 @@
       - Post-reset requests unaffected by pre-reset counts
     - _Validates: Requirements 7.1, 7.2, 7.4_
 
-- [ ] 25. Checkpoint - Ensure all tests pass
+- [x] 25. Checkpoint - Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
 ## Phase 11: Prowlarr Health Monitoring (Optional)

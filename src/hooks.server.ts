@@ -1,8 +1,24 @@
 import type { Handle } from '@sveltejs/kit';
 import { validateSession } from '$lib/server/auth';
+import { initializeScheduler } from '$lib/server/scheduler';
 
 /** Cookie name for session token */
 const SESSION_COOKIE_NAME = 'session';
+
+// =============================================================================
+// Scheduler Initialization
+// =============================================================================
+
+/**
+ * Initialize scheduled jobs on server startup.
+ * Only runs in non-test environments to avoid interference with tests.
+ * The initializeScheduler function is idempotent (safe to call multiple times).
+ *
+ * Requirements: 7.4 - Reset counters at configured intervals
+ */
+if (process.env.NODE_ENV !== 'test') {
+	initializeScheduler();
+}
 
 export const handle: Handle = async ({ event, resolve }) => {
 	// Generate correlation ID for request tracing
