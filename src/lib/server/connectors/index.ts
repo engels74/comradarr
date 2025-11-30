@@ -68,6 +68,20 @@ export {
 
 export type { ParseResult } from './common/parsers.js';
 
+// Pagination utilities
+export {
+	fetchAllPages,
+	collectAllPages,
+	collectAllPagesWithMetadata,
+	DEFAULT_PAGE_SIZE
+} from './common/pagination.js';
+
+export type {
+	FetchAllPagesOptions,
+	PageFetcher,
+	PaginationMetadata
+} from './common/pagination.js';
+
 // Sonarr types
 export type {
 	SonarrSeries,
