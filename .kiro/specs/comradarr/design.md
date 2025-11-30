@@ -32,9 +32,14 @@ graph TB
         Sync[Sync Service]
         Discovery[Discovery Service]
         Queue[Queue Service]
+        Throttle[Throttle Service]
         Scheduler[Scheduler]
         Notifications[Notification Service]
         Analytics[Analytics Service]
+    end
+
+    subgraph "Optional Services"
+        ProwlarrMonitor[Prowlarr Health Monitor]
     end
     
     subgraph "Connectors"
@@ -52,6 +57,7 @@ graph TB
     subgraph "External"
         ArrApps[*arr Applications]
         NotifChannels[Notification Channels]
+        Prowlarr[Prowlarr Instance]
     end
     
     UI --> Routes
@@ -85,7 +91,12 @@ graph TB
     BaseClient --> ArrApps
     
     Notifications --> NotifChannels
-    
+
+    Queue --> Throttle
+    Throttle --> Drizzle
+    ProwlarrMonitor --> Prowlarr
+    ProwlarrMonitor --> Drizzle
+
     Sync --> Drizzle
     Queue --> Drizzle
     Analytics --> Drizzle
@@ -392,6 +403,185 @@ stateDiagram-v2
     exhausted --> [*]: Pruned after retention
     exhausted --> pending: Manual reset
 ```
+
+## Throttle Profile System
+
+### Overview
+
+The throttle profile system controls the rate at which Comradarr dispatches search requests to *arr applications. This prevents overwhelming indexers and avoids rate limiting bans.
+
+### Database Schema
+
+```mermaid
+erDiagram
+    throttle_profiles ||--o{ connectors : "used by"
+    throttle_profiles ||--o{ throttle_state : "tracks"
+    connectors ||--o| throttle_state : "has"
+
+    throttle_profiles {
+        int id PK
+        varchar name
+        text description
+        int requests_per_minute
+        int daily_budget
+        int batch_size
+        int batch_cooldown_seconds
+        int rate_limit_pause_seconds
+        boolean is_default
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    throttle_state {
+        int id PK
+        int connector_id FK
+        int requests_this_minute
+        int requests_today
+        timestamp minute_window_start
+        timestamp day_window_start
+        timestamp paused_until
+        varchar pause_reason
+        timestamp last_request_at
+        timestamp created_at
+        timestamp updated_at
+    }
+```
+
+### Preset Templates
+
+Throttle profiles are defined as code constants with three presets:
+
+| Preset | Requests/Min | Daily Budget | Batch Size | Cooldown | Rate Limit Pause |
+|--------|--------------|--------------|------------|----------|------------------|
+| Conservative | 2 | 200 | 5 | 120s | 600s |
+| Moderate | 5 | 500 | 10 | 60s | 300s |
+| Aggressive | 15 | Unlimited | 10 | 30s | 120s |
+
+### Profile Resolution
+
+```
+1. Connector-specific profile (connectors.throttle_profile_id)
+   ↓ (if null)
+2. Default profile (throttle_profiles.is_default = true)
+   ↓ (if not found)
+3. Fallback to Moderate preset constants
+```
+
+### Throttle Enforcer Service
+
+```typescript
+// $lib/server/services/throttle/throttle-enforcer.ts
+interface ThrottleResult {
+  allowed: boolean;
+  reason?: 'rate_limit' | 'daily_budget_exhausted' | 'paused';
+  retryAfterMs?: number;
+}
+
+class ThrottleEnforcer {
+  canDispatch(connectorId: number): Promise<ThrottleResult>;
+  recordRequest(connectorId: number): Promise<void>;
+  handleRateLimitResponse(connectorId: number, retryAfter?: number): Promise<void>;
+  getAvailableCapacity(connectorId: number): Promise<number>;
+  resetExpiredWindows(): Promise<void>;
+}
+```
+
+### Dispatch Flow with Throttling
+
+```mermaid
+sequenceDiagram
+    participant Scheduler
+    participant Queue
+    participant Throttle
+    participant ArrClient
+    participant DB
+
+    Scheduler->>Queue: processNext()
+    Queue->>Throttle: canDispatch(connectorId)
+    Throttle->>DB: Check throttle_state
+
+    alt Rate Limited
+        Throttle-->>Queue: {allowed: false, retryAfterMs}
+        Queue-->>Scheduler: Skip dispatch
+    else Allowed
+        Throttle-->>Queue: {allowed: true}
+        Queue->>ArrClient: sendSearchCommand()
+
+        alt Success
+            ArrClient-->>Queue: Command ID
+            Queue->>Throttle: recordRequest()
+            Throttle->>DB: Increment counters
+        else HTTP 429
+            ArrClient-->>Queue: RateLimitError
+            Queue->>Throttle: handleRateLimitResponse()
+            Throttle->>DB: Set paused_until
+        end
+    end
+```
+
+## Prowlarr Integration (Optional)
+
+### Overview
+
+Prowlarr integration provides optional health monitoring for indexers. Comradarr can query Prowlarr's API to check indexer status before dispatching searches. This is informational only - it does not block dispatches.
+
+### Architecture
+
+Prowlarr is implemented as a utility service, not a connector type:
+
+```
+src/lib/server/services/prowlarr/
+├── index.ts           # Module exports
+├── types.ts           # ProwlarrIndexer, IndexerHealth types
+├── client.ts          # ProwlarrClient for API calls
+└── health-monitor.ts  # Periodic health checking service
+```
+
+### Prowlarr Client
+
+```typescript
+// $lib/server/services/prowlarr/client.ts
+class ProwlarrClient {
+  async getIndexerStatus(): Promise<ProwlarrIndexerStatus[]>;
+  async getIndexerStats(): Promise<ProwlarrIndexerStats[]>;
+}
+
+interface ProwlarrIndexerStatus {
+  id: number;
+  indexerId: number;
+  disabledTill: Date | null;
+  mostRecentFailure: Date | null;
+  initialFailure: Date | null;
+}
+```
+
+### Health Monitoring Flow
+
+```mermaid
+sequenceDiagram
+    participant Scheduler
+    participant Monitor as ProwlarrHealthMonitor
+    participant Prowlarr
+    participant DB
+
+    Scheduler->>Monitor: checkHealth() [every 5 min]
+    Monitor->>Prowlarr: GET /api/v1/indexerstatus
+
+    alt Prowlarr Available
+        Prowlarr-->>Monitor: IndexerStatus[]
+        Monitor->>DB: Update prowlarr_indexers cache
+    else Prowlarr Unavailable
+        Monitor->>DB: Mark cache as stale
+        Note over Monitor,DB: Continue with cached data
+    end
+```
+
+### Integration with Queue (Informational)
+
+When Prowlarr is configured and unhealthy indexers are detected:
+- Log a warning message
+- Display status in UI
+- Do NOT block search dispatch (users may have other indexers)
 
 
 

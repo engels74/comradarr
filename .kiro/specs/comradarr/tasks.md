@@ -362,159 +362,207 @@
 ## Phase 10: Throttle Profiles
 
 - [ ] 24. Implement throttle profile management
-  - [ ] 24.1 Create throttle profile schema and CRUD
-    - Define throttle_profiles table
-    - Implement create, read, update, delete operations
-    - _Requirements: 7.1_
+  - [ ] 24.1 Create throttle profile and state schema
+    - Add throttle_profiles table with preset seeding
+    - Add throttle_state table for runtime tracking
+    - Add throttle_profile_id FK to connectors table
+    - Run migration with Moderate as default profile
+    - _Requirements: 7.1, 7.5_
 
-  - [ ] 24.2 Implement rate limiting enforcement
-    - Track requests per minute
-    - Track daily budget
-    - Pause processing when limits reached
-    - _Requirements: 7.1, 7.2_
+  - [ ] 24.2 Implement preset templates
+    - Create presets.ts with Conservative/Moderate/Aggressive constants
+    - Implement profile resolution (connector -> default -> fallback)
+    - Create CRUD queries for profiles
+    - _Requirements: 7.1, 7.5, 7.6_
 
-  - [ ] 24.3 Implement HTTP 429 handling
-    - Pause connector on rate limit response
-    - Apply extended cooldown
+  - [ ] 24.3 Implement rate limiting enforcement
+    - Create ThrottleEnforcer service
+    - Implement canDispatch() with per-minute rate check
+    - Implement recordRequest() with atomic counter update
+    - Track daily budget against profile limit
+    - Pause dispatch when limits reached
+    - _Requirements: 7.1, 7.2, 7.7_
+
+  - [ ] 24.4 Implement HTTP 429 handling
+    - Catch RateLimitError from connector clients
+    - Respect Retry-After header when present
+    - Set pausedUntil in throttle_state
+    - Apply extended cooldown from profile config
     - _Requirements: 7.3_
 
-  - [ ] 24.4 Implement counter reset
-    - Reset request counts at configured interval
+  - [ ] 24.5 Implement counter reset logic
+    - Reset per-minute counter when window expires
+    - Reset daily counter at midnight UTC
+    - Add scheduled jobs for periodic resets
     - _Requirements: 7.4_
 
-  - [ ] 24.5 Write property tests for throttling
+  - [ ] 24.6 Write property tests for throttling
     - **Property 11: Throttle Profile Enforcement**
+      - Requests in any minute window <= requestsPerMinute
+      - Daily requests <= dailyBudget (when not unlimited)
     - **Property 12: Request Counter Reset**
-    - **Validates: Requirements 7.1, 7.2, 7.4**
+      - Counter resets to zero at window boundary
+      - Post-reset requests unaffected by pre-reset counts
+    - _Validates: Requirements 7.1, 7.2, 7.4_
 
 - [ ] 25. Checkpoint - Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
-## Phase 11: Scheduler
+## Phase 11: Prowlarr Health Monitoring (Optional)
 
-- [ ] 26. Implement scheduler
-  - [ ] 26.1 Create Croner job initialization
+- [ ] 26. Implement Prowlarr integration
+  - [ ] 26.1 Create Prowlarr client
+    - Add prowlarr_instances table (URL, encrypted API key)
+    - Implement ProwlarrClient with getIndexerStatus()
+    - Parse disabledTill timestamps for rate-limited indexers
+    - _Requirements: 38.1, 38.2, 38.3_
+
+  - [ ] 26.2 Implement health monitoring service
+    - Create ProwlarrHealthMonitor service
+    - Periodic health check (configurable interval, default 5 min)
+    - Cache indexer health status in database
+    - _Requirements: 38.2, 38.4_
+
+  - [ ] 26.3 Integrate with dispatch (optional check)
+    - Add pre-dispatch check for indexer health
+    - Log warning when indexers are unhealthy
+    - Do NOT block dispatch (informational only)
+    - _Requirements: 38.5, 38.6_
+
+  - [ ] 26.4 Add Prowlarr settings UI
+    - Connection configuration (URL, API key)
+    - Enable/disable health monitoring
+    - Display indexer health status
+    - _Requirements: 38.4_
+
+- [ ] 27. Checkpoint - Ensure all tests pass
+  - Ensure all tests pass, ask the user if questions arise.
+
+## Phase 12: Scheduler
+
+- [ ] 28. Implement scheduler
+  - [ ] 28.1 Create Croner job initialization
     - Initialize jobs in hooks.server.ts
     - Configure protect: true for overrun protection
     - _Requirements: 8.1, 8.3_
 
-  - [ ] 26.2 Implement sweep cycle jobs
+  - [ ] 28.2 Implement sweep cycle jobs
     - Create incremental sync job (every 15 minutes)
     - Create full reconciliation job (daily)
     - Create queue processor job (every minute)
     - _Requirements: 8.1, 8.2, 8.4_
 
-  - [ ] 26.3 Implement health check job
+  - [ ] 28.3 Implement health check job
     - Check connector health every 5 minutes
     - Update connector health status
     - _Requirements: 1.4_
 
-  - [ ] 26.4 Implement unhealthy connector exclusion
+  - [ ] 28.4 Implement unhealthy connector exclusion
     - Skip sweep cycles for unhealthy connectors
     - _Requirements: 1.5_
 
-  - [ ] 26.5 Write property test for unhealthy connector exclusion
+  - [ ] 28.5 Write property test for unhealthy connector exclusion
     - **Property 19: Unhealthy Connector Exclusion**
     - **Validates: Requirements 1.5**
 
-- [ ] 27. Checkpoint - Ensure all tests pass
+- [ ] 29. Checkpoint - Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
-## Phase 12: Content Browser UI
+## Phase 13: Content Browser UI
 
-- [ ] 28. Create content browser pages
-  - [ ] 28.1 Create content list page
+- [ ] 30. Create content browser pages
+  - [ ] 30.1 Create content list page
     - Display content with filters (connector, type, status)
     - Implement title search
     - Show sortable columns
     - _Requirements: 17.1, 17.2_
 
-  - [ ] 28.2 Create series detail page
+  - [ ] 30.2 Create series detail page
     - Display metadata and quality status per episode
     - Show gap and upgrade status
     - Show search history
     - _Requirements: 17.3_
 
-  - [ ] 28.3 Create movie detail page
+  - [ ] 30.3 Create movie detail page
     - Display metadata and current quality
     - Show search history and lastSearchTime
     - _Requirements: 17.4_
 
-  - [ ] 28.4 Implement bulk actions
+  - [ ] 30.4 Implement bulk actions
     - Select multiple items
     - Queue for search, adjust priority, mark exhausted
     - _Requirements: 17.5_
 
-- [ ] 29. Checkpoint - Ensure all tests pass
+- [ ] 31. Checkpoint - Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
-## Phase 13: Queue Management UI
+## Phase 14: Queue Management UI
 
-- [ ] 30. Create queue management pages
-  - [ ] 30.1 Create queue list page
+- [ ] 32. Create queue management pages
+  - [ ] 32.1 Create queue list page
     - Display items in priority order
     - Show estimated dispatch time
     - Show current processing indicator
     - _Requirements: 18.1_
 
-  - [ ] 30.2 Implement queue controls
+  - [ ] 32.2 Implement queue controls
     - Add priority adjustment
     - Add remove from queue
     - Add pause/resume/clear actions
     - _Requirements: 18.2, 18.3_
 
-  - [ ] 30.3 Create recent completions view
+  - [ ] 32.3 Create recent completions view
     - Display last N completed searches
     - Show outcome indicators
     - _Requirements: 18.4_
 
-  - [ ] 30.4 Implement real-time updates
+  - [ ] 32.4 Implement real-time updates
     - Use SvelteKit invalidation for queue updates
     - _Requirements: 18.5_
-
-- [ ] 31. Checkpoint - Ensure all tests pass
-  - Ensure all tests pass, ask the user if questions arise.
-
-## Phase 14: Dashboard
-
-- [ ] 32. Create dashboard page
-  - [ ] 32.1 Create connection status panel
-    - Display health indicators for all connectors
-    - Show last sync time per connector
-    - _Requirements: 15.1_
-
-  - [ ] 32.2 Create statistics cards
-    - Show total gaps, upgrade candidates, queue items
-    - Show searches completed today and success rate
-    - _Requirements: 15.2_
-
-  - [ ] 32.3 Create activity feed
-    - Display recent discoveries and search outcomes
-    - Show system events
-    - _Requirements: 15.3_
-
-  - [ ] 32.4 Create library completion visualization
-    - Show per-connector completion percentage
-    - Add trend sparklines
-    - _Requirements: 15.4_
-
-  - [ ] 32.5 Create upcoming schedule display
-    - Show next scheduled sweeps
-    - Show current sweep progress
-    - _Requirements: 15.5_
 
 - [ ] 33. Checkpoint - Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
-## Phase 15: Notifications
+## Phase 15: Dashboard
 
-- [ ] 34. Implement notification system
-  - [ ] 34.1 Create notification channel schema
+- [ ] 34. Create dashboard page
+  - [ ] 34.1 Create connection status panel
+    - Display health indicators for all connectors
+    - Show last sync time per connector
+    - _Requirements: 15.1_
+
+  - [ ] 34.2 Create statistics cards
+    - Show total gaps, upgrade candidates, queue items
+    - Show searches completed today and success rate
+    - _Requirements: 15.2_
+
+  - [ ] 34.3 Create activity feed
+    - Display recent discoveries and search outcomes
+    - Show system events
+    - _Requirements: 15.3_
+
+  - [ ] 34.4 Create library completion visualization
+    - Show per-connector completion percentage
+    - Add trend sparklines
+    - _Requirements: 15.4_
+
+  - [ ] 34.5 Create upcoming schedule display
+    - Show next scheduled sweeps
+    - Show current sweep progress
+    - _Requirements: 15.5_
+
+- [ ] 35. Checkpoint - Ensure all tests pass
+  - Ensure all tests pass, ask the user if questions arise.
+
+## Phase 16: Notifications
+
+- [ ] 36. Implement notification system
+  - [ ] 36.1 Create notification channel schema
     - Define notification_channels table
     - Define notification_history table
     - _Requirements: 9.1_
 
-  - [ ] 34.2 Implement notification channels
+  - [ ] 36.2 Implement notification channels
     - Implement Discord webhook
     - Implement Telegram bot API
     - Implement Slack webhook
@@ -522,221 +570,221 @@
     - Implement generic webhook with signature support
     - _Requirements: 9.1, 9.5_
 
-  - [ ] 34.3 Implement notification dispatch
+  - [ ] 36.3 Implement notification dispatch
     - Send to enabled channels for event type
     - Support message templating
     - _Requirements: 9.2_
 
-  - [ ] 34.4 Implement notification batching
+  - [ ] 36.4 Implement notification batching
     - Combine similar events within time window
     - _Requirements: 9.3_
 
-  - [ ] 34.5 Implement quiet hours
+  - [ ] 36.5 Implement quiet hours
     - Suppress notifications during configured period
     - _Requirements: 9.4_
 
-- [ ] 35. Checkpoint - Ensure all tests pass
+- [ ] 37. Checkpoint - Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
-## Phase 16: Schedule Management UI
+## Phase 17: Schedule Management UI
 
-- [ ] 36. Create schedule management pages
-  - [ ] 36.1 Create schedule list page
+- [ ] 38. Create schedule management pages
+  - [ ] 38.1 Create schedule list page
     - Display schedules with connector, cron, next run
     - Add enable/disable toggle
     - _Requirements: 19.1_
 
-  - [ ] 36.2 Create schedule editor
+  - [ ] 38.2 Create schedule editor
     - Add connector and sweep type selection
     - Add cron expression input with builder UI
     - Add throttle profile selection
     - _Requirements: 19.2, 19.3_
 
-  - [ ] 36.3 Create timeline visualization
+  - [ ] 38.3 Create timeline visualization
     - Display calendar view of upcoming sweeps
     - _Requirements: 19.4_
 
-- [ ] 37. Checkpoint - Ensure all tests pass
+- [ ] 39. Checkpoint - Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
-## Phase 17: Analytics
+## Phase 18: Analytics
 
-- [ ] 38. Implement analytics
-  - [ ] 38.1 Create analytics schema
+- [ ] 40. Implement analytics
+  - [ ] 40.1 Create analytics schema
     - Define analytics_events table
     - Define aggregated statistics tables
     - _Requirements: 12.1_
 
-  - [ ] 38.2 Implement analytics collectors
+  - [ ] 40.2 Implement analytics collectors
     - Track gap discovery rate
     - Track search volume and success rate
     - Track queue depth
     - _Requirements: 12.1_
 
-  - [ ] 38.3 Create analytics dashboard
+  - [ ] 40.3 Create analytics dashboard
     - Display time-series charts
     - Show connector comparison
     - Show content analysis
     - _Requirements: 12.2, 12.3_
 
-  - [ ] 38.4 Implement CSV export
+  - [ ] 40.4 Implement CSV export
     - Export statistics with date range selection
     - _Requirements: 12.4_
 
-- [ ] 39. Checkpoint - Ensure all tests pass
+- [ ] 41. Checkpoint - Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
-## Phase 18: Settings UI
+## Phase 19: Settings UI
 
-- [ ] 40. Create settings pages
-  - [ ] 40.1 Create general settings page
+- [ ] 42. Create settings pages
+  - [ ] 42.1 Create general settings page
     - Add application name, timezone, log level options
     - _Requirements: 21.1_
 
-  - [ ] 40.2 Create throttle profiles page
+  - [ ] 42.2 Create throttle profiles page
     - List profiles with presets
     - Add create/edit custom profile form
     - _Requirements: 21.2_
 
-  - [ ] 40.3 Create notifications settings page
+  - [ ] 42.3 Create notifications settings page
     - Add channel configuration
     - Add event filtering
     - Add test notification button
     - Add quiet hours configuration
     - _Requirements: 21.3_
 
-  - [ ] 40.4 Create search behavior settings page
+  - [ ] 42.4 Create search behavior settings page
     - Add priority weights configuration
     - Add season pack thresholds
     - Add cooldown and retry settings
     - _Requirements: 21.4_
 
-  - [ ] 40.5 Create security settings page
+  - [ ] 42.5 Create security settings page
     - Add authentication mode selection
     - Add password change form
     - Add session management
     - _Requirements: 21.5_
 
-- [ ] 41. Checkpoint - Ensure all tests pass
+- [ ] 43. Checkpoint - Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
-## Phase 19: Database Maintenance
+## Phase 20: Database Maintenance
 
-- [ ] 42. Implement maintenance tasks
-  - [ ] 42.1 Create maintenance service
+- [ ] 44. Implement maintenance tasks
+  - [ ] 44.1 Create maintenance service
     - Implement VACUUM and ANALYZE operations
     - _Requirements: 13.1_
 
-  - [ ] 42.2 Implement orphan cleanup
+  - [ ] 44.2 Implement orphan cleanup
     - Delete search state without content mirror items
     - _Requirements: 13.2_
 
-  - [ ] 42.3 Implement history pruning
+  - [ ] 44.3 Implement history pruning
     - Prune search history older than retention period
     - Preserve aggregated statistics
     - _Requirements: 13.3_
 
-  - [ ] 42.4 Schedule maintenance job
+  - [ ] 44.4 Schedule maintenance job
     - Run daily at configured time
     - _Requirements: 13.1_
 
-- [ ] 43. Checkpoint - Ensure all tests pass
+- [ ] 45. Checkpoint - Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
-## Phase 20: Health Check and Logging
+## Phase 21: Health Check and Logging
 
-- [ ] 44. Implement health check endpoint
-  - [ ] 44.1 Create /health endpoint
+- [ ] 46. Implement health check endpoint
+  - [ ] 46.1 Create /health endpoint
     - Return application status
     - Return database connection status
     - Return per-connector health summary
     - Return queue status and memory usage
     - _Requirements: 32.1, 32.2, 32.3, 32.4, 32.5_
 
-- [ ] 45. Implement structured logging
-  - [ ] 45.1 Create logger module
+- [ ] 47. Implement structured logging
+  - [ ] 47.1 Create logger module
     - Implement structured JSON logging
     - Support log levels (error, warn, info, debug, trace)
     - _Requirements: 31.1, 31.4_
 
-  - [ ] 45.2 Implement correlation ID propagation
+  - [ ] 47.2 Implement correlation ID propagation
     - Generate correlation ID in hooks.server.ts
     - Propagate through request lifecycle
     - _Requirements: 31.2_
 
-  - [ ] 45.3 Implement runtime log level change
+  - [ ] 47.3 Implement runtime log level change
     - Allow changing log level without restart
     - _Requirements: 31.5_
 
-- [ ] 46. Checkpoint - Ensure all tests pass
+- [ ] 48. Checkpoint - Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
-## Phase 21: Backup and Restore
+## Phase 22: Backup and Restore
 
-- [ ] 47. Implement backup/restore
-  - [ ] 47.1 Create backup service
+- [ ] 49. Implement backup/restore
+  - [ ] 49.1 Create backup service
     - Export all database tables
     - Include encrypted secrets
     - _Requirements: 33.1_
 
-  - [ ] 47.2 Create restore service
+  - [ ] 49.2 Create restore service
     - Validate backup integrity
     - Check SECRET_KEY compatibility
     - Apply migrations if needed
     - _Requirements: 33.2, 33.3, 33.4_
 
-  - [ ] 47.3 Implement scheduled backups
+  - [ ] 49.3 Implement scheduled backups
     - Create backups at configured interval
     - _Requirements: 33.5_
-
-- [ ] 48. Checkpoint - Ensure all tests pass
-  - Ensure all tests pass, ask the user if questions arise.
-
-## Phase 22: External API
-
-- [ ] 49. Implement external API
-  - [ ] 49.1 Create API key management
-    - Generate API keys with description and scope
-    - Store keys securely
-    - _Requirements: 34.1_
-
-  - [ ] 49.2 Implement API key authentication
-    - Validate X-API-Key header
-    - Enforce scope restrictions
-    - _Requirements: 34.2_
-
-  - [ ] 49.3 Implement key revocation and logging
-    - Revoke keys immediately
-    - Log API key usage
-    - _Requirements: 34.3, 34.4_
-
-  - [ ] 49.4 Implement API rate limiting
-    - Enforce per-key request limits
-    - _Requirements: 34.5_
 
 - [ ] 50. Checkpoint - Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
-## Phase 23: Docker Deployment
+## Phase 23: External API
 
-- [ ] 51. Create Docker configuration
-  - [ ] 51.1 Create multi-stage Dockerfile
+- [ ] 51. Implement external API
+  - [ ] 51.1 Create API key management
+    - Generate API keys with description and scope
+    - Store keys securely
+    - _Requirements: 34.1_
+
+  - [ ] 51.2 Implement API key authentication
+    - Validate X-API-Key header
+    - Enforce scope restrictions
+    - _Requirements: 34.2_
+
+  - [ ] 51.3 Implement key revocation and logging
+    - Revoke keys immediately
+    - Log API key usage
+    - _Requirements: 34.3, 34.4_
+
+  - [ ] 51.4 Implement API rate limiting
+    - Enforce per-key request limits
+    - _Requirements: 34.5_
+
+- [ ] 52. Checkpoint - Ensure all tests pass
+  - Ensure all tests pass, ask the user if questions arise.
+
+## Phase 24: Docker Deployment
+
+- [ ] 53. Create Docker configuration
+  - [ ] 53.1 Create multi-stage Dockerfile
     - Base stage with oven/bun:1-alpine
     - Dependencies stage with BuildKit cache mounts
     - Build stage with NODE_ENV=production
     - Production stage with non-root user
     - _Requirements: 37.1_
 
-  - [ ] 51.2 Create Docker Compose configuration
+  - [ ] 53.2 Create Docker Compose configuration
     - Configure app service with health check
     - Configure PostgreSQL with secrets
     - Set up depends_on with service_healthy condition
     - _Requirements: 37.2_
 
-  - [ ] 51.3 Configure health check in container
+  - [ ] 53.3 Configure health check in container
     - Add HEALTHCHECK instruction
     - _Requirements: 32.1_
 
-- [ ] 52. Final Checkpoint - Ensure all tests pass
+- [ ] 54. Final Checkpoint - Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 

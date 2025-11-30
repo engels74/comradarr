@@ -101,6 +101,9 @@ Comradarr is a media library completion service that integrates with *arr applic
 2. WHEN the daily request budget is exhausted THEN the System SHALL pause queue processing until the next day
 3. WHEN an HTTP 429 response is received THEN the System SHALL pause all searches for the affected connector and apply extended cooldown
 4. WHEN a throttle profile is applied THEN the System SHALL track request counts and reset them at the configured interval
+5. WHEN preset profiles are available THEN the System SHALL provide Conservative, Moderate, and Aggressive presets with predefined limits
+6. WHEN a user creates a custom profile THEN the System SHALL allow configuring all rate limiting parameters independently
+7. WHEN a connector has no profile assigned THEN the System SHALL use the global default profile (Moderate preset)
 
 ### Requirement 8: Sweep Cycle Scheduling
 
@@ -464,3 +467,16 @@ Comradarr is a media library completion service that integrates with *arr applic
 3. WHEN the in-memory queue exceeds the configured limit THEN the System SHALL persist overflow items to the database
 4. WHEN database queries return large result sets THEN the System SHALL paginate results to limit memory consumption
 5. WHEN sweep cycles run THEN the System SHALL allow concurrent execution for different connectors while preventing overlap for the same connector
+
+### Requirement 38: Prowlarr Health Monitoring (Optional)
+
+**User Story:** As a user with Prowlarr, I want Comradarr to optionally monitor my indexer health, so that I can be informed about indexer availability before searches are dispatched.
+
+#### Acceptance Criteria
+
+1. WHEN a Prowlarr connection is configured THEN the System SHALL store the URL and API key (encrypted using AES-256-GCM)
+2. WHEN health monitoring is enabled THEN the System SHALL periodically query Prowlarr's /api/v1/indexerstatus endpoint to retrieve indexer status
+3. WHEN an indexer has a disabledTill timestamp in the future THEN the System SHALL mark that indexer as rate-limited in the cached health status
+4. WHEN displaying indexer health THEN the System SHALL show the current status of all indexers including name, health state, and any error messages
+5. WHEN unhealthy indexers are detected THEN the System SHALL log a warning but SHALL NOT block search dispatch (informational only)
+6. WHEN Prowlarr is unreachable THEN the System SHALL continue normal operation and display cached health data with a stale indicator
