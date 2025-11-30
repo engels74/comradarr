@@ -215,7 +215,7 @@
 ## Phase 5: Connector Management UI
 
 - [ ] 13. Create connector management pages
-  - [ ] 13.1 Create connector list page
+  - [x] 13.1 Create connector list page
     - Display connectors with status indicator, name, type, URL
     - Show quick stats (gaps, queue depth)
     - Add enable/disable toggle
