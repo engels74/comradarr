@@ -47,7 +47,14 @@
 	<Card.Header class="pb-3">
 		<div class="flex items-start justify-between gap-2">
 			<div class="space-y-1">
-				<Card.Title class="text-lg">{connector.name}</Card.Title>
+				<Card.Title class="text-lg">
+					<a
+						href="/connectors/{connector.id}"
+						class="hover:underline hover:text-primary transition-colors"
+					>
+						{connector.name}
+					</a>
+				</Card.Title>
 				<div class="flex items-center gap-2">
 					<span
 						class={cn(

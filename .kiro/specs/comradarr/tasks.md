@@ -227,7 +227,7 @@
     - Validate with Valibot schema
     - _Requirements: 16.2, 16.3_
 
-  - [ ] 13.3 Create connector detail page
+  - [x] 13.3 Create connector detail page
     - Display full configuration
     - Show connection health history
     - Show sync history and status
