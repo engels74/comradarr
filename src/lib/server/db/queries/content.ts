@@ -196,6 +196,45 @@ export interface SeriesSearchHistoryEntry {
 }
 
 // =============================================================================
+// Movie Detail Types (Requirement 17.4)
+// =============================================================================
+
+/**
+ * Full movie detail with connector info.
+ */
+export interface MovieDetail {
+	id: number;
+	connectorId: number;
+	arrId: number;
+	tmdbId: number | null;
+	imdbId: string | null;
+	title: string;
+	year: number | null;
+	monitored: boolean;
+	hasFile: boolean;
+	quality: QualityModel | null;
+	qualityCutoffNotMet: boolean;
+	movieFileId: number | null;
+	lastSearchTime: Date | null;
+	createdAt: Date;
+	updatedAt: Date;
+	connectorName: string;
+	connectorType: string;
+	connectorUrl: string;
+}
+
+/**
+ * Search history entry for movies.
+ */
+export interface MovieSearchHistoryEntry {
+	id: number;
+	movieTitle: string;
+	outcome: string;
+	createdAt: Date;
+	metadata: unknown;
+}
+
+// =============================================================================
 // Helper Functions
 // =============================================================================
 
@@ -932,6 +971,91 @@ export async function getSeriesSearchHistory(
 		episodeTitle: h.episodeTitle,
 		seasonNumber: h.seasonNumber,
 		episodeNumber: h.episodeNumber,
+		outcome: h.outcome,
+		createdAt: h.createdAt,
+		metadata: h.metadata
+	}));
+}
+
+// =============================================================================
+// Movie Detail Queries (Requirement 17.4)
+// =============================================================================
+
+/**
+ * Gets movie detail with connector information.
+ *
+ * @param id - Movie ID (Comradarr internal ID)
+ * @returns Movie detail or null if not found
+ */
+export async function getMovieDetail(id: number): Promise<MovieDetail | null> {
+	const result = await db
+		.select({
+			id: movies.id,
+			connectorId: movies.connectorId,
+			arrId: movies.arrId,
+			tmdbId: movies.tmdbId,
+			imdbId: movies.imdbId,
+			title: movies.title,
+			year: movies.year,
+			monitored: movies.monitored,
+			hasFile: movies.hasFile,
+			quality: movies.quality,
+			qualityCutoffNotMet: movies.qualityCutoffNotMet,
+			movieFileId: movies.movieFileId,
+			lastSearchTime: movies.lastSearchTime,
+			createdAt: movies.createdAt,
+			updatedAt: movies.updatedAt,
+			connectorName: connectors.name,
+			connectorType: connectors.type,
+			connectorUrl: connectors.url
+		})
+		.from(movies)
+		.innerJoin(connectors, eq(movies.connectorId, connectors.id))
+		.where(eq(movies.id, id))
+		.limit(1);
+
+	const row = result[0];
+	if (!row) return null;
+
+	return {
+		...row,
+		quality: row.quality as QualityModel | null
+	};
+}
+
+/**
+ * Gets search history for a movie.
+ *
+ * @param movieId - Movie ID
+ * @param limit - Maximum entries to return (default 20)
+ * @returns Search history entries
+ */
+export async function getMovieSearchHistory(
+	movieId: number,
+	limit: number = 20
+): Promise<MovieSearchHistoryEntry[]> {
+	const history = await db
+		.select({
+			id: searchHistory.id,
+			outcome: searchHistory.outcome,
+			metadata: searchHistory.metadata,
+			createdAt: searchHistory.createdAt,
+			movieTitle: movies.title
+		})
+		.from(searchHistory)
+		.innerJoin(movies, eq(searchHistory.contentId, movies.id))
+		.where(
+			and(
+				eq(searchHistory.contentType, 'movie'),
+				eq(searchHistory.contentId, movieId)
+			)
+		)
+		.orderBy(desc(searchHistory.createdAt))
+		.limit(limit);
+
+	return history.map((h) => ({
+		id: h.id,
+		movieTitle: h.movieTitle,
 		outcome: h.outcome,
 		createdAt: h.createdAt,
 		metadata: h.metadata

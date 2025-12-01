@@ -483,7 +483,7 @@
     - Show search history
     - _Requirements: 17.3_
 
-  - [ ] 30.3 Create movie detail page
+  - [x] 30.3 Create movie detail page
     - Display metadata and current quality
     - Show search history and lastSearchTime
     - _Requirements: 17.4_
