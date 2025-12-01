@@ -465,13 +465,13 @@
     - **Property 19: Unhealthy Connector Exclusion**
     - **Validates: Requirements 1.5**
 
-- [ ] 29. Checkpoint - Ensure all tests pass
+- [x] 29. Checkpoint - Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
 ## Phase 13: Content Browser UI
 
 - [ ] 30. Create content browser pages
-  - [ ] 30.1 Create content list page
+  - [x] 30.1 Create content list page
     - Display content with filters (connector, type, status)
     - Implement title search
     - Show sortable columns
