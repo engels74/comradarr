@@ -435,13 +435,13 @@
     - Display indexer health status
     - _Requirements: 38.4_
 
-- [ ] 27. Checkpoint - Ensure all tests pass
+- [x] 27. Checkpoint - Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
 ## Phase 12: Scheduler
 
 - [ ] 28. Implement scheduler
-  - [ ] 28.1 Create Croner job initialization
+  - [x] 28.1 Create Croner job initialization
     - Initialize jobs in hooks.server.ts
     - Configure protect: true for overrun protection
     - _Requirements: 8.1, 8.3_
