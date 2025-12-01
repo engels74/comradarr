@@ -446,7 +446,7 @@
     - Configure protect: true for overrun protection
     - _Requirements: 8.1, 8.3_
 
-  - [ ] 28.2 Implement sweep cycle jobs
+  - [x] 28.2 Implement sweep cycle jobs
     - Create incremental sync job (every 15 minutes)
     - Create full reconciliation job (daily)
     - Create queue processor job (every minute)
