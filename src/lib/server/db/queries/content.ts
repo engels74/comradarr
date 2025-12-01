@@ -1061,3 +1061,414 @@ export async function getMovieSearchHistory(
 		metadata: h.metadata
 	}));
 }
+
+// =============================================================================
+// Bulk Action Types and Queries (Requirement 17.5)
+// =============================================================================
+
+/**
+ * Target for bulk actions.
+ */
+export interface BulkActionTarget {
+	type: 'series' | 'movie';
+	id: number;
+}
+
+/**
+ * Result of a bulk action operation.
+ */
+export interface BulkActionResult {
+	affected: number;
+	skipped: number;
+}
+
+/**
+ * Queues selected content items for search.
+ * Creates or updates search registry entries with state='pending'.
+ *
+ * For series: Gets all episodes that are missing or need upgrade and creates/updates their entries.
+ * For movies: Creates/updates the movie's search registry entry.
+ *
+ * @param targets - Array of content items to queue
+ * @param searchType - Type of search ('gap' for missing, 'upgrade' for quality upgrade)
+ * @returns Number of items affected
+ */
+export async function bulkQueueForSearch(
+	targets: BulkActionTarget[],
+	searchType: 'gap' | 'upgrade' = 'gap'
+): Promise<BulkActionResult> {
+	if (targets.length === 0) {
+		return { affected: 0, skipped: 0 };
+	}
+
+	const seriesIds = targets.filter((t) => t.type === 'series').map((t) => t.id);
+	const movieIds = targets.filter((t) => t.type === 'movie').map((t) => t.id);
+
+	let affected = 0;
+
+	// Handle series - get all eligible episodes
+	if (seriesIds.length > 0) {
+		// Get all episodes from these series that match the search criteria
+		const episodeCondition =
+			searchType === 'gap'
+				? and(eq(episodes.hasFile, false), eq(episodes.monitored, true))
+				: and(
+						eq(episodes.qualityCutoffNotMet, true),
+						eq(episodes.hasFile, true),
+						eq(episodes.monitored, true)
+					);
+
+		const episodeRows = await db
+			.select({
+				id: episodes.id,
+				connectorId: episodes.connectorId
+			})
+			.from(episodes)
+			.innerJoin(seasons, eq(episodes.seasonId, seasons.id))
+			.where(and(inArray(seasons.seriesId, seriesIds), episodeCondition));
+
+		// Upsert search registry entries for episodes
+		for (const ep of episodeRows) {
+			await db
+				.insert(searchRegistry)
+				.values({
+					connectorId: ep.connectorId,
+					contentType: 'episode',
+					contentId: ep.id,
+					searchType,
+					state: 'pending',
+					attemptCount: 0,
+					priority: 0
+				})
+				.onConflictDoUpdate({
+					target: [searchRegistry.connectorId, searchRegistry.contentType, searchRegistry.contentId],
+					set: {
+						state: 'pending',
+						searchType,
+						updatedAt: new Date()
+					}
+				});
+			affected++;
+		}
+	}
+
+	// Handle movies
+	if (movieIds.length > 0) {
+		// Get movies that match the search criteria
+		const movieCondition =
+			searchType === 'gap'
+				? and(eq(movies.hasFile, false), eq(movies.monitored, true))
+				: and(
+						eq(movies.qualityCutoffNotMet, true),
+						eq(movies.hasFile, true),
+						eq(movies.monitored, true)
+					);
+
+		const movieRows = await db
+			.select({
+				id: movies.id,
+				connectorId: movies.connectorId
+			})
+			.from(movies)
+			.where(and(inArray(movies.id, movieIds), movieCondition));
+
+		// Upsert search registry entries for movies
+		for (const mv of movieRows) {
+			await db
+				.insert(searchRegistry)
+				.values({
+					connectorId: mv.connectorId,
+					contentType: 'movie',
+					contentId: mv.id,
+					searchType,
+					state: 'pending',
+					attemptCount: 0,
+					priority: 0
+				})
+				.onConflictDoUpdate({
+					target: [searchRegistry.connectorId, searchRegistry.contentType, searchRegistry.contentId],
+					set: {
+						state: 'pending',
+						searchType,
+						updatedAt: new Date()
+					}
+				});
+			affected++;
+		}
+	}
+
+	return { affected, skipped: 0 };
+}
+
+/**
+ * Sets priority for selected content items.
+ * Updates the priority field in search_registry for matching entries.
+ *
+ * @param targets - Array of content items to update
+ * @param priority - Absolute priority value (0-100)
+ * @returns Number of items affected
+ */
+export async function bulkSetPriority(
+	targets: BulkActionTarget[],
+	priority: number
+): Promise<BulkActionResult> {
+	if (targets.length === 0) {
+		return { affected: 0, skipped: 0 };
+	}
+
+	// Clamp priority to valid range
+	const clampedPriority = Math.max(0, Math.min(100, priority));
+
+	const seriesIds = targets.filter((t) => t.type === 'series').map((t) => t.id);
+	const movieIds = targets.filter((t) => t.type === 'movie').map((t) => t.id);
+
+	let affected = 0;
+
+	// Handle series - update all episode entries
+	if (seriesIds.length > 0) {
+		// Get episode IDs for these series
+		const episodeRows = await db
+			.select({ id: episodes.id })
+			.from(episodes)
+			.innerJoin(seasons, eq(episodes.seasonId, seasons.id))
+			.where(inArray(seasons.seriesId, seriesIds));
+
+		const episodeIds = episodeRows.map((e) => e.id);
+
+		if (episodeIds.length > 0) {
+			const result = await db
+				.update(searchRegistry)
+				.set({ priority: clampedPriority, updatedAt: new Date() })
+				.where(
+					and(eq(searchRegistry.contentType, 'episode'), inArray(searchRegistry.contentId, episodeIds))
+				)
+				.returning({ id: searchRegistry.id });
+
+			affected += result.length;
+		}
+	}
+
+	// Handle movies
+	if (movieIds.length > 0) {
+		const result = await db
+			.update(searchRegistry)
+			.set({ priority: clampedPriority, updatedAt: new Date() })
+			.where(
+				and(eq(searchRegistry.contentType, 'movie'), inArray(searchRegistry.contentId, movieIds))
+			)
+			.returning({ id: searchRegistry.id });
+
+		affected += result.length;
+	}
+
+	return { affected, skipped: 0 };
+}
+
+/**
+ * Marks selected content items as exhausted.
+ * Updates search_registry state to 'exhausted' for matching entries.
+ *
+ * @param targets - Array of content items to mark
+ * @returns Number of items affected
+ */
+export async function bulkMarkExhausted(targets: BulkActionTarget[]): Promise<BulkActionResult> {
+	if (targets.length === 0) {
+		return { affected: 0, skipped: 0 };
+	}
+
+	const seriesIds = targets.filter((t) => t.type === 'series').map((t) => t.id);
+	const movieIds = targets.filter((t) => t.type === 'movie').map((t) => t.id);
+
+	let affected = 0;
+	let skipped = 0;
+
+	// Handle series - update all episode entries (skip items currently searching)
+	if (seriesIds.length > 0) {
+		// Get episode IDs for these series
+		const episodeRows = await db
+			.select({ id: episodes.id })
+			.from(episodes)
+			.innerJoin(seasons, eq(episodes.seasonId, seasons.id))
+			.where(inArray(seasons.seriesId, seriesIds));
+
+		const episodeIds = episodeRows.map((e) => e.id);
+
+		if (episodeIds.length > 0) {
+			// Count items that will be skipped (currently searching)
+			const searchingCount = await db
+				.select({ count: count() })
+				.from(searchRegistry)
+				.where(
+					and(
+						eq(searchRegistry.contentType, 'episode'),
+						inArray(searchRegistry.contentId, episodeIds),
+						eq(searchRegistry.state, 'searching')
+					)
+				);
+			skipped += searchingCount[0]?.count ?? 0;
+
+			// Update entries that are not currently searching
+			const result = await db
+				.update(searchRegistry)
+				.set({
+					state: 'exhausted',
+					nextEligible: null,
+					updatedAt: new Date()
+				})
+				.where(
+					and(
+						eq(searchRegistry.contentType, 'episode'),
+						inArray(searchRegistry.contentId, episodeIds),
+						sql`${searchRegistry.state} != 'searching'`
+					)
+				)
+				.returning({ id: searchRegistry.id });
+
+			affected += result.length;
+		}
+	}
+
+	// Handle movies
+	if (movieIds.length > 0) {
+		// Count items that will be skipped (currently searching)
+		const searchingCount = await db
+			.select({ count: count() })
+			.from(searchRegistry)
+			.where(
+				and(
+					eq(searchRegistry.contentType, 'movie'),
+					inArray(searchRegistry.contentId, movieIds),
+					eq(searchRegistry.state, 'searching')
+				)
+			);
+		skipped += searchingCount[0]?.count ?? 0;
+
+		// Update entries that are not currently searching
+		const result = await db
+			.update(searchRegistry)
+			.set({
+				state: 'exhausted',
+				nextEligible: null,
+				updatedAt: new Date()
+			})
+			.where(
+				and(
+					eq(searchRegistry.contentType, 'movie'),
+					inArray(searchRegistry.contentId, movieIds),
+					sql`${searchRegistry.state} != 'searching'`
+				)
+			)
+			.returning({ id: searchRegistry.id });
+
+		affected += result.length;
+	}
+
+	return { affected, skipped };
+}
+
+/**
+ * Clears search state for selected content items.
+ * Resets search_registry to: state='pending', attemptCount=0, failureCategory=null, nextEligible=null.
+ *
+ * @param targets - Array of content items to reset
+ * @returns Number of items affected
+ */
+export async function bulkClearSearchState(targets: BulkActionTarget[]): Promise<BulkActionResult> {
+	if (targets.length === 0) {
+		return { affected: 0, skipped: 0 };
+	}
+
+	const seriesIds = targets.filter((t) => t.type === 'series').map((t) => t.id);
+	const movieIds = targets.filter((t) => t.type === 'movie').map((t) => t.id);
+
+	let affected = 0;
+	let skipped = 0;
+
+	// Handle series - reset all episode entries
+	if (seriesIds.length > 0) {
+		// Get episode IDs for these series
+		const episodeRows = await db
+			.select({ id: episodes.id })
+			.from(episodes)
+			.innerJoin(seasons, eq(episodes.seasonId, seasons.id))
+			.where(inArray(seasons.seriesId, seriesIds));
+
+		const episodeIds = episodeRows.map((e) => e.id);
+
+		if (episodeIds.length > 0) {
+			// Count items that will be skipped (currently searching)
+			const searchingCount = await db
+				.select({ count: count() })
+				.from(searchRegistry)
+				.where(
+					and(
+						eq(searchRegistry.contentType, 'episode'),
+						inArray(searchRegistry.contentId, episodeIds),
+						eq(searchRegistry.state, 'searching')
+					)
+				);
+			skipped += searchingCount[0]?.count ?? 0;
+
+			// Reset entries that are not currently searching
+			const result = await db
+				.update(searchRegistry)
+				.set({
+					state: 'pending',
+					attemptCount: 0,
+					failureCategory: null,
+					nextEligible: null,
+					seasonPackFailed: false,
+					updatedAt: new Date()
+				})
+				.where(
+					and(
+						eq(searchRegistry.contentType, 'episode'),
+						inArray(searchRegistry.contentId, episodeIds),
+						sql`${searchRegistry.state} != 'searching'`
+					)
+				)
+				.returning({ id: searchRegistry.id });
+
+			affected += result.length;
+		}
+	}
+
+	// Handle movies
+	if (movieIds.length > 0) {
+		// Count items that will be skipped (currently searching)
+		const searchingCount = await db
+			.select({ count: count() })
+			.from(searchRegistry)
+			.where(
+				and(
+					eq(searchRegistry.contentType, 'movie'),
+					inArray(searchRegistry.contentId, movieIds),
+					eq(searchRegistry.state, 'searching')
+				)
+			);
+		skipped += searchingCount[0]?.count ?? 0;
+
+		// Reset entries that are not currently searching
+		const result = await db
+			.update(searchRegistry)
+			.set({
+				state: 'pending',
+				attemptCount: 0,
+				failureCategory: null,
+				nextEligible: null,
+				updatedAt: new Date()
+			})
+			.where(
+				and(
+					eq(searchRegistry.contentType, 'movie'),
+					inArray(searchRegistry.contentId, movieIds),
+					sql`${searchRegistry.state} != 'searching'`
+				)
+			)
+			.returning({ id: searchRegistry.id });
+
+		affected += result.length;
+	}
+
+	return { affected, skipped };
+}

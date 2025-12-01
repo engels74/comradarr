@@ -2,21 +2,50 @@
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
 	import { Badge } from '$lib/components/ui/badge';
+	import { Checkbox } from '$lib/components/ui/checkbox';
 	import * as Table from '$lib/components/ui/table';
 	import { cn } from '$lib/utils.js';
 	import ContentStatusBadge from './ContentStatusBadge.svelte';
 	import type { ContentItem } from '$lib/server/db/queries/content';
 
 	/**
-	 * Content table with sortable columns.
-	 * Requirements: 17.1 (sortable columns)
+	 * Content table with sortable columns and selection support.
+	 * Requirements: 17.1 (sortable columns), 17.5 (bulk selection)
 	 */
 
 	interface Props {
 		items: ContentItem[];
+		selectedKeys?: Set<string> | undefined;
+		onToggleSelection?: ((key: string, shiftKey: boolean) => void) | undefined;
+		onToggleAll?: (() => void) | undefined;
 	}
 
-	let { items }: Props = $props();
+	let { items, selectedKeys, onToggleSelection, onToggleAll }: Props = $props();
+
+	// Computed selection states
+	const selectionEnabled = $derived(selectedKeys !== undefined && onToggleSelection !== undefined);
+	const allSelected = $derived(
+		selectionEnabled && items.length > 0 && items.every((item) => selectedKeys!.has(getItemKey(item)))
+	);
+	const someSelected = $derived(
+		selectionEnabled && items.some((item) => selectedKeys!.has(getItemKey(item))) && !allSelected
+	);
+
+	/**
+	 * Gets the unique key for an item.
+	 */
+	function getItemKey(item: ContentItem): string {
+		return `${item.type}-${item.id}`;
+	}
+
+	/**
+	 * Handles checkbox click for row selection.
+	 */
+	function handleRowCheckboxClick(item: ContentItem, event: MouseEvent) {
+		if (onToggleSelection) {
+			onToggleSelection(getItemKey(item), event.shiftKey);
+		}
+	}
 
 	// Get current sort state from URL
 	const currentSort = $derived($page.url.searchParams.get('sort') ?? 'title');
@@ -60,6 +89,16 @@
 	<Table.Root>
 		<Table.Header>
 			<Table.Row>
+				{#if selectionEnabled}
+					<Table.Head class="w-[40px]">
+						<Checkbox
+							checked={allSelected}
+							indeterminate={someSelected}
+							onCheckedChange={onToggleAll}
+							aria-label={allSelected ? 'Deselect all items' : 'Select all visible items'}
+						/>
+					</Table.Head>
+				{/if}
 				<Table.Head
 					class="cursor-pointer select-none hover:bg-muted/50"
 					onclick={() => toggleSort('title')}
@@ -78,8 +117,19 @@
 			</Table.Row>
 		</Table.Header>
 		<Table.Body>
-			{#each items as item (`${item.type}-${item.id}`)}
-				<Table.Row>
+			{#each items as item (getItemKey(item))}
+				{@const itemKey = getItemKey(item)}
+				{@const isSelected = selectionEnabled && selectedKeys!.has(itemKey)}
+				<Table.Row data-state={isSelected ? 'selected' : undefined}>
+					{#if selectionEnabled}
+						<Table.Cell>
+							<Checkbox
+								checked={isSelected}
+								onclick={(e: MouseEvent) => handleRowCheckboxClick(item, e)}
+								aria-label={`Select ${item.title}`}
+							/>
+						</Table.Cell>
+					{/if}
 					<Table.Cell class="font-medium">
 						<a
 							href="/content/{item.type}/{item.id}"
@@ -127,7 +177,7 @@
 				</Table.Row>
 			{:else}
 				<Table.Row>
-					<Table.Cell colspan={5} class="h-24 text-center text-muted-foreground">
+					<Table.Cell colspan={selectionEnabled ? 6 : 5} class="h-24 text-center text-muted-foreground">
 						No content found.
 					</Table.Cell>
 				</Table.Row>
