@@ -429,7 +429,7 @@
     - Do NOT block dispatch (informational only)
     - _Requirements: 38.5, 38.6_
 
-  - [ ] 26.4 Add Prowlarr settings UI
+  - [x] 26.4 Add Prowlarr settings UI
     - Connection configuration (URL, API key)
     - Enable/disable health monitoring
     - Display indexer health status
