@@ -3,7 +3,7 @@
 
 	let {
 		ref = $bindable(null),
-		value = $bindable(),
+		value = $bindable<string[]>([]),
 		...restProps
 	}: DropdownMenuPrimitive.CheckboxGroupProps = $props();
 </script>

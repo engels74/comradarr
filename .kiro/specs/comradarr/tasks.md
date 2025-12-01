@@ -488,7 +488,7 @@
     - Show search history and lastSearchTime
     - _Requirements: 17.4_
 
-  - [ ] 30.4 Implement bulk actions
+  - [x] 30.4 Implement bulk actions
     - Select multiple items
     - Queue for search, adjust priority, mark exhausted
     - _Requirements: 17.5_

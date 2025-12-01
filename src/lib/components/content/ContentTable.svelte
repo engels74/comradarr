@@ -94,7 +94,7 @@
 						<Checkbox
 							checked={allSelected}
 							indeterminate={someSelected}
-							onCheckedChange={onToggleAll}
+							onCheckedChange={() => onToggleAll?.()}
 							aria-label={allSelected ? 'Deselect all items' : 'Select all visible items'}
 						/>
 					</Table.Head>
