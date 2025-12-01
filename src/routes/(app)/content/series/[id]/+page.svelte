@@ -33,19 +33,19 @@
 			: 'Unknown'
 	);
 
-	// Collapsible season state - expand all by default if 3 or fewer seasons
-	let expandedSeasons = $state<Set<number>>(
-		new Set(data.seasons.length <= 3 ? data.seasons.map((s) => s.seasonNumber) : [])
-	);
+	// Collapsible season state - track user toggles, derive defaults from data
+	let userToggles = $state<Map<number, boolean>>(new Map());
+
+	function isSeasonExpanded(seasonNumber: number): boolean {
+		const userToggle = userToggles.get(seasonNumber);
+		if (userToggle !== undefined) return userToggle;
+		// Default: expand if 3 or fewer seasons
+		return data.seasons.length <= 3;
+	}
 
 	function toggleSeason(seasonNumber: number) {
-		const newSet = new Set(expandedSeasons);
-		if (newSet.has(seasonNumber)) {
-			newSet.delete(seasonNumber);
-		} else {
-			newSet.add(seasonNumber);
-		}
-		expandedSeasons = newSet;
+		const current = isSeasonExpanded(seasonNumber);
+		userToggles = new Map(userToggles).set(seasonNumber, !current);
 	}
 
 	// Outcome badge styling (matching connector detail pattern)
@@ -211,13 +211,13 @@
 								{season.episodes.filter((e) => e.hasFile).length}/{season.episodes.length} episodes
 							</span>
 							<span class="text-muted-foreground">
-								{expandedSeasons.has(season.seasonNumber) ? '−' : '+'}
+								{isSeasonExpanded(season.seasonNumber) ? '−' : '+'}
 							</span>
 						</div>
 					</div>
 				</Card.Header>
 
-				{#if expandedSeasons.has(season.seasonNumber)}
+				{#if isSeasonExpanded(season.seasonNumber)}
 					<Card.Content>
 						<Table.Root>
 							<Table.Header>
