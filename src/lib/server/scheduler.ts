@@ -6,13 +6,16 @@
  * - Error handling that logs but doesn't crash the server
  *
  * Requirements: 7.4 - Reset counters at configured intervals
+ * Requirements: 38.2 - Periodic Prowlarr health checks
  *
  * Jobs:
  * - throttle-window-reset: Runs every minute to reset expired throttle windows
+ * - prowlarr-health-check: Runs every 5 minutes to check Prowlarr indexer health
  */
 
 import { Cron } from 'croner';
 import { throttleEnforcer } from '$lib/server/services/throttle';
+import { prowlarrHealthMonitor } from '$lib/server/services/prowlarr';
 
 // =============================================================================
 // Types
@@ -80,6 +83,43 @@ export function initializeScheduler(): void {
 	jobs.set('throttle-window-reset', {
 		name: 'throttle-window-reset',
 		cron: throttleResetJob
+	});
+
+	// Prowlarr health check - runs every 5 minutes
+	// Checks indexer health status from Prowlarr and caches results (Req 38.2)
+	const prowlarrHealthJob = new Cron(
+		'*/5 * * * *', // Every 5 minutes
+		{
+			name: 'prowlarr-health-check',
+			protect: true, // Prevent overlapping executions
+			catch: (err) => {
+				console.error('[scheduler] Prowlarr health check failed:', err);
+			}
+		},
+		async () => {
+			const results = await prowlarrHealthMonitor.checkAllInstances();
+
+			// Only log if there are instances to check
+			if (results.length > 0) {
+				const unhealthy = results.filter((r) => r.status !== 'healthy');
+				if (unhealthy.length > 0) {
+					console.log('[scheduler] Prowlarr health issues detected:', {
+						total: results.length,
+						unhealthy: unhealthy.length,
+						issues: unhealthy.map((r) => ({
+							instance: r.instanceName,
+							status: r.status,
+							error: r.error
+						}))
+					});
+				}
+			}
+		}
+	);
+
+	jobs.set('prowlarr-health-check', {
+		name: 'prowlarr-health-check',
+		cron: prowlarrHealthJob
 	});
 
 	initialized = true;

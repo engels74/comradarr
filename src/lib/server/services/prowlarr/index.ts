@@ -5,11 +5,14 @@
  * It provides visibility into indexer rate-limiting status.
  *
  * @module services/prowlarr
- * @requirements 38.1, 38.2, 38.3
+ * @requirements 38.1, 38.2, 38.3, 38.4
  */
 
 // Client
 export { ProwlarrClient } from './client.js';
+
+// Health Monitor
+export { ProwlarrHealthMonitor, prowlarrHealthMonitor } from './health-monitor.js';
 
 // Types
 export type {
@@ -17,7 +20,11 @@ export type {
 	ProwlarrIndexerStatus,
 	ProwlarrIndexer,
 	IndexerHealth,
-	ProwlarrHealthStatus
+	ProwlarrHealthStatus,
+	HealthCheckResult,
+	CachedIndexerHealth,
+	HealthSummary,
+	HealthMonitorConfig
 } from './types.js';
 
 // Parsers

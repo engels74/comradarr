@@ -417,7 +417,7 @@
     - Parse disabledTill timestamps for rate-limited indexers
     - _Requirements: 38.1, 38.2, 38.3_
 
-  - [ ] 26.2 Implement health monitoring service
+  - [x] 26.2 Implement health monitoring service
     - Create ProwlarrHealthMonitor service
     - Periodic health check (configurable interval, default 5 min)
     - Cache indexer health status in database

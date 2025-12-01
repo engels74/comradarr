@@ -1,21 +1,26 @@
 /**
- * Database queries for Prowlarr instance operations.
+ * Database queries for Prowlarr instance and indexer health operations.
  *
- * @requirements 38.1
+ * @requirements 38.1, 38.2, 38.4
  *
  * API keys are encrypted using AES-256-GCM before storage.
  * Decryption happens lazily, only when the key is needed for API calls.
+ *
+ * Indexer health is cached in the database for quick access and to survive
+ * restarts. Cache is updated periodically by ProwlarrHealthMonitor.
  */
 
 import { db } from '$lib/server/db';
 import {
 	prowlarrInstances,
+	prowlarrIndexerHealth,
 	type ProwlarrInstance,
-	type NewProwlarrInstance
+	type NewProwlarrInstance,
+	type ProwlarrIndexerHealth
 } from '$lib/server/db/schema';
-import { eq } from 'drizzle-orm';
+import { eq, and, notInArray, sql } from 'drizzle-orm';
 import { encrypt, decrypt, DecryptionError, SecretKeyError } from '$lib/server/crypto';
-import type { ProwlarrHealthStatus } from '$lib/server/services/prowlarr/types';
+import type { ProwlarrHealthStatus, IndexerHealth } from '$lib/server/services/prowlarr/types';
 
 // Re-export crypto errors for consumers
 export { DecryptionError, SecretKeyError };
@@ -234,4 +239,182 @@ export async function prowlarrInstanceNameExists(
  */
 function normalizeUrl(url: string): string {
 	return url.replace(/\/+$/, '');
+}
+
+// =============================================================================
+// Indexer Health Cache Operations (Requirements 38.2, 38.4)
+// =============================================================================
+
+/**
+ * Upserts indexer health data for a Prowlarr instance.
+ * Inserts new indexers and updates existing ones.
+ *
+ * Uses ON CONFLICT DO UPDATE for atomic upsert.
+ *
+ * @param instanceId - Prowlarr instance ID
+ * @param healthData - Array of indexer health from Prowlarr API
+ * @returns Number of rows affected
+ *
+ * @requirements 38.2, 38.4
+ */
+export async function upsertIndexerHealth(
+	instanceId: number,
+	healthData: IndexerHealth[]
+): Promise<number> {
+	if (healthData.length === 0) {
+		return 0;
+	}
+
+	const now = new Date();
+
+	// Use raw SQL for ON CONFLICT DO UPDATE since Drizzle's onConflictDoUpdate
+	// requires specific handling for composite unique constraints
+	const values = healthData.map((h) => ({
+		prowlarrInstanceId: instanceId,
+		indexerId: h.indexerId,
+		name: h.name,
+		enabled: h.enabled,
+		isRateLimited: h.isRateLimited,
+		rateLimitExpiresAt: h.rateLimitExpiresAt,
+		mostRecentFailure: h.mostRecentFailure,
+		lastUpdated: now
+	}));
+
+	// Drizzle upsert with onConflictDoUpdate
+	const result = await db
+		.insert(prowlarrIndexerHealth)
+		.values(values)
+		.onConflictDoUpdate({
+			target: [prowlarrIndexerHealth.prowlarrInstanceId, prowlarrIndexerHealth.indexerId],
+			set: {
+				name: sql`excluded.name`,
+				enabled: sql`excluded.enabled`,
+				isRateLimited: sql`excluded.is_rate_limited`,
+				rateLimitExpiresAt: sql`excluded.rate_limit_expires_at`,
+				mostRecentFailure: sql`excluded.most_recent_failure`,
+				lastUpdated: sql`excluded.last_updated`
+			}
+		});
+
+	return healthData.length;
+}
+
+/**
+ * Gets cached indexer health for a specific Prowlarr instance.
+ *
+ * @param instanceId - Prowlarr instance ID
+ * @returns Array of cached indexer health records
+ *
+ * @requirements 38.4
+ */
+export async function getIndexerHealthByInstance(
+	instanceId: number
+): Promise<ProwlarrIndexerHealth[]> {
+	return db
+		.select()
+		.from(prowlarrIndexerHealth)
+		.where(eq(prowlarrIndexerHealth.prowlarrInstanceId, instanceId))
+		.orderBy(prowlarrIndexerHealth.name);
+}
+
+/**
+ * Gets all cached indexer health across all instances.
+ *
+ * @returns Array of all cached indexer health records
+ *
+ * @requirements 38.4
+ */
+export async function getAllCachedIndexerHealth(): Promise<ProwlarrIndexerHealth[]> {
+	return db.select().from(prowlarrIndexerHealth).orderBy(prowlarrIndexerHealth.name);
+}
+
+/**
+ * Gets rate-limited indexers for a specific instance.
+ *
+ * @param instanceId - Prowlarr instance ID
+ * @returns Array of rate-limited indexer records
+ */
+export async function getRateLimitedIndexers(
+	instanceId: number
+): Promise<ProwlarrIndexerHealth[]> {
+	return db
+		.select()
+		.from(prowlarrIndexerHealth)
+		.where(
+			and(
+				eq(prowlarrIndexerHealth.prowlarrInstanceId, instanceId),
+				eq(prowlarrIndexerHealth.isRateLimited, true)
+			)
+		)
+		.orderBy(prowlarrIndexerHealth.name);
+}
+
+/**
+ * Deletes indexer health records for indexers that no longer exist in Prowlarr.
+ * Called after a successful health check to remove stale data.
+ *
+ * @param instanceId - Prowlarr instance ID
+ * @param activeIndexerIds - Array of indexer IDs that still exist in Prowlarr
+ * @returns Number of deleted records
+ */
+export async function deleteStaleIndexerHealth(
+	instanceId: number,
+	activeIndexerIds: number[]
+): Promise<number> {
+	if (activeIndexerIds.length === 0) {
+		// Delete all indexer health for this instance if no active indexers
+		const result = await db
+			.delete(prowlarrIndexerHealth)
+			.where(eq(prowlarrIndexerHealth.prowlarrInstanceId, instanceId))
+			.returning({ id: prowlarrIndexerHealth.id });
+		return result.length;
+	}
+
+	const result = await db
+		.delete(prowlarrIndexerHealth)
+		.where(
+			and(
+				eq(prowlarrIndexerHealth.prowlarrInstanceId, instanceId),
+				notInArray(prowlarrIndexerHealth.indexerId, activeIndexerIds)
+			)
+		)
+		.returning({ id: prowlarrIndexerHealth.id });
+
+	return result.length;
+}
+
+/**
+ * Deletes all cached indexer health for a Prowlarr instance.
+ * Used when an instance is deleted (cascades via FK) or manually cleared.
+ *
+ * @param instanceId - Prowlarr instance ID
+ * @returns Number of deleted records
+ */
+export async function clearIndexerHealthCache(instanceId: number): Promise<number> {
+	const result = await db
+		.delete(prowlarrIndexerHealth)
+		.where(eq(prowlarrIndexerHealth.prowlarrInstanceId, instanceId))
+		.returning({ id: prowlarrIndexerHealth.id });
+
+	return result.length;
+}
+
+/**
+ * Gets health summary for a Prowlarr instance.
+ *
+ * @param instanceId - Prowlarr instance ID
+ * @returns Summary with total indexers, enabled count, and rate-limited count
+ */
+export async function getIndexerHealthSummary(instanceId: number): Promise<{
+	totalIndexers: number;
+	enabledIndexers: number;
+	rateLimitedIndexers: number;
+}> {
+	const indexers = await getIndexerHealthByInstance(instanceId);
+
+	return {
+		totalIndexers: indexers.length,
+		enabledIndexers: indexers.filter((i) => i.enabled).length,
+		rateLimitedIndexers: indexers.filter((i) => i.isRateLimited).length
+	};
 }

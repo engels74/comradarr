@@ -11,8 +11,9 @@
  * - syncState: Sync tracking per connector
  * - users, sessions: Authentication (Requirements 10.1, 10.2)
  * - prowlarrInstances: Prowlarr connections for indexer health monitoring (Requirements 38.1)
+ * - prowlarrIndexerHealth: Cached indexer health status (Requirements 38.2, 38.4)
  *
- * Requirements: 7.1, 7.4, 7.5, 10.1, 10.2, 14.1, 14.2, 14.3, 38.1
+ * Requirements: 7.1, 7.4, 7.5, 10.1, 10.2, 14.1, 14.2, 14.3, 38.1, 38.2, 38.4
  */
 
 import {
@@ -370,6 +371,39 @@ export const prowlarrInstances = pgTable('prowlarr_instances', {
 });
 
 // =============================================================================
+// Prowlarr Indexer Health Cache Table (Requirements 38.2, 38.4)
+// =============================================================================
+
+export const prowlarrIndexerHealth = pgTable(
+	'prowlarr_indexer_health',
+	{
+		id: integer('id').primaryKey().generatedAlwaysAsIdentity(),
+		prowlarrInstanceId: integer('prowlarr_instance_id')
+			.notNull()
+			.references(() => prowlarrInstances.id, { onDelete: 'cascade' }),
+		indexerId: integer('indexer_id').notNull(), // Prowlarr's indexer ID
+		name: varchar('name', { length: 200 }).notNull(),
+		enabled: boolean('enabled').notNull(),
+		isRateLimited: boolean('is_rate_limited').notNull().default(false),
+		rateLimitExpiresAt: timestamp('rate_limit_expires_at', { withTimezone: true }),
+		mostRecentFailure: timestamp('most_recent_failure', { withTimezone: true }),
+		lastUpdated: timestamp('last_updated', { withTimezone: true }).notNull().defaultNow()
+	},
+	(table) => [
+		// Unique constraint: one entry per indexer per instance
+		uniqueIndex('prowlarr_indexer_health_instance_indexer_idx').on(
+			table.prowlarrInstanceId,
+			table.indexerId
+		),
+		// Index for finding rate-limited indexers
+		index('prowlarr_indexer_health_rate_limited_idx').on(
+			table.prowlarrInstanceId,
+			table.isRateLimited
+		)
+	]
+);
+
+// =============================================================================
 // Type Exports (Drizzle inference)
 // =============================================================================
 
@@ -414,3 +448,6 @@ export type NewSession = typeof sessions.$inferInsert;
 
 export type ProwlarrInstance = typeof prowlarrInstances.$inferSelect;
 export type NewProwlarrInstance = typeof prowlarrInstances.$inferInsert;
+
+export type ProwlarrIndexerHealth = typeof prowlarrIndexerHealth.$inferSelect;
+export type NewProwlarrIndexerHealth = typeof prowlarrIndexerHealth.$inferInsert;
