@@ -477,7 +477,7 @@
     - Show sortable columns
     - _Requirements: 17.1, 17.2_
 
-  - [ ] 30.2 Create series detail page
+  - [x] 30.2 Create series detail page
     - Display metadata and quality status per episode
     - Show gap and upgrade status
     - Show search history

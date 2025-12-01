@@ -15,12 +15,13 @@ import {
 	connectors,
 	episodes,
 	movies,
+	searchHistory,
 	searchRegistry,
 	seasons,
 	series,
 	type Connector
 } from '$lib/server/db/schema';
-import { and, asc, count, desc, eq, ilike, or, sql, type SQL } from 'drizzle-orm';
+import { and, asc, count, desc, eq, ilike, inArray, or, sql, type SQL } from 'drizzle-orm';
 
 // =============================================================================
 // Types
@@ -102,6 +103,96 @@ export interface ContentStatusCounts {
 	queued: number;
 	searching: number;
 	exhausted: number;
+}
+
+// =============================================================================
+// Series Detail Types (Requirement 17.3)
+// =============================================================================
+
+/**
+ * Quality model structure (from *arr API).
+ */
+export interface QualityModel {
+	quality: {
+		id: number;
+		name: string;
+		source: string;
+		resolution: number;
+	};
+	revision: {
+		version: number;
+		real: number;
+		isRepack: boolean;
+	};
+}
+
+/**
+ * Full series detail with connector info.
+ */
+export interface SeriesDetail {
+	id: number;
+	connectorId: number;
+	arrId: number;
+	tvdbId: number | null;
+	title: string;
+	status: string | null;
+	monitored: boolean;
+	qualityProfileId: number | null;
+	createdAt: Date;
+	updatedAt: Date;
+	connectorName: string;
+	connectorType: string;
+	connectorUrl: string;
+}
+
+/**
+ * Episode detail with search state.
+ */
+export interface EpisodeDetail {
+	id: number;
+	arrId: number;
+	seasonNumber: number;
+	episodeNumber: number;
+	title: string | null;
+	airDate: Date | null;
+	monitored: boolean;
+	hasFile: boolean;
+	quality: QualityModel | null;
+	qualityCutoffNotMet: boolean;
+	lastSearchTime: Date | null;
+	searchState: string | null;
+	searchType: string | null;
+	attemptCount: number;
+	nextEligible: Date | null;
+}
+
+/**
+ * Season with aggregated stats and episode list.
+ */
+export interface SeasonWithEpisodes {
+	id: number;
+	seasonNumber: number;
+	monitored: boolean;
+	totalEpisodes: number;
+	downloadedEpisodes: number;
+	nextAiring: Date | null;
+	missingCount: number;
+	upgradeCount: number;
+	episodes: EpisodeDetail[];
+}
+
+/**
+ * Search history entry for series episodes.
+ */
+export interface SeriesSearchHistoryEntry {
+	id: number;
+	episodeId: number;
+	episodeTitle: string | null;
+	seasonNumber: number;
+	episodeNumber: number;
+	outcome: string;
+	createdAt: Date;
+	metadata: unknown;
 }
 
 // =============================================================================
@@ -658,4 +749,191 @@ export async function getContentStatusCounts(connectorId?: number): Promise<Cont
 		searching: searchStateCounts['searching'] ?? 0,
 		exhausted: searchStateCounts['exhausted'] ?? 0
 	};
+}
+
+// =============================================================================
+// Series Detail Queries (Requirement 17.3)
+// =============================================================================
+
+/**
+ * Gets series detail with connector information.
+ *
+ * @param id - Series ID (Comradarr internal ID)
+ * @returns Series detail or null if not found
+ */
+export async function getSeriesDetail(id: number): Promise<SeriesDetail | null> {
+	const result = await db
+		.select({
+			id: series.id,
+			connectorId: series.connectorId,
+			arrId: series.arrId,
+			tvdbId: series.tvdbId,
+			title: series.title,
+			status: series.status,
+			monitored: series.monitored,
+			qualityProfileId: series.qualityProfileId,
+			createdAt: series.createdAt,
+			updatedAt: series.updatedAt,
+			connectorName: connectors.name,
+			connectorType: connectors.type,
+			connectorUrl: connectors.url
+		})
+		.from(series)
+		.innerJoin(connectors, eq(series.connectorId, connectors.id))
+		.where(eq(series.id, id))
+		.limit(1);
+
+	return result[0] ?? null;
+}
+
+/**
+ * Gets all seasons for a series with episodes and search state.
+ *
+ * @param seriesId - Series ID
+ * @returns Array of seasons with episodes
+ */
+export async function getSeriesSeasonsWithEpisodes(
+	seriesId: number
+): Promise<SeasonWithEpisodes[]> {
+	// Get seasons
+	const seasonRows = await db
+		.select()
+		.from(seasons)
+		.where(eq(seasons.seriesId, seriesId))
+		.orderBy(asc(seasons.seasonNumber));
+
+	if (seasonRows.length === 0) return [];
+
+	// Get all episodes for these seasons with search state
+	const seasonIds = seasonRows.map((s) => s.id);
+
+	const episodeRows = await db
+		.select({
+			id: episodes.id,
+			seasonId: episodes.seasonId,
+			arrId: episodes.arrId,
+			seasonNumber: episodes.seasonNumber,
+			episodeNumber: episodes.episodeNumber,
+			title: episodes.title,
+			airDate: episodes.airDate,
+			monitored: episodes.monitored,
+			hasFile: episodes.hasFile,
+			quality: episodes.quality,
+			qualityCutoffNotMet: episodes.qualityCutoffNotMet,
+			lastSearchTime: episodes.lastSearchTime,
+			// Search registry fields
+			searchState: searchRegistry.state,
+			searchType: searchRegistry.searchType,
+			attemptCount: searchRegistry.attemptCount,
+			nextEligible: searchRegistry.nextEligible
+		})
+		.from(episodes)
+		.leftJoin(
+			searchRegistry,
+			and(
+				eq(searchRegistry.contentType, 'episode'),
+				eq(searchRegistry.contentId, episodes.id)
+			)
+		)
+		.where(inArray(episodes.seasonId, seasonIds))
+		.orderBy(asc(episodes.seasonNumber), asc(episodes.episodeNumber));
+
+	// Group episodes by season
+	const episodesBySeason = new Map<number, EpisodeDetail[]>();
+	for (const ep of episodeRows) {
+		if (!episodesBySeason.has(ep.seasonId)) {
+			episodesBySeason.set(ep.seasonId, []);
+		}
+		episodesBySeason.get(ep.seasonId)!.push({
+			id: ep.id,
+			arrId: ep.arrId,
+			seasonNumber: ep.seasonNumber,
+			episodeNumber: ep.episodeNumber,
+			title: ep.title,
+			airDate: ep.airDate,
+			monitored: ep.monitored,
+			hasFile: ep.hasFile,
+			quality: ep.quality as QualityModel | null,
+			qualityCutoffNotMet: ep.qualityCutoffNotMet,
+			lastSearchTime: ep.lastSearchTime,
+			searchState: ep.searchState,
+			searchType: ep.searchType,
+			attemptCount: ep.attemptCount ?? 0,
+			nextEligible: ep.nextEligible
+		});
+	}
+
+	// Build result with computed counts
+	return seasonRows.map((season) => {
+		const eps = episodesBySeason.get(season.id) ?? [];
+		const missingCount = eps.filter((e) => e.monitored && !e.hasFile).length;
+		const upgradeCount = eps.filter((e) => e.monitored && e.hasFile && e.qualityCutoffNotMet).length;
+
+		return {
+			id: season.id,
+			seasonNumber: season.seasonNumber,
+			monitored: season.monitored,
+			totalEpisodes: season.totalEpisodes,
+			downloadedEpisodes: season.downloadedEpisodes,
+			nextAiring: season.nextAiring,
+			missingCount,
+			upgradeCount,
+			episodes: eps
+		};
+	});
+}
+
+/**
+ * Gets search history for all episodes in a series.
+ *
+ * @param seriesId - Series ID
+ * @param limit - Maximum entries to return (default 20)
+ * @returns Search history entries with episode info
+ */
+export async function getSeriesSearchHistory(
+	seriesId: number,
+	limit: number = 20
+): Promise<SeriesSearchHistoryEntry[]> {
+	// Get all episode IDs for this series
+	const episodeIds = await db
+		.select({ id: episodes.id })
+		.from(episodes)
+		.innerJoin(seasons, eq(episodes.seasonId, seasons.id))
+		.where(eq(seasons.seriesId, seriesId));
+
+	if (episodeIds.length === 0) return [];
+
+	const ids = episodeIds.map((e) => e.id);
+
+	// Get search history for these episodes
+	const history = await db
+		.select({
+			id: searchHistory.id,
+			contentId: searchHistory.contentId,
+			outcome: searchHistory.outcome,
+			metadata: searchHistory.metadata,
+			createdAt: searchHistory.createdAt,
+			// Episode info
+			episodeTitle: episodes.title,
+			seasonNumber: episodes.seasonNumber,
+			episodeNumber: episodes.episodeNumber
+		})
+		.from(searchHistory)
+		.innerJoin(episodes, eq(searchHistory.contentId, episodes.id))
+		.where(
+			and(eq(searchHistory.contentType, 'episode'), inArray(searchHistory.contentId, ids))
+		)
+		.orderBy(desc(searchHistory.createdAt))
+		.limit(limit);
+
+	return history.map((h) => ({
+		id: h.id,
+		episodeId: h.contentId,
+		episodeTitle: h.episodeTitle,
+		seasonNumber: h.seasonNumber,
+		episodeNumber: h.episodeNumber,
+		outcome: h.outcome,
+		createdAt: h.createdAt,
+		metadata: h.metadata
+	}));
 }
