@@ -112,6 +112,26 @@ export async function getEnabledConnectors(): Promise<Connector[]> {
 }
 
 /**
+ * Gets all enabled connectors with healthy status (healthy or degraded).
+ * Excludes unhealthy, offline, and unknown status connectors from sweep cycles.
+ * Used by scheduler to skip sweep cycles for unhealthy connectors (Requirement 1.5).
+ *
+ * @returns Array of healthy, enabled connectors
+ */
+export async function getHealthyConnectors(): Promise<Connector[]> {
+	return db
+		.select()
+		.from(connectors)
+		.where(
+			and(
+				eq(connectors.enabled, true),
+				inArray(connectors.healthStatus, ['healthy', 'degraded'])
+			)
+		)
+		.orderBy(connectors.name);
+}
+
+/**
  * Decrypts the API key from a connector.
  * Call this only when making actual API requests to the *arr application.
  *

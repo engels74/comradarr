@@ -7,6 +7,7 @@
  *
  * Requirements:
  * - 1.4: Connector health checks
+ * - 1.5: Skip sweep cycles for unhealthy connectors
  * - 7.4: Reset counters at configured intervals
  * - 8.1: Execute sweeps at specified cron intervals
  * - 8.2: Run discovery for configured search types
@@ -27,9 +28,11 @@ import { throttleEnforcer } from '$lib/server/services/throttle';
 import { prowlarrHealthMonitor } from '$lib/server/services/prowlarr';
 import {
 	getEnabledConnectors,
+	getHealthyConnectors,
 	getDecryptedApiKey,
 	updateConnectorHealth
 } from '$lib/server/db/queries/connectors';
+import type { Connector } from '$lib/server/db/schema';
 import { createConnectorClient } from '$lib/server/connectors/factory';
 import { determineHealthFromChecks, type HealthStatus } from '$lib/server/services/sync/health-utils';
 import { AuthenticationError, NetworkError, TimeoutError } from '$lib/server/connectors/common/errors';
@@ -65,6 +68,28 @@ const jobs: Map<string, ScheduledJob> = new Map();
 
 /** Flag to prevent multiple initializations */
 let initialized = false;
+
+// =============================================================================
+// Internal Helpers
+// =============================================================================
+
+/**
+ * Logs connectors that are being skipped due to unhealthy status.
+ * Used by sweep cycle jobs to inform about excluded connectors (Requirement 1.5).
+ *
+ * @param healthyConnectors - Connectors that will be processed
+ */
+async function logSkippedUnhealthyConnectors(healthyConnectors: Connector[]): Promise<void> {
+	const allEnabled = await getEnabledConnectors();
+	const skipped = allEnabled.filter((c) => !healthyConnectors.some((hc) => hc.id === c.id));
+
+	if (skipped.length > 0) {
+		console.log(
+			'[scheduler] Skipping unhealthy connectors:',
+			skipped.map((c) => ({ id: c.id, name: c.name, healthStatus: c.healthStatus }))
+		);
+	}
+}
 
 // =============================================================================
 // Public API
@@ -258,6 +283,7 @@ export function initializeScheduler(): void {
 
 	// Incremental sync sweep - runs every 15 minutes
 	// Syncs content from *arr apps, discovers gaps/upgrades, enqueues items
+	// Only processes healthy connectors (Requirement 1.5)
 	const incrementalSyncJob = new Cron(
 		'*/15 * * * *', // Every 15 minutes
 		{
@@ -269,10 +295,14 @@ export function initializeScheduler(): void {
 		},
 		async () => {
 			const startTime = Date.now();
-			const connectors = await getEnabledConnectors();
+			// Only process healthy connectors (Requirement 1.5)
+			const connectors = await getHealthyConnectors();
+
+			// Log any unhealthy connectors being skipped
+			await logSkippedUnhealthyConnectors(connectors);
 
 			if (connectors.length === 0) {
-				return; // No connectors to process
+				return; // No healthy connectors to process
 			}
 
 			const summary = {
@@ -354,6 +384,7 @@ export function initializeScheduler(): void {
 
 	// Full reconciliation - runs daily at 3 AM
 	// Complete sync with deletion of removed items, full discovery and enqueue
+	// Only processes healthy connectors (Requirement 1.5)
 	const fullReconciliationJob = new Cron(
 		'0 3 * * *', // Daily at 3:00 AM
 		{
@@ -365,10 +396,14 @@ export function initializeScheduler(): void {
 		},
 		async () => {
 			const startTime = Date.now();
-			const connectors = await getEnabledConnectors();
+			// Only process healthy connectors (Requirement 1.5)
+			const connectors = await getHealthyConnectors();
+
+			// Log any unhealthy connectors being skipped
+			await logSkippedUnhealthyConnectors(connectors);
 
 			if (connectors.length === 0) {
-				return; // No connectors to process
+				return; // No healthy connectors to process
 			}
 
 			const summary = {
@@ -446,6 +481,7 @@ export function initializeScheduler(): void {
 
 	// Queue processor - runs every minute
 	// Re-enqueues cooldown items, dequeues and dispatches searches
+	// Only processes healthy connectors (Requirement 1.5)
 	const queueProcessorJob = new Cron(
 		'* * * * *', // Every minute
 		{
@@ -469,8 +505,8 @@ export function initializeScheduler(): void {
 				rateLimited: 0
 			};
 
-			// 2. Process queue for each enabled connector
-			const connectors = await getEnabledConnectors();
+			// 2. Process queue for each healthy connector (Requirement 1.5)
+			const connectors = await getHealthyConnectors();
 
 			for (const connector of connectors) {
 				try {

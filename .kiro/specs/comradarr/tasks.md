@@ -457,11 +457,11 @@
     - Update connector health status
     - _Requirements: 1.4_
 
-  - [ ] 28.4 Implement unhealthy connector exclusion
+  - [x] 28.4 Implement unhealthy connector exclusion
     - Skip sweep cycles for unhealthy connectors
     - _Requirements: 1.5_
 
-  - [ ] 28.5 Write property test for unhealthy connector exclusion
+  - [x] 28.5 Write property test for unhealthy connector exclusion
     - **Property 19: Unhealthy Connector Exclusion**
     - **Validates: Requirements 1.5**
 
