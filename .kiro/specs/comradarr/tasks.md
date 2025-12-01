@@ -423,7 +423,7 @@
     - Cache indexer health status in database
     - _Requirements: 38.2, 38.4_
 
-  - [ ] 26.3 Integrate with dispatch (optional check)
+  - [x] 26.3 Integrate with dispatch (optional check)
     - Add pre-dispatch check for indexer health
     - Log warning when indexers are unhealthy
     - Do NOT block dispatch (informational only)

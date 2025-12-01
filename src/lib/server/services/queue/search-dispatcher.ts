@@ -3,11 +3,12 @@
  *
  * Orchestrates dispatching search commands to *arr connectors with:
  * - Pre-dispatch throttle checking
+ * - Optional Prowlarr indexer health check (informational only)
  * - HTTP 429 (RateLimitError) handling
  * - Request recording for rate limiting
  *
  * @module services/queue/search-dispatcher
- * @requirements 7.3
+ * @requirements 7.3, 38.5, 38.6
  */
 
 import { getConnector, getDecryptedApiKey } from '$lib/server/db/queries/connectors';
@@ -20,6 +21,7 @@ import {
 	type CommandResponse
 } from '$lib/server/connectors';
 import { throttleEnforcer } from '$lib/server/services/throttle';
+import { prowlarrHealthMonitor } from '$lib/server/services/prowlarr';
 import type { ContentType, SearchType } from './types';
 
 // =============================================================================
@@ -132,6 +134,43 @@ async function executeSearchCommand(
 	throw new Error('Invalid search options: provide episodeIds, movieIds, or seriesId+seasonNumber');
 }
 
+/**
+ * Check Prowlarr indexer health and log warning if issues detected.
+ * This is informational only - does NOT block dispatch.
+ * Uses cached data to avoid additional API calls.
+ *
+ * @requirements 38.5, 38.6
+ */
+async function checkProwlarrHealth(): Promise<void> {
+	try {
+		const cachedHealth = await prowlarrHealthMonitor.getAllCachedHealth();
+
+		if (cachedHealth.length === 0) {
+			// No Prowlarr instances configured, skip check
+			return;
+		}
+
+		const rateLimitedIndexers = cachedHealth.filter((h) => h.isRateLimited);
+		const staleData = cachedHealth.some((h) => h.isStale);
+
+		if (rateLimitedIndexers.length > 0) {
+			console.warn('[dispatcher] Prowlarr health warning:', {
+				rateLimitedIndexers: rateLimitedIndexers.length,
+				totalIndexers: cachedHealth.length,
+				indexerNames: rateLimitedIndexers.map((h) => h.name),
+				dataStale: staleData
+			});
+		}
+	} catch (error) {
+		// Requirement 38.6: Continue normal operation if Prowlarr unreachable
+		// Log error but do not throw - this check is purely informational
+		console.warn(
+			'[dispatcher] Prowlarr health check failed (continuing dispatch):',
+			error instanceof Error ? error.message : 'Unknown error'
+		);
+	}
+}
+
 // =============================================================================
 // Main Dispatch Function
 // =============================================================================
@@ -196,6 +235,10 @@ export async function dispatchSearch(
 			rateLimited: throttleResult.reason === 'rate_limit'
 		};
 	}
+
+	// 1.5. Optional Prowlarr health check (informational only, does NOT block dispatch)
+	// Requirements 38.5, 38.6
+	await checkProwlarrHealth();
 
 	// 2. Create connector client
 	const connectorResult = await createConnectorClient(connectorId);

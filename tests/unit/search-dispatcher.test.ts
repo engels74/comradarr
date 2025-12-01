@@ -1,13 +1,14 @@
 /**
- * Unit tests for search dispatcher HTTP 429 handling.
+ * Unit tests for search dispatcher HTTP 429 handling and Prowlarr integration.
  *
  * Tests focus on:
  * - RateLimitError triggering handleRateLimitResponse()
  * - Retry-After header being passed correctly
  * - Fallback to profile config when no Retry-After
  * - Batch dispatch stopping on rate limit
+ * - Prowlarr health check integration (informational, non-blocking)
  *
- * Requirements: 7.3
+ * Requirements: 7.3, 38.5, 38.6
  */
 
 import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest';
@@ -80,10 +81,17 @@ vi.mock('$lib/server/services/throttle', () => ({
 	}
 }));
 
+vi.mock('$lib/server/services/prowlarr', () => ({
+	prowlarrHealthMonitor: {
+		getAllCachedHealth: vi.fn()
+	}
+}));
+
 // Now import the module and mocks
 import { dispatchSearch, dispatchBatch } from '../../src/lib/server/services/queue/search-dispatcher';
 import { getConnector, getDecryptedApiKey } from '$lib/server/db/queries/connectors';
 import { throttleEnforcer } from '$lib/server/services/throttle';
+import { prowlarrHealthMonitor } from '$lib/server/services/prowlarr';
 
 describe('dispatchSearch', () => {
 	const mockConnector = {
@@ -104,6 +112,8 @@ describe('dispatchSearch', () => {
 		(throttleEnforcer.canDispatch as Mock).mockResolvedValue({ allowed: true });
 		(throttleEnforcer.recordRequest as Mock).mockResolvedValue(undefined);
 		(throttleEnforcer.handleRateLimitResponse as Mock).mockResolvedValue(undefined);
+		// Default: no Prowlarr instances configured (empty array)
+		(prowlarrHealthMonitor.getAllCachedHealth as Mock).mockResolvedValue([]);
 	});
 
 	describe('successful dispatch', () => {
@@ -302,6 +312,155 @@ describe('dispatchSearch', () => {
 			expect(result.error).toContain('not found');
 		});
 	});
+
+	describe('Prowlarr health check integration (Requirements 38.5, 38.6)', () => {
+		it('should call getAllCachedHealth during dispatch', async () => {
+			mockSonarrClient.sendEpisodeSearch.mockResolvedValue({ id: 123, status: 'queued' });
+
+			await dispatchSearch(1, 100, 'episode', 'gap', {
+				episodeIds: [456]
+			});
+
+			expect(prowlarrHealthMonitor.getAllCachedHealth).toHaveBeenCalled();
+		});
+
+		it('should proceed with dispatch when indexers are rate-limited (Requirement 38.5)', async () => {
+			// Mock rate-limited indexers
+			(prowlarrHealthMonitor.getAllCachedHealth as Mock).mockResolvedValue([
+				{
+					instanceId: 1,
+					indexerId: 10,
+					name: 'NZBgeek',
+					enabled: true,
+					isRateLimited: true,
+					rateLimitExpiresAt: new Date(Date.now() + 3600000),
+					mostRecentFailure: null,
+					lastUpdated: new Date(),
+					isStale: false
+				}
+			]);
+			mockSonarrClient.sendEpisodeSearch.mockResolvedValue({ id: 123, status: 'queued' });
+
+			const result = await dispatchSearch(1, 100, 'episode', 'gap', {
+				episodeIds: [456]
+			});
+
+			// Dispatch should still succeed despite unhealthy indexers
+			expect(result.success).toBe(true);
+			expect(result.commandId).toBe(123);
+		});
+
+		it('should proceed with dispatch when Prowlarr health check throws (Requirement 38.6)', async () => {
+			// Simulate Prowlarr being unreachable
+			(prowlarrHealthMonitor.getAllCachedHealth as Mock).mockRejectedValue(
+				new Error('Database connection failed')
+			);
+			mockSonarrClient.sendEpisodeSearch.mockResolvedValue({ id: 123, status: 'queued' });
+
+			const result = await dispatchSearch(1, 100, 'episode', 'gap', {
+				episodeIds: [456]
+			});
+
+			// Dispatch should still succeed
+			expect(result.success).toBe(true);
+			expect(result.commandId).toBe(123);
+		});
+
+		it('should skip health check when no Prowlarr instances configured', async () => {
+			(prowlarrHealthMonitor.getAllCachedHealth as Mock).mockResolvedValue([]);
+			mockSonarrClient.sendEpisodeSearch.mockResolvedValue({ id: 123, status: 'queued' });
+
+			const result = await dispatchSearch(1, 100, 'episode', 'gap', {
+				episodeIds: [456]
+			});
+
+			expect(result.success).toBe(true);
+			expect(prowlarrHealthMonitor.getAllCachedHealth).toHaveBeenCalled();
+		});
+
+		it('should log warning when indexers are rate-limited', async () => {
+			const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+			(prowlarrHealthMonitor.getAllCachedHealth as Mock).mockResolvedValue([
+				{
+					instanceId: 1,
+					indexerId: 10,
+					name: 'NZBgeek',
+					enabled: true,
+					isRateLimited: true,
+					rateLimitExpiresAt: new Date(Date.now() + 3600000),
+					mostRecentFailure: null,
+					lastUpdated: new Date(),
+					isStale: false
+				}
+			]);
+			mockSonarrClient.sendEpisodeSearch.mockResolvedValue({ id: 123, status: 'queued' });
+
+			await dispatchSearch(1, 100, 'episode', 'gap', {
+				episodeIds: [456]
+			});
+
+			expect(warnSpy).toHaveBeenCalledWith(
+				'[dispatcher] Prowlarr health warning:',
+				expect.objectContaining({
+					rateLimitedIndexers: 1,
+					totalIndexers: 1
+				})
+			);
+
+			warnSpy.mockRestore();
+		});
+
+		it('should not log warning when all indexers are healthy', async () => {
+			const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+			(prowlarrHealthMonitor.getAllCachedHealth as Mock).mockResolvedValue([
+				{
+					instanceId: 1,
+					indexerId: 10,
+					name: 'NZBgeek',
+					enabled: true,
+					isRateLimited: false,
+					rateLimitExpiresAt: null,
+					mostRecentFailure: null,
+					lastUpdated: new Date(),
+					isStale: false
+				}
+			]);
+			mockSonarrClient.sendEpisodeSearch.mockResolvedValue({ id: 123, status: 'queued' });
+
+			await dispatchSearch(1, 100, 'episode', 'gap', {
+				episodeIds: [456]
+			});
+
+			expect(warnSpy).not.toHaveBeenCalledWith(
+				'[dispatcher] Prowlarr health warning:',
+				expect.anything()
+			);
+
+			warnSpy.mockRestore();
+		});
+
+		it('should log warning when Prowlarr health check fails', async () => {
+			const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+			(prowlarrHealthMonitor.getAllCachedHealth as Mock).mockRejectedValue(
+				new Error('Connection timeout')
+			);
+			mockSonarrClient.sendEpisodeSearch.mockResolvedValue({ id: 123, status: 'queued' });
+
+			await dispatchSearch(1, 100, 'episode', 'gap', {
+				episodeIds: [456]
+			});
+
+			expect(warnSpy).toHaveBeenCalledWith(
+				'[dispatcher] Prowlarr health check failed (continuing dispatch):',
+				'Connection timeout'
+			);
+
+			warnSpy.mockRestore();
+		});
+	});
 });
 
 describe('dispatchBatch', () => {
@@ -322,6 +481,8 @@ describe('dispatchBatch', () => {
 		(throttleEnforcer.canDispatch as Mock).mockResolvedValue({ allowed: true });
 		(throttleEnforcer.recordRequest as Mock).mockResolvedValue(undefined);
 		(throttleEnforcer.handleRateLimitResponse as Mock).mockResolvedValue(undefined);
+		// Default: no Prowlarr instances configured (empty array)
+		(prowlarrHealthMonitor.getAllCachedHealth as Mock).mockResolvedValue([]);
 	});
 
 	it('should dispatch all items successfully', async () => {
