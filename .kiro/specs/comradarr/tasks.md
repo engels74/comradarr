@@ -452,7 +452,7 @@
     - Create queue processor job (every minute)
     - _Requirements: 8.1, 8.2, 8.4_
 
-  - [ ] 28.3 Implement health check job
+  - [x] 28.3 Implement health check job
     - Check connector health every 5 minutes
     - Update connector health status
     - _Requirements: 1.4_

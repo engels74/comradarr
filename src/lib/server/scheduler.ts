@@ -6,6 +6,7 @@
  * - Error handling that logs but doesn't crash the server
  *
  * Requirements:
+ * - 1.4: Connector health checks
  * - 7.4: Reset counters at configured intervals
  * - 8.1: Execute sweeps at specified cron intervals
  * - 8.2: Run discovery for configured search types
@@ -15,6 +16,7 @@
  * Jobs:
  * - throttle-window-reset: Every minute - resets expired throttle windows
  * - prowlarr-health-check: Every 5 minutes - checks Prowlarr indexer health
+ * - connector-health-check: Every 5 minutes - checks *arr connector health
  * - incremental-sync-sweep: Every 15 minutes - syncs content, discovers gaps/upgrades, enqueues items
  * - full-reconciliation: Daily at 3 AM - complete sync with deletion of removed items
  * - queue-processor: Every minute - re-enqueues cooldown items, dispatches searches
@@ -23,7 +25,14 @@
 import { Cron } from 'croner';
 import { throttleEnforcer } from '$lib/server/services/throttle';
 import { prowlarrHealthMonitor } from '$lib/server/services/prowlarr';
-import { getEnabledConnectors } from '$lib/server/db/queries/connectors';
+import {
+	getEnabledConnectors,
+	getDecryptedApiKey,
+	updateConnectorHealth
+} from '$lib/server/db/queries/connectors';
+import { createConnectorClient } from '$lib/server/connectors/factory';
+import { determineHealthFromChecks, type HealthStatus } from '$lib/server/services/sync/health-utils';
+import { AuthenticationError, NetworkError, TimeoutError } from '$lib/server/connectors/common/errors';
 import { runIncrementalSync, runFullReconciliation } from '$lib/server/services/sync';
 import { discoverGaps, discoverUpgrades } from '$lib/server/services/discovery';
 import {
@@ -138,6 +147,109 @@ export function initializeScheduler(): void {
 	jobs.set('prowlarr-health-check', {
 		name: 'prowlarr-health-check',
 		cron: prowlarrHealthJob
+	});
+
+	// Connector health check - runs every 5 minutes
+	// Checks *arr connector health status and updates database (Req 1.4)
+	const connectorHealthJob = new Cron(
+		'*/5 * * * *', // Every 5 minutes
+		{
+			name: 'connector-health-check',
+			protect: true, // Prevent overlapping executions
+			catch: (err) => {
+				console.error('[scheduler] Connector health check failed:', err);
+			}
+		},
+		async () => {
+			const connectors = await getEnabledConnectors();
+
+			if (connectors.length === 0) {
+				return; // No connectors to check
+			}
+
+			const results: Array<{
+				id: number;
+				name: string;
+				oldStatus: string;
+				newStatus: string;
+				error?: string;
+			}> = [];
+
+			for (const connector of connectors) {
+				try {
+					// Decrypt API key and create client
+					const apiKey = await getDecryptedApiKey(connector);
+					const client = createConnectorClient(connector, apiKey);
+
+					// Try to ping first (fast connectivity check)
+					const isReachable = await client.ping();
+
+					if (!isReachable) {
+						// Can't reach connector - mark as offline
+						await updateConnectorHealth(connector.id, 'offline');
+						results.push({
+							id: connector.id,
+							name: connector.name,
+							oldStatus: connector.healthStatus,
+							newStatus: 'offline',
+							error: 'Connection failed'
+						});
+						continue;
+					}
+
+					// Get health checks from API
+					const healthChecks = await client.getHealth();
+					const newStatus = determineHealthFromChecks(healthChecks);
+
+					// Update status in database
+					await updateConnectorHealth(connector.id, newStatus);
+
+					// Track if status changed
+					if (connector.healthStatus !== newStatus) {
+						results.push({
+							id: connector.id,
+							name: connector.name,
+							oldStatus: connector.healthStatus,
+							newStatus
+						});
+					}
+				} catch (error) {
+					// Categorize error to determine status
+					let newStatus: HealthStatus;
+					let errorMsg: string;
+
+					if (error instanceof AuthenticationError) {
+						newStatus = 'unhealthy';
+						errorMsg = 'Authentication failed';
+					} else if (error instanceof NetworkError || error instanceof TimeoutError) {
+						newStatus = 'offline';
+						errorMsg = error.message;
+					} else {
+						newStatus = 'unhealthy';
+						errorMsg = error instanceof Error ? error.message : 'Unknown error';
+					}
+
+					await updateConnectorHealth(connector.id, newStatus);
+					results.push({
+						id: connector.id,
+						name: connector.name,
+						oldStatus: connector.healthStatus,
+						newStatus,
+						error: errorMsg
+					});
+				}
+			}
+
+			// Log only if there were status changes
+			if (results.length > 0) {
+				console.log('[scheduler] Connector health status changes:', results);
+			}
+		}
+	);
+
+	jobs.set('connector-health-check', {
+		name: 'connector-health-check',
+		cron: connectorHealthJob
 	});
 
 	// =========================================================================

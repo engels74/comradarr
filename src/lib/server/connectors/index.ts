@@ -10,6 +10,9 @@
 // Base client
 export { BaseArrClient } from './common/base-client.js';
 
+// Factory
+export { createConnectorClient } from './factory.js';
+
 // Sonarr client
 export { SonarrClient } from './sonarr/client.js';
 

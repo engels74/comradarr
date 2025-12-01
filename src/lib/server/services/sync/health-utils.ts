@@ -115,3 +115,30 @@ export function calculateSyncBackoffDelay(attempt: number): number {
 
 	return Math.min(exponentialDelay, SYNC_CONFIG.SYNC_RETRY_MAX_DELAY);
 }
+
+/**
+ * Determines connector health status from API health check results.
+ *
+ * This function analyzes the health checks returned by the *arr application's
+ * /api/v3/health endpoint and determines the overall health status.
+ *
+ * Rules:
+ * - Any 'error' type: 'degraded' (connector is responding but has issues)
+ * - Any 'warning' type: 'healthy' (warnings are informational)
+ * - All 'ok' or 'notice': 'healthy'
+ *
+ * @param checks - Array of health check items from the *arr API
+ * @returns The determined health status
+ * @requirements 1.4
+ */
+export function determineHealthFromChecks(
+	checks: Array<{ type: 'ok' | 'notice' | 'warning' | 'error' }>
+): HealthStatus {
+	const hasError = checks.some((c) => c.type === 'error');
+
+	if (hasError) {
+		return 'degraded';
+	}
+
+	return 'healthy';
+}
