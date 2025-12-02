@@ -6,9 +6,12 @@
   - Current quality status per episode
   - Gap and upgrade status
   - Search history
+
+  Episodes are lazy-loaded when seasons are expanded.
 -->
 <script lang="ts">
 	import type { PageProps } from './$types';
+	import type { EpisodeDetail } from '$lib/server/db/queries/content';
 	import * as Card from '$lib/components/ui/card';
 	import * as Table from '$lib/components/ui/table';
 	import { Badge } from '$lib/components/ui/badge';
@@ -33,19 +36,48 @@
 			: 'Unknown'
 	);
 
-	// Collapsible season state - track user toggles, derive defaults from data
-	let userToggles = $state<Map<number, boolean>>(new Map());
+	// Collapsible season state - track expanded/collapsed seasons
+	let expandedSeasons = $state<Set<number>>(new Set());
 
-	function isSeasonExpanded(seasonNumber: number): boolean {
-		const userToggle = userToggles.get(seasonNumber);
-		if (userToggle !== undefined) return userToggle;
-		// Default: expand if 3 or fewer seasons
-		return data.seasons.length <= 3;
+	// Episode cache per season - keyed by season ID
+	let episodeCache = $state<Map<number, EpisodeDetail[]>>(new Map());
+	let loadingSeasons = $state<Set<number>>(new Set());
+	let errorSeasons = $state<Map<number, string>>(new Map());
+
+	function isSeasonExpanded(seasonId: number): boolean {
+		return expandedSeasons.has(seasonId);
 	}
 
-	function toggleSeason(seasonNumber: number) {
-		const current = isSeasonExpanded(seasonNumber);
-		userToggles = new Map(userToggles).set(seasonNumber, !current);
+	async function toggleSeason(seasonId: number) {
+		if (expandedSeasons.has(seasonId)) {
+			// Collapse
+			expandedSeasons = new Set([...expandedSeasons].filter((id) => id !== seasonId));
+		} else {
+			// Expand and fetch episodes if not cached
+			expandedSeasons = new Set([...expandedSeasons, seasonId]);
+			if (!episodeCache.has(seasonId)) {
+				await fetchEpisodes(seasonId);
+			}
+		}
+	}
+
+	async function fetchEpisodes(seasonId: number) {
+		loadingSeasons = new Set([...loadingSeasons, seasonId]);
+		errorSeasons = new Map([...errorSeasons].filter(([id]) => id !== seasonId));
+
+		try {
+			const response = await fetch(`/api/seasons/${seasonId}/episodes`);
+			if (!response.ok) {
+				throw new Error(`Failed to load episodes: ${response.statusText}`);
+			}
+			const data = await response.json();
+			episodeCache = new Map(episodeCache).set(seasonId, data.episodes);
+		} catch (e) {
+			const message = e instanceof Error ? e.message : 'Failed to load episodes';
+			errorSeasons = new Map(errorSeasons).set(seasonId, message);
+		} finally {
+			loadingSeasons = new Set([...loadingSeasons].filter((id) => id !== seasonId));
+		}
 	}
 
 	// Outcome badge styling (matching connector detail pattern)
@@ -191,10 +223,13 @@
 		<h2 class="text-xl font-semibold">Seasons</h2>
 
 		{#each data.seasons as season (season.id)}
+			{@const episodes = episodeCache.get(season.id) ?? []}
+			{@const isLoading = loadingSeasons.has(season.id)}
+			{@const error = errorSeasons.get(season.id)}
 			<Card.Root>
 				<Card.Header
 					class="cursor-pointer hover:bg-muted/50 transition-colors"
-					onclick={() => toggleSeason(season.seasonNumber)}
+					onclick={() => toggleSeason(season.id)}
 				>
 					<div class="flex items-center justify-between">
 						<Card.Title class="text-lg">
@@ -208,66 +243,85 @@
 								<Badge variant="secondary">{season.upgradeCount} upgrades</Badge>
 							{/if}
 							<span class="text-sm text-muted-foreground">
-								{season.episodes.filter((e) => e.hasFile).length}/{season.episodes.length} episodes
+								{season.downloadedEpisodes}/{season.totalEpisodes} episodes
 							</span>
 							<span class="text-muted-foreground">
-								{isSeasonExpanded(season.seasonNumber) ? '−' : '+'}
+								{isSeasonExpanded(season.id) ? '−' : '+'}
 							</span>
 						</div>
 					</div>
 				</Card.Header>
 
-				{#if isSeasonExpanded(season.seasonNumber)}
+				{#if isSeasonExpanded(season.id)}
 					<Card.Content>
-						<Table.Root>
-							<Table.Header>
-								<Table.Row>
-									<Table.Head class="w-16">#</Table.Head>
-									<Table.Head>Title</Table.Head>
-									<Table.Head>Air Date</Table.Head>
-									<Table.Head>Status</Table.Head>
-									<Table.Head>Quality</Table.Head>
-									<Table.Head>Search State</Table.Head>
-								</Table.Row>
-							</Table.Header>
-							<Table.Body>
-								{#each season.episodes as episode (episode.id)}
-									<Table.Row class={cn(!episode.monitored && 'opacity-50')}>
-										<Table.Cell class="font-mono">
-											{episode.episodeNumber}
-										</Table.Cell>
-										<Table.Cell class="font-medium">
-											{episode.title ?? 'TBA'}
-											{#if !episode.monitored}
-												<span class="text-xs text-muted-foreground ml-1">(unmonitored)</span>
-											{/if}
-										</Table.Cell>
-										<Table.Cell class="text-muted-foreground">
-											{episode.airDate ? new Date(episode.airDate).toLocaleDateString() : '-'}
-										</Table.Cell>
-										<Table.Cell>
-											{#if episode.hasFile}
-												{#if episode.qualityCutoffNotMet}
-													<Badge variant="secondary">Upgrade</Badge>
-												{:else}
-													<Badge variant="default">Downloaded</Badge>
-												{/if}
-											{:else if episode.monitored}
-												<Badge variant="destructive">Missing</Badge>
-											{:else}
-												<Badge variant="outline">-</Badge>
-											{/if}
-										</Table.Cell>
-										<Table.Cell>
-											{formatQuality(episode.quality)}
-										</Table.Cell>
-										<Table.Cell>
-											<ContentStatusBadge state={episode.searchState} />
-										</Table.Cell>
+						{#if isLoading}
+							<div class="flex items-center justify-center py-8">
+								<div class="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
+								<span class="ml-2 text-sm text-muted-foreground">Loading episodes...</span>
+							</div>
+						{:else if error}
+							<div class="flex flex-col items-center justify-center py-8 gap-2">
+								<span class="text-sm text-destructive">{error}</span>
+								<button
+									class="text-sm text-primary hover:underline"
+									onclick={() => fetchEpisodes(season.id)}
+								>
+									Retry
+								</button>
+							</div>
+						{:else if episodes.length === 0}
+							<p class="text-sm text-muted-foreground py-4 text-center">No episodes found.</p>
+						{:else}
+							<Table.Root>
+								<Table.Header>
+									<Table.Row>
+										<Table.Head class="w-16">#</Table.Head>
+										<Table.Head>Title</Table.Head>
+										<Table.Head>Air Date</Table.Head>
+										<Table.Head>Status</Table.Head>
+										<Table.Head>Quality</Table.Head>
+										<Table.Head>Search State</Table.Head>
 									</Table.Row>
-								{/each}
-							</Table.Body>
-						</Table.Root>
+								</Table.Header>
+								<Table.Body>
+									{#each episodes as episode (episode.id)}
+										<Table.Row class={cn(!episode.monitored && 'opacity-50')}>
+											<Table.Cell class="font-mono">
+												{episode.episodeNumber}
+											</Table.Cell>
+											<Table.Cell class="font-medium">
+												{episode.title ?? 'TBA'}
+												{#if !episode.monitored}
+													<span class="text-xs text-muted-foreground ml-1">(unmonitored)</span>
+												{/if}
+											</Table.Cell>
+											<Table.Cell class="text-muted-foreground">
+												{episode.airDate ? new Date(episode.airDate).toLocaleDateString() : '-'}
+											</Table.Cell>
+											<Table.Cell>
+												{#if episode.hasFile}
+													{#if episode.qualityCutoffNotMet}
+														<Badge variant="secondary">Upgrade</Badge>
+													{:else}
+														<Badge variant="default">Downloaded</Badge>
+													{/if}
+												{:else if episode.monitored}
+													<Badge variant="destructive">Missing</Badge>
+												{:else}
+													<Badge variant="outline">-</Badge>
+												{/if}
+											</Table.Cell>
+											<Table.Cell>
+												{formatQuality(episode.quality)}
+											</Table.Cell>
+											<Table.Cell>
+												<ContentStatusBadge state={episode.searchState} />
+											</Table.Cell>
+										</Table.Row>
+									{/each}
+								</Table.Body>
+							</Table.Root>
+						{/if}
 					</Card.Content>
 				{/if}
 			</Card.Root>

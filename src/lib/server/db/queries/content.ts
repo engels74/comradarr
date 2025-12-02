@@ -195,6 +195,20 @@ export interface SeriesSearchHistoryEntry {
 	metadata: unknown;
 }
 
+/**
+ * Season summary without episode list (for lazy loading).
+ */
+export interface SeasonSummary {
+	id: number;
+	seasonNumber: number;
+	monitored: boolean;
+	totalEpisodes: number;
+	downloadedEpisodes: number;
+	nextAiring: Date | null;
+	missingCount: number;
+	upgradeCount: number;
+}
+
 // =============================================================================
 // Movie Detail Types (Requirement 17.4)
 // =============================================================================
@@ -920,6 +934,99 @@ export async function getSeriesSeasonsWithEpisodes(
 			episodes: eps
 		};
 	});
+}
+
+/**
+ * Gets season summaries for a series without loading episodes.
+ * Used for initial page load with lazy episode loading.
+ *
+ * @param seriesId - Series ID
+ * @returns Array of season summaries with computed counts
+ */
+export async function getSeasonSummaries(seriesId: number): Promise<SeasonSummary[]> {
+	const result = await db
+		.select({
+			id: seasons.id,
+			seasonNumber: seasons.seasonNumber,
+			monitored: seasons.monitored,
+			totalEpisodes: seasons.totalEpisodes,
+			downloadedEpisodes: seasons.downloadedEpisodes,
+			nextAiring: seasons.nextAiring,
+			// Compute missing count via subquery
+			missingCount: sql<number>`(
+				SELECT COUNT(*)::int FROM episodes e
+				WHERE e.season_id = ${seasons.id}
+				AND e.has_file = false AND e.monitored = true
+			)`.as('missing_count'),
+			// Compute upgrade count via subquery
+			upgradeCount: sql<number>`(
+				SELECT COUNT(*)::int FROM episodes e
+				WHERE e.season_id = ${seasons.id}
+				AND e.quality_cutoff_not_met = true AND e.monitored = true AND e.has_file = true
+			)`.as('upgrade_count')
+		})
+		.from(seasons)
+		.where(eq(seasons.seriesId, seriesId))
+		.orderBy(asc(seasons.seasonNumber));
+
+	return result;
+}
+
+/**
+ * Gets episodes for a specific season with search state.
+ * Used for lazy loading when a season is expanded.
+ *
+ * @param seasonId - Season ID
+ * @returns Array of episode details
+ */
+export async function getSeasonEpisodes(seasonId: number): Promise<EpisodeDetail[]> {
+	const result = await db
+		.select({
+			id: episodes.id,
+			arrId: episodes.arrId,
+			seasonNumber: episodes.seasonNumber,
+			episodeNumber: episodes.episodeNumber,
+			title: episodes.title,
+			airDate: episodes.airDate,
+			monitored: episodes.monitored,
+			hasFile: episodes.hasFile,
+			quality: episodes.quality,
+			qualityCutoffNotMet: episodes.qualityCutoffNotMet,
+			lastSearchTime: episodes.lastSearchTime,
+			// Search registry fields
+			searchState: searchRegistry.state,
+			searchType: searchRegistry.searchType,
+			attemptCount: searchRegistry.attemptCount,
+			nextEligible: searchRegistry.nextEligible
+		})
+		.from(episodes)
+		.leftJoin(
+			searchRegistry,
+			and(
+				eq(searchRegistry.contentType, 'episode'),
+				eq(searchRegistry.contentId, episodes.id)
+			)
+		)
+		.where(eq(episodes.seasonId, seasonId))
+		.orderBy(asc(episodes.episodeNumber));
+
+	return result.map((ep) => ({
+		id: ep.id,
+		arrId: ep.arrId,
+		seasonNumber: ep.seasonNumber,
+		episodeNumber: ep.episodeNumber,
+		title: ep.title,
+		airDate: ep.airDate,
+		monitored: ep.monitored,
+		hasFile: ep.hasFile,
+		quality: ep.quality as QualityModel | null,
+		qualityCutoffNotMet: ep.qualityCutoffNotMet,
+		lastSearchTime: ep.lastSearchTime,
+		searchState: ep.searchState,
+		searchType: ep.searchType,
+		attemptCount: ep.attemptCount ?? 0,
+		nextEligible: ep.nextEligible
+	}));
 }
 
 /**
