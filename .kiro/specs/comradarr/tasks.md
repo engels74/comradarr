@@ -493,7 +493,7 @@
     - Queue for search, adjust priority, mark exhausted
     - _Requirements: 17.5_
 
-- [ ] 31. Checkpoint - Ensure all tests pass
+- [x] 31. Checkpoint - Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
 ## Phase 14: Queue Management UI
