@@ -410,7 +410,7 @@
 
 ## Phase 11: Prowlarr Health Monitoring (Optional)
 
-- [ ] 26. Implement Prowlarr integration
+- [x] 26. Implement Prowlarr integration
   - [x] 26.1 Create Prowlarr client
     - Add prowlarr_instances table (URL, encrypted API key)
     - Implement ProwlarrClient with getIndexerStatus()
@@ -440,7 +440,7 @@
 
 ## Phase 12: Scheduler
 
-- [ ] 28. Implement scheduler
+- [x] 28. Implement scheduler
   - [x] 28.1 Create Croner job initialization
     - Initialize jobs in hooks.server.ts
     - Configure protect: true for overrun protection
@@ -470,7 +470,7 @@
 
 ## Phase 13: Content Browser UI
 
-- [ ] 30. Create content browser pages
+- [x] 30. Create content browser pages
   - [x] 30.1 Create content list page
     - Display content with filters (connector, type, status)
     - Implement title search
