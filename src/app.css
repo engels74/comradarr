@@ -1,5 +1,4 @@
 @import '@unocss/reset/tailwind.css';
-@import 'virtual:uno.css';
 
 :root {
   --radius: 0.625rem;
