@@ -37,12 +37,13 @@
 	);
 
 	// Collapsible season state - track expanded/collapsed seasons
-	let expandedSeasons = $state<Set<number>>(new Set());
+	// Using $state.raw() since we always replace collections (immutable pattern)
+	let expandedSeasons = $state.raw<Set<number>>(new Set());
 
 	// Episode cache per season - keyed by season ID
-	let episodeCache = $state<Map<number, EpisodeDetail[]>>(new Map());
-	let loadingSeasons = $state<Set<number>>(new Set());
-	let errorSeasons = $state<Map<number, string>>(new Map());
+	let episodeCache = $state.raw<Map<number, EpisodeDetail[]>>(new Map());
+	let loadingSeasons = $state.raw<Set<number>>(new Set());
+	let errorSeasons = $state.raw<Map<number, string>>(new Map());
 
 	function isSeasonExpanded(seasonId: number): boolean {
 		return expandedSeasons.has(seasonId);
