@@ -64,6 +64,46 @@ export interface ContentFilters {
 	sortDirection?: SortDirection | undefined;
 	limit?: number | undefined;
 	offset?: number | undefined;
+	/** Cursor for keyset pagination (encoded as type:id:title) */
+	cursor?: string | undefined;
+}
+
+/**
+ * Cursor for keyset pagination.
+ * Encodes position in the result set for efficient pagination.
+ */
+export interface ContentCursor {
+	type: 'series' | 'movie';
+	id: number;
+	title: string;
+}
+
+/**
+ * Encodes a cursor from content item properties.
+ */
+export function encodeCursor(type: 'series' | 'movie', id: number, title: string): string {
+	return Buffer.from(JSON.stringify({ type, id, title })).toString('base64url');
+}
+
+/**
+ * Decodes a cursor string to its components.
+ */
+export function decodeCursor(cursor: string): ContentCursor | null {
+	try {
+		const decoded = JSON.parse(Buffer.from(cursor, 'base64url').toString('utf-8'));
+		if (
+			decoded &&
+			typeof decoded === 'object' &&
+			(decoded.type === 'series' || decoded.type === 'movie') &&
+			typeof decoded.id === 'number' &&
+			typeof decoded.title === 'string'
+		) {
+			return decoded as ContentCursor;
+		}
+		return null;
+	} catch {
+		return null;
+	}
 }
 
 /**
@@ -91,6 +131,8 @@ export interface ContentItem {
 export interface ContentListResult {
 	items: ContentItem[];
 	total: number;
+	/** Cursor for next page, null if no more results */
+	nextCursor: string | null;
 }
 
 /**
@@ -293,7 +335,87 @@ interface SeriesWithStats {
 }
 
 /**
+ * Pre-aggregated episode counts subquery.
+ * This replaces N correlated subqueries with a single aggregation query.
+ */
+const episodeCountsSubquery = db
+	.select({
+		seriesId: seasons.seriesId,
+		missingCount: sql<number>`COUNT(*) FILTER (WHERE ${episodes.hasFile} = false AND ${episodes.monitored} = true)::int`.as('missing_count'),
+		upgradeCount: sql<number>`COUNT(*) FILTER (WHERE ${episodes.qualityCutoffNotMet} = true AND ${episodes.monitored} = true AND ${episodes.hasFile} = true)::int`.as('upgrade_count')
+	})
+	.from(episodes)
+	.innerJoin(seasons, eq(episodes.seasonId, seasons.id))
+	.groupBy(seasons.seriesId)
+	.as('ep_counts');
+
+/**
+ * Pre-aggregated search state subquery.
+ * Uses DISTINCT ON to get the highest-priority search state per series.
+ * Priority: searching > queued > cooldown > exhausted > pending
+ *
+ * This computes the "most active" search state once for all series,
+ * then we join to it, eliminating the N correlated subqueries.
+ */
+const searchStateSubquery = db
+	.select({
+		seriesId: sql<number>`sr_agg.series_id`.as('series_id'),
+		state: sql<string | null>`sr_agg.state`.as('state')
+	})
+	.from(
+		sql`(
+			SELECT DISTINCT ON (sea.series_id)
+				sea.series_id,
+				sr.state
+			FROM search_registry sr
+			JOIN episodes e ON sr.content_id = e.id AND sr.content_type = 'episode'
+			JOIN seasons sea ON e.season_id = sea.id
+			ORDER BY sea.series_id,
+				CASE sr.state
+					WHEN 'searching' THEN 1
+					WHEN 'queued' THEN 2
+					WHEN 'cooldown' THEN 3
+					WHEN 'exhausted' THEN 4
+					WHEN 'pending' THEN 5
+					ELSE 6
+				END
+		) AS sr_agg`
+	)
+	.as('sr_state');
+
+/**
+ * Builds SQL conditions for status filtering on series.
+ * Status filters reference the aggregated subquery columns.
+ */
+function buildSeriesStatusConditions(status: ContentStatus | undefined): SQL | undefined {
+	switch (status) {
+		case 'missing':
+			// Series with at least one missing episode
+			return sql`COALESCE(ep_counts.missing_count, 0) > 0`;
+		case 'upgrade':
+			// Series with at least one episode needing upgrade
+			return sql`COALESCE(ep_counts.upgrade_count, 0) > 0`;
+		case 'queued':
+			return sql`sr_state.state = 'queued'`;
+		case 'searching':
+			return sql`sr_state.state = 'searching'`;
+		case 'exhausted':
+			return sql`sr_state.state = 'exhausted'`;
+		case 'all':
+		default:
+			return undefined;
+	}
+}
+
+/**
  * Gets series with aggregated episode stats and search state.
+ * Optimized to eliminate N+1 subquery pattern by using pre-aggregated joins.
+ *
+ * Performance optimization:
+ * - Episode counts: Single aggregation query joined to series (replaces 2N subqueries)
+ * - Search state: Single DISTINCT ON query joined to series (replaces N subqueries)
+ * - Status filtering: Applied in SQL WHERE clause (not post-filtering)
+ * - Total queries: 1 instead of 3N+1
  */
 async function getSeriesList(filters: ContentFilters): Promise<SeriesWithStats[]> {
 	const conditions: SQL[] = [];
@@ -306,6 +428,12 @@ async function getSeriesList(filters: ContentFilters): Promise<SeriesWithStats[]
 	// Search filter
 	if (filters.search) {
 		conditions.push(ilike(series.title, `%${filters.search}%`));
+	}
+
+	// Status filter (applied in SQL, not post-filtering)
+	const statusCondition = buildSeriesStatusConditions(filters.status);
+	if (statusCondition) {
+		conditions.push(statusCondition);
 	}
 
 	// Build order by
@@ -321,6 +449,8 @@ async function getSeriesList(filters: ContentFilters): Promise<SeriesWithStats[]
 			break;
 	}
 
+	// Optimized query using pre-aggregated subqueries instead of correlated subqueries
+	// This reduces 3N+1 queries to a single query with JOINs
 	const result = await db
 		.select({
 			id: series.id,
@@ -330,40 +460,14 @@ async function getSeriesList(filters: ContentFilters): Promise<SeriesWithStats[]
 			connectorName: connectors.name,
 			connectorType: connectors.type,
 			monitored: series.monitored,
-			// Subquery for missing count
-			missingCount: sql<number>`(
-				SELECT COUNT(*)::int FROM episodes e
-				JOIN seasons s ON e.season_id = s.id
-				WHERE s.series_id = ${series.id}
-				AND e.has_file = false AND e.monitored = true
-			)`.as('missing_count'),
-			// Subquery for upgrade count
-			upgradeCount: sql<number>`(
-				SELECT COUNT(*)::int FROM episodes e
-				JOIN seasons s ON e.season_id = s.id
-				WHERE s.series_id = ${series.id}
-				AND e.quality_cutoff_not_met = true AND e.monitored = true AND e.has_file = true
-			)`.as('upgrade_count'),
-			// Latest search state for any episode in this series
-			searchState: sql<string | null>`(
-				SELECT sr.state FROM search_registry sr
-				JOIN episodes e ON sr.content_id = e.id AND sr.content_type = 'episode'
-				JOIN seasons s ON e.season_id = s.id
-				WHERE s.series_id = ${series.id} AND sr.connector_id = ${series.connectorId}
-				ORDER BY
-					CASE sr.state
-						WHEN 'searching' THEN 1
-						WHEN 'queued' THEN 2
-						WHEN 'cooldown' THEN 3
-						WHEN 'exhausted' THEN 4
-						WHEN 'pending' THEN 5
-						ELSE 6
-					END
-				LIMIT 1
-			)`.as('search_state')
+			missingCount: sql<number>`COALESCE(ep_counts.missing_count, 0)`.as('missing_count'),
+			upgradeCount: sql<number>`COALESCE(ep_counts.upgrade_count, 0)`.as('upgrade_count'),
+			searchState: sql<string | null>`sr_state.state`.as('search_state')
 		})
 		.from(series)
 		.innerJoin(connectors, eq(series.connectorId, connectors.id))
+		.leftJoin(episodeCountsSubquery, eq(series.id, episodeCountsSubquery.seriesId))
+		.leftJoin(searchStateSubquery, eq(series.id, searchStateSubquery.seriesId))
 		.where(conditions.length > 0 ? and(...conditions) : undefined)
 		.orderBy(orderBy)
 		.limit(filters.limit ?? 50)
@@ -373,7 +477,8 @@ async function getSeriesList(filters: ContentFilters): Promise<SeriesWithStats[]
 }
 
 /**
- * Gets count of series matching filters.
+ * Gets count of series matching filters, including status filters.
+ * Uses the same aggregation subqueries as getSeriesList to ensure consistent counts.
  */
 async function getSeriesCount(filters: ContentFilters): Promise<number> {
 	const conditions: SQL[] = [];
@@ -386,12 +491,34 @@ async function getSeriesCount(filters: ContentFilters): Promise<number> {
 		conditions.push(ilike(series.title, `%${filters.search}%`));
 	}
 
-	const result = await db
-		.select({ count: count() })
-		.from(series)
-		.where(conditions.length > 0 ? and(...conditions) : undefined);
+	// Status filter (same logic as getSeriesList for consistent counts)
+	const statusCondition = buildSeriesStatusConditions(filters.status);
+	if (statusCondition) {
+		conditions.push(statusCondition);
+	}
 
-	return result[0]?.count ?? 0;
+	// If we have status filters that require aggregation, we need to join the subqueries
+	const needsAggregation = filters.status && filters.status !== 'all';
+
+	if (needsAggregation) {
+		// Count with aggregation subqueries for status filtering
+		const result = await db
+			.select({ count: count() })
+			.from(series)
+			.leftJoin(episodeCountsSubquery, eq(series.id, episodeCountsSubquery.seriesId))
+			.leftJoin(searchStateSubquery, eq(series.id, searchStateSubquery.seriesId))
+			.where(conditions.length > 0 ? and(...conditions) : undefined);
+
+		return result[0]?.count ?? 0;
+	} else {
+		// Simple count without aggregation (faster for 'all' status)
+		const result = await db
+			.select({ count: count() })
+			.from(series)
+			.where(conditions.length > 0 ? and(...conditions) : undefined);
+
+		return result[0]?.count ?? 0;
+	}
 }
 
 // =============================================================================
@@ -415,7 +542,36 @@ interface MovieWithStats {
 }
 
 /**
+ * Builds SQL conditions for status filtering on movies.
+ * Movies are simpler than series - status is based on hasFile and qualityCutoffNotMet.
+ */
+function buildMovieStatusConditions(status: ContentStatus | undefined): SQL | undefined {
+	switch (status) {
+		case 'missing':
+			// Movie is missing (no file, monitored)
+			return and(eq(movies.hasFile, false), eq(movies.monitored, true));
+		case 'upgrade':
+			// Movie needs upgrade (has file, cutoff not met, monitored)
+			return and(
+				eq(movies.qualityCutoffNotMet, true),
+				eq(movies.hasFile, true),
+				eq(movies.monitored, true)
+			);
+		case 'queued':
+			return sql`search_registry.state = 'queued'`;
+		case 'searching':
+			return sql`search_registry.state = 'searching'`;
+		case 'exhausted':
+			return sql`search_registry.state = 'exhausted'`;
+		case 'all':
+		default:
+			return undefined;
+	}
+}
+
+/**
  * Gets movies with search state.
+ * Status filtering is applied in SQL WHERE clause.
  */
 async function getMoviesList(filters: ContentFilters): Promise<MovieWithStats[]> {
 	const conditions: SQL[] = [];
@@ -428,6 +584,12 @@ async function getMoviesList(filters: ContentFilters): Promise<MovieWithStats[]>
 	// Search filter
 	if (filters.search) {
 		conditions.push(ilike(movies.title, `%${filters.search}%`));
+	}
+
+	// Status filter (applied in SQL, not post-filtering)
+	const statusCondition = buildMovieStatusConditions(filters.status);
+	if (statusCondition) {
+		conditions.push(statusCondition);
 	}
 
 	// Build order by
@@ -478,7 +640,8 @@ async function getMoviesList(filters: ContentFilters): Promise<MovieWithStats[]>
 }
 
 /**
- * Gets count of movies matching filters.
+ * Gets count of movies matching filters, including status filters.
+ * Uses the same conditions as getMoviesList to ensure consistent counts.
  */
 async function getMoviesCount(filters: ContentFilters): Promise<number> {
 	const conditions: SQL[] = [];
@@ -491,12 +654,38 @@ async function getMoviesCount(filters: ContentFilters): Promise<number> {
 		conditions.push(ilike(movies.title, `%${filters.search}%`));
 	}
 
-	const result = await db
-		.select({ count: count() })
-		.from(movies)
-		.where(conditions.length > 0 ? and(...conditions) : undefined);
+	// Status filter (same logic as getMoviesList for consistent counts)
+	const statusCondition = buildMovieStatusConditions(filters.status);
+	if (statusCondition) {
+		conditions.push(statusCondition);
+	}
 
-	return result[0]?.count ?? 0;
+	// If we have search state status filters, we need to join search_registry
+	const needsSearchRegistry = filters.status === 'queued' || filters.status === 'searching' || filters.status === 'exhausted';
+
+	if (needsSearchRegistry) {
+		const result = await db
+			.select({ count: count() })
+			.from(movies)
+			.leftJoin(
+				searchRegistry,
+				and(
+					eq(searchRegistry.contentType, 'movie'),
+					eq(searchRegistry.contentId, movies.id),
+					eq(searchRegistry.connectorId, movies.connectorId)
+				)
+			)
+			.where(conditions.length > 0 ? and(...conditions) : undefined);
+
+		return result[0]?.count ?? 0;
+	} else {
+		const result = await db
+			.select({ count: count() })
+			.from(movies)
+			.where(conditions.length > 0 ? and(...conditions) : undefined);
+
+		return result[0]?.count ?? 0;
+	}
 }
 
 // =============================================================================
@@ -505,6 +694,10 @@ async function getMoviesCount(filters: ContentFilters): Promise<number> {
 
 /**
  * Gets unified content list (series and/or movies) with filters.
+ *
+ * Status filtering is now applied in SQL (not post-filtering) for:
+ * - Correct pagination counts
+ * - Better performance at scale
  *
  * @param filters - Query filters
  * @returns Content items and total count
@@ -519,14 +712,12 @@ export async function getContentList(filters: ContentFilters): Promise<ContentLi
 	let items: ContentItem[] = [];
 	let total = 0;
 
-	// For status filters, we need to filter after aggregation
-	const statusFilter = filters.status ?? 'all';
-
 	if (querySeries && queryMovies) {
 		// Query both, merge and sort
+		// Note: Status filtering is now done in SQL within getSeriesList/getMoviesList
 		const [seriesResult, moviesResult, seriesCount, moviesCount] = await Promise.all([
-			getSeriesList({ ...filters, limit: filters.limit, offset: filters.offset }),
-			getMoviesList({ ...filters, limit: filters.limit, offset: filters.offset }),
+			getSeriesList(filters),
+			getMoviesList(filters),
 			getSeriesCount(filters),
 			getMoviesCount(filters)
 		]);
@@ -565,15 +756,13 @@ export async function getContentList(filters: ContentFilters): Promise<ContentLi
 		// Merge and sort
 		items = [...seriesItems, ...movieItems];
 
-		// Apply status filter
-		items = filterByStatus(items, statusFilter);
-
-		// Sort merged results
+		// Sort merged results (status filtering already done in SQL)
 		items = sortItems(items, filters.sortColumn ?? 'title', filters.sortDirection ?? 'asc');
 
 		// Apply pagination to merged results
 		items = items.slice(0, filters.limit ?? 50);
 
+		// Total is now accurate (status filter applied in SQL)
 		total = seriesCount + moviesCount;
 	} else if (querySeries) {
 		const [seriesResult, seriesCount] = await Promise.all([
@@ -581,6 +770,7 @@ export async function getContentList(filters: ContentFilters): Promise<ContentLi
 			getSeriesCount(filters)
 		]);
 
+		// Status filtering already done in SQL
 		items = seriesResult.map((s) => ({
 			id: s.id,
 			type: 'series' as const,
@@ -596,9 +786,6 @@ export async function getContentList(filters: ContentFilters): Promise<ContentLi
 			searchState: s.searchState
 		}));
 
-		// Apply status filter
-		items = filterByStatus(items, statusFilter);
-
 		total = seriesCount;
 	} else if (queryMovies) {
 		const [moviesResult, moviesCount] = await Promise.all([
@@ -606,6 +793,7 @@ export async function getContentList(filters: ContentFilters): Promise<ContentLi
 			getMoviesCount(filters)
 		]);
 
+		// Status filtering already done in SQL
 		items = moviesResult.map((m) => ({
 			id: m.id,
 			type: 'movie' as const,
@@ -621,34 +809,23 @@ export async function getContentList(filters: ContentFilters): Promise<ContentLi
 			searchState: m.searchState
 		}));
 
-		// Apply status filter
-		items = filterByStatus(items, statusFilter);
-
 		total = moviesCount;
 	}
 
-	return { items, total };
-}
+	// Generate next cursor if there are more results
+	const limit = filters.limit ?? 50;
+	const offset = filters.offset ?? 0;
+	const hasMore = offset + items.length < total;
+	let nextCursor: string | null = null;
 
-/**
- * Filters content items by status.
- */
-function filterByStatus(items: ContentItem[], status: ContentStatus): ContentItem[] {
-	switch (status) {
-		case 'missing':
-			return items.filter((item) => item.missingCount > 0);
-		case 'upgrade':
-			return items.filter((item) => item.upgradeCount > 0);
-		case 'queued':
-			return items.filter((item) => item.searchState === 'queued');
-		case 'searching':
-			return items.filter((item) => item.searchState === 'searching');
-		case 'exhausted':
-			return items.filter((item) => item.searchState === 'exhausted');
-		case 'all':
-		default:
-			return items;
+	if (hasMore && items.length > 0) {
+		const lastItem = items[items.length - 1];
+		if (lastItem) {
+			nextCursor = encodeCursor(lastItem.type, lastItem.id, lastItem.title);
+		}
 	}
+
+	return { items, total, nextCursor };
 }
 
 /**

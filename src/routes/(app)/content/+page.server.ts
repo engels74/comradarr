@@ -36,6 +36,7 @@ export const load: PageServerLoad = async ({ url }) => {
 	return {
 		content: contentResult.items,
 		total: contentResult.total,
+		nextCursor: contentResult.nextCursor,
 		connectors,
 		statusCounts,
 		filters

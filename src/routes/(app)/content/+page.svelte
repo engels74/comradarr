@@ -1,17 +1,36 @@
 <script lang="ts">
 	import type { PageProps } from './$types';
-	import { BulkActionBar, ContentFilters, ContentTable } from '$lib/components/content';
+	import { BulkActionBar, ContentFilters, VirtualizedContentTable } from '$lib/components/content';
 	import { Button } from '$lib/components/ui/button';
+	import * as Dialog from '$lib/components/ui/dialog';
+	import { Input } from '$lib/components/ui/input';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
-	import type { BulkActionTarget } from '$lib/server/db/queries/content';
+	import type { BulkActionTarget, ContentItem } from '$lib/server/db/queries/content';
 
 	/**
-	 * Content browser page.
+	 * Content browser page with virtualized table and "Load More" pagination.
 	 * Requirements: 17.1, 17.2, 17.5
 	 */
 
 	let { data }: PageProps = $props();
+
+	// Loaded items state - starts with initial data, grows as user loads more
+	let loadedItems = $state<ContentItem[]>([...data.content]);
+	let nextCursor = $state<string | null>(data.nextCursor);
+	let isLoadingMore = $state(false);
+	let loadError = $state<string | null>(null);
+
+	// Reset loaded items when filters change (detected via data.content changing)
+	$effect(() => {
+		// This effect runs when data.content changes (e.g., filter change)
+		loadedItems = [...data.content];
+		nextCursor = data.nextCursor;
+		loadError = null;
+		// Clear selection when filters change
+		selectedKeys = new Set();
+		lastClickedKey = null;
+	});
 
 	// Selection state
 	let selectedKeys = $state<Set<string>>(new Set());
@@ -26,21 +45,66 @@
 		})
 	);
 
-	// Pagination state derived from filters
-	const currentPage = $derived(
-		Math.floor((data.filters.offset ?? 0) / (data.filters.limit ?? 50)) + 1
-	);
-	const totalPages = $derived(Math.ceil(data.total / (data.filters.limit ?? 50)));
-	const showingFrom = $derived(data.content.length > 0 ? (data.filters.offset ?? 0) + 1 : 0);
-	const showingTo = $derived((data.filters.offset ?? 0) + data.content.length);
+	// Has more items to load
+	const hasMore = $derived(nextCursor !== null);
+
+	// Jump to page state
+	let jumpDialogOpen = $state(false);
+	let jumpPageInput = $state('');
+	const pageSize = $derived(data.filters.limit ?? 50);
+	const totalPages = $derived(Math.ceil(data.total / pageSize));
+	const currentPage = $derived(Math.floor((data.filters.offset ?? 0) / pageSize) + 1);
 
 	/**
-	 * Navigate to a specific page.
+	 * Jump to a specific page number.
 	 */
-	function goToPage(pageNum: number) {
+	function jumpToPage() {
+		const targetPage = parseInt(jumpPageInput, 10);
+		if (isNaN(targetPage) || targetPage < 1 || targetPage > totalPages) {
+			return; // Invalid page number
+		}
+
+		// Calculate offset for the target page
+		const newOffset = (targetPage - 1) * pageSize;
+
+		// Navigate with the new offset
 		const params = new URLSearchParams($page.url.searchParams);
-		params.set('page', pageNum.toString());
+		params.set('page', targetPage.toString());
 		goto(`/content?${params.toString()}`);
+
+		// Close dialog and reset input
+		jumpDialogOpen = false;
+		jumpPageInput = '';
+	}
+
+	/**
+	 * Load more items from the API.
+	 */
+	async function loadMore() {
+		if (isLoadingMore || !nextCursor) return;
+
+		isLoadingMore = true;
+		loadError = null;
+
+		try {
+			// Build API URL with current filters
+			const params = new URLSearchParams($page.url.searchParams);
+			params.set('cursor', nextCursor);
+			params.set('offset', loadedItems.length.toString());
+
+			const response = await fetch(`/api/content?${params.toString()}`);
+			if (!response.ok) {
+				throw new Error(`Failed to load more items: ${response.statusText}`);
+			}
+
+			const result = await response.json();
+			loadedItems = [...loadedItems, ...result.items];
+			nextCursor = result.nextCursor;
+		} catch (e) {
+			loadError = e instanceof Error ? e.message : 'Failed to load more items';
+		} finally {
+			isLoadingMore = false;
+		}
 	}
 
 	/**
@@ -51,7 +115,7 @@
 
 		if (shiftKey && lastClickedKey) {
 			// Range select: select all items between lastClickedKey and key
-			const keys = data.content.map((item) => `${item.type}-${item.id}`);
+			const keys = loadedItems.map((item) => `${item.type}-${item.id}`);
 			const fromIndex = keys.indexOf(lastClickedKey);
 			const toIndex = keys.indexOf(key);
 
@@ -86,17 +150,17 @@
 	}
 
 	/**
-	 * Toggle all visible items.
+	 * Toggle all loaded items.
 	 */
 	function toggleAll() {
-		const allKeys = data.content.map((item) => `${item.type}-${item.id}`);
+		const allKeys = loadedItems.map((item) => `${item.type}-${item.id}`);
 		const allSelected = allKeys.every((key) => selectedKeys.has(key));
 
 		if (allSelected) {
 			// Deselect all
 			selectedKeys = new Set();
 		} else {
-			// Select all visible
+			// Select all loaded
 			selectedKeys = new Set(allKeys);
 		}
 	}
@@ -148,7 +212,7 @@
 	/>
 
 	<!-- Content -->
-	{#if data.content.length === 0}
+	{#if loadedItems.length === 0}
 		<div class="rounded-lg border border-dashed p-8 text-center">
 			<h2 class="text-lg font-medium mb-2">No content found</h2>
 			<p class="text-muted-foreground">
@@ -162,48 +226,97 @@
 			</p>
 		</div>
 	{:else}
-		<ContentTable
-			items={data.content}
+		<VirtualizedContentTable
+			items={loadedItems}
 			{selectedKeys}
 			onToggleSelection={toggleSelection}
 			onToggleAll={toggleAll}
 		/>
 
-		<!-- Pagination -->
-		{#if totalPages > 1}
-			<div class="flex items-center justify-between mt-6">
-				<p class="text-sm text-muted-foreground">
-					Showing {showingFrom}-{showingTo} of {data.total} items
-				</p>
-
-				<div class="flex items-center gap-2">
-					<Button
-						variant="outline"
-						size="sm"
-						disabled={currentPage <= 1}
-						onclick={() => goToPage(currentPage - 1)}
-					>
-						Previous
-					</Button>
-
-					<span class="px-4 py-2 text-sm">
-						Page {currentPage} of {totalPages}
-					</span>
-
-					<Button
-						variant="outline"
-						size="sm"
-						disabled={currentPage >= totalPages}
-						onclick={() => goToPage(currentPage + 1)}
-					>
-						Next
-					</Button>
-				</div>
-			</div>
-		{:else if data.total > 0}
-			<p class="text-sm text-muted-foreground mt-4 text-center">
-				Showing all {data.total} items
+		<!-- Load More / Status -->
+		<div class="flex flex-col items-center gap-4 mt-6">
+			<p class="text-sm text-muted-foreground">
+				Showing {loadedItems.length.toLocaleString()} of {data.total.toLocaleString()} items
 			</p>
-		{/if}
+
+			<div class="flex items-center gap-2">
+				{#if loadError}
+					<div class="flex items-center gap-2 text-sm text-destructive">
+						<span>{loadError}</span>
+						<Button variant="outline" size="sm" onclick={loadMore}>
+							Retry
+						</Button>
+					</div>
+				{:else if hasMore}
+					<Button
+						variant="outline"
+						size="sm"
+						disabled={isLoadingMore}
+						onclick={loadMore}
+					>
+						{#if isLoadingMore}
+							<span class="animate-spin mr-2">&#8987;</span>
+							Loading...
+						{:else}
+							Load More
+						{/if}
+					</Button>
+				{:else if data.total > 0}
+					<span class="text-sm text-muted-foreground">
+						All items loaded
+					</span>
+				{/if}
+
+				{#if totalPages > 1}
+					<Dialog.Root bind:open={jumpDialogOpen}>
+						<Dialog.Trigger>
+							{#snippet child({ props })}
+								<Button variant="outline" size="sm" {...props}>
+									Jump to Page
+								</Button>
+							{/snippet}
+						</Dialog.Trigger>
+						<Dialog.Content class="sm:max-w-[300px]">
+							<Dialog.Header>
+								<Dialog.Title>Jump to Page</Dialog.Title>
+								<Dialog.Description>
+									Enter a page number (1-{totalPages.toLocaleString()})
+								</Dialog.Description>
+							</Dialog.Header>
+							<form
+								onsubmit={(e) => {
+									e.preventDefault();
+									jumpToPage();
+								}}
+								class="space-y-4"
+							>
+								<div class="flex items-center gap-2">
+									<span class="text-sm text-muted-foreground">Page</span>
+									<Input
+										type="number"
+										min={1}
+										max={totalPages}
+										placeholder={currentPage.toString()}
+										bind:value={jumpPageInput}
+										class="w-24"
+									/>
+									<span class="text-sm text-muted-foreground">
+										of {totalPages.toLocaleString()}
+									</span>
+								</div>
+								<Dialog.Footer>
+									<Dialog.Close>
+										{#snippet child({ props })}
+											<Button variant="outline" {...props}>Cancel</Button>
+										{/snippet}
+									</Dialog.Close>
+									<Button type="submit">Go</Button>
+								</Dialog.Footer>
+							</form>
+						</Dialog.Content>
+					</Dialog.Root>
+				{/if}
+			</div>
+		</div>
 	{/if}
 </div>
