@@ -511,7 +511,7 @@
     - Add pause/resume/clear actions
     - _Requirements: 18.2, 18.3_
 
-  - [ ] 32.3 Create recent completions view
+  - [x] 32.3 Create recent completions view
     - Display last N completed searches
     - Show outcome indicators
     - _Requirements: 18.4_

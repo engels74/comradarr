@@ -1,12 +1,13 @@
 /**
  * Queue management page server load and actions.
  *
- * Requirements: 18.1, 18.2, 18.3
+ * Requirements: 18.1, 18.2, 18.3, 18.4
  * - Display items in priority order
  * - Show estimated dispatch time
  * - Show current processing indicator
  * - Manual priority adjustment and removal from queue
  * - Pause, resume, and clear queue actions
+ * - Display recent completions with outcome indicators
  */
 
 import { fail } from '@sveltejs/kit';
@@ -17,6 +18,7 @@ import {
 	getQueueStatusCounts,
 	getAllThrottleInfo,
 	getQueuePauseStatus,
+	getRecentCompletions,
 	parseQueueFilters,
 	updateQueueItemPriority,
 	removeFromQueueByIds,
@@ -30,12 +32,13 @@ export const load: PageServerLoad = async ({ url }) => {
 	const filters = parseQueueFilters(url.searchParams);
 
 	// Load data in parallel for efficiency
-	const [queueResult, connectors, statusCounts, throttleInfoMap, pauseStatus] = await Promise.all([
+	const [queueResult, connectors, statusCounts, throttleInfoMap, pauseStatus, recentCompletions] = await Promise.all([
 		getQueueList(filters),
 		getConnectorsForQueueFilter(),
 		getQueueStatusCounts(filters.connectorId),
 		getAllThrottleInfo(),
-		getQueuePauseStatus()
+		getQueuePauseStatus(),
+		getRecentCompletions(25)
 	]);
 
 	// Convert Map to serializable object
@@ -68,7 +71,11 @@ export const load: PageServerLoad = async ({ url }) => {
 		statusCounts,
 		throttleInfo,
 		pauseStatus,
-		filters
+		filters,
+		recentCompletions: recentCompletions.map((completion) => ({
+			...completion,
+			createdAt: completion.createdAt.toISOString()
+		}))
 	};
 };
 

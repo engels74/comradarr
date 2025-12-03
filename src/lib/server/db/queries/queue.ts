@@ -15,6 +15,7 @@ import {
 	episodes,
 	movies,
 	requestQueue,
+	searchHistory,
 	searchRegistry,
 	seasons,
 	series,
@@ -740,4 +741,115 @@ export async function clearQueueForConnectors(connectorIds?: number[]): Promise<
 	}
 
 	return deletedCount;
+}
+
+// =============================================================================
+// Recent Completions Query
+// =============================================================================
+
+/**
+ * Recent completion entry with content and connector info.
+ * Requirements: 18.4
+ */
+export interface RecentCompletion {
+	id: number;
+	contentType: 'episode' | 'movie';
+	contentId: number;
+	contentTitle: string | null;
+	seriesId: number | null;
+	seriesTitle: string | null;
+	seasonNumber: number | null;
+	episodeNumber: number | null;
+	connectorId: number;
+	connectorName: string;
+	connectorType: string;
+	outcome: string;
+	createdAt: Date;
+}
+
+/**
+ * Gets recent completed searches (from search_history) for display.
+ *
+ * Fetches recent entries from search_history table, joined with content
+ * tables to get titles and connector info for display.
+ *
+ * Requirements: 18.4
+ *
+ * @param limit - Maximum number of entries to return (default 25)
+ * @returns Recent completion entries with content and connector info
+ */
+export async function getRecentCompletions(limit: number = 25): Promise<RecentCompletion[]> {
+	// Episode completions query
+	const episodeCompletions = db
+		.select({
+			id: searchHistory.id,
+			contentType: sql<'episode'>`'episode'::text`.as('content_type'),
+			contentId: searchHistory.contentId,
+			contentTitle: episodes.title,
+			seriesId: series.id,
+			seriesTitle: series.title,
+			seasonNumber: episodes.seasonNumber,
+			episodeNumber: episodes.episodeNumber,
+			connectorId: searchHistory.connectorId,
+			connectorName: connectors.name,
+			connectorType: connectors.type,
+			outcome: searchHistory.outcome,
+			createdAt: searchHistory.createdAt
+		})
+		.from(searchHistory)
+		.innerJoin(connectors, eq(searchHistory.connectorId, connectors.id))
+		.innerJoin(episodes, eq(searchHistory.contentId, episodes.id))
+		.innerJoin(seasons, eq(episodes.seasonId, seasons.id))
+		.innerJoin(series, eq(seasons.seriesId, series.id))
+		.where(eq(searchHistory.contentType, 'episode'));
+
+	// Movie completions query
+	const movieCompletions = db
+		.select({
+			id: searchHistory.id,
+			contentType: sql<'movie'>`'movie'::text`.as('content_type'),
+			contentId: searchHistory.contentId,
+			contentTitle: movies.title,
+			seriesId: sql<number | null>`NULL::integer`.as('series_id'),
+			seriesTitle: sql<string | null>`NULL::text`.as('series_title'),
+			seasonNumber: sql<number | null>`NULL::integer`.as('season_number'),
+			episodeNumber: sql<number | null>`NULL::integer`.as('episode_number'),
+			connectorId: searchHistory.connectorId,
+			connectorName: connectors.name,
+			connectorType: connectors.type,
+			outcome: searchHistory.outcome,
+			createdAt: searchHistory.createdAt
+		})
+		.from(searchHistory)
+		.innerJoin(connectors, eq(searchHistory.connectorId, connectors.id))
+		.innerJoin(movies, eq(searchHistory.contentId, movies.id))
+		.where(eq(searchHistory.contentType, 'movie'));
+
+	// Combine with UNION ALL and sort by created_at DESC
+	const unionQuery = sql`
+		(${episodeCompletions})
+		UNION ALL
+		(${movieCompletions})
+		ORDER BY created_at DESC
+		LIMIT ${limit}
+	`;
+
+	const results = await db.execute(unionQuery);
+
+	// Map rows to typed items
+	return (results as Record<string, unknown>[]).map((row) => ({
+		id: row.id as number,
+		contentType: row.content_type as 'episode' | 'movie',
+		contentId: row.contentid as number,
+		contentTitle: row.contenttitle as string | null,
+		seriesId: row.series_id as number | null,
+		seriesTitle: row.series_title as string | null,
+		seasonNumber: row.seasonnumber as number | null,
+		episodeNumber: row.episodenumber as number | null,
+		connectorId: row.connectorid as number,
+		connectorName: row.connectorname as string,
+		connectorType: row.connectortype as string,
+		outcome: row.outcome as string,
+		createdAt: new Date(row.createdat as string)
+	}));
 }

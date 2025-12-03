@@ -1,18 +1,19 @@
 <script lang="ts">
 	import type { PageProps } from './$types';
-	import { QueueBulkActions, QueueControls, QueueFilters, QueueTable } from '$lib/components/queue';
+	import { QueueBulkActions, QueueControls, QueueFilters, QueueTable, RecentCompletions } from '$lib/components/queue';
 	import { Button } from '$lib/components/ui/button';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
 
 	/**
 	 * Queue management page with virtualized table.
-	 * Requirements: 18.1, 18.2, 18.3
+	 * Requirements: 18.1, 18.2, 18.3, 18.4
 	 * - Display items in priority order
 	 * - Show estimated dispatch time
 	 * - Show current processing indicator
 	 * - Manual priority adjustment and removal from queue
 	 * - Pause, resume, and clear queue actions
+	 * - Display recent completions with outcome indicators
 	 */
 
 	let { data }: PageProps = $props();
@@ -176,4 +177,10 @@
 			{/if}
 		</div>
 	{/if}
+
+	<!-- Recent Completions (Requirement 18.4) -->
+	<RecentCompletions
+		completions={data.recentCompletions}
+		class="mt-8"
+	/>
 </div>

@@ -40,3 +40,23 @@ export interface SerializedThrottleInfo {
 	dailyBudget: number | null;
 	requestsToday: number;
 }
+
+/**
+ * Serialized recent completion for display.
+ * Requirements: 18.4
+ */
+export interface SerializedCompletion {
+	id: number;
+	contentType: 'episode' | 'movie';
+	contentId: number;
+	contentTitle: string | null;
+	seriesId: number | null;
+	seriesTitle: string | null;
+	seasonNumber: number | null;
+	episodeNumber: number | null;
+	connectorId: number;
+	connectorName: string;
+	connectorType: string;
+	outcome: string;
+	createdAt: string;
+}
