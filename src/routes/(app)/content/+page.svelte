@@ -16,20 +16,25 @@
 	let { data }: PageProps = $props();
 
 	// Loaded items state - starts with initial data, grows as user loads more
-	let loadedItems = $state<ContentItem[]>([...data.content]);
-	let nextCursor = $state<string | null>(data.nextCursor);
+	// Initialize empty and populate via effect to track reactive data changes
+	let loadedItems = $state<ContentItem[]>([]);
+	let nextCursor = $state<string | null>(null);
 	let isLoadingMore = $state(false);
 	let loadError = $state<string | null>(null);
+	let lastDataContent = $state<ContentItem[] | null>(null);
 
 	// Reset loaded items when filters change (detected via data.content changing)
 	$effect(() => {
-		// This effect runs when data.content changes (e.g., filter change)
-		loadedItems = [...data.content];
-		nextCursor = data.nextCursor;
-		loadError = null;
-		// Clear selection when filters change
-		selectedKeys = new Set();
-		lastClickedKey = null;
+		// Only update when data.content reference changes (filter change or initial load)
+		if (data.content !== lastDataContent) {
+			loadedItems = [...data.content];
+			nextCursor = data.nextCursor;
+			loadError = null;
+			// Clear selection when filters change
+			selectedKeys = new Set();
+			lastClickedKey = null;
+			lastDataContent = data.content;
+		}
 	});
 
 	// Selection state
@@ -64,10 +69,7 @@
 			return; // Invalid page number
 		}
 
-		// Calculate offset for the target page
-		const newOffset = (targetPage - 1) * pageSize;
-
-		// Navigate with the new offset
+		// Navigate to the target page
 		const params = new URLSearchParams($page.url.searchParams);
 		params.set('page', targetPage.toString());
 		goto(`/content?${params.toString()}`);
