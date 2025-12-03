@@ -498,7 +498,7 @@
 
 ## Phase 14: Queue Management UI
 
-- [x] 32. Create queue management pages
+- [ ] 32. Create queue management pages
   - [x] 32.1 Create queue list page
     - Display items in priority order
     - Show estimated dispatch time
@@ -516,11 +516,11 @@
     - Show outcome indicators
     - _Requirements: 18.4_
 
-  - [x] 32.4 Implement real-time updates
-    - Use SvelteKit invalidation for queue updates
-    - _Requirements: 18.5_
+    - [ ] 32.4 Implement real-time updates
+      - Use SvelteKit invalidation for queue updates
+      - _Requirements: 18.5_
 
-- [ ] 33. Checkpoint - Ensure all tests pass
+- [x] 33. Checkpoint - Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
 ## Phase 15: Dashboard
