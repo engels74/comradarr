@@ -499,7 +499,7 @@
 ## Phase 14: Queue Management UI
 
 - [ ] 32. Create queue management pages
-  - [ ] 32.1 Create queue list page
+  - [x] 32.1 Create queue list page
     - Display items in priority order
     - Show estimated dispatch time
     - Show current processing indicator
