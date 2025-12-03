@@ -505,7 +505,7 @@
     - Show current processing indicator
     - _Requirements: 18.1_
 
-  - [ ] 32.2 Implement queue controls
+  - [x] 32.2 Implement queue controls
     - Add priority adjustment
     - Add remove from queue
     - Add pause/resume/clear actions

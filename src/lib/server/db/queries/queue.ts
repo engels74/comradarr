@@ -21,7 +21,7 @@ import {
 	throttleProfiles,
 	throttleState
 } from '$lib/server/db/schema';
-import { and, asc, count, desc, eq, ilike, or, sql, type SQL } from 'drizzle-orm';
+import { and, asc, count, desc, eq, ilike, inArray, or, sql, type SQL } from 'drizzle-orm';
 
 // =============================================================================
 // Types
@@ -489,4 +489,255 @@ export async function getAllThrottleInfo(): Promise<Map<number, QueueThrottleInf
 	}
 
 	return map;
+}
+
+// =============================================================================
+// Queue Control Operations
+// =============================================================================
+
+/**
+ * Pause status for a connector.
+ */
+export interface ConnectorPauseStatus {
+	id: number;
+	name: string;
+	type: string;
+	queuePaused: boolean;
+	queueCount: number;
+}
+
+/**
+ * Gets pause status for all enabled connectors.
+ */
+export async function getQueuePauseStatus(): Promise<ConnectorPauseStatus[]> {
+	const result = await db
+		.select({
+			id: connectors.id,
+			name: connectors.name,
+			type: connectors.type,
+			queuePaused: connectors.queuePaused,
+			queueCount: sql<number>`COALESCE(queue_counts.queue_count, 0)::int`.as('queue_count')
+		})
+		.from(connectors)
+		.leftJoin(
+			sql`(
+				SELECT connector_id, COUNT(*) as queue_count
+				FROM search_registry
+				WHERE state IN ('queued', 'searching')
+				GROUP BY connector_id
+			) AS queue_counts`,
+			sql`queue_counts.connector_id = ${connectors.id}`
+		)
+		.where(eq(connectors.enabled, true))
+		.orderBy(asc(connectors.name));
+
+	return result.map((row) => ({
+		id: row.id,
+		name: row.name,
+		type: row.type,
+		queuePaused: row.queuePaused,
+		queueCount: row.queueCount
+	}));
+}
+
+/**
+ * Updates priority for queue items.
+ *
+ * Updates both the search_registry.priority and request_queue.priority fields.
+ *
+ * @param registryIds - Search registry IDs to update
+ * @param priority - New priority value (0-100 user override, will be added to calculated priority)
+ * @returns Number of items updated
+ */
+export async function updateQueueItemPriority(
+	registryIds: number[],
+	priority: number
+): Promise<number> {
+	if (registryIds.length === 0) return 0;
+
+	const now = new Date();
+
+	// Update search_registry priority
+	const updated = await db
+		.update(searchRegistry)
+		.set({
+			priority,
+			updatedAt: now
+		})
+		.where(inArray(searchRegistry.id, registryIds))
+		.returning({ id: searchRegistry.id });
+
+	// Also update request_queue if items are in queue
+	await db
+		.update(requestQueue)
+		.set({ priority })
+		.where(inArray(requestQueue.searchRegistryId, registryIds));
+
+	return updated.length;
+}
+
+/**
+ * Removes items from the queue and resets their state.
+ *
+ * Deletes from request_queue and resets search_registry state to 'pending'.
+ *
+ * @param registryIds - Search registry IDs to remove from queue
+ * @returns Number of items removed
+ */
+export async function removeFromQueueByIds(registryIds: number[]): Promise<number> {
+	if (registryIds.length === 0) return 0;
+
+	const now = new Date();
+
+	// Delete from request_queue
+	const deleted = await db
+		.delete(requestQueue)
+		.where(inArray(requestQueue.searchRegistryId, registryIds))
+		.returning({ id: requestQueue.id });
+
+	// Reset search_registry state to 'pending' for items that were queued
+	await db
+		.update(searchRegistry)
+		.set({
+			state: 'pending',
+			updatedAt: now
+		})
+		.where(
+			and(
+				inArray(searchRegistry.id, registryIds),
+				eq(searchRegistry.state, 'queued')
+			)
+		);
+
+	return deleted.length;
+}
+
+/**
+ * Pauses queue processing for specified connectors.
+ *
+ * @param connectorIds - Connector IDs to pause (empty array = all connectors)
+ * @returns Number of connectors updated
+ */
+export async function pauseQueueForConnectors(connectorIds?: number[]): Promise<number> {
+	const now = new Date();
+
+	if (connectorIds && connectorIds.length > 0) {
+		const updated = await db
+			.update(connectors)
+			.set({
+				queuePaused: true,
+				updatedAt: now
+			})
+			.where(inArray(connectors.id, connectorIds))
+			.returning({ id: connectors.id });
+		return updated.length;
+	} else {
+		// Pause all enabled connectors
+		const updated = await db
+			.update(connectors)
+			.set({
+				queuePaused: true,
+				updatedAt: now
+			})
+			.where(eq(connectors.enabled, true))
+			.returning({ id: connectors.id });
+		return updated.length;
+	}
+}
+
+/**
+ * Resumes queue processing for specified connectors.
+ *
+ * @param connectorIds - Connector IDs to resume (empty array = all connectors)
+ * @returns Number of connectors updated
+ */
+export async function resumeQueueForConnectors(connectorIds?: number[]): Promise<number> {
+	const now = new Date();
+
+	if (connectorIds && connectorIds.length > 0) {
+		const updated = await db
+			.update(connectors)
+			.set({
+				queuePaused: false,
+				updatedAt: now
+			})
+			.where(inArray(connectors.id, connectorIds))
+			.returning({ id: connectors.id });
+		return updated.length;
+	} else {
+		// Resume all enabled connectors
+		const updated = await db
+			.update(connectors)
+			.set({
+				queuePaused: false,
+				updatedAt: now
+			})
+			.where(eq(connectors.enabled, true))
+			.returning({ id: connectors.id });
+		return updated.length;
+	}
+}
+
+/**
+ * Clears queue items for specified connectors.
+ *
+ * Deletes from request_queue and resets search_registry state to 'pending'.
+ *
+ * @param connectorIds - Connector IDs to clear (empty array = all connectors)
+ * @returns Number of items cleared
+ */
+export async function clearQueueForConnectors(connectorIds?: number[]): Promise<number> {
+	const now = new Date();
+
+	let deletedCount: number;
+	let registryIds: number[];
+
+	if (connectorIds && connectorIds.length > 0) {
+		// Get registry IDs before deletion
+		const toDelete = await db
+			.select({ searchRegistryId: requestQueue.searchRegistryId })
+			.from(requestQueue)
+			.where(inArray(requestQueue.connectorId, connectorIds));
+
+		registryIds = toDelete.map((item) => item.searchRegistryId);
+
+		// Delete from request_queue
+		const deleted = await db
+			.delete(requestQueue)
+			.where(inArray(requestQueue.connectorId, connectorIds))
+			.returning({ id: requestQueue.id });
+
+		deletedCount = deleted.length;
+	} else {
+		// Clear all queues
+		const toDelete = await db
+			.select({ searchRegistryId: requestQueue.searchRegistryId })
+			.from(requestQueue);
+
+		registryIds = toDelete.map((item) => item.searchRegistryId);
+
+		const deleted = await db
+			.delete(requestQueue)
+			.returning({ id: requestQueue.id });
+
+		deletedCount = deleted.length;
+	}
+
+	// Reset search_registry state to 'pending'
+	if (registryIds.length > 0) {
+		await db
+			.update(searchRegistry)
+			.set({
+				state: 'pending',
+				updatedAt: now
+			})
+			.where(
+				and(
+					inArray(searchRegistry.id, registryIds),
+					eq(searchRegistry.state, 'queued')
+				)
+			);
+	}
+
+	return deletedCount;
 }

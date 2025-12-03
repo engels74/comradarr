@@ -1,55 +1,77 @@
 <script lang="ts">
 	import { createVirtualizer } from '@tanstack/svelte-virtual';
 	import { Badge } from '$lib/components/ui/badge';
+	import { Checkbox } from '$lib/components/ui/checkbox';
 	import { cn } from '$lib/utils.js';
 	import QueueStateBadge from './QueueStateBadge.svelte';
-	import type { QueueItemWithContent, QueueThrottleInfo } from '$lib/server/db/queries/queue';
+	import type { SerializedQueueItem, SerializedThrottleInfo } from './types';
 
 	/**
 	 * Virtualized queue table for large datasets.
 	 * Uses TanStack Virtual to only render visible rows.
-	 * Requirements: 18.1 (priority order, dispatch time, processing indicator)
+	 * Requirements: 18.1, 18.2 (priority order, dispatch time, processing indicator, selection)
 	 */
-
-	interface SerializedQueueItem {
-		id: number;
-		searchRegistryId: number;
-		connectorId: number;
-		connectorName: string;
-		connectorType: string;
-		contentType: 'episode' | 'movie';
-		contentId: number;
-		title: string;
-		seriesTitle: string | null;
-		seasonNumber: number | null;
-		episodeNumber: number | null;
-		year: number | null;
-		searchType: 'gap' | 'upgrade';
-		state: 'pending' | 'queued' | 'searching' | 'cooldown' | 'exhausted';
-		priority: number;
-		attemptCount: number;
-		scheduledAt: string | null;
-		createdAt: string;
-	}
-
-	interface SerializedThrottleInfo {
-		connectorId: number;
-		isPaused: boolean;
-		pausedUntil: string | null;
-		pauseReason: string | null;
-		requestsPerMinute: number;
-		requestsThisMinute: number;
-		dailyBudget: number | null;
-		requestsToday: number;
-	}
 
 	interface Props {
 		items: SerializedQueueItem[];
 		throttleInfo: Record<number, SerializedThrottleInfo>;
 		maxHeight?: string | undefined;
+		selectedIds?: Set<number> | undefined;
+		onSelectionChange?: ((ids: Set<number>) => void) | undefined;
 	}
 
-	let { items, throttleInfo, maxHeight = '70vh' }: Props = $props();
+	let { items, throttleInfo, maxHeight = '70vh', selectedIds = new Set(), onSelectionChange }: Props = $props();
+
+	// Selection state
+	const isAllSelected = $derived(items.length > 0 && items.every((item) => selectedIds.has(item.searchRegistryId)));
+	const isSomeSelected = $derived(items.some((item) => selectedIds.has(item.searchRegistryId)));
+	const isIndeterminate = $derived(isSomeSelected && !isAllSelected);
+
+	/**
+	 * Toggle selection for a single item.
+	 */
+	function toggleSelection(registryId: number) {
+		const newSet = new Set(selectedIds);
+		if (newSet.has(registryId)) {
+			newSet.delete(registryId);
+		} else {
+			newSet.add(registryId);
+		}
+		onSelectionChange?.(newSet);
+	}
+
+	/**
+	 * Toggle all items selection.
+	 */
+	function toggleAll() {
+		if (isAllSelected) {
+			// Deselect all visible items
+			const newSet = new Set(selectedIds);
+			for (const item of items) {
+				newSet.delete(item.searchRegistryId);
+			}
+			onSelectionChange?.(newSet);
+		} else {
+			// Select all visible items
+			const newSet = new Set(selectedIds);
+			for (const item of items) {
+				newSet.add(item.searchRegistryId);
+			}
+			onSelectionChange?.(newSet);
+		}
+	}
+
+	/**
+	 * Handle row click for selection (only if not clicking a link).
+	 */
+	function handleRowClick(e: MouseEvent, registryId: number) {
+		// Don't toggle if clicking on a link or checkbox
+		const target = e.target as HTMLElement;
+		if (target.tagName === 'A' || target.closest('a') || target.tagName === 'BUTTON' || target.closest('button')) {
+			return;
+		}
+		toggleSelection(registryId);
+	}
 
 	// Scroll container reference
 	let scrollContainer: HTMLDivElement | null = $state(null);
@@ -197,6 +219,15 @@
 	<!-- Sticky header -->
 	<div class="border-b bg-muted/50">
 		<div class="flex items-center h-12 px-4 gap-4 text-sm font-medium text-muted-foreground">
+			<!-- Select all checkbox -->
+			<div class="w-6 flex-shrink-0">
+				<Checkbox
+					checked={isAllSelected}
+					indeterminate={isIndeterminate}
+					onCheckedChange={toggleAll}
+					aria-label="Select all"
+				/>
+			</div>
 			<div class="flex-1 min-w-0">Title</div>
 			<div class="w-28 flex-shrink-0">Connector</div>
 			<div class="w-20 flex-shrink-0">Type</div>
@@ -222,11 +253,27 @@
 			{:else}
 				{#each virtualItems as virtualItem (virtualItem.key)}
 					{@const item = items[virtualItem.index]}
+					{@const isSelected = selectedIds.has(item?.searchRegistryId ?? -1)}
 					{#if item}
 						<div
-							class="absolute left-0 right-0 flex items-center px-4 gap-4 border-b hover:bg-muted/50 transition-colors"
+							class={cn(
+								"absolute left-0 right-0 flex items-center px-4 gap-4 border-b transition-colors cursor-pointer",
+								isSelected ? "bg-primary/5 hover:bg-primary/10" : "hover:bg-muted/50"
+							)}
 							style="height: {ROW_HEIGHT}px; top: {virtualItem.start}px;"
+							onclick={(e) => handleRowClick(e, item.searchRegistryId)}
+							onkeydown={(e) => e.key === 'Enter' && toggleSelection(item.searchRegistryId)}
+							role="row"
+							tabindex="0"
 						>
+							<!-- Row checkbox -->
+							<div class="w-6 flex-shrink-0">
+								<Checkbox
+									checked={isSelected}
+									onCheckedChange={() => toggleSelection(item.searchRegistryId)}
+									aria-label="Select {formatTitle(item)}"
+								/>
+							</div>
 							<!-- Title -->
 							<div class="flex-1 min-w-0">
 								<a

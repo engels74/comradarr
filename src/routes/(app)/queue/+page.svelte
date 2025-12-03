@@ -1,19 +1,63 @@
 <script lang="ts">
 	import type { PageProps } from './$types';
-	import { QueueFilters, QueueTable } from '$lib/components/queue';
+	import { QueueBulkActions, QueueControls, QueueFilters, QueueTable } from '$lib/components/queue';
 	import { Button } from '$lib/components/ui/button';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
 
 	/**
 	 * Queue management page with virtualized table.
-	 * Requirements: 18.1
+	 * Requirements: 18.1, 18.2, 18.3
 	 * - Display items in priority order
 	 * - Show estimated dispatch time
 	 * - Show current processing indicator
+	 * - Manual priority adjustment and removal from queue
+	 * - Pause, resume, and clear queue actions
 	 */
 
 	let { data }: PageProps = $props();
+
+	// Selection state
+	let selectedIds = $state<Set<number>>(new Set());
+
+	// Clear selection when data changes (e.g., after an action)
+	$effect(() => {
+		// Access data to create dependency
+		data.queue;
+		// Clear selection on data refresh
+		selectedIds = new Set();
+	});
+
+	/**
+	 * Handle selection change from QueueTable.
+	 */
+	function handleSelectionChange(ids: Set<number>) {
+		selectedIds = ids;
+	}
+
+	/**
+	 * Clear all selections.
+	 */
+	function clearSelection() {
+		selectedIds = new Set();
+	}
+
+	// Toast-like feedback state
+	let feedbackMessage = $state<string | null>(null);
+	let feedbackTimeout: ReturnType<typeof setTimeout> | null = null;
+
+	/**
+	 * Show feedback message temporarily.
+	 */
+	function showFeedback(message: string) {
+		if (feedbackTimeout) {
+			clearTimeout(feedbackTimeout);
+		}
+		feedbackMessage = message;
+		feedbackTimeout = setTimeout(() => {
+			feedbackMessage = null;
+		}, 3000);
+	}
 
 	// Pagination state
 	const pageSize = $derived(data.filters.limit ?? 50);
@@ -40,6 +84,13 @@
 </svelte:head>
 
 <div class="container mx-auto p-6">
+	<!-- Feedback toast -->
+	{#if feedbackMessage}
+		<div class="fixed bottom-4 right-4 z-50 bg-background border rounded-lg shadow-lg px-4 py-3 animate-in slide-in-from-bottom-2">
+			<p class="text-sm font-medium">{feedbackMessage}</p>
+		</div>
+	{/if}
+
 	<!-- Header -->
 	<div class="flex items-center justify-between mb-6">
 		<div>
@@ -52,12 +103,24 @@
 				{/if}
 			</p>
 		</div>
+		<QueueControls
+			pauseStatus={data.pauseStatus}
+			onActionComplete={showFeedback}
+		/>
 	</div>
 
 	<!-- Filters -->
 	<QueueFilters
 		connectors={data.connectors}
 		statusCounts={data.statusCounts}
+	/>
+
+	<!-- Bulk Actions (when items selected) -->
+	<QueueBulkActions
+		selectedCount={selectedIds.size}
+		{selectedIds}
+		onClearSelection={clearSelection}
+		onActionComplete={showFeedback}
 	/>
 
 	<!-- Content -->
@@ -78,6 +141,8 @@
 		<QueueTable
 			items={data.queue}
 			throttleInfo={data.throttleInfo}
+			{selectedIds}
+			onSelectionChange={handleSelectionChange}
 		/>
 
 		<!-- Pagination -->
