@@ -1,13 +1,14 @@
 /**
  * Queue management page server load and actions.
  *
- * Requirements: 18.1, 18.2, 18.3, 18.4
+ * Requirements: 18.1, 18.2, 18.3, 18.4, 18.5
  * - Display items in priority order
  * - Show estimated dispatch time
  * - Show current processing indicator
  * - Manual priority adjustment and removal from queue
  * - Pause, resume, and clear queue actions
  * - Display recent completions with outcome indicators
+ * - Real-time updates without page refresh
  */
 
 import { fail } from '@sveltejs/kit';
@@ -27,7 +28,10 @@ import {
 	clearQueueForConnectors
 } from '$lib/server/db/queries/queue';
 
-export const load: PageServerLoad = async ({ url }) => {
+export const load: PageServerLoad = async ({ url, depends }) => {
+	// Register custom dependency for selective invalidation (Requirement 18.5)
+	depends('app:queue');
+
 	// Parse filters from URL params
 	const filters = parseQueueFilters(url.searchParams);
 

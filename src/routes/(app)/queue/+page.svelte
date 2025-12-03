@@ -4,19 +4,34 @@
 	import { Button } from '$lib/components/ui/button';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
+	import { onMount } from 'svelte';
+	import { createPollingController, POLLING_INTERVALS } from '$lib/utils/polling';
 
 	/**
 	 * Queue management page with virtualized table.
-	 * Requirements: 18.1, 18.2, 18.3, 18.4
+	 * Requirements: 18.1, 18.2, 18.3, 18.4, 18.5
 	 * - Display items in priority order
 	 * - Show estimated dispatch time
 	 * - Show current processing indicator
 	 * - Manual priority adjustment and removal from queue
 	 * - Pause, resume, and clear queue actions
 	 * - Display recent completions with outcome indicators
+	 * - Real-time updates without page refresh
 	 */
 
 	let { data }: PageProps = $props();
+
+	// Polling controller for real-time updates (Requirement 18.5)
+	const polling = createPollingController({
+		dependencyKey: 'app:queue',
+		interval: POLLING_INTERVALS.FAST
+	});
+
+	// Start/stop polling on mount/unmount
+	onMount(() => {
+		polling.start();
+		return () => polling.stop();
+	});
 
 	// Selection state
 	let selectedIds = $state<Set<number>>(new Set());
@@ -58,6 +73,24 @@
 		feedbackTimeout = setTimeout(() => {
 			feedbackMessage = null;
 		}, 3000);
+	}
+
+	/**
+	 * Handle action start - pause polling during form submission.
+	 */
+	function handleActionStart() {
+		polling.pause();
+	}
+
+	/**
+	 * Handle action complete - resume polling and show feedback.
+	 */
+	function handleActionComplete(message: string) {
+		showFeedback(message);
+		// Resume polling after a short delay to allow UI to settle
+		setTimeout(() => {
+			polling.resume();
+		}, 500);
 	}
 
 	// Pagination state
@@ -106,7 +139,8 @@
 		</div>
 		<QueueControls
 			pauseStatus={data.pauseStatus}
-			onActionComplete={showFeedback}
+			onActionStart={handleActionStart}
+			onActionComplete={handleActionComplete}
 		/>
 	</div>
 
@@ -121,7 +155,8 @@
 		selectedCount={selectedIds.size}
 		{selectedIds}
 		onClearSelection={clearSelection}
-		onActionComplete={showFeedback}
+		onActionStart={handleActionStart}
+		onActionComplete={handleActionComplete}
 	/>
 
 	<!-- Content -->

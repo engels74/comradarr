@@ -16,10 +16,11 @@
 
 	interface Props {
 		pauseStatus: ConnectorPauseStatus[];
+		onActionStart?: (() => void) | undefined;
 		onActionComplete?: ((message: string) => void) | undefined;
 	}
 
-	let { pauseStatus, onActionComplete }: Props = $props();
+	let { pauseStatus, onActionStart, onActionComplete }: Props = $props();
 
 	// Loading states
 	let isPausing = $state(false);
@@ -47,6 +48,7 @@
 	) {
 		return () => {
 			setLoading(true);
+			onActionStart?.(); // Pause polling during form submission
 			return async ({ result, update }: { result: { type: string; data?: { message?: string; error?: string } }; update: () => Promise<void> }) => {
 				setLoading(false);
 				closeDialog?.();

@@ -15,10 +15,11 @@
 		selectedCount: number;
 		selectedIds: Set<number>;
 		onClearSelection: () => void;
+		onActionStart?: (() => void) | undefined;
 		onActionComplete?: ((message: string) => void) | undefined;
 	}
 
-	let { selectedCount, selectedIds, onClearSelection, onActionComplete }: Props = $props();
+	let { selectedCount, selectedIds, onClearSelection, onActionStart, onActionComplete }: Props = $props();
 
 	// Serialize IDs for form submission
 	const registryIdsJson = $derived(JSON.stringify([...selectedIds]));
@@ -44,6 +45,7 @@
 	) {
 		return () => {
 			setLoading(true);
+			onActionStart?.(); // Pause polling during form submission
 			return async ({ result, update }: { result: { type: string; data?: { message?: string; error?: string } }; update: () => Promise<void> }) => {
 				setLoading(false);
 				closeDialog?.();
