@@ -3,9 +3,10 @@
  *
  * Processes pending notifications for batching-enabled channels, combining
  * similar events within the configured time window into digest notifications.
+ * Also respects quiet hours configuration by deferring batch sends.
  *
  * @module services/notifications/batcher
- * @requirements 9.3
+ * @requirements 9.3, 9.4
  */
 
 import type { NotificationChannel, NotificationHistory } from '$lib/server/db/schema';
@@ -20,6 +21,7 @@ import {
 import { getSender, isSupportedChannelType } from './index';
 import { buildAggregatePayload } from './aggregators';
 import type { NotificationResult } from './types';
+import { isInQuietHours } from './quiet-hours';
 
 // =============================================================================
 // Types
@@ -227,6 +229,13 @@ export class NotificationBatcher {
 
 		if (oldestAgeMs < windowSeconds * 1000) {
 			// Not ready yet - still within the batching window
+			return null;
+		}
+
+		// Check if currently in quiet hours (Requirement 9.4)
+		// If so, defer sending until quiet hours end
+		if (channel.quietHoursEnabled && isInQuietHours(channel)) {
+			// Skip this batch - notifications will be sent when quiet hours end
 			return null;
 		}
 

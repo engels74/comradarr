@@ -556,7 +556,7 @@
 
 ## Phase 16: Notifications
 
-- [ ] 36. Implement notification system
+- [x] 36. Implement notification system
   - [x] 36.1 Create notification channel schema
     - Define notification_channels table
     - Define notification_history table
@@ -579,11 +579,11 @@
     - Combine similar events within time window
     - _Requirements: 9.3_
 
-  - [ ] 36.5 Implement quiet hours
+  - [x] 36.5 Implement quiet hours
     - Suppress notifications during configured period
     - _Requirements: 9.4_
 
-- [ ] 37. Checkpoint - Ensure all tests pass
+- [x] 37. Checkpoint - Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
 ## Phase 17: Schedule Management UI

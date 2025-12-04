@@ -9,7 +9,7 @@
  * - Generic webhooks with HMAC signature support
  *
  * @module services/notifications
- * @requirements 9.1, 9.2, 9.5, 36.2, 36.3
+ * @requirements 9.1, 9.2, 9.4, 9.5, 36.2, 36.3
  *
  * @example
  * ```typescript
@@ -236,3 +236,16 @@ export {
 } from './batcher';
 
 export { buildAggregatePayload, type AggregatedPayloadMetadata } from './aggregators';
+
+// =============================================================================
+// Quiet Hours Exports (Task 36.5, Requirement 9.4)
+// =============================================================================
+
+export {
+	isInQuietHours,
+	parseTimeString,
+	getCurrentTimeInTimezone,
+	timeToMinutes,
+	isTimeInRange,
+	type TimeOfDay
+} from './quiet-hours';

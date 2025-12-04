@@ -7,9 +7,10 @@
  * - Building payloads from event data using templates
  * - Sending to each channel via channel senders
  * - Recording results in notification history
+ * - Quiet hours suppression (Requirement 9.4)
  *
  * @module services/notifications/dispatcher
- * @requirements 9.2, 36.3
+ * @requirements 9.2, 9.4, 36.3
  */
 
 import type { NotificationChannel } from '$lib/server/db/schema';
@@ -25,6 +26,7 @@ import { getSender, isSupportedChannelType } from './index';
 import { buildPayload, type EventDataMap } from './templates';
 import type { NotificationPayload, NotificationResult } from './types';
 import { isRetryableNotificationError } from './errors';
+import { isInQuietHours } from './quiet-hours';
 
 // =============================================================================
 // Types
@@ -48,6 +50,8 @@ export interface DispatchResult {
 	skippedCount: number;
 	/** Number of channels where notification was queued for batching */
 	batchedCount: number;
+	/** Number of channels where notification was suppressed due to quiet hours (Requirement 9.4) */
+	quietHoursSuppressedCount: number;
 }
 
 /**
@@ -107,7 +111,8 @@ export class NotificationDispatcher {
 			successCount: 0,
 			failureCount: 0,
 			skippedCount: 0,
-			batchedCount: 0
+			batchedCount: 0,
+			quietHoursSuppressedCount: 0
 		};
 
 		// No channels configured for this event type
@@ -115,25 +120,39 @@ export class NotificationDispatcher {
 			return result;
 		}
 
-		// Process each channel - batching enabled channels store for later, others send immediately
+		// Process each channel - check quiet hours, batching, or send immediately
 		const sendPromises = channels.map(async (channel) => {
+			// Check if in quiet hours for this channel (Requirement 9.4)
+			if (channel.quietHoursEnabled && isInQuietHours(channel)) {
+				// Store as pending for later (will be sent when quiet hours end)
+				const stored = await this.storeForBatching(channel, eventType, eventData);
+				return { type: 'quiet_hours' as const, success: stored };
+			}
+
 			// Check if batching is enabled for this channel (Requirement 9.3)
 			if (channel.batchingEnabled) {
 				// Store as pending for later batching
 				const stored = await this.storeForBatching(channel, eventType, eventData);
 				return { type: 'batched' as const, success: stored };
-			} else {
-				// Send immediately
-				const sendResult = await this.sendToChannelInternal(channel, payload, options);
-				return { type: 'sent' as const, result: sendResult };
 			}
+
+			// Send immediately
+			const sendResult = await this.sendToChannelInternal(channel, payload, options);
+			return { type: 'sent' as const, result: sendResult };
 		});
 
 		const channelResults = await Promise.all(sendPromises);
 
 		// Aggregate results
 		for (const channelResult of channelResults) {
-			if (channelResult.type === 'batched') {
+			if (channelResult.type === 'quiet_hours') {
+				// Notification was suppressed due to quiet hours (Requirement 9.4)
+				if (channelResult.success) {
+					result.quietHoursSuppressedCount++;
+				} else {
+					result.failureCount++;
+				}
+			} else if (channelResult.type === 'batched') {
 				// Notification was stored for batching
 				if (channelResult.success) {
 					result.batchedCount++;
