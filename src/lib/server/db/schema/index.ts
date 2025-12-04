@@ -15,8 +15,9 @@
  * - notificationChannels: Notification channel configurations (Requirements 9.1, 9.2, 9.3, 9.4, 36.1)
  * - notificationHistory: Sent notification tracking (Requirements 9.2, 9.3)
  * - completionSnapshots: Library completion history for trend visualization (Requirements 15.4)
+ * - sweepSchedules: Per-connector sweep schedule configurations (Requirements 19.1)
  *
- * Requirements: 7.1, 7.4, 7.5, 9.1, 9.2, 9.3, 9.4, 10.1, 10.2, 14.1, 14.2, 14.3, 15.4, 36.1, 38.1, 38.2, 38.4
+ * Requirements: 7.1, 7.4, 7.5, 9.1, 9.2, 9.3, 9.4, 10.1, 10.2, 14.1, 14.2, 14.3, 15.4, 19.1, 36.1, 38.1, 38.2, 38.4
  */
 
 import {
@@ -565,3 +566,42 @@ export const completionSnapshots = pgTable(
 
 export type CompletionSnapshot = typeof completionSnapshots.$inferSelect;
 export type NewCompletionSnapshot = typeof completionSnapshots.$inferInsert;
+
+// =============================================================================
+// Sweep Schedules Table (Requirements 19.1)
+// =============================================================================
+
+/**
+ * Stores per-connector sweep schedule configurations.
+ * Allows configurable cron-based sweep cycles with enable/disable per schedule.
+ */
+export const sweepSchedules = pgTable(
+	'sweep_schedules',
+	{
+		id: integer('id').primaryKey().generatedAlwaysAsIdentity(),
+		connectorId: integer('connector_id').references(() => connectors.id, {
+			onDelete: 'cascade'
+		}), // null = global schedule for all connectors
+		name: varchar('name', { length: 100 }).notNull(),
+		sweepType: varchar('sweep_type', { length: 30 }).notNull(), // 'incremental' | 'full_reconciliation'
+		cronExpression: varchar('cron_expression', { length: 100 }).notNull(),
+		timezone: varchar('timezone', { length: 50 }).notNull().default('UTC'),
+		enabled: boolean('enabled').notNull().default(true),
+		throttleProfileId: integer('throttle_profile_id').references(() => throttleProfiles.id, {
+			onDelete: 'set null'
+		}),
+		lastRunAt: timestamp('last_run_at', { withTimezone: true }),
+		nextRunAt: timestamp('next_run_at', { withTimezone: true }),
+		createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+		updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow()
+	},
+	(table) => [
+		// Index for finding schedules by connector
+		index('sweep_schedules_connector_idx').on(table.connectorId),
+		// Index for finding enabled schedules
+		index('sweep_schedules_enabled_idx').on(table.enabled)
+	]
+);
+
+export type SweepSchedule = typeof sweepSchedules.$inferSelect;
+export type NewSweepSchedule = typeof sweepSchedules.$inferInsert;

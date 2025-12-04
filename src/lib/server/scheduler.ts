@@ -34,6 +34,11 @@ import {
 	getDecryptedApiKey,
 	updateConnectorHealth
 } from '$lib/server/db/queries/connectors';
+import {
+	getEnabledSchedules,
+	updateNextRunAt,
+	type ScheduleWithRelations
+} from '$lib/server/db/queries/schedules';
 import type { Connector } from '$lib/server/db/schema';
 import { createConnectorClient } from '$lib/server/connectors/factory';
 import { determineHealthFromChecks, type HealthStatus } from '$lib/server/services/sync/health-utils';
@@ -65,8 +70,11 @@ interface ScheduledJob {
 // Module State
 // =============================================================================
 
-/** Map of registered jobs */
+/** Map of registered static jobs */
 const jobs: Map<string, ScheduledJob> = new Map();
+
+/** Map of dynamic schedule jobs (loaded from database) */
+const dynamicJobs: Map<number, Cron> = new Map();
 
 /** Flag to prevent multiple initializations */
 let initialized = false;
@@ -681,12 +689,20 @@ export function initializeScheduler(): void {
 export function stopScheduler(): void {
 	console.log('[scheduler] Stopping all scheduled jobs...');
 
+	// Stop static jobs
 	for (const [name, job] of jobs) {
 		job.cron.stop();
 		console.log(`[scheduler] Stopped job: ${name}`);
 	}
-
 	jobs.clear();
+
+	// Stop dynamic jobs
+	for (const [id, cron] of dynamicJobs) {
+		cron.stop();
+		console.log(`[scheduler] Stopped dynamic schedule: ${id}`);
+	}
+	dynamicJobs.clear();
+
 	initialized = false;
 	console.log('[scheduler] All scheduled jobs stopped');
 }
@@ -702,6 +718,11 @@ export function getSchedulerStatus(): {
 		isRunning: boolean;
 		nextRun: Date | null;
 	}>;
+	dynamicSchedules: Array<{
+		id: number;
+		isRunning: boolean;
+		nextRun: Date | null;
+	}>;
 } {
 	return {
 		initialized,
@@ -709,6 +730,72 @@ export function getSchedulerStatus(): {
 			name: job.name,
 			isRunning: job.cron.isRunning(),
 			nextRun: job.cron.nextRun()
+		})),
+		dynamicSchedules: Array.from(dynamicJobs.entries()).map(([id, cron]) => ({
+			id,
+			isRunning: cron.isRunning(),
+			nextRun: cron.nextRun()
 		}))
 	};
+}
+
+// =============================================================================
+// Dynamic Schedule Management (Requirement 19.1)
+// =============================================================================
+
+/**
+ * Refresh dynamic schedules from the database.
+ * Called when schedules are created, updated, or toggled.
+ *
+ * This function:
+ * 1. Stops all existing dynamic schedule jobs
+ * 2. Loads enabled schedules from database
+ * 3. Creates new Cron jobs for each enabled schedule
+ * 4. Updates nextRunAt for each schedule in the database
+ */
+export async function refreshDynamicSchedules(): Promise<void> {
+	console.log('[scheduler] Refreshing dynamic schedules...');
+
+	// Stop all existing dynamic jobs
+	for (const [id, cron] of dynamicJobs) {
+		cron.stop();
+	}
+	dynamicJobs.clear();
+
+	// Load enabled schedules from database
+	const schedules = await getEnabledSchedules();
+
+	for (const schedule of schedules) {
+		try {
+			// Create Cron job for this schedule
+			const cron = new Cron(
+				schedule.cronExpression,
+				{
+					name: `sweep-schedule-${schedule.id}`,
+					timezone: schedule.timezone,
+					protect: true, // Prevent overlapping executions
+					catch: (err) => {
+						console.error(`[scheduler] Dynamic schedule ${schedule.id} (${schedule.name}) failed:`, err);
+					}
+				},
+				async () => {
+					// Job execution will be implemented in a future task
+					// For now, just log that it would run
+					console.log(`[scheduler] Dynamic schedule triggered: ${schedule.name} (ID: ${schedule.id})`);
+				}
+			);
+
+			dynamicJobs.set(schedule.id, cron);
+
+			// Update nextRunAt in database
+			const nextRun = cron.nextRun();
+			if (nextRun) {
+				await updateNextRunAt(schedule.id, nextRun);
+			}
+		} catch (error) {
+			console.error(`[scheduler] Failed to create job for schedule ${schedule.id}:`, error);
+		}
+	}
+
+	console.log(`[scheduler] Loaded ${dynamicJobs.size} dynamic schedules`);
 }

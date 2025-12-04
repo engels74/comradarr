@@ -589,7 +589,7 @@
 ## Phase 17: Schedule Management UI
 
 - [ ] 38. Create schedule management pages
-  - [ ] 38.1 Create schedule list page
+  - [x] 38.1 Create schedule list page
     - Display schedules with connector, cron, next run
     - Add enable/disable toggle
     - _Requirements: 19.1_
