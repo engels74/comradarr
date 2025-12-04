@@ -9,43 +9,33 @@
  * - Generic webhooks with HMAC signature support
  *
  * @module services/notifications
- * @requirements 9.1, 9.5, 36.2
+ * @requirements 9.1, 9.2, 9.5, 36.2, 36.3
  *
  * @example
  * ```typescript
- * import {
- *   getSender,
- *   type NotificationPayload
- * } from '$lib/server/services/notifications';
- * import {
- *   getNotificationChannel,
- *   getDecryptedSensitiveConfig
- * } from '$lib/server/db/queries/notifications';
+ * // Simple usage with notify() convenience function
+ * import { notify } from '$lib/server/services/notifications';
  *
- * // Get channel from database
- * const channel = await getNotificationChannel(channelId);
- * if (!channel) throw new Error('Channel not found');
- *
- * // Decrypt sensitive configuration
- * const sensitiveConfig = await getDecryptedSensitiveConfig(channel);
- *
- * // Get the appropriate sender
- * const sender = getSender(channel.type);
- *
- * // Send notification
- * const result = await sender.send(channel, sensitiveConfig, {
- *   eventType: 'search_success',
- *   title: 'Content Found',
- *   message: 'Breaking Bad S01E01 was found and grabbed!',
- *   fields: [
- *     { name: 'Quality', value: 'HDTV-1080p', inline: true },
- *     { name: 'Source', value: 'Sonarr', inline: true }
- *   ],
- *   timestamp: new Date()
+ * await notify('sweep_completed', {
+ *   connectorId: 1,
+ *   connectorName: 'Sonarr',
+ *   gapsFound: 15,
+ *   itemsQueued: 10
  * });
  *
- * if (!result.success) {
- *   console.error('Failed to send notification:', result.error);
+ * // Or use the dispatcher directly
+ * import { getNotificationDispatcher } from '$lib/server/services/notifications';
+ *
+ * const dispatcher = getNotificationDispatcher();
+ * const result = await dispatcher.dispatch('search_success', {
+ *   contentTitle: 'Breaking Bad',
+ *   contentYear: 2008,
+ *   quality: 'HDTV-1080p',
+ *   connectorName: 'Sonarr'
+ * });
+ *
+ * if (result.failureCount > 0) {
+ *   console.warn(`${result.failureCount} notification(s) failed`);
  * }
  * ```
  */
@@ -201,3 +191,33 @@ export function getSupportedChannelTypes(): string[] {
 export function clearSenderCache(): void {
 	senderInstances.clear();
 }
+
+// =============================================================================
+// Dispatcher Exports (Task 36.3)
+// =============================================================================
+
+export {
+	NotificationDispatcher,
+	getNotificationDispatcher,
+	notify,
+	type DispatchResult,
+	type DispatchOptions
+} from './dispatcher';
+
+// =============================================================================
+// Template Exports (Task 36.3)
+// =============================================================================
+
+export {
+	buildPayload,
+	type EventDataMap,
+	type SweepStartedData,
+	type SweepCompletedData,
+	type SearchSuccessData,
+	type SearchExhaustedData,
+	type ConnectorHealthChangedData,
+	type SyncCompletedData,
+	type SyncFailedData,
+	type AppStartedData,
+	type UpdateAvailableData
+} from './templates';

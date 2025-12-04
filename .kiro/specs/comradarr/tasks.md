@@ -570,7 +570,7 @@
     - Implement generic webhook with signature support
     - _Requirements: 9.1, 9.5_
 
-  - [ ] 36.3 Implement notification dispatch
+  - [x] 36.3 Implement notification dispatch
     - Send to enabled channels for event type
     - Support message templating
     - _Requirements: 9.2_
