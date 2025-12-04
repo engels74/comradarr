@@ -498,7 +498,7 @@
 
 ## Phase 14: Queue Management UI
 
-- [ ] 32. Create queue management pages
+- [x] 32. Create queue management pages
   - [x] 32.1 Create queue list page
     - Display items in priority order
     - Show estimated dispatch time
@@ -525,7 +525,7 @@
 
 ## Phase 15: Dashboard
 
-- [ ] 34. Create dashboard page
+- [x] 34. Create dashboard page
   - [x] 34.1 Create connection status panel
     - Display health indicators for all connectors
     - Show last sync time per connector
@@ -546,12 +546,12 @@
     - Add trend sparklines
     - _Requirements: 15.4_
 
-  - [ ] 34.5 Create upcoming schedule display
+  - [x] 34.5 Create upcoming schedule display
     - Show next scheduled sweeps
     - Show current sweep progress
     - _Requirements: 15.5_
 
-- [ ] 35. Checkpoint - Ensure all tests pass
+- [x] 35. Checkpoint - Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
 ## Phase 16: Notifications

@@ -3,6 +3,7 @@
 	import ConnectionStatusPanel from '$lib/components/dashboard/ConnectionStatusPanel.svelte';
 	import LibraryCompletionPanel from '$lib/components/dashboard/LibraryCompletionPanel.svelte';
 	import StatisticsPanel from '$lib/components/dashboard/StatisticsPanel.svelte';
+	import UpcomingSchedulePanel from '$lib/components/dashboard/UpcomingSchedulePanel.svelte';
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();
@@ -23,6 +24,11 @@
 	<!-- Library Completion Section (Requirement 15.4) -->
 	<div class="mb-6">
 		<LibraryCompletionPanel completionData={data.completionData} />
+	</div>
+
+	<!-- Upcoming Schedules Section (Requirement 15.5) -->
+	<div class="mb-6">
+		<UpcomingSchedulePanel scheduledJobs={data.scheduledJobs} />
 	</div>
 
 	<!-- Connection Status Section -->

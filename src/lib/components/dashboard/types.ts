@@ -1,6 +1,6 @@
 /**
  * Types for dashboard components.
- * Requirements: 15.1, 15.2, 15.3, 15.4
+ * Requirements: 15.1, 15.2, 15.3, 15.4, 15.5
  */
 
 /**
@@ -88,4 +88,25 @@ export interface SerializedConnectorCompletion {
 	trend: SerializedCompletionDataPoint[];
 	/** Change in completion percentage over trend period */
 	trendDelta: number;
+}
+
+// =============================================================================
+// Scheduler Status Types (Requirement 15.5)
+// =============================================================================
+
+/**
+ * Serialized scheduled job for display in the upcoming schedule panel.
+ * Requirements: 15.5
+ */
+export interface SerializedScheduledJob {
+	/** Internal job name (e.g., 'incremental-sync-sweep') */
+	name: string;
+	/** Human-readable display name */
+	displayName: string;
+	/** Brief job description */
+	description: string;
+	/** Whether job is currently executing */
+	isRunning: boolean;
+	/** ISO timestamp of next run, or null if not scheduled */
+	nextRun: string | null;
 }
