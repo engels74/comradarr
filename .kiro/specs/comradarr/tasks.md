@@ -610,7 +610,7 @@
 ## Phase 18: Analytics
 
 - [ ] 40. Implement analytics
-  - [ ] 40.1 Create analytics schema
+  - [x] 40.1 Create analytics schema
     - Define analytics_events table
     - Define aggregated statistics tables
     - _Requirements: 12.1_

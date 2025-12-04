@@ -16,8 +16,11 @@
  * - notificationHistory: Sent notification tracking (Requirements 9.2, 9.3)
  * - completionSnapshots: Library completion history for trend visualization (Requirements 15.4)
  * - sweepSchedules: Per-connector sweep schedule configurations (Requirements 19.1)
+ * - analyticsEvents: Raw analytics event tracking (Requirements 12.1)
+ * - analyticsHourlyStats: Hourly aggregated statistics (Requirements 12.1, 12.2, 12.3)
+ * - analyticsDailyStats: Daily aggregated statistics (Requirements 12.1, 12.2, 12.4)
  *
- * Requirements: 7.1, 7.4, 7.5, 9.1, 9.2, 9.3, 9.4, 10.1, 10.2, 14.1, 14.2, 14.3, 15.4, 19.1, 36.1, 38.1, 38.2, 38.4
+ * Requirements: 7.1, 7.4, 7.5, 9.1, 9.2, 9.3, 9.4, 10.1, 10.2, 12.1, 12.2, 12.3, 12.4, 14.1, 14.2, 14.3, 15.4, 19.1, 36.1, 38.1, 38.2, 38.4
  */
 
 import {
@@ -605,3 +608,139 @@ export const sweepSchedules = pgTable(
 
 export type SweepSchedule = typeof sweepSchedules.$inferSelect;
 export type NewSweepSchedule = typeof sweepSchedules.$inferInsert;
+
+// =============================================================================
+// Analytics Events Table (Requirements 12.1)
+// =============================================================================
+
+/**
+ * Stores raw analytics events for detailed analysis and time-series tracking.
+ * Events include gap/upgrade discoveries, search operations, sync events, etc.
+ */
+export const analyticsEvents = pgTable(
+	'analytics_events',
+	{
+		id: integer('id').primaryKey().generatedAlwaysAsIdentity(),
+		connectorId: integer('connector_id').references(() => connectors.id, {
+			onDelete: 'cascade'
+		}), // null = system-wide events
+		eventType: varchar('event_type', { length: 50 }).notNull(), // 'gap_discovered' | 'upgrade_discovered' | 'search_dispatched' | 'search_completed' | 'search_failed' | 'search_no_results' | 'queue_depth_sampled' | 'sync_completed' | 'sync_failed'
+		eventData: jsonb('event_data'), // Event-specific payload (e.g., contentId, responseTimeMs, errorMessage)
+		createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow()
+	},
+	(table) => [
+		// Index for time-series queries by event type
+		index('analytics_events_type_time_idx').on(table.eventType, table.createdAt.desc()),
+		// Index for connector-specific analytics
+		index('analytics_events_connector_time_idx').on(table.connectorId, table.createdAt.desc()),
+		// Index for querying events by date range (for CSV export)
+		index('analytics_events_created_idx').on(table.createdAt)
+	]
+);
+
+export type AnalyticsEvent = typeof analyticsEvents.$inferSelect;
+export type NewAnalyticsEvent = typeof analyticsEvents.$inferInsert;
+
+// =============================================================================
+// Analytics Hourly Statistics Table (Requirements 12.1, 12.2, 12.3)
+// =============================================================================
+
+/**
+ * Pre-computed hourly statistics per connector for efficient time-series queries.
+ * Updated by analytics collector service, used for dashboard charts and comparisons.
+ */
+export const analyticsHourlyStats = pgTable(
+	'analytics_hourly_stats',
+	{
+		id: integer('id').primaryKey().generatedAlwaysAsIdentity(),
+		connectorId: integer('connector_id')
+			.notNull()
+			.references(() => connectors.id, { onDelete: 'cascade' }),
+		hourBucket: timestamp('hour_bucket', { withTimezone: true }).notNull(), // Truncated to hour
+		// Discovery metrics
+		gapsDiscovered: integer('gaps_discovered').notNull().default(0),
+		upgradesDiscovered: integer('upgrades_discovered').notNull().default(0),
+		// Search volume metrics
+		searchesDispatched: integer('searches_dispatched').notNull().default(0),
+		searchesSuccessful: integer('searches_successful').notNull().default(0),
+		searchesFailed: integer('searches_failed').notNull().default(0),
+		searchesNoResults: integer('searches_no_results').notNull().default(0),
+		// Queue metrics
+		avgQueueDepth: integer('avg_queue_depth').notNull().default(0),
+		peakQueueDepth: integer('peak_queue_depth').notNull().default(0),
+		// Response time metrics (for connector comparison)
+		avgResponseTimeMs: integer('avg_response_time_ms'),
+		maxResponseTimeMs: integer('max_response_time_ms'),
+		// Error rate tracking
+		errorCount: integer('error_count').notNull().default(0),
+		createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+		updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow()
+	},
+	(table) => [
+		// Unique constraint: one row per connector per hour
+		uniqueIndex('analytics_hourly_stats_connector_hour_idx').on(
+			table.connectorId,
+			table.hourBucket
+		),
+		// Index for time-series queries (most recent first)
+		index('analytics_hourly_stats_time_idx').on(table.hourBucket.desc()),
+		// Index for connector comparison queries
+		index('analytics_hourly_stats_connector_idx').on(table.connectorId, table.hourBucket.desc())
+	]
+);
+
+export type AnalyticsHourlyStat = typeof analyticsHourlyStats.$inferSelect;
+export type NewAnalyticsHourlyStat = typeof analyticsHourlyStats.$inferInsert;
+
+// =============================================================================
+// Analytics Daily Statistics Table (Requirements 12.1, 12.2, 12.4)
+// =============================================================================
+
+/**
+ * Rolled-up daily statistics for long-term trend analysis and CSV export.
+ * Aggregated from hourly stats or raw events by maintenance job.
+ */
+export const analyticsDailyStats = pgTable(
+	'analytics_daily_stats',
+	{
+		id: integer('id').primaryKey().generatedAlwaysAsIdentity(),
+		connectorId: integer('connector_id')
+			.notNull()
+			.references(() => connectors.id, { onDelete: 'cascade' }),
+		dateBucket: timestamp('date_bucket', { withTimezone: true }).notNull(), // Truncated to day (midnight UTC)
+		// Discovery metrics
+		gapsDiscovered: integer('gaps_discovered').notNull().default(0),
+		upgradesDiscovered: integer('upgrades_discovered').notNull().default(0),
+		// Search volume metrics
+		searchesDispatched: integer('searches_dispatched').notNull().default(0),
+		searchesSuccessful: integer('searches_successful').notNull().default(0),
+		searchesFailed: integer('searches_failed').notNull().default(0),
+		searchesNoResults: integer('searches_no_results').notNull().default(0),
+		// Queue metrics
+		avgQueueDepth: integer('avg_queue_depth').notNull().default(0),
+		peakQueueDepth: integer('peak_queue_depth').notNull().default(0),
+		// Response time metrics
+		avgResponseTimeMs: integer('avg_response_time_ms'),
+		maxResponseTimeMs: integer('max_response_time_ms'),
+		// Error rate tracking
+		errorCount: integer('error_count').notNull().default(0),
+		// Library completion snapshot (denormalized for export convenience)
+		completionPercentage: integer('completion_percentage'), // 0-10000 basis points
+		createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+		updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow()
+	},
+	(table) => [
+		// Unique constraint: one row per connector per day
+		uniqueIndex('analytics_daily_stats_connector_date_idx').on(
+			table.connectorId,
+			table.dateBucket
+		),
+		// Index for date range queries (CSV export)
+		index('analytics_daily_stats_date_idx').on(table.dateBucket.desc()),
+		// Index for connector-specific queries
+		index('analytics_daily_stats_connector_idx').on(table.connectorId, table.dateBucket.desc())
+	]
+);
+
+export type AnalyticsDailyStat = typeof analyticsDailyStats.$inferSelect;
+export type NewAnalyticsDailyStat = typeof analyticsDailyStats.$inferInsert;
