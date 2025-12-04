@@ -557,7 +557,7 @@
 ## Phase 16: Notifications
 
 - [ ] 36. Implement notification system
-  - [ ] 36.1 Create notification channel schema
+  - [x] 36.1 Create notification channel schema
     - Define notification_channels table
     - Define notification_history table
     - _Requirements: 9.1_

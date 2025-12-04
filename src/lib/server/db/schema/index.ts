@@ -12,9 +12,11 @@
  * - users, sessions: Authentication (Requirements 10.1, 10.2)
  * - prowlarrInstances: Prowlarr connections for indexer health monitoring (Requirements 38.1)
  * - prowlarrIndexerHealth: Cached indexer health status (Requirements 38.2, 38.4)
+ * - notificationChannels: Notification channel configurations (Requirements 9.1, 9.2, 9.3, 9.4, 36.1)
+ * - notificationHistory: Sent notification tracking (Requirements 9.2, 9.3)
  * - completionSnapshots: Library completion history for trend visualization (Requirements 15.4)
  *
- * Requirements: 7.1, 7.4, 7.5, 10.1, 10.2, 14.1, 14.2, 14.3, 15.4, 38.1, 38.2, 38.4
+ * Requirements: 7.1, 7.4, 7.5, 9.1, 9.2, 9.3, 9.4, 10.1, 10.2, 14.1, 14.2, 14.3, 15.4, 36.1, 38.1, 38.2, 38.4
  */
 
 import {
@@ -452,6 +454,81 @@ export type NewProwlarrInstance = typeof prowlarrInstances.$inferInsert;
 
 export type ProwlarrIndexerHealth = typeof prowlarrIndexerHealth.$inferSelect;
 export type NewProwlarrIndexerHealth = typeof prowlarrIndexerHealth.$inferInsert;
+
+// =============================================================================
+// Notification Channels Table (Requirements 9.1, 9.2, 9.3, 9.4, 36.1)
+// =============================================================================
+
+/**
+ * Stores notification channel configurations for various notification providers.
+ * Supports Discord, Telegram, Slack, Pushover, Gotify, ntfy, email, and webhooks.
+ * Sensitive credentials are encrypted using AES-256-GCM.
+ */
+export const notificationChannels = pgTable(
+	'notification_channels',
+	{
+		id: integer('id').primaryKey().generatedAlwaysAsIdentity(),
+		name: varchar('name', { length: 100 }).notNull(),
+		type: varchar('type', { length: 20 }).notNull(), // 'discord' | 'telegram' | 'slack' | 'pushover' | 'gotify' | 'ntfy' | 'email' | 'webhook'
+		config: jsonb('config'), // Non-sensitive configuration (e.g., topic URL, server URL, SMTP settings)
+		configEncrypted: text('config_encrypted'), // AES-256-GCM encrypted sensitive credentials (API keys, tokens, passwords)
+		enabled: boolean('enabled').notNull().default(true),
+		enabledEvents: jsonb('enabled_events'), // Array of event types to notify on (e.g., ['sweep_completed', 'search_success'])
+		// Batching configuration (Requirement 9.3)
+		batchingEnabled: boolean('batching_enabled').notNull().default(false),
+		batchingWindowSeconds: integer('batching_window_seconds').notNull().default(60),
+		// Quiet hours configuration (Requirement 9.4)
+		quietHoursEnabled: boolean('quiet_hours_enabled').notNull().default(false),
+		quietHoursStart: varchar('quiet_hours_start', { length: 5 }), // HH:MM format (e.g., '22:00')
+		quietHoursEnd: varchar('quiet_hours_end', { length: 5 }), // HH:MM format (e.g., '08:00')
+		quietHoursTimezone: varchar('quiet_hours_timezone', { length: 50 }).default('UTC'),
+		createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+		updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow()
+	},
+	(table) => [
+		// Index for querying enabled channels by type
+		index('notification_channels_type_enabled_idx').on(table.type, table.enabled)
+	]
+);
+
+export type NotificationChannel = typeof notificationChannels.$inferSelect;
+export type NewNotificationChannel = typeof notificationChannels.$inferInsert;
+
+// =============================================================================
+// Notification History Table (Requirements 9.2, 9.3)
+// =============================================================================
+
+/**
+ * Tracks sent notifications and their outcomes.
+ * Used for debugging, retry logic, and batching related notifications.
+ */
+export const notificationHistory = pgTable(
+	'notification_history',
+	{
+		id: integer('id').primaryKey().generatedAlwaysAsIdentity(),
+		channelId: integer('channel_id')
+			.notNull()
+			.references(() => notificationChannels.id, { onDelete: 'cascade' }),
+		eventType: varchar('event_type', { length: 50 }).notNull(), // 'sweep_started' | 'sweep_completed' | 'search_success' | etc.
+		eventData: jsonb('event_data'), // Full event payload
+		status: varchar('status', { length: 20 }).notNull().default('pending'), // 'pending' | 'sent' | 'failed' | 'batched'
+		sentAt: timestamp('sent_at', { withTimezone: true }),
+		errorMessage: text('error_message'), // Error details if failed
+		batchId: varchar('batch_id', { length: 50 }), // Groups batched notifications together
+		createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow()
+	},
+	(table) => [
+		// Index for querying notification history by channel
+		index('notification_history_channel_idx').on(table.channelId, table.createdAt.desc()),
+		// Index for querying by status (e.g., finding pending notifications)
+		index('notification_history_status_idx').on(table.status, table.createdAt),
+		// Index for batch grouping
+		index('notification_history_batch_idx').on(table.batchId)
+	]
+);
+
+export type NotificationHistory = typeof notificationHistory.$inferSelect;
+export type NewNotificationHistory = typeof notificationHistory.$inferInsert;
 
 // =============================================================================
 // Completion Snapshots Table (Requirements 15.4)
