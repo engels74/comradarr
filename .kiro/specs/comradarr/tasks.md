@@ -621,7 +621,7 @@
     - Track queue depth
     - _Requirements: 12.1_
 
-  - [ ] 40.3 Create analytics dashboard
+  - [x] 40.3 Create analytics dashboard
     - Display time-series charts
     - Show connector comparison
     - Show content analysis
