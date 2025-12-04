@@ -562,7 +562,7 @@
     - Define notification_history table
     - _Requirements: 9.1_
 
-  - [ ] 36.2 Implement notification channels
+  - [x] 36.2 Implement notification channels
     - Implement Discord webhook
     - Implement Telegram bot API
     - Implement Slack webhook
