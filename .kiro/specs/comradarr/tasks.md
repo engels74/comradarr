@@ -526,7 +526,7 @@
 ## Phase 15: Dashboard
 
 - [ ] 34. Create dashboard page
-  - [ ] 34.1 Create connection status panel
+  - [x] 34.1 Create connection status panel
     - Display health indicators for all connectors
     - Show last sync time per connector
     - _Requirements: 15.1_
