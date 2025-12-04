@@ -46,6 +46,8 @@ export interface DispatchResult {
 	failureCount: number;
 	/** Number of channels that were skipped (unsupported type) */
 	skippedCount: number;
+	/** Number of channels where notification was queued for batching */
+	batchedCount: number;
 }
 
 /**
@@ -104,7 +106,8 @@ export class NotificationDispatcher {
 			totalChannels: channels.length,
 			successCount: 0,
 			failureCount: 0,
-			skippedCount: 0
+			skippedCount: 0,
+			batchedCount: 0
 		};
 
 		// No channels configured for this event type
@@ -112,29 +115,83 @@ export class NotificationDispatcher {
 			return result;
 		}
 
-		// Send to each channel
-		const sendPromises = channels.map((channel) =>
-			this.sendToChannelInternal(channel, payload, options)
-		);
+		// Process each channel - batching enabled channels store for later, others send immediately
+		const sendPromises = channels.map(async (channel) => {
+			// Check if batching is enabled for this channel (Requirement 9.3)
+			if (channel.batchingEnabled) {
+				// Store as pending for later batching
+				const stored = await this.storeForBatching(channel, eventType, eventData);
+				return { type: 'batched' as const, success: stored };
+			} else {
+				// Send immediately
+				const sendResult = await this.sendToChannelInternal(channel, payload, options);
+				return { type: 'sent' as const, result: sendResult };
+			}
+		});
 
 		const channelResults = await Promise.all(sendPromises);
 
 		// Aggregate results
 		for (const channelResult of channelResults) {
-			if (channelResult === null) {
-				// Channel was skipped (unsupported type)
-				result.skippedCount++;
-			} else {
-				result.channelResults.push(channelResult);
+			if (channelResult.type === 'batched') {
+				// Notification was stored for batching
 				if (channelResult.success) {
-					result.successCount++;
+					result.batchedCount++;
 				} else {
 					result.failureCount++;
+				}
+			} else {
+				// Notification was sent immediately
+				if (channelResult.result === null) {
+					// Channel was skipped (unsupported type)
+					result.skippedCount++;
+				} else {
+					result.channelResults.push(channelResult.result);
+					if (channelResult.result.success) {
+						result.successCount++;
+					} else {
+						result.failureCount++;
+					}
 				}
 			}
 		}
 
 		return result;
+	}
+
+	/**
+	 * Store a notification for batching (Requirement 9.3).
+	 *
+	 * Instead of sending immediately, store the notification as pending
+	 * in notification history. The batch processor will send it later.
+	 *
+	 * @param channel - The channel to store for
+	 * @param eventType - The event type
+	 * @param eventData - The event data
+	 * @returns true if stored successfully
+	 */
+	private async storeForBatching<T extends NotificationEventType>(
+		channel: NotificationChannel,
+		eventType: T,
+		eventData: EventDataMap[T]
+	): Promise<boolean> {
+		try {
+			await createNotificationHistory({
+				channelId: channel.id,
+				eventType,
+				eventData: eventData as Record<string, unknown>,
+				status: 'pending'
+			});
+			return true;
+		} catch (error) {
+			console.error('[Notifications] Failed to store notification for batching:', {
+				channelId: channel.id,
+				channelName: channel.name,
+				eventType,
+				error: error instanceof Error ? error.message : String(error)
+			});
+			return false;
+		}
 	}
 
 	/**

@@ -188,6 +188,22 @@ export async function getEnabledNotificationChannels(): Promise<NotificationChan
 }
 
 /**
+ * Gets enabled notification channels that have batching enabled.
+ * Used by the batch processor to find channels that need batch processing.
+ *
+ * @returns Array of batching-enabled channels
+ */
+export async function getBatchingEnabledChannels(): Promise<NotificationChannel[]> {
+	return db
+		.select()
+		.from(notificationChannels)
+		.where(
+			and(eq(notificationChannels.enabled, true), eq(notificationChannels.batchingEnabled, true))
+		)
+		.orderBy(notificationChannels.id);
+}
+
+/**
  * Gets enabled notification channels that have a specific event type enabled.
  * Used to determine which channels should receive a particular notification.
  *

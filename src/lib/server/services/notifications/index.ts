@@ -221,3 +221,18 @@ export {
 	type AppStartedData,
 	type UpdateAvailableData
 } from './templates';
+
+// =============================================================================
+// Batching Exports (Task 36.4, Requirement 9.3)
+// =============================================================================
+
+export {
+	NotificationBatcher,
+	getNotificationBatcher,
+	processBatches,
+	type BatchProcessingResult,
+	type ChannelBatchResult,
+	type BatchSendResult
+} from './batcher';
+
+export { buildAggregatePayload, type AggregatedPayloadMetadata } from './aggregators';

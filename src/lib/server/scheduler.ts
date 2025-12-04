@@ -633,6 +633,43 @@ export function initializeScheduler(): void {
 		cron: queueProcessorJob
 	});
 
+	// =========================================================================
+	// Notification Batch Processor (Requirement 9.3)
+	// =========================================================================
+
+	// Notification batch processor - runs every minute
+	// Processes pending batched notifications and sends digest notifications
+	const notificationBatchJob = new Cron(
+		'* * * * *', // Every minute
+		{
+			name: 'notification-batch-processor',
+			protect: true, // Prevent overlapping executions
+			catch: (err) => {
+				console.error('[scheduler] Notification batch processing failed:', err);
+			}
+		},
+		async () => {
+			const { processBatches } = await import('$lib/server/services/notifications/batcher');
+
+			const result = await processBatches();
+
+			// Only log if there was activity
+			if (result.batchesSent > 0 || result.errors > 0) {
+				console.log('[scheduler] Notification batches processed:', {
+					channelsProcessed: result.channelsProcessed,
+					batchesSent: result.batchesSent,
+					notificationsBatched: result.notificationsBatched,
+					errors: result.errors
+				});
+			}
+		}
+	);
+
+	jobs.set('notification-batch-processor', {
+		name: 'notification-batch-processor',
+		cron: notificationBatchJob
+	});
+
 	initialized = true;
 	console.log('[scheduler] Scheduled jobs initialized:', Array.from(jobs.keys()));
 }

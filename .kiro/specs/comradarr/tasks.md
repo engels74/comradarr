@@ -575,7 +575,7 @@
     - Support message templating
     - _Requirements: 9.2_
 
-  - [ ] 36.4 Implement notification batching
+  - [x] 36.4 Implement notification batching
     - Combine similar events within time window
     - _Requirements: 9.3_
 
