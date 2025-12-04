@@ -6,6 +6,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Comradarr is a media library completion service that integrates with *arr applications (Sonarr, Radarr, Whisparr) to systematically identify and request missing or upgradeable content.
 
+## IMPORTANT
+Always use auggie mcp tool (codebase-retrieval) when working with code in this repository.
+
 ### Problem Solved
 
 *arr applications only monitor RSS feeds for new releases—they don't actively search for older missing content. Comradarr fills this gap by running scheduled sweeps to find content gaps and upgrade candidates.
