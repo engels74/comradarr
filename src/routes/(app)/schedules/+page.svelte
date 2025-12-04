@@ -1,6 +1,10 @@
 <script lang="ts">
+	/**
+	 * Schedules list page with timeline visualization.
+	 * Requirements: 19.1, 19.4
+	 */
 	import type { PageProps } from './$types';
-	import { ScheduleCard } from '$lib/components/schedules';
+	import { ScheduleCard, ScheduleTimeline } from '$lib/components/schedules';
 	import { Button } from '$lib/components/ui/button';
 
 	let { data }: PageProps = $props();
@@ -30,10 +34,14 @@
 			<Button href="/schedules/new">Add Schedule</Button>
 		</div>
 	{:else}
+		<!-- Schedule Cards -->
 		<div class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
 			{#each data.schedules as schedule (schedule.id)}
 				<ScheduleCard {schedule} />
 			{/each}
 		</div>
+
+		<!-- Timeline Visualization -->
+		<ScheduleTimeline timeline={data.timeline} class="mt-8" />
 	{/if}
 </div>

@@ -588,7 +588,7 @@
 
 ## Phase 17: Schedule Management UI
 
-- [ ] 38. Create schedule management pages
+- [x] 38. Create schedule management pages
   - [x] 38.1 Create schedule list page
     - Display schedules with connector, cron, next run
     - Add enable/disable toggle
@@ -600,11 +600,11 @@
     - Add throttle profile selection
     - _Requirements: 19.2, 19.3_
 
-  - [ ] 38.3 Create timeline visualization
+  - [x] 38.3 Create timeline visualization
     - Display calendar view of upcoming sweeps
     - _Requirements: 19.4_
 
-- [ ] 39. Checkpoint - Ensure all tests pass
+- [x] 39. Checkpoint - Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
 ## Phase 18: Analytics
