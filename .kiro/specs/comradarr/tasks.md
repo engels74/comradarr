@@ -615,7 +615,7 @@
     - Define aggregated statistics tables
     - _Requirements: 12.1_
 
-  - [ ] 40.2 Implement analytics collectors
+  - [x] 40.2 Implement analytics collectors
     - Track gap discovery rate
     - Track search volume and success rate
     - Track queue depth

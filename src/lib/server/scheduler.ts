@@ -12,6 +12,7 @@
  * - 8.1: Execute sweeps at specified cron intervals
  * - 8.2: Run discovery for configured search types
  * - 8.4: Log summary of discoveries and items queued
+ * - 12.1: Track analytics (gap discovery, search volume, queue depth)
  * - 15.4: Capture completion snapshots for trend visualization
  * - 38.2: Periodic Prowlarr health checks
  *
@@ -23,6 +24,9 @@
  * - full-reconciliation: Daily at 3 AM - complete sync with deletion of removed items
  * - completion-snapshot: Daily at 4 AM - captures library completion stats for trend sparklines
  * - queue-processor: Every minute - re-enqueues cooldown items, dispatches searches
+ * - queue-depth-sampler: Every 5 minutes - samples queue depth for analytics
+ * - analytics-hourly-aggregation: 5 min past each hour - aggregates raw events to hourly stats
+ * - analytics-daily-aggregation: Daily at 1 AM - aggregates hourly to daily stats, cleans old events
  */
 
 import { Cron } from 'croner';
@@ -53,6 +57,12 @@ import {
 	markSearchFailed,
 	type FailureCategory
 } from '$lib/server/services/queue';
+import {
+	analyticsCollector,
+	aggregateHourlyStats,
+	aggregateDailyStats,
+	cleanupOldEvents
+} from '$lib/server/services/analytics';
 
 // =============================================================================
 // Types
@@ -348,9 +358,13 @@ export function initializeScheduler(): void {
 
 					if (gapsResult.success) {
 						summary.totalGapsFound += gapsResult.registriesCreated;
+						// Record analytics for gap discovery (Requirement 12.1)
+						await analyticsCollector.recordGapDiscovery(connector.id, gapsResult);
 					}
 					if (upgradesResult.success) {
 						summary.totalUpgradesFound += upgradesResult.registriesCreated;
+						// Record analytics for upgrade discovery (Requirement 12.1)
+						await analyticsCollector.recordUpgradeDiscovery(connector.id, upgradesResult);
 					}
 
 					// 3. Enqueue pending items
@@ -453,9 +467,13 @@ export function initializeScheduler(): void {
 
 					if (gapsResult.success) {
 						summary.totalGapsFound += gapsResult.registriesCreated;
+						// Record analytics for gap discovery (Requirement 12.1)
+						await analyticsCollector.recordGapDiscovery(connector.id, gapsResult);
 					}
 					if (upgradesResult.success) {
 						summary.totalUpgradesFound += upgradesResult.registriesCreated;
+						// Record analytics for upgrade discovery (Requirement 12.1)
+						await analyticsCollector.recordUpgradeDiscovery(connector.id, upgradesResult);
 					}
 
 					// 3. Enqueue pending items
@@ -577,6 +595,8 @@ export function initializeScheduler(): void {
 								? { movieIds: [item.contentId] }
 								: { episodeIds: [item.contentId] };
 
+						// Track response time for analytics (Requirement 12.1)
+						const dispatchStartTime = Date.now();
 						const dispatchResult = await dispatchSearch(
 							item.connectorId,
 							item.searchRegistryId,
@@ -584,17 +604,21 @@ export function initializeScheduler(): void {
 							item.searchType,
 							dispatchOptions
 						);
+						const responseTimeMs = Date.now() - dispatchStartTime;
 
 						if (dispatchResult.success) {
 							summary.succeeded++;
+							// Record successful dispatch analytics (Requirement 12.1)
+							await analyticsCollector.recordSearchDispatched(
+								item.connectorId,
+								item.searchRegistryId,
+								item.contentType,
+								item.searchType,
+								dispatchResult.commandId!,
+								responseTimeMs
+							);
 						} else {
 							summary.failed++;
-
-							if (dispatchResult.rateLimited) {
-								summary.rateLimited++;
-								// Stop processing this connector if rate limited
-								break;
-							}
 
 							// Mark the search as failed with appropriate category
 							const failureCategory: FailureCategory = dispatchResult.rateLimited
@@ -604,6 +628,23 @@ export function initializeScheduler(): void {
 									: dispatchResult.error?.includes('network')
 										? 'network_error'
 										: 'server_error';
+
+							// Record failed dispatch analytics (Requirement 12.1)
+							await analyticsCollector.recordSearchFailed(
+								item.connectorId,
+								item.searchRegistryId,
+								item.contentType,
+								item.searchType,
+								failureCategory,
+								dispatchResult.error,
+								responseTimeMs
+							);
+
+							if (dispatchResult.rateLimited) {
+								summary.rateLimited++;
+								// Stop processing this connector if rate limited
+								break;
+							}
 
 							await markSearchFailed({
 								searchRegistryId: item.searchRegistryId,
@@ -676,6 +717,114 @@ export function initializeScheduler(): void {
 	jobs.set('notification-batch-processor', {
 		name: 'notification-batch-processor',
 		cron: notificationBatchJob
+	});
+
+	// =========================================================================
+	// Analytics Jobs (Requirement 12.1)
+	// =========================================================================
+
+	// Queue depth sampler - runs every 5 minutes
+	// Samples queue depth for analytics tracking
+	const queueDepthSamplerJob = new Cron(
+		'*/5 * * * *', // Every 5 minutes
+		{
+			name: 'queue-depth-sampler',
+			protect: true, // Prevent overlapping executions
+			catch: (err) => {
+				console.error('[scheduler] Queue depth sampling failed:', err);
+			}
+		},
+		async () => {
+			const samples = await analyticsCollector.sampleQueueDepth();
+
+			if (samples.length > 0) {
+				const totalDepth = samples.reduce((sum, s) => sum + s.queueDepth, 0);
+				console.log('[scheduler] Queue depth sampled:', {
+					connectors: samples.length,
+					totalQueueDepth: totalDepth
+				});
+			}
+		}
+	);
+
+	jobs.set('queue-depth-sampler', {
+		name: 'queue-depth-sampler',
+		cron: queueDepthSamplerJob
+	});
+
+	// Hourly stats aggregation - runs at minute 5 of every hour
+	// Aggregates raw events into hourly statistics
+	const hourlyAggregationJob = new Cron(
+		'5 * * * *', // 5 minutes past every hour
+		{
+			name: 'analytics-hourly-aggregation',
+			protect: true, // Prevent overlapping executions
+			catch: (err) => {
+				console.error('[scheduler] Hourly analytics aggregation failed:', err);
+			}
+		},
+		async () => {
+			// Aggregate the previous hour
+			const previousHour = new Date();
+			previousHour.setHours(previousHour.getHours() - 1);
+			previousHour.setMinutes(0, 0, 0);
+
+			const result = await aggregateHourlyStats(previousHour);
+
+			if (result.success && result.hourlyStatsUpdated > 0) {
+				console.log('[scheduler] Hourly analytics aggregated:', {
+					hour: previousHour.toISOString(),
+					statsUpdated: result.hourlyStatsUpdated,
+					eventsProcessed: result.eventsProcessed,
+					durationMs: result.durationMs
+				});
+			}
+		}
+	);
+
+	jobs.set('analytics-hourly-aggregation', {
+		name: 'analytics-hourly-aggregation',
+		cron: hourlyAggregationJob
+	});
+
+	// Daily stats aggregation - runs at 1:00 AM
+	// Aggregates hourly stats into daily statistics and cleans up old events
+	const dailyAggregationJob = new Cron(
+		'0 1 * * *', // 1:00 AM daily
+		{
+			name: 'analytics-daily-aggregation',
+			protect: true, // Prevent overlapping executions
+			catch: (err) => {
+				console.error('[scheduler] Daily analytics aggregation failed:', err);
+			}
+		},
+		async () => {
+			// Aggregate the previous day
+			const previousDay = new Date();
+			previousDay.setDate(previousDay.getDate() - 1);
+			previousDay.setHours(0, 0, 0, 0);
+
+			const result = await aggregateDailyStats(previousDay);
+
+			if (result.success) {
+				console.log('[scheduler] Daily analytics aggregated:', {
+					date: previousDay.toISOString().split('T')[0],
+					statsUpdated: result.dailyStatsUpdated,
+					durationMs: result.durationMs
+				});
+			}
+
+			// Cleanup old raw events (keep 7 days)
+			const eventsDeleted = await cleanupOldEvents(7);
+			if (eventsDeleted > 0) {
+				console.log('[scheduler] Old analytics events cleaned up:', eventsDeleted);
+			}
+		}
+	);
+
+	jobs.set('analytics-daily-aggregation', {
+		name: 'analytics-daily-aggregation',
+		cron: dailyAggregationJob
 	});
 
 	initialized = true;
