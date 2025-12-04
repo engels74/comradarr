@@ -12,8 +12,9 @@
  * - users, sessions: Authentication (Requirements 10.1, 10.2)
  * - prowlarrInstances: Prowlarr connections for indexer health monitoring (Requirements 38.1)
  * - prowlarrIndexerHealth: Cached indexer health status (Requirements 38.2, 38.4)
+ * - completionSnapshots: Library completion history for trend visualization (Requirements 15.4)
  *
- * Requirements: 7.1, 7.4, 7.5, 10.1, 10.2, 14.1, 14.2, 14.3, 38.1, 38.2, 38.4
+ * Requirements: 7.1, 7.4, 7.5, 10.1, 10.2, 14.1, 14.2, 14.3, 15.4, 38.1, 38.2, 38.4
  */
 
 import {
@@ -451,3 +452,39 @@ export type NewProwlarrInstance = typeof prowlarrInstances.$inferInsert;
 
 export type ProwlarrIndexerHealth = typeof prowlarrIndexerHealth.$inferSelect;
 export type NewProwlarrIndexerHealth = typeof prowlarrIndexerHealth.$inferInsert;
+
+// =============================================================================
+// Completion Snapshots Table (Requirements 15.4)
+// =============================================================================
+
+/**
+ * Stores periodic library completion snapshots for trend visualization.
+ * Captured daily by scheduler job for sparkline display on dashboard.
+ */
+export const completionSnapshots = pgTable(
+	'completion_snapshots',
+	{
+		id: integer('id').primaryKey().generatedAlwaysAsIdentity(),
+		connectorId: integer('connector_id')
+			.notNull()
+			.references(() => connectors.id, { onDelete: 'cascade' }),
+		capturedAt: timestamp('captured_at', { withTimezone: true }).notNull().defaultNow(),
+		// Episode stats (for Sonarr/Whisparr)
+		episodesMonitored: integer('episodes_monitored').notNull().default(0),
+		episodesDownloaded: integer('episodes_downloaded').notNull().default(0),
+		// Movie stats (for Radarr)
+		moviesMonitored: integer('movies_monitored').notNull().default(0),
+		moviesDownloaded: integer('movies_downloaded').notNull().default(0),
+		// Computed completion percentage stored as basis points (0-10000) for precision
+		completionPercentage: integer('completion_percentage').notNull().default(0)
+	},
+	(table) => [
+		// Index for querying recent snapshots per connector (most recent first)
+		index('completion_snapshots_connector_time_idx').on(table.connectorId, table.capturedAt.desc()),
+		// Unique constraint to prevent duplicate snapshots at same timestamp
+		uniqueIndex('completion_snapshots_connector_captured_idx').on(table.connectorId, table.capturedAt)
+	]
+);
+
+export type CompletionSnapshot = typeof completionSnapshots.$inferSelect;
+export type NewCompletionSnapshot = typeof completionSnapshots.$inferInsert;

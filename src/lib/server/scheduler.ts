@@ -12,6 +12,7 @@
  * - 8.1: Execute sweeps at specified cron intervals
  * - 8.2: Run discovery for configured search types
  * - 8.4: Log summary of discoveries and items queued
+ * - 15.4: Capture completion snapshots for trend visualization
  * - 38.2: Periodic Prowlarr health checks
  *
  * Jobs:
@@ -20,6 +21,7 @@
  * - connector-health-check: Every 5 minutes - checks *arr connector health
  * - incremental-sync-sweep: Every 15 minutes - syncs content, discovers gaps/upgrades, enqueues items
  * - full-reconciliation: Daily at 3 AM - complete sync with deletion of removed items
+ * - completion-snapshot: Daily at 4 AM - captures library completion stats for trend sparklines
  * - queue-processor: Every minute - re-enqueues cooldown items, dispatches searches
  */
 
@@ -477,6 +479,46 @@ export function initializeScheduler(): void {
 	jobs.set('full-reconciliation', {
 		name: 'full-reconciliation',
 		cron: fullReconciliationJob
+	});
+
+	// =========================================================================
+	// Completion Snapshot Job (Requirement 15.4)
+	// =========================================================================
+
+	// Completion snapshot capture - runs daily at 4 AM (after full reconciliation at 3 AM)
+	// Captures library completion stats for trend visualization (sparklines)
+	const completionSnapshotJob = new Cron(
+		'0 4 * * *', // Daily at 4:00 AM
+		{
+			name: 'completion-snapshot',
+			protect: true, // Prevent overlapping executions
+			catch: (err) => {
+				console.error('[scheduler] Completion snapshot failed:', err);
+			}
+		},
+		async () => {
+			const { captureCompletionSnapshots, cleanupOldSnapshots } = await import(
+				'$lib/server/db/queries/completion'
+			);
+
+			// Capture current state
+			const captured = await captureCompletionSnapshots();
+
+			// Clean up old snapshots (keep 30 days)
+			const cleaned = await cleanupOldSnapshots(30);
+
+			if (captured > 0 || cleaned > 0) {
+				console.log('[scheduler] Completion snapshot:', {
+					snapshotsCaptured: captured,
+					oldSnapshotsCleaned: cleaned
+				});
+			}
+		}
+	);
+
+	jobs.set('completion-snapshot', {
+		name: 'completion-snapshot',
+		cron: completionSnapshotJob
 	});
 
 	// Queue processor - runs every minute

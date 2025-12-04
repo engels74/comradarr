@@ -1,6 +1,6 @@
 /**
  * Types for dashboard components.
- * Requirements: 15.1, 15.2, 15.3
+ * Requirements: 15.1, 15.2, 15.3, 15.4
  */
 
 /**
@@ -42,4 +42,50 @@ export interface SerializedActivity {
 	connectorName?: string | undefined;
 	/** Connector type (sonarr, radarr, whisparr) */
 	connectorType?: string | undefined;
+}
+
+// =============================================================================
+// Library Completion Types (Requirement 15.4)
+// =============================================================================
+
+/**
+ * Serialized completion data point for sparklines.
+ * Requirements: 15.4
+ */
+export interface SerializedCompletionDataPoint {
+	/** ISO timestamp string when snapshot was captured */
+	capturedAt: string;
+	/** Completion percentage (0-100) */
+	completionPercentage: number;
+}
+
+/**
+ * Serialized connector completion stats with trend data for dashboard display.
+ * Requirements: 15.4
+ */
+export interface SerializedConnectorCompletion {
+	/** Connector ID */
+	connectorId: number;
+	/** Connector display name */
+	connectorName: string;
+	/** Connector type (sonarr, radarr, whisparr) */
+	connectorType: string;
+	/** Number of monitored episodes */
+	episodesMonitored: number;
+	/** Number of downloaded episodes */
+	episodesDownloaded: number;
+	/** Number of monitored movies */
+	moviesMonitored: number;
+	/** Number of downloaded movies */
+	moviesDownloaded: number;
+	/** Total monitored items (episodes + movies) */
+	totalMonitored: number;
+	/** Total downloaded items (episodes + movies) */
+	totalDownloaded: number;
+	/** Current completion percentage (0-100) */
+	completionPercentage: number;
+	/** Historical trend data points for sparkline */
+	trend: SerializedCompletionDataPoint[];
+	/** Change in completion percentage over trend period */
+	trendDelta: number;
 }

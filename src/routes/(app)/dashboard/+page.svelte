@@ -1,6 +1,7 @@
 <script lang="ts">
 	import ActivityFeed from '$lib/components/dashboard/ActivityFeed.svelte';
 	import ConnectionStatusPanel from '$lib/components/dashboard/ConnectionStatusPanel.svelte';
+	import LibraryCompletionPanel from '$lib/components/dashboard/LibraryCompletionPanel.svelte';
 	import StatisticsPanel from '$lib/components/dashboard/StatisticsPanel.svelte';
 	import type { PageProps } from './$types';
 
@@ -11,14 +12,17 @@
 	<!-- Page Header -->
 	<div class="mb-6">
 		<h1 class="text-3xl font-bold">Dashboard</h1>
-		<p class="text-muted-foreground mt-1">
-			Overview of your media library completion status
-		</p>
+		<p class="text-muted-foreground mt-1">Overview of your media library completion status</p>
 	</div>
 
 	<!-- Statistics Section -->
 	<div class="mb-6">
 		<StatisticsPanel contentStats={data.contentStats} todayStats={data.todayStats} />
+	</div>
+
+	<!-- Library Completion Section (Requirement 15.4) -->
+	<div class="mb-6">
+		<LibraryCompletionPanel completionData={data.completionData} />
 	</div>
 
 	<!-- Connection Status Section -->

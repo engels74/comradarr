@@ -541,7 +541,7 @@
     - Show system events
     - _Requirements: 15.3_
 
-  - [ ] 34.4 Create library completion visualization
+  - [x] 34.4 Create library completion visualization
     - Show per-connector completion percentage
     - Add trend sparklines
     - _Requirements: 15.4_
