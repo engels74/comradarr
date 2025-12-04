@@ -536,7 +536,7 @@
     - Show searches completed today and success rate
     - _Requirements: 15.2_
 
-  - [ ] 34.3 Create activity feed
+  - [x] 34.3 Create activity feed
     - Display recent discoveries and search outcomes
     - Show system events
     - _Requirements: 15.3_

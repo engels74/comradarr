@@ -1,4 +1,5 @@
 <script lang="ts">
+	import ActivityFeed from '$lib/components/dashboard/ActivityFeed.svelte';
 	import ConnectionStatusPanel from '$lib/components/dashboard/ConnectionStatusPanel.svelte';
 	import StatisticsPanel from '$lib/components/dashboard/StatisticsPanel.svelte';
 	import type { PageProps } from './$types';
@@ -23,5 +24,10 @@
 	<!-- Connection Status Section -->
 	<div class="mb-6">
 		<ConnectionStatusPanel connectors={data.connectors} stats={data.stats} />
+	</div>
+
+	<!-- Activity Feed Section -->
+	<div class="mb-6">
+		<ActivityFeed activities={data.activities} />
 	</div>
 </div>

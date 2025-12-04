@@ -2,17 +2,19 @@ import { getAllConnectors, getAllConnectorStats } from '$lib/server/db/queries/c
 import type { ConnectorStats } from '$lib/server/db/queries/connectors';
 import { getContentStatusCounts } from '$lib/server/db/queries/content';
 import { getTodaySearchStats } from '$lib/server/db/queries/queue';
+import { getRecentActivity } from '$lib/server/db/queries/activity';
 import type { PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ parent }) => {
 	const parentData = await parent();
 
 	// Fetch all dashboard data in parallel
-	const [connectors, statsMap, contentStats, todayStats] = await Promise.all([
+	const [connectors, statsMap, contentStats, todayStats, recentActivity] = await Promise.all([
 		getAllConnectors(),
 		getAllConnectorStats(),
 		getContentStatusCounts(),
-		getTodaySearchStats()
+		getTodaySearchStats(),
+		getRecentActivity(15)
 	]);
 
 	// Convert Map to plain object for serialization
@@ -21,11 +23,18 @@ export const load: PageServerLoad = async ({ parent }) => {
 		stats[id] = stat;
 	}
 
+	// Serialize activity timestamps to ISO strings
+	const activities = recentActivity.map((activity) => ({
+		...activity,
+		timestamp: activity.timestamp.toISOString()
+	}));
+
 	return {
 		...parentData,
 		connectors,
 		stats,
 		contentStats,
-		todayStats
+		todayStats,
+		activities
 	};
 };
