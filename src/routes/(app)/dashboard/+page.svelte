@@ -1,5 +1,6 @@
 <script lang="ts">
 	import ConnectionStatusPanel from '$lib/components/dashboard/ConnectionStatusPanel.svelte';
+	import StatisticsPanel from '$lib/components/dashboard/StatisticsPanel.svelte';
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();
@@ -14,13 +15,13 @@
 		</p>
 	</div>
 
+	<!-- Statistics Section -->
+	<div class="mb-6">
+		<StatisticsPanel contentStats={data.contentStats} todayStats={data.todayStats} />
+	</div>
+
 	<!-- Connection Status Section -->
 	<div class="mb-6">
 		<ConnectionStatusPanel connectors={data.connectors} stats={data.stats} />
 	</div>
-
-	<!-- Welcome Message (can be removed or moved later) -->
-	<!-- <p class="text-muted-foreground">
-		Welcome, {data.user.displayName ?? data.user.username}!
-	</p> -->
 </div>

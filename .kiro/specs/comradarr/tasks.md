@@ -531,7 +531,7 @@
     - Show last sync time per connector
     - _Requirements: 15.1_
 
-  - [ ] 34.2 Create statistics cards
+  - [x] 34.2 Create statistics cards
     - Show total gaps, upgrade candidates, queue items
     - Show searches completed today and success rate
     - _Requirements: 15.2_

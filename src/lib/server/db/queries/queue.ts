@@ -853,3 +853,51 @@ export async function getRecentCompletions(limit: number = 25): Promise<RecentCo
 		createdAt: new Date(row.createdat as string)
 	}));
 }
+
+// =============================================================================
+// Today's Search Statistics (Requirement 15.2)
+// =============================================================================
+
+/**
+ * Statistics for searches completed today.
+ */
+export interface TodaySearchStats {
+	completedToday: number;
+	successfulToday: number;
+	successRate: number;
+}
+
+/**
+ * Gets search statistics for today (UTC).
+ *
+ * Returns:
+ * - completedToday: Total searches completed today
+ * - successfulToday: Searches with outcome='success' today
+ * - successRate: Percentage (0-100), 0 if no searches
+ *
+ * Requirements: 15.2
+ */
+export async function getTodaySearchStats(): Promise<TodaySearchStats> {
+	// Get start of today in UTC
+	const todayStart = new Date();
+	todayStart.setUTCHours(0, 0, 0, 0);
+
+	// Query for total and successful counts in one query
+	const result = await db
+		.select({
+			total: count(),
+			successful: sql<number>`COUNT(*) FILTER (WHERE ${searchHistory.outcome} = 'success')::int`
+		})
+		.from(searchHistory)
+		.where(sql`${searchHistory.createdAt} >= ${todayStart.toISOString()}`);
+
+	const completedToday = result[0]?.total ?? 0;
+	const successfulToday = result[0]?.successful ?? 0;
+	const successRate = completedToday > 0 ? Math.round((successfulToday / completedToday) * 100) : 0;
+
+	return {
+		completedToday,
+		successfulToday,
+		successRate
+	};
+}

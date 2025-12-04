@@ -1,14 +1,18 @@
 import { getAllConnectors, getAllConnectorStats } from '$lib/server/db/queries/connectors';
 import type { ConnectorStats } from '$lib/server/db/queries/connectors';
+import { getContentStatusCounts } from '$lib/server/db/queries/content';
+import { getTodaySearchStats } from '$lib/server/db/queries/queue';
 import type { PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ parent }) => {
 	const parentData = await parent();
 
-	// Fetch connectors and statistics in parallel
-	const [connectors, statsMap] = await Promise.all([
+	// Fetch all dashboard data in parallel
+	const [connectors, statsMap, contentStats, todayStats] = await Promise.all([
 		getAllConnectors(),
-		getAllConnectorStats()
+		getAllConnectorStats(),
+		getContentStatusCounts(),
+		getTodaySearchStats()
 	]);
 
 	// Convert Map to plain object for serialization
@@ -20,6 +24,8 @@ export const load: PageServerLoad = async ({ parent }) => {
 	return {
 		...parentData,
 		connectors,
-		stats
+		stats,
+		contentStats,
+		todayStats
 	};
 };
