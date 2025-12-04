@@ -516,9 +516,9 @@
     - Show outcome indicators
     - _Requirements: 18.4_
 
-    - [ ] 32.4 Implement real-time updates
-      - Use SvelteKit invalidation for queue updates
-      - _Requirements: 18.5_
+  - [x] 32.4 Implement real-time updates
+    - Use SvelteKit invalidation for queue updates
+    - _Requirements: 18.5_
 
 - [x] 33. Checkpoint - Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
