@@ -594,7 +594,7 @@
     - Add enable/disable toggle
     - _Requirements: 19.1_
 
-  - [ ] 38.2 Create schedule editor
+  - [x] 38.2 Create schedule editor
     - Add connector and sweep type selection
     - Add cron expression input with builder UI
     - Add throttle profile selection
