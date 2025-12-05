@@ -693,8 +693,8 @@
 
 ## Phase 21: Health Check and Logging
 
-- [ ] 46. Implement health check endpoint
-  - [ ] 46.1 Create /health endpoint
+- [x] 46. Implement health check endpoint
+  - [x] 46.1 Create /health endpoint
     - Return application status
     - Return database connection status
     - Return per-connector health summary
