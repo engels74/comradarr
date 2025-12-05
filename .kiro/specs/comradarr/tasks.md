@@ -641,7 +641,7 @@
     - Add application name, timezone, log level options
     - _Requirements: 21.1_
 
-  - [ ] 42.2 Create throttle profiles page
+  - [x] 42.2 Create throttle profiles page
     - List profiles with presets
     - Add create/edit custom profile form
     - _Requirements: 21.2_
