@@ -1,12 +1,12 @@
 /**
  * Database queries for authentication operations.
  *
- * Requirements: 10.1, 10.2, 35.1-35.5
+ * Requirements: 10.1, 10.2, 21.5, 35.1-35.5
  */
 
 import { db } from '$lib/server/db';
-import { users, type User, type NewUser } from '$lib/server/db/schema';
-import { eq, sql } from 'drizzle-orm';
+import { users, sessions, type User, type NewUser } from '$lib/server/db/schema';
+import { eq, sql, and, ne, desc } from 'drizzle-orm';
 import {
 	MAX_FAILED_ATTEMPTS,
 	LOCKOUT_DURATION_MINUTES,
@@ -214,4 +214,82 @@ export async function updateUserPassword(userId: number, passwordHash: string): 
 export async function hasUsers(): Promise<boolean> {
 	const result = await db.select({ id: users.id }).from(users).limit(1);
 	return result.length > 0;
+}
+
+// =============================================================================
+// Session Management (Requirements 21.5)
+// =============================================================================
+
+/**
+ * Represents a user session for display in security settings.
+ */
+export interface UserSession {
+	id: string;
+	createdAt: Date;
+	lastAccessedAt: Date;
+	expiresAt: Date;
+	userAgent: string | null;
+	ipAddress: string | null;
+	isCurrent: boolean;
+}
+
+/**
+ * Gets all active sessions for a user.
+ *
+ * @param userId - The user ID to get sessions for
+ * @param currentSessionId - Optional current session ID to mark as current
+ * @returns Array of user sessions, sorted by last accessed (most recent first)
+ */
+export async function getUserSessions(userId: number, currentSessionId?: string): Promise<UserSession[]> {
+	const now = new Date();
+
+	const result = await db
+		.select({
+			id: sessions.id,
+			createdAt: sessions.createdAt,
+			lastAccessedAt: sessions.lastAccessedAt,
+			expiresAt: sessions.expiresAt,
+			userAgent: sessions.userAgent,
+			ipAddress: sessions.ipAddress
+		})
+		.from(sessions)
+		.where(and(eq(sessions.userId, userId), sql`${sessions.expiresAt} > ${now}`))
+		.orderBy(desc(sessions.lastAccessedAt));
+
+	return result.map((session) => ({
+		...session,
+		isCurrent: session.id === currentSessionId
+	}));
+}
+
+/**
+ * Deletes a specific session for a user.
+ *
+ * @param userId - The user ID (for authorization check)
+ * @param sessionId - The session ID to delete
+ * @returns true if session was deleted, false if not found or unauthorized
+ */
+export async function deleteUserSession(userId: number, sessionId: string): Promise<boolean> {
+	const result = await db
+		.delete(sessions)
+		.where(and(eq(sessions.id, sessionId), eq(sessions.userId, userId)))
+		.returning({ id: sessions.id });
+
+	return result.length > 0;
+}
+
+/**
+ * Deletes all sessions for a user except the current one.
+ *
+ * @param userId - The user ID
+ * @param currentSessionId - The current session ID to keep
+ * @returns Number of sessions deleted
+ */
+export async function deleteOtherUserSessions(userId: number, currentSessionId: string): Promise<number> {
+	const result = await db
+		.delete(sessions)
+		.where(and(eq(sessions.userId, userId), ne(sessions.id, currentSessionId)))
+		.returning({ id: sessions.id });
+
+	return result.length;
 }

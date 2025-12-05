@@ -636,7 +636,7 @@
 
 ## Phase 19: Settings UI
 
-- [ ] 42. Create settings pages
+- [x] 42. Create settings pages
   - [x] 42.1 Create general settings page
     - Add application name, timezone, log level options
     - _Requirements: 21.1_
@@ -659,13 +659,13 @@
     - Add cooldown and retry settings
     - _Requirements: 21.4_
 
-  - [ ] 42.5 Create security settings page
+  - [x] 42.5 Create security settings page
     - Add authentication mode selection
     - Add password change form
     - Add session management
     - _Requirements: 21.5_
 
-- [ ] 43. Checkpoint - Ensure all tests pass
+- [x] 43. Checkpoint - Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
 ## Phase 20: Database Maintenance

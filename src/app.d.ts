@@ -14,6 +14,10 @@ declare global {
 				role: string;
 			} | null;
 			correlationId: string;
+			/** Current session ID (if authenticated via session) */
+			sessionId?: string;
+			/** True when auth is bypassed for local network access (Req 10.3) */
+			isLocalBypass?: boolean;
 		}
 		// interface PageData {}
 		// interface PageState {}

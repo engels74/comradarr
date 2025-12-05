@@ -1,7 +1,7 @@
 /**
  * Database queries for application settings operations.
  *
- * Requirements: 21.1, 21.4
+ * Requirements: 21.1, 21.4, 21.5
  *
  * Application settings are stored as key-value pairs with defaults applied
  * when a setting is not explicitly configured.
@@ -24,6 +24,15 @@ export const GENERAL_SETTINGS_DEFAULTS = {
 	timezone: 'UTC',
 	log_level: 'info',
 	check_for_updates: 'true'
+} as const;
+
+/**
+ * Default values for security settings.
+ *
+ * Requirements: 21.5, 10.3
+ */
+export const SECURITY_SETTINGS_DEFAULTS = {
+	auth_mode: 'full'
 } as const;
 
 /**
@@ -59,6 +68,7 @@ export const SEARCH_SETTINGS_DEFAULTS = {
  */
 export const SETTINGS_DEFAULTS = {
 	...GENERAL_SETTINGS_DEFAULTS,
+	...SECURITY_SETTINGS_DEFAULTS,
 	...SEARCH_SETTINGS_DEFAULTS
 } as const;
 
@@ -410,4 +420,52 @@ export async function updateSearchSettings(input: SearchSettings): Promise<void>
 				});
 		}
 	});
+}
+
+// =============================================================================
+// Security Settings Types
+// =============================================================================
+
+/**
+ * Valid authentication modes.
+ */
+export type AuthMode = 'full' | 'local_bypass';
+
+/**
+ * Represents the security settings.
+ *
+ * Requirements: 21.5
+ */
+export interface SecuritySettings {
+	authMode: AuthMode;
+}
+
+// =============================================================================
+// Security Settings Operations
+// =============================================================================
+
+/**
+ * Gets security settings with defaults applied.
+ *
+ * Requirements: 21.5
+ *
+ * @returns Security settings object with all fields populated
+ */
+export async function getSecuritySettings(): Promise<SecuritySettings> {
+	const value = await getSetting('auth_mode');
+
+	return {
+		authMode: (value ?? SECURITY_SETTINGS_DEFAULTS.auth_mode) as AuthMode
+	};
+}
+
+/**
+ * Updates security settings.
+ *
+ * Requirements: 21.5
+ *
+ * @param input - Settings to update
+ */
+export async function updateSecuritySettings(input: { authMode: AuthMode }): Promise<void> {
+	await setSetting('auth_mode', input.authMode);
 }

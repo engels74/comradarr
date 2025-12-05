@@ -1,5 +1,6 @@
 import type { Handle } from '@sveltejs/kit';
-import { validateSession } from '$lib/server/auth';
+import { validateSession, isLocalNetworkIP, getClientIP } from '$lib/server/auth';
+import { getSecuritySettings } from '$lib/server/db/queries/settings';
 import { initializeScheduler } from '$lib/server/scheduler';
 
 /** Cookie name for session token */
@@ -29,8 +30,35 @@ export const handle: Handle = async ({ event, resolve }) => {
 	const sessionId = event.cookies.get(SESSION_COOKIE_NAME);
 	if (sessionId) {
 		event.locals.user = await validateSession(sessionId);
+		if (event.locals.user) {
+			event.locals.sessionId = sessionId;
+		}
 	} else {
 		event.locals.user = null;
+	}
+
+	// Local network bypass (Requirement 10.3)
+	// Only check bypass if no valid session exists
+	if (!event.locals.user) {
+		try {
+			const securitySettings = await getSecuritySettings();
+			if (securitySettings.authMode === 'local_bypass') {
+				const clientIP = getClientIP(event.request, event.getClientAddress);
+				if (isLocalNetworkIP(clientIP)) {
+					event.locals.isLocalBypass = true;
+					// Set synthetic user for bypass access with admin role
+					event.locals.user = {
+						id: 0,
+						username: 'local',
+						displayName: 'Local Network',
+						role: 'admin'
+					};
+				}
+			}
+		} catch {
+			// If settings fetch fails, continue without bypass
+			// This ensures the app works even if DB is unavailable
+		}
 	}
 
 	const response = await resolve(event);
