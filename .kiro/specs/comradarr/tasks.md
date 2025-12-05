@@ -675,7 +675,7 @@
     - Implement VACUUM and ANALYZE operations
     - _Requirements: 13.1_
 
-  - [ ] 44.2 Implement orphan cleanup
+  - [x] 44.2 Implement orphan cleanup
     - Delete search state without content mirror items
     - _Requirements: 13.2_
 

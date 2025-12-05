@@ -65,7 +65,7 @@ import {
 	aggregateDailyStats,
 	cleanupOldEvents
 } from '$lib/server/services/analytics';
-import { runDatabaseMaintenance } from '$lib/server/services/maintenance';
+import { runDatabaseMaintenance, cleanupOrphanedSearchState } from '$lib/server/services/maintenance';
 
 // =============================================================================
 // Types
@@ -555,7 +555,8 @@ export function initializeScheduler(): void {
 	// =========================================================================
 
 	// Database maintenance - runs daily at 4:30 AM (after completion snapshot at 4:00 AM)
-	// Executes VACUUM and ANALYZE operations for optimal database performance
+	// Executes VACUUM/ANALYZE and orphan cleanup for optimal database performance
+	// Requirements: 13.1 (VACUUM/ANALYZE), 13.2 (orphan cleanup)
 	const dbMaintenanceJob = new Cron(
 		'30 4 * * *', // Daily at 4:30 AM
 		{
@@ -566,16 +567,33 @@ export function initializeScheduler(): void {
 			}
 		},
 		async () => {
-			const result = await runDatabaseMaintenance();
+			// 1. Run VACUUM and ANALYZE (Requirement 13.1)
+			const maintenanceResult = await runDatabaseMaintenance();
 
-			if (result.success) {
+			if (maintenanceResult.success) {
 				console.log('[scheduler] Database maintenance completed:', {
-					vacuumDurationMs: result.vacuumDurationMs,
-					analyzeDurationMs: result.analyzeDurationMs,
-					totalDurationMs: result.totalDurationMs
+					vacuumDurationMs: maintenanceResult.vacuumDurationMs,
+					analyzeDurationMs: maintenanceResult.analyzeDurationMs,
+					totalDurationMs: maintenanceResult.totalDurationMs
 				});
 			} else {
-				console.error('[scheduler] Database maintenance failed:', result.error);
+				console.error('[scheduler] Database maintenance failed:', maintenanceResult.error);
+			}
+
+			// 2. Run orphan cleanup (Requirement 13.2)
+			const orphanResult = await cleanupOrphanedSearchState();
+
+			if (orphanResult.success) {
+				if (orphanResult.totalOrphansDeleted > 0) {
+					console.log('[scheduler] Orphan cleanup completed:', {
+						episodeOrphansDeleted: orphanResult.episodeOrphansDeleted,
+						movieOrphansDeleted: orphanResult.movieOrphansDeleted,
+						totalOrphansDeleted: orphanResult.totalOrphansDeleted,
+						durationMs: orphanResult.durationMs
+					});
+				}
+			} else {
+				console.error('[scheduler] Orphan cleanup failed:', orphanResult.error);
 			}
 		}
 	);

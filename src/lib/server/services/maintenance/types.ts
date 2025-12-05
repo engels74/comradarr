@@ -50,3 +50,33 @@ export interface MaintenanceResult {
 	/** Error message if maintenance failed */
 	error?: string;
 }
+
+// =============================================================================
+// Orphan Cleanup Types (Requirement 13.2)
+// =============================================================================
+
+/**
+ * Result of an orphan cleanup operation.
+ *
+ * Orphan cleanup deletes search_registry entries that reference
+ * content_id values that no longer exist in the episodes or movies tables.
+ */
+export interface OrphanCleanupResult {
+	/** Whether the orphan cleanup operation completed successfully */
+	success: boolean;
+
+	/** Number of orphaned episode search registry entries deleted */
+	episodeOrphansDeleted: number;
+
+	/** Number of orphaned movie search registry entries deleted */
+	movieOrphansDeleted: number;
+
+	/** Total number of orphaned entries deleted */
+	totalOrphansDeleted: number;
+
+	/** Time taken for the cleanup operation in milliseconds */
+	durationMs: number;
+
+	/** Error message if cleanup failed */
+	error?: string;
+}
