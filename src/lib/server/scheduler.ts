@@ -13,6 +13,7 @@
  * - 8.2: Run discovery for configured search types
  * - 8.4: Log summary of discoveries and items queued
  * - 12.1: Track analytics (gap discovery, search volume, queue depth)
+ * - 13.1: Execute VACUUM and ANALYZE database maintenance
  * - 15.4: Capture completion snapshots for trend visualization
  * - 38.2: Periodic Prowlarr health checks
  *
@@ -23,6 +24,7 @@
  * - incremental-sync-sweep: Every 15 minutes - syncs content, discovers gaps/upgrades, enqueues items
  * - full-reconciliation: Daily at 3 AM - complete sync with deletion of removed items
  * - completion-snapshot: Daily at 4 AM - captures library completion stats for trend sparklines
+ * - db-maintenance: Daily at 4:30 AM - runs VACUUM and ANALYZE for database optimization
  * - queue-processor: Every minute - re-enqueues cooldown items, dispatches searches
  * - queue-depth-sampler: Every 5 minutes - samples queue depth for analytics
  * - analytics-hourly-aggregation: 5 min past each hour - aggregates raw events to hourly stats
@@ -63,6 +65,7 @@ import {
 	aggregateDailyStats,
 	cleanupOldEvents
 } from '$lib/server/services/analytics';
+import { runDatabaseMaintenance } from '$lib/server/services/maintenance';
 
 // =============================================================================
 // Types
@@ -545,6 +548,41 @@ export function initializeScheduler(): void {
 	jobs.set('completion-snapshot', {
 		name: 'completion-snapshot',
 		cron: completionSnapshotJob
+	});
+
+	// =========================================================================
+	// Database Maintenance Job (Requirement 13.1)
+	// =========================================================================
+
+	// Database maintenance - runs daily at 4:30 AM (after completion snapshot at 4:00 AM)
+	// Executes VACUUM and ANALYZE operations for optimal database performance
+	const dbMaintenanceJob = new Cron(
+		'30 4 * * *', // Daily at 4:30 AM
+		{
+			name: 'db-maintenance',
+			protect: true, // Prevent overlapping executions
+			catch: (err) => {
+				console.error('[scheduler] Database maintenance failed:', err);
+			}
+		},
+		async () => {
+			const result = await runDatabaseMaintenance();
+
+			if (result.success) {
+				console.log('[scheduler] Database maintenance completed:', {
+					vacuumDurationMs: result.vacuumDurationMs,
+					analyzeDurationMs: result.analyzeDurationMs,
+					totalDurationMs: result.totalDurationMs
+				});
+			} else {
+				console.error('[scheduler] Database maintenance failed:', result.error);
+			}
+		}
+	);
+
+	jobs.set('db-maintenance', {
+		name: 'db-maintenance',
+		cron: dbMaintenanceJob
 	});
 
 	// Queue processor - runs every minute

@@ -671,7 +671,7 @@
 ## Phase 20: Database Maintenance
 
 - [ ] 44. Implement maintenance tasks
-  - [ ] 44.1 Create maintenance service
+  - [x] 44.1 Create maintenance service
     - Implement VACUUM and ANALYZE operations
     - _Requirements: 13.1_
 
@@ -684,7 +684,7 @@
     - Preserve aggregated statistics
     - _Requirements: 13.3_
 
-  - [ ] 44.4 Schedule maintenance job
+  - [x] 44.4 Schedule maintenance job
     - Run daily at configured time
     - _Requirements: 13.1_
 
