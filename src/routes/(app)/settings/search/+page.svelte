@@ -4,6 +4,7 @@
 	 *
 	 * Requirements: 21.4
 	 */
+	import { untrack } from 'svelte';
 	import { enhance } from '$app/forms';
 	import * as Card from '$lib/components/ui/card';
 	import { Input } from '$lib/components/ui/input';
@@ -31,7 +32,8 @@
 	let isResetting = $state(false);
 
 	// Form state with initial values from loaded settings
-	let jitter = $state(data.settings.cooldownConfig.jitter);
+	// Use untrack to explicitly capture initial value without reactive tracking
+	let jitter = $state(untrack(() => data.settings.cooldownConfig.jitter));
 
 	// Update jitter when form is submitted with errors (preserve user's choice)
 	$effect(() => {
@@ -39,16 +41,6 @@
 			jitter = form.values.cooldownConfig.jitter;
 		}
 	});
-
-	/**
-	 * Get form value with fallback to loaded data.
-	 */
-	function getFormValue(
-		formValue: number | undefined,
-		settingsValue: number
-	): number {
-		return formValue ?? settingsValue;
-	}
 
 	/**
 	 * Get nested form value for priority weights.

@@ -4,6 +4,7 @@
 	 *
 	 * Requirements: 21.1
 	 */
+	import { untrack } from 'svelte';
 	import { enhance } from '$app/forms';
 	import * as Card from '$lib/components/ui/card';
 	import { Input } from '$lib/components/ui/input';
@@ -19,7 +20,8 @@
 	let isSubmitting = $state(false);
 
 	// Form state with initial values from loaded settings
-	let checkForUpdates = $state(data.settings.checkForUpdates);
+	// Use untrack to explicitly capture initial value without reactive tracking
+	let checkForUpdates = $state(untrack(() => data.settings.checkForUpdates));
 
 	// Update checkForUpdates when form is submitted with errors (preserve user's choice)
 	$effect(() => {

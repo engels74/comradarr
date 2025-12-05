@@ -4,6 +4,7 @@
 	 *
 	 * Requirements: 19.2, 19.3
 	 */
+	import { untrack } from 'svelte';
 	import { enhance } from '$app/forms';
 	import * as Card from '$lib/components/ui/card';
 	import { Input } from '$lib/components/ui/input';
@@ -38,8 +39,9 @@
 	const formValues = $derived(isUpdateFormValues(form) ? form : null);
 
 	// Form state (pre-populated from schedule data, updated via two-way binding)
-	let cronExpression = $state(data.schedule.cronExpression);
-	let timezone = $state(data.schedule.timezone);
+	// Use untrack to explicitly capture initial values without reactive tracking
+	let cronExpression = $state(untrack(() => data.schedule.cronExpression));
+	let timezone = $state(untrack(() => data.schedule.timezone));
 
 	// Update state when form values change (after form submission with errors)
 	$effect(() => {

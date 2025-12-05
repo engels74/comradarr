@@ -4,6 +4,7 @@
 	 *
 	 * Requirements: 19.2, 19.3
 	 */
+	import { untrack } from 'svelte';
 	import { enhance } from '$app/forms';
 	import * as Card from '$lib/components/ui/card';
 	import { Input } from '$lib/components/ui/input';
@@ -17,9 +18,9 @@
 
 	let isSubmitting = $state(false);
 
-	// Form state
-	let cronExpression = $state(form?.cronExpression ?? '0 3 * * *');
-	let timezone = $state(form?.timezone ?? 'UTC');
+	// Form state - use untrack to explicitly capture initial values without reactive tracking
+	let cronExpression = $state(untrack(() => form?.cronExpression ?? '0 3 * * *'));
+	let timezone = $state(untrack(() => form?.timezone ?? 'UTC'));
 
 	const isLoading = $derived(isSubmitting);
 
