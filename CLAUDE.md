@@ -2,6 +2,17 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Codebase Search
+
+**Always use the `mcp__auggie-mcp__codebase-retrieval` tool as the primary method for:**
+- Exploring the codebase and understanding architecture
+- Finding existing patterns before implementing new features
+- Locating relevant code when the exact file location is unknown
+- Gathering context before making edits
+- Planning tasks in plan mode
+
+This semantic search tool provides better results than grep/find for understanding code relationships. Use grep only for finding exact string matches or all occurrences of a known identifier.
+
 ## Project Overview
 
 Comradarr is a media library completion service that integrates with *arr applications (Sonarr, Radarr, Whisparr) to systematically identify and request missing or upgradeable content. Unlike similar tools that use tags for state tracking, Comradarr maintains all state in its own PostgreSQL database for accurate episode-level tracking.
