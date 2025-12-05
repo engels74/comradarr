@@ -670,7 +670,7 @@
 
 ## Phase 20: Database Maintenance
 
-- [ ] 44. Implement maintenance tasks
+- [x] 44. Implement maintenance tasks
   - [x] 44.1 Create maintenance service
     - Implement VACUUM and ANALYZE operations
     - _Requirements: 13.1_
@@ -679,7 +679,7 @@
     - Delete search state without content mirror items
     - _Requirements: 13.2_
 
-  - [ ] 44.3 Implement history pruning
+  - [x] 44.3 Implement history pruning
     - Prune search history older than retention period
     - Preserve aggregated statistics
     - _Requirements: 13.3_
@@ -688,7 +688,7 @@
     - Run daily at configured time
     - _Requirements: 13.1_
 
-- [ ] 45. Checkpoint - Ensure all tests pass
+- [x] 45. Checkpoint - Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
 ## Phase 21: Health Check and Logging

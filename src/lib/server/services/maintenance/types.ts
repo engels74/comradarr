@@ -80,3 +80,28 @@ export interface OrphanCleanupResult {
 	/** Error message if cleanup failed */
 	error?: string;
 }
+
+// =============================================================================
+// History Pruning Types (Requirement 13.3)
+// =============================================================================
+
+/**
+ * Result of a history pruning operation.
+ *
+ * History pruning deletes search_history entries older than the configured
+ * retention period. Aggregated statistics in analytics_hourly_stats and
+ * analytics_daily_stats are preserved.
+ */
+export interface HistoryPruningResult {
+	/** Whether the history pruning operation completed successfully */
+	success: boolean;
+
+	/** Number of search_history entries deleted */
+	searchHistoryDeleted: number;
+
+	/** Time taken for the pruning operation in milliseconds */
+	durationMs: number;
+
+	/** Error message if pruning failed */
+	error?: string;
+}

@@ -64,12 +64,23 @@ export const SEARCH_SETTINGS_DEFAULTS = {
 } as const;
 
 /**
+ * Default values for maintenance settings.
+ *
+ * Requirements: 13.3
+ */
+export const MAINTENANCE_SETTINGS_DEFAULTS = {
+	// History retention in days (search_history table)
+	history_retention_days_search: '90'
+} as const;
+
+/**
  * Combined default values for all application settings.
  */
 export const SETTINGS_DEFAULTS = {
 	...GENERAL_SETTINGS_DEFAULTS,
 	...SECURITY_SETTINGS_DEFAULTS,
-	...SEARCH_SETTINGS_DEFAULTS
+	...SEARCH_SETTINGS_DEFAULTS,
+	...MAINTENANCE_SETTINGS_DEFAULTS
 } as const;
 
 export type SettingKey = keyof typeof SETTINGS_DEFAULTS;

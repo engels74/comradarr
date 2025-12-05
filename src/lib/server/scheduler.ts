@@ -65,7 +65,11 @@ import {
 	aggregateDailyStats,
 	cleanupOldEvents
 } from '$lib/server/services/analytics';
-import { runDatabaseMaintenance, cleanupOrphanedSearchState } from '$lib/server/services/maintenance';
+import {
+	runDatabaseMaintenance,
+	cleanupOrphanedSearchState,
+	pruneSearchHistory
+} from '$lib/server/services/maintenance';
 
 // =============================================================================
 // Types
@@ -594,6 +598,20 @@ export function initializeScheduler(): void {
 				}
 			} else {
 				console.error('[scheduler] Orphan cleanup failed:', orphanResult.error);
+			}
+
+			// 3. Run history pruning (Requirement 13.3)
+			const historyResult = await pruneSearchHistory();
+
+			if (historyResult.success) {
+				if (historyResult.searchHistoryDeleted > 0) {
+					console.log('[scheduler] History pruning completed:', {
+						searchHistoryDeleted: historyResult.searchHistoryDeleted,
+						durationMs: historyResult.durationMs
+					});
+				}
+			} else {
+				console.error('[scheduler] History pruning failed:', historyResult.error);
 			}
 		}
 	);
