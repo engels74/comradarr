@@ -716,7 +716,7 @@
     - Allow changing log level without restart
     - _Requirements: 31.5_
 
-- [ ] 48. Checkpoint - Ensure all tests pass
+- [x] 48. Checkpoint - Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
 ## Phase 22: Backup and Restore
