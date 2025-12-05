@@ -653,7 +653,7 @@
     - Add quiet hours configuration
     - _Requirements: 21.3_
 
-  - [ ] 42.4 Create search behavior settings page
+  - [x] 42.4 Create search behavior settings page
     - Add priority weights configuration
     - Add season pack thresholds
     - Add cooldown and retry settings

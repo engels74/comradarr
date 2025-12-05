@@ -6,12 +6,12 @@
  * database dependencies.
  *
  * @module services/queue/backoff
- * @requirements 5.5
+ * @requirements 5.5, 21.4
  */
 
 import { calculateBackoffDelay } from '$lib/server/connectors/common/retry.js';
 import type { RetryConfig } from '$lib/server/connectors/common/types.js';
-import { STATE_TRANSITION_CONFIG } from './config';
+import { STATE_TRANSITION_CONFIG, getStateTransitionConfig } from './config';
 
 /**
  * Calculate the next eligible time for a retry attempt using exponential backoff.
@@ -62,4 +62,54 @@ export function calculateNextEligibleTime(attemptCount: number, now: Date = new 
  */
 export function shouldMarkExhausted(attemptCount: number): boolean {
 	return attemptCount >= STATE_TRANSITION_CONFIG.MAX_ATTEMPTS;
+}
+
+// =============================================================================
+// Async versions using database configuration (Requirement 21.4)
+// =============================================================================
+
+/**
+ * Calculate the next eligible time using database-configured cooldown settings.
+ *
+ * This is an async version of calculateNextEligibleTime that fetches the
+ * current cooldown configuration from the database settings.
+ *
+ * @param attemptCount - Number of failed attempts (1-based, after the current failure)
+ * @param now - Current time (default: new Date())
+ * @returns Promise resolving to Date when the item becomes eligible for retry
+ *
+ * @requirements 21.4
+ */
+export async function calculateNextEligibleTimeWithConfig(
+	attemptCount: number,
+	now: Date = new Date()
+): Promise<Date> {
+	const stateConfig = await getStateTransitionConfig();
+
+	const config: Required<RetryConfig> = {
+		maxRetries: stateConfig.MAX_ATTEMPTS,
+		baseDelay: stateConfig.COOLDOWN_BASE_DELAY,
+		maxDelay: stateConfig.COOLDOWN_MAX_DELAY,
+		multiplier: stateConfig.COOLDOWN_MULTIPLIER,
+		jitter: stateConfig.COOLDOWN_JITTER
+	};
+
+	const delayMs = calculateBackoffDelay(Math.max(0, attemptCount - 1), config);
+	return new Date(now.getTime() + delayMs);
+}
+
+/**
+ * Check if an item should be marked as exhausted using database-configured max attempts.
+ *
+ * This is an async version of shouldMarkExhausted that fetches the current
+ * max attempts configuration from the database settings.
+ *
+ * @param attemptCount - Current attempt count (after incrementing for failure)
+ * @returns Promise resolving to true if the item has reached max attempts
+ *
+ * @requirements 21.4
+ */
+export async function shouldMarkExhaustedWithConfig(attemptCount: number): Promise<boolean> {
+	const stateConfig = await getStateTransitionConfig();
+	return attemptCount >= stateConfig.MAX_ATTEMPTS;
 }

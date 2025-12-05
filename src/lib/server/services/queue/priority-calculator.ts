@@ -19,7 +19,7 @@
  */
 
 import type { PriorityInput, PriorityResult, PriorityWeights, PriorityBreakdown } from './types';
-import { DEFAULT_PRIORITY_WEIGHTS, PRIORITY_CONSTANTS } from './config';
+import { DEFAULT_PRIORITY_WEIGHTS, PRIORITY_CONSTANTS, getPriorityWeights } from './config';
 
 /**
  * Calculate the priority score for a queue item.
@@ -162,4 +162,24 @@ function calculateMissingDurationScore(discoveredAt: Date, now: Date): number {
 export function comparePriority(a: PriorityResult, b: PriorityResult): number {
 	// Higher score = higher priority = comes first
 	return b.score - a.score;
+}
+
+/**
+ * Calculate priority using database-configured weights.
+ *
+ * This is an async wrapper around calculatePriority that automatically
+ * fetches the current priority weights from the database settings.
+ *
+ * @param input - Priority calculation input data
+ * @param now - Current time for age calculations (defaults to current time)
+ * @returns Promise resolving to priority result with score and breakdown
+ *
+ * @requirements 21.4
+ */
+export async function calculatePriorityWithConfig(
+	input: PriorityInput,
+	now: Date = new Date()
+): Promise<PriorityResult> {
+	const weights = await getPriorityWeights();
+	return calculatePriority(input, weights, now);
 }

@@ -9,10 +9,10 @@
  * - EpisodeSearch: Season currently airing OR below threshold
  *
  * @module services/queue/episode-batcher
- * @requirements 6.1, 6.2, 6.3
+ * @requirements 6.1, 6.2, 6.3, 21.4
  */
 
-import { BATCHING_CONFIG } from './config';
+import { BATCHING_CONFIG, getBatchingConfig } from './config';
 
 // =============================================================================
 // Types
@@ -532,4 +532,58 @@ export function createMovieBatches(
 	}
 
 	return batches;
+}
+
+// =============================================================================
+// Async versions using database configuration (Requirement 21.4)
+// =============================================================================
+
+/**
+ * Determines the batching decision using database-configured thresholds.
+ *
+ * This is an async version of determineBatchingDecision that fetches the
+ * current batching configuration from the database settings.
+ *
+ * @param stats - Season statistics (totalEpisodes, downloadedEpisodes, nextAiring)
+ * @returns Promise resolving to batching decision with command and reason
+ *
+ * @requirements 21.4
+ */
+export async function determineBatchingDecisionWithConfig(
+	stats: SeasonStatistics
+): Promise<BatchingDecision> {
+	const batchingConfig = await getBatchingConfig();
+
+	const config: BatchingConfig = {
+		seasonSearchMinMissingPercent: batchingConfig.SEASON_SEARCH_MIN_MISSING_PERCENT,
+		seasonSearchMinMissingCount: batchingConfig.SEASON_SEARCH_MIN_MISSING_COUNT
+	};
+
+	return determineBatchingDecision(stats, config);
+}
+
+/**
+ * Extended batching decision using database-configured thresholds with fallback support.
+ *
+ * This is an async version of determineBatchingDecisionWithFallback that fetches the
+ * current batching configuration from the database settings.
+ *
+ * @param stats - Season statistics (totalEpisodes, downloadedEpisodes, nextAiring)
+ * @param seasonPackFailed - Whether a season pack search previously failed for this season
+ * @returns Promise resolving to batching decision with command and reason
+ *
+ * @requirements 21.4
+ */
+export async function determineBatchingDecisionWithFallbackAndConfig(
+	stats: SeasonStatistics,
+	seasonPackFailed: boolean
+): Promise<BatchingDecision> {
+	const batchingConfig = await getBatchingConfig();
+
+	const config: BatchingConfig = {
+		seasonSearchMinMissingPercent: batchingConfig.SEASON_SEARCH_MIN_MISSING_PERCENT,
+		seasonSearchMinMissingCount: batchingConfig.SEASON_SEARCH_MIN_MISSING_COUNT
+	};
+
+	return determineBatchingDecisionWithFallback(stats, seasonPackFailed, config);
 }

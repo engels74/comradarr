@@ -1,7 +1,7 @@
 /**
  * Database queries for application settings operations.
  *
- * Requirements: 21.1
+ * Requirements: 21.1, 21.4
  *
  * Application settings are stored as key-value pairs with defaults applied
  * when a setting is not explicitly configured.
@@ -16,14 +16,50 @@ import { eq, inArray } from 'drizzle-orm';
 // =============================================================================
 
 /**
- * Default values for all application settings.
+ * Default values for general application settings.
  * These are used when a setting is not found in the database.
  */
-export const SETTINGS_DEFAULTS = {
+export const GENERAL_SETTINGS_DEFAULTS = {
 	app_name: 'Comradarr',
 	timezone: 'UTC',
 	log_level: 'info',
 	check_for_updates: 'true'
+} as const;
+
+/**
+ * Default values for search behavior settings.
+ * These match the original hard-coded constants in queue/config.ts.
+ *
+ * Requirements: 21.4
+ */
+export const SEARCH_SETTINGS_DEFAULTS = {
+	// Priority Weights
+	search_priority_weight_content_age: '30',
+	search_priority_weight_missing_duration: '25',
+	search_priority_weight_user_priority: '40',
+	search_priority_weight_failure_penalty: '10',
+	search_priority_weight_gap_bonus: '20',
+
+	// Season Pack Thresholds
+	search_season_pack_min_missing_percent: '50',
+	search_season_pack_min_missing_count: '3',
+
+	// Cooldown Configuration
+	search_cooldown_base_delay_hours: '1',
+	search_cooldown_max_delay_hours: '24',
+	search_cooldown_multiplier: '2',
+	search_cooldown_jitter: 'true',
+
+	// Retry Configuration
+	search_max_attempts: '5'
+} as const;
+
+/**
+ * Combined default values for all application settings.
+ */
+export const SETTINGS_DEFAULTS = {
+	...GENERAL_SETTINGS_DEFAULTS,
+	...SEARCH_SETTINGS_DEFAULTS
 } as const;
 
 export type SettingKey = keyof typeof SETTINGS_DEFAULTS;
@@ -207,4 +243,171 @@ export async function deleteSetting(key: string): Promise<boolean> {
 	const result = await db.delete(appSettings).where(eq(appSettings.key, key)).returning();
 
 	return result.length > 0;
+}
+
+// =============================================================================
+// Search Settings Types
+// =============================================================================
+
+/**
+ * Represents the search behavior settings.
+ *
+ * Requirements: 21.4
+ */
+export interface SearchSettings {
+	priorityWeights: {
+		contentAge: number;
+		missingDuration: number;
+		userPriority: number;
+		failurePenalty: number;
+		gapBonus: number;
+	};
+	seasonPackThresholds: {
+		minMissingPercent: number;
+		minMissingCount: number;
+	};
+	cooldownConfig: {
+		baseDelayHours: number;
+		maxDelayHours: number;
+		multiplier: number;
+		jitter: boolean;
+	};
+	retryConfig: {
+		maxAttempts: number;
+	};
+}
+
+// =============================================================================
+// Search Settings Operations
+// =============================================================================
+
+/**
+ * Gets search behavior settings with defaults applied.
+ *
+ * Requirements: 21.4
+ *
+ * @returns Search settings object with all fields populated
+ */
+export async function getSearchSettings(): Promise<SearchSettings> {
+	const keys = Object.keys(SEARCH_SETTINGS_DEFAULTS) as Array<keyof typeof SEARCH_SETTINGS_DEFAULTS>;
+	const settings = await getSettings(keys);
+
+	return {
+		priorityWeights: {
+			contentAge: Number(
+				settings['search_priority_weight_content_age'] ??
+					SEARCH_SETTINGS_DEFAULTS.search_priority_weight_content_age
+			),
+			missingDuration: Number(
+				settings['search_priority_weight_missing_duration'] ??
+					SEARCH_SETTINGS_DEFAULTS.search_priority_weight_missing_duration
+			),
+			userPriority: Number(
+				settings['search_priority_weight_user_priority'] ??
+					SEARCH_SETTINGS_DEFAULTS.search_priority_weight_user_priority
+			),
+			failurePenalty: Number(
+				settings['search_priority_weight_failure_penalty'] ??
+					SEARCH_SETTINGS_DEFAULTS.search_priority_weight_failure_penalty
+			),
+			gapBonus: Number(
+				settings['search_priority_weight_gap_bonus'] ??
+					SEARCH_SETTINGS_DEFAULTS.search_priority_weight_gap_bonus
+			)
+		},
+		seasonPackThresholds: {
+			minMissingPercent: Number(
+				settings['search_season_pack_min_missing_percent'] ??
+					SEARCH_SETTINGS_DEFAULTS.search_season_pack_min_missing_percent
+			),
+			minMissingCount: Number(
+				settings['search_season_pack_min_missing_count'] ??
+					SEARCH_SETTINGS_DEFAULTS.search_season_pack_min_missing_count
+			)
+		},
+		cooldownConfig: {
+			baseDelayHours: Number(
+				settings['search_cooldown_base_delay_hours'] ??
+					SEARCH_SETTINGS_DEFAULTS.search_cooldown_base_delay_hours
+			),
+			maxDelayHours: Number(
+				settings['search_cooldown_max_delay_hours'] ??
+					SEARCH_SETTINGS_DEFAULTS.search_cooldown_max_delay_hours
+			),
+			multiplier: Number(
+				settings['search_cooldown_multiplier'] ?? SEARCH_SETTINGS_DEFAULTS.search_cooldown_multiplier
+			),
+			jitter:
+				(settings['search_cooldown_jitter'] ?? SEARCH_SETTINGS_DEFAULTS.search_cooldown_jitter) ===
+				'true'
+		},
+		retryConfig: {
+			maxAttempts: Number(
+				settings['search_max_attempts'] ?? SEARCH_SETTINGS_DEFAULTS.search_max_attempts
+			)
+		}
+	};
+}
+
+/**
+ * Updates search behavior settings.
+ *
+ * Requirements: 21.4
+ *
+ * @param input - Settings to update
+ */
+export async function updateSearchSettings(input: SearchSettings): Promise<void> {
+	const updates: Array<{ key: string; value: string }> = [
+		// Priority Weights
+		{ key: 'search_priority_weight_content_age', value: String(input.priorityWeights.contentAge) },
+		{
+			key: 'search_priority_weight_missing_duration',
+			value: String(input.priorityWeights.missingDuration)
+		},
+		{ key: 'search_priority_weight_user_priority', value: String(input.priorityWeights.userPriority) },
+		{
+			key: 'search_priority_weight_failure_penalty',
+			value: String(input.priorityWeights.failurePenalty)
+		},
+		{ key: 'search_priority_weight_gap_bonus', value: String(input.priorityWeights.gapBonus) },
+
+		// Season Pack Thresholds
+		{
+			key: 'search_season_pack_min_missing_percent',
+			value: String(input.seasonPackThresholds.minMissingPercent)
+		},
+		{
+			key: 'search_season_pack_min_missing_count',
+			value: String(input.seasonPackThresholds.minMissingCount)
+		},
+
+		// Cooldown Configuration
+		{ key: 'search_cooldown_base_delay_hours', value: String(input.cooldownConfig.baseDelayHours) },
+		{ key: 'search_cooldown_max_delay_hours', value: String(input.cooldownConfig.maxDelayHours) },
+		{ key: 'search_cooldown_multiplier', value: String(input.cooldownConfig.multiplier) },
+		{ key: 'search_cooldown_jitter', value: input.cooldownConfig.jitter ? 'true' : 'false' },
+
+		// Retry Configuration
+		{ key: 'search_max_attempts', value: String(input.retryConfig.maxAttempts) }
+	];
+
+	// Use a transaction to ensure all settings are updated atomically
+	await db.transaction(async (tx) => {
+		for (const { key, value } of updates) {
+			await tx
+				.insert(appSettings)
+				.values({
+					key,
+					value,
+					updatedAt: new Date()
+				})
+				.onConflictDoUpdate({
+					target: appSettings.key,
+					set: {
+						value,
+						updatedAt: new Date()
+					}
+				});
+		}
+	});
 }
