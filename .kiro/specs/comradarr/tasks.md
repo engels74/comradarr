@@ -722,7 +722,7 @@
 ## Phase 22: Backup and Restore
 
 - [ ] 49. Implement backup/restore
-  - [ ] 49.1 Create backup service
+  - [x] 49.1 Create backup service
     - Export all database tables
     - Include encrypted secrets
     - _Requirements: 33.1_
