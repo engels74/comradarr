@@ -3,10 +3,12 @@
  *
  * Requirements:
  * - 31.1: Output structured JSON with timestamp, level, module, message, and correlation_id fields
+ * - 31.2: Automatically include correlation ID from request context when available
  * - 31.4: When LOG_LEVEL is set to trace, include full request and response bodies
  */
 
 import { logLevels, type LogLevel } from '$lib/schemas/settings';
+import { getCorrelationId } from '$lib/server/context';
 
 // =============================================================================
 // Types
@@ -197,6 +199,7 @@ export class Logger {
 
 	/**
 	 * Internal log method that handles level checking and output.
+	 * Automatically includes correlation ID from async context if not explicitly provided.
 	 */
 	private log(level: LogLevel, message: string, context?: Record<string, unknown>): void {
 		const currentLevel = getCurrentLogLevel();
@@ -205,11 +208,15 @@ export class Logger {
 			return;
 		}
 
+		// Auto-include correlation ID from async context if not provided (Requirement 31.2)
+		const correlationId = (context?.correlationId as string | undefined) ?? getCorrelationId();
+
 		const entry: LogEntry = {
 			timestamp: new Date().toISOString(),
 			level,
 			module: this.module,
 			message,
+			...(correlationId !== undefined && { correlationId }),
 			...context
 		};
 
@@ -261,6 +268,7 @@ export class Logger {
 	 * Logs an HTTP request.
 	 * - Logs at debug level with method, URL, and headers (redacted)
 	 * - Includes request body only at trace level (Requirement 31.4)
+	 * - Auto-includes correlation ID from async context if not provided (Requirement 31.2)
 	 *
 	 * @param method - HTTP method (GET, POST, etc.)
 	 * @param url - Request URL
@@ -279,8 +287,10 @@ export class Logger {
 			url
 		};
 
-		if (options?.correlationId) {
-			context.correlationId = options.correlationId;
+		// Auto-include correlation ID from async context if not provided (Requirement 31.2)
+		const correlationId = options?.correlationId ?? getCorrelationId();
+		if (correlationId) {
+			context.correlationId = correlationId;
 		}
 
 		if (options?.headers) {
@@ -299,6 +309,7 @@ export class Logger {
 	 * Logs an HTTP response.
 	 * - Logs at debug level with status code, URL, and duration
 	 * - Includes response body only at trace level (Requirement 31.4)
+	 * - Auto-includes correlation ID from async context if not provided (Requirement 31.2)
 	 *
 	 * @param statusCode - HTTP status code
 	 * @param url - Request URL
@@ -317,8 +328,10 @@ export class Logger {
 			url
 		};
 
-		if (options?.correlationId) {
-			context.correlationId = options.correlationId;
+		// Auto-include correlation ID from async context if not provided (Requirement 31.2)
+		const correlationId = options?.correlationId ?? getCorrelationId();
+		if (correlationId) {
+			context.correlationId = correlationId;
 		}
 
 		if (options?.durationMs !== undefined) {

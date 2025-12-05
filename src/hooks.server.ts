@@ -1,5 +1,6 @@
 import type { Handle } from '@sveltejs/kit';
 import { validateSession, isLocalNetworkIP, getClientIP } from '$lib/server/auth';
+import { runWithContext, type RequestContext } from '$lib/server/context';
 import { getSecuritySettings } from '$lib/server/db/queries/settings';
 import { initializeScheduler } from '$lib/server/scheduler';
 
@@ -22,7 +23,7 @@ if (process.env.NODE_ENV !== 'test') {
 }
 
 export const handle: Handle = async ({ event, resolve }) => {
-	// Generate correlation ID for request tracing
+	// Generate correlation ID for request tracing (Requirement 31.2)
 	const correlationId = event.request.headers.get('x-correlation-id') ?? crypto.randomUUID();
 	event.locals.correlationId = correlationId;
 
@@ -61,20 +62,31 @@ export const handle: Handle = async ({ event, resolve }) => {
 		}
 	}
 
-	const response = await resolve(event);
+	// Create request context for correlation ID propagation (Requirement 31.2)
+	// All async operations within this context will have access to the correlation ID
+	const context: RequestContext = {
+		correlationId,
+		source: 'http',
+		...(event.locals.user?.id !== undefined && { userId: event.locals.user.id })
+	};
 
-	// Security headers (Requirement 10.5)
-	response.headers.set('X-Frame-Options', 'SAMEORIGIN');
-	response.headers.set('X-Content-Type-Options', 'nosniff');
-	response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
+	// Execute request handling within context
+	return runWithContext(context, async () => {
+		const response = await resolve(event);
 
-	// HSTS header in production only (don't break local HTTP dev)
-	if (process.env.NODE_ENV === 'production') {
-		response.headers.set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
-	}
+		// Security headers (Requirement 10.5)
+		response.headers.set('X-Frame-Options', 'SAMEORIGIN');
+		response.headers.set('X-Content-Type-Options', 'nosniff');
+		response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
 
-	// Include correlation ID in response for client-side correlation
-	response.headers.set('X-Correlation-ID', correlationId);
+		// HSTS header in production only (don't break local HTTP dev)
+		if (process.env.NODE_ENV === 'production') {
+			response.headers.set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+		}
 
-	return response;
+		// Include correlation ID in response for client-side correlation
+		response.headers.set('X-Correlation-ID', correlationId);
+
+		return response;
+	});
 };

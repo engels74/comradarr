@@ -32,6 +32,7 @@
  */
 
 import { Cron } from 'croner';
+import { runWithContext, generateCorrelationId, type RequestContext } from '$lib/server/context';
 import { throttleEnforcer } from '$lib/server/services/throttle';
 import { prowlarrHealthMonitor } from '$lib/server/services/prowlarr';
 import {
@@ -118,6 +119,26 @@ async function logSkippedUnhealthyConnectors(healthyConnectors: Connector[]): Pr
 	}
 }
 
+/**
+ * Creates a job executor that wraps the callback in a request context.
+ * Ensures all scheduled jobs have proper correlation ID propagation (Requirement 31.2).
+ *
+ * @param jobName - Name of the job for context tracking
+ * @param callback - The job callback to wrap
+ * @returns Wrapped callback that executes within a request context
+ */
+function withJobContext(jobName: string, callback: () => Promise<void>): () => Promise<void> {
+	return async () => {
+		const context: RequestContext = {
+			correlationId: generateCorrelationId(),
+			source: 'scheduler',
+			jobName
+		};
+
+		return runWithContext(context, callback);
+	};
+}
+
 // =============================================================================
 // Public API
 // =============================================================================
@@ -145,7 +166,7 @@ export function initializeScheduler(): void {
 				console.error('[scheduler] Throttle window reset failed:', err);
 			}
 		},
-		async () => {
+		withJobContext('throttle-window-reset', async () => {
 			const result = await throttleEnforcer.resetExpiredWindows();
 
 			// Only log if resets occurred (reduce log noise)
@@ -156,7 +177,7 @@ export function initializeScheduler(): void {
 					pausesCleared: result.pausesCleared
 				});
 			}
-		}
+		})
 	);
 
 	jobs.set('throttle-window-reset', {
@@ -175,7 +196,7 @@ export function initializeScheduler(): void {
 				console.error('[scheduler] Prowlarr health check failed:', err);
 			}
 		},
-		async () => {
+		withJobContext('prowlarr-health-check', async () => {
 			const results = await prowlarrHealthMonitor.checkAllInstances();
 
 			// Only log if there are instances to check
@@ -193,7 +214,7 @@ export function initializeScheduler(): void {
 					});
 				}
 			}
-		}
+		})
 	);
 
 	jobs.set('prowlarr-health-check', {
@@ -212,7 +233,7 @@ export function initializeScheduler(): void {
 				console.error('[scheduler] Connector health check failed:', err);
 			}
 		},
-		async () => {
+		withJobContext('connector-health-check', async () => {
 			const connectors = await getEnabledConnectors();
 
 			if (connectors.length === 0) {
@@ -296,7 +317,7 @@ export function initializeScheduler(): void {
 			if (results.length > 0) {
 				console.log('[scheduler] Connector health status changes:', results);
 			}
-		}
+		})
 	);
 
 	jobs.set('connector-health-check', {
@@ -320,7 +341,7 @@ export function initializeScheduler(): void {
 				console.error('[scheduler] Incremental sync sweep failed:', err);
 			}
 		},
-		async () => {
+		withJobContext('incremental-sync-sweep', async () => {
 			const startTime = Date.now();
 			// Only process healthy connectors (Requirement 1.5)
 			const connectors = await getHealthyConnectors();
@@ -405,7 +426,7 @@ export function initializeScheduler(): void {
 					durationMs
 				});
 			}
-		}
+		})
 	);
 
 	jobs.set('incremental-sync-sweep', {
@@ -425,7 +446,7 @@ export function initializeScheduler(): void {
 				console.error('[scheduler] Full reconciliation failed:', err);
 			}
 		},
-		async () => {
+		withJobContext('full-reconciliation', async () => {
 			const startTime = Date.now();
 			// Only process healthy connectors (Requirement 1.5)
 			const connectors = await getHealthyConnectors();
@@ -506,7 +527,7 @@ export function initializeScheduler(): void {
 				...summary,
 				durationMs
 			});
-		}
+		})
 	);
 
 	jobs.set('full-reconciliation', {
@@ -529,7 +550,7 @@ export function initializeScheduler(): void {
 				console.error('[scheduler] Completion snapshot failed:', err);
 			}
 		},
-		async () => {
+		withJobContext('completion-snapshot', async () => {
 			const { captureCompletionSnapshots, cleanupOldSnapshots } = await import(
 				'$lib/server/db/queries/completion'
 			);
@@ -546,7 +567,7 @@ export function initializeScheduler(): void {
 					oldSnapshotsCleaned: cleaned
 				});
 			}
-		}
+		})
 	);
 
 	jobs.set('completion-snapshot', {
@@ -570,7 +591,7 @@ export function initializeScheduler(): void {
 				console.error('[scheduler] Database maintenance failed:', err);
 			}
 		},
-		async () => {
+		withJobContext('db-maintenance', async () => {
 			// 1. Run VACUUM and ANALYZE (Requirement 13.1)
 			const maintenanceResult = await runDatabaseMaintenance();
 
@@ -613,7 +634,7 @@ export function initializeScheduler(): void {
 			} else {
 				console.error('[scheduler] History pruning failed:', historyResult.error);
 			}
-		}
+		})
 	);
 
 	jobs.set('db-maintenance', {
@@ -633,7 +654,7 @@ export function initializeScheduler(): void {
 				console.error('[scheduler] Queue processor failed:', err);
 			}
 		},
-		async () => {
+		withJobContext('queue-processor', async () => {
 			const startTime = Date.now();
 
 			// 1. Re-enqueue eligible cooldown items (items whose cooldown has expired)
@@ -748,7 +769,7 @@ export function initializeScheduler(): void {
 					durationMs
 				});
 			}
-		}
+		})
 	);
 
 	jobs.set('queue-processor', {
@@ -771,7 +792,7 @@ export function initializeScheduler(): void {
 				console.error('[scheduler] Notification batch processing failed:', err);
 			}
 		},
-		async () => {
+		withJobContext('notification-batch-processor', async () => {
 			const { processBatches } = await import('$lib/server/services/notifications/batcher');
 
 			const result = await processBatches();
@@ -785,7 +806,7 @@ export function initializeScheduler(): void {
 					errors: result.errors
 				});
 			}
-		}
+		})
 	);
 
 	jobs.set('notification-batch-processor', {
@@ -808,7 +829,7 @@ export function initializeScheduler(): void {
 				console.error('[scheduler] Queue depth sampling failed:', err);
 			}
 		},
-		async () => {
+		withJobContext('queue-depth-sampler', async () => {
 			const samples = await analyticsCollector.sampleQueueDepth();
 
 			if (samples.length > 0) {
@@ -818,7 +839,7 @@ export function initializeScheduler(): void {
 					totalQueueDepth: totalDepth
 				});
 			}
-		}
+		})
 	);
 
 	jobs.set('queue-depth-sampler', {
@@ -837,7 +858,7 @@ export function initializeScheduler(): void {
 				console.error('[scheduler] Hourly analytics aggregation failed:', err);
 			}
 		},
-		async () => {
+		withJobContext('analytics-hourly-aggregation', async () => {
 			// Aggregate the previous hour
 			const previousHour = new Date();
 			previousHour.setHours(previousHour.getHours() - 1);
@@ -853,7 +874,7 @@ export function initializeScheduler(): void {
 					durationMs: result.durationMs
 				});
 			}
-		}
+		})
 	);
 
 	jobs.set('analytics-hourly-aggregation', {
@@ -872,7 +893,7 @@ export function initializeScheduler(): void {
 				console.error('[scheduler] Daily analytics aggregation failed:', err);
 			}
 		},
-		async () => {
+		withJobContext('analytics-daily-aggregation', async () => {
 			// Aggregate the previous day
 			const previousDay = new Date();
 			previousDay.setDate(previousDay.getDate() - 1);
@@ -893,7 +914,7 @@ export function initializeScheduler(): void {
 			if (eventsDeleted > 0) {
 				console.log('[scheduler] Old analytics events cleaned up:', eventsDeleted);
 			}
-		}
+		})
 	);
 
 	jobs.set('analytics-daily-aggregation', {
@@ -1001,11 +1022,11 @@ export async function refreshDynamicSchedules(): Promise<void> {
 						console.error(`[scheduler] Dynamic schedule ${schedule.id} (${schedule.name}) failed:`, err);
 					}
 				},
-				async () => {
+				withJobContext(`sweep-schedule-${schedule.id}`, async () => {
 					// Job execution will be implemented in a future task
 					// For now, just log that it would run
 					console.log(`[scheduler] Dynamic schedule triggered: ${schedule.name} (ID: ${schedule.id})`);
-				}
+				})
 			);
 
 			dynamicJobs.set(schedule.id, cron);

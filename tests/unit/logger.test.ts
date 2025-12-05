@@ -7,11 +7,12 @@
  * - Log level hierarchy
  * - Context merging
  * - Correlation ID inclusion
+ * - Auto correlation ID from async context
  * - Environment variable precedence
  * - HTTP request/response logging
  * - Trace level body inclusion
  *
- * @requirements 31.1, 31.4
+ * @requirements 31.1, 31.2, 31.4
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
@@ -24,6 +25,7 @@ import {
 	shouldLog,
 	type LogEntry
 } from '../../src/lib/server/logger';
+import { runWithContext, type RequestContext } from '../../src/lib/server/context';
 
 describe('Logger', () => {
 	let consoleSpy: ReturnType<typeof vi.spyOn>;
@@ -546,6 +548,191 @@ describe('HTTP logging methods', () => {
 
 			expect(headers['Content-Type']).toBe('application/json');
 			expect(headers['X-Request-Id']).toBe('req-123');
+		});
+	});
+});
+
+describe('Auto correlation ID from async context (Requirement 31.2)', () => {
+	let consoleSpy: ReturnType<typeof vi.spyOn>;
+
+	beforeEach(() => {
+		consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+		clearLogLevelCache();
+	});
+
+	afterEach(() => {
+		consoleSpy.mockRestore();
+		clearLogLevelCache();
+	});
+
+	describe('standard log methods', () => {
+		it('should include correlation ID from async context when not provided', async () => {
+			setLogLevel('info');
+			const logger = createLogger('test');
+			const context: RequestContext = {
+				correlationId: 'auto-123',
+				source: 'http'
+			};
+
+			await runWithContext(context, async () => {
+				logger.info('Test message');
+			});
+
+			expect(consoleSpy).toHaveBeenCalledTimes(1);
+			const output = consoleSpy.mock.calls[0]![0] as string;
+			const entry = JSON.parse(output) as LogEntry;
+			expect(entry.correlationId).toBe('auto-123');
+		});
+
+		it('should prefer explicit correlation ID over context', async () => {
+			setLogLevel('info');
+			const logger = createLogger('test');
+			const context: RequestContext = {
+				correlationId: 'context-id',
+				source: 'http'
+			};
+
+			await runWithContext(context, async () => {
+				logger.info('Test message', { correlationId: 'explicit-id' });
+			});
+
+			expect(consoleSpy).toHaveBeenCalledTimes(1);
+			const output = consoleSpy.mock.calls[0]![0] as string;
+			const entry = JSON.parse(output) as LogEntry;
+			expect(entry.correlationId).toBe('explicit-id');
+		});
+
+		it('should work without context (no correlation ID)', () => {
+			setLogLevel('info');
+			const logger = createLogger('test');
+
+			logger.info('Test message');
+
+			expect(consoleSpy).toHaveBeenCalledTimes(1);
+			const output = consoleSpy.mock.calls[0]![0] as string;
+			const entry = JSON.parse(output) as LogEntry;
+			expect(entry.correlationId).toBeUndefined();
+		});
+
+		it('should propagate correlation ID through async chains', async () => {
+			setLogLevel('info');
+			const logger = createLogger('test');
+			const context: RequestContext = {
+				correlationId: 'propagated-id',
+				source: 'http'
+			};
+
+			const nestedLog = async () => {
+				logger.info('Nested message');
+			};
+
+			await runWithContext(context, async () => {
+				await nestedLog();
+			});
+
+			expect(consoleSpy).toHaveBeenCalledTimes(1);
+			const output = consoleSpy.mock.calls[0]![0] as string;
+			const entry = JSON.parse(output) as LogEntry;
+			expect(entry.correlationId).toBe('propagated-id');
+		});
+
+		it('should work with error level logs', async () => {
+			setLogLevel('error');
+			const logger = createLogger('test');
+			const context: RequestContext = {
+				correlationId: 'error-context-id',
+				source: 'http'
+			};
+
+			await runWithContext(context, async () => {
+				logger.error('Error occurred', { errorCode: 'E001' });
+			});
+
+			expect(consoleSpy).toHaveBeenCalledTimes(1);
+			const output = consoleSpy.mock.calls[0]![0] as string;
+			const entry = JSON.parse(output) as LogEntry;
+			expect(entry.correlationId).toBe('error-context-id');
+			expect(entry.errorCode).toBe('E001');
+		});
+	});
+
+	describe('HTTP logging methods', () => {
+		it('should include correlation ID from context in logRequest', async () => {
+			setLogLevel('debug');
+			const logger = createLogger('http');
+			const context: RequestContext = {
+				correlationId: 'request-context-id',
+				source: 'http'
+			};
+
+			await runWithContext(context, async () => {
+				logger.logRequest('GET', 'http://example.com/api');
+			});
+
+			expect(consoleSpy).toHaveBeenCalledTimes(1);
+			const output = consoleSpy.mock.calls[0]![0] as string;
+			const entry = JSON.parse(output) as LogEntry;
+			expect(entry.correlationId).toBe('request-context-id');
+		});
+
+		it('should include correlation ID from context in logResponse', async () => {
+			setLogLevel('debug');
+			const logger = createLogger('http');
+			const context: RequestContext = {
+				correlationId: 'response-context-id',
+				source: 'http'
+			};
+
+			await runWithContext(context, async () => {
+				logger.logResponse(200, 'http://example.com/api', { durationMs: 100 });
+			});
+
+			expect(consoleSpy).toHaveBeenCalledTimes(1);
+			const output = consoleSpy.mock.calls[0]![0] as string;
+			const entry = JSON.parse(output) as LogEntry;
+			expect(entry.correlationId).toBe('response-context-id');
+		});
+
+		it('should prefer explicit correlation ID over context in HTTP methods', async () => {
+			setLogLevel('debug');
+			const logger = createLogger('http');
+			const context: RequestContext = {
+				correlationId: 'context-id',
+				source: 'http'
+			};
+
+			await runWithContext(context, async () => {
+				logger.logRequest('POST', 'http://example.com', {
+					correlationId: 'explicit-http-id'
+				});
+			});
+
+			expect(consoleSpy).toHaveBeenCalledTimes(1);
+			const output = consoleSpy.mock.calls[0]![0] as string;
+			const entry = JSON.parse(output) as LogEntry;
+			expect(entry.correlationId).toBe('explicit-http-id');
+		});
+	});
+
+	describe('scheduler context', () => {
+		it('should include correlation ID from scheduler context', async () => {
+			setLogLevel('info');
+			const logger = createLogger('scheduler');
+			const context: RequestContext = {
+				correlationId: 'job-12345',
+				source: 'scheduler',
+				jobName: 'sync-connectors'
+			};
+
+			await runWithContext(context, async () => {
+				logger.info('Job started', { jobName: 'sync-connectors' });
+			});
+
+			expect(consoleSpy).toHaveBeenCalledTimes(1);
+			const output = consoleSpy.mock.calls[0]![0] as string;
+			const entry = JSON.parse(output) as LogEntry;
+			expect(entry.correlationId).toBe('job-12345');
+			expect(entry.jobName).toBe('sync-connectors');
 		});
 	});
 });
