@@ -129,6 +129,38 @@ export function clearLogLevelCache(): void {
 }
 
 /**
+ * Initializes the log level from database settings.
+ * Should be called once at application startup.
+ * Falls back to environment variable or default if database is unavailable.
+ *
+ * Requirement 31.5: Log level can be changed at runtime
+ *
+ * @returns Promise that resolves when initialization is complete
+ */
+export async function initializeLogLevel(): Promise<void> {
+	try {
+		// Dynamic import to avoid circular dependencies and keep logger lightweight
+		const { getSetting } = await import('$lib/server/db/queries/settings');
+		const dbLogLevel = await getSetting('log_level');
+
+		if (dbLogLevel && logLevels.includes(dbLogLevel as LogLevel)) {
+			cachedLogLevel = dbLogLevel as LogLevel;
+			return;
+		}
+	} catch {
+		// Database not available - fall through to environment/default
+	}
+
+	// Fall back to environment variable or default
+	const envLevel = process.env.LOG_LEVEL?.toLowerCase();
+	if (envLevel && logLevels.includes(envLevel as LogLevel)) {
+		cachedLogLevel = envLevel as LogLevel;
+	} else {
+		cachedLogLevel = DEFAULT_LOG_LEVEL;
+	}
+}
+
+/**
  * Checks if a message at the given level should be logged
  * based on the current log level setting.
  *

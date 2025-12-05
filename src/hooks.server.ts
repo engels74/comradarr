@@ -3,22 +3,32 @@ import { validateSession, isLocalNetworkIP, getClientIP } from '$lib/server/auth
 import { runWithContext, type RequestContext } from '$lib/server/context';
 import { getSecuritySettings } from '$lib/server/db/queries/settings';
 import { initializeScheduler } from '$lib/server/scheduler';
+import { initializeLogLevel } from '$lib/server/logger';
 
 /** Cookie name for session token */
 const SESSION_COOKIE_NAME = 'session';
 
 // =============================================================================
-// Scheduler Initialization
+// Application Initialization
 // =============================================================================
 
 /**
- * Initialize scheduled jobs on server startup.
+ * Initialize application on server startup.
  * Only runs in non-test environments to avoid interference with tests.
- * The initializeScheduler function is idempotent (safe to call multiple times).
  *
- * Requirements: 7.4 - Reset counters at configured intervals
+ * Requirements:
+ * - 31.5: Initialize log level from database settings
+ * - 7.4: Reset throttle counters at configured intervals
  */
 if (process.env.NODE_ENV !== 'test') {
+	// Initialize log level from database (Requirement 31.5)
+	// This allows log level to persist across restarts
+	initializeLogLevel().catch(() => {
+		// Silently handle errors - logger will fall back to env/default
+	});
+
+	// Initialize scheduled jobs (Requirement 7.4)
+	// The initializeScheduler function is idempotent (safe to call multiple times).
 	initializeScheduler();
 }
 

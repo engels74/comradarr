@@ -8,7 +8,8 @@ import type { PageServerLoad, Actions } from './$types';
 import { getGeneralSettings, updateGeneralSettings } from '$lib/server/db/queries/settings';
 import { fail } from '@sveltejs/kit';
 import * as v from 'valibot';
-import { GeneralSettingsSchema } from '$lib/schemas/settings';
+import { GeneralSettingsSchema, type LogLevel } from '$lib/schemas/settings';
+import { setLogLevel } from '$lib/server/logger';
 
 export const load: PageServerLoad = async () => {
 	const settings = await getGeneralSettings();
@@ -71,6 +72,9 @@ export const actions: Actions = {
 				logLevel: config.logLevel,
 				checkForUpdates: config.checkForUpdates
 			});
+
+			// Apply log level change immediately without restart (Requirement 31.5)
+			setLogLevel(config.logLevel as LogLevel);
 		} catch (err) {
 			console.error('[settings] Failed to update settings:', err);
 			return fail(500, {

@@ -23,6 +23,7 @@ import {
 	setLogLevel,
 	clearLogLevelCache,
 	shouldLog,
+	initializeLogLevel,
 	type LogEntry
 } from '../../src/lib/server/logger';
 import { runWithContext, type RequestContext } from '../../src/lib/server/context';
@@ -734,5 +735,157 @@ describe('Auto correlation ID from async context (Requirement 31.2)', () => {
 			expect(entry.correlationId).toBe('job-12345');
 			expect(entry.jobName).toBe('sync-connectors');
 		});
+	});
+});
+
+describe('initializeLogLevel (Requirement 31.5)', () => {
+	let originalEnv: string | undefined;
+
+	beforeEach(() => {
+		originalEnv = process.env.LOG_LEVEL;
+		clearLogLevelCache();
+	});
+
+	afterEach(() => {
+		if (originalEnv !== undefined) {
+			process.env.LOG_LEVEL = originalEnv;
+		} else {
+			delete process.env.LOG_LEVEL;
+		}
+		clearLogLevelCache();
+	});
+
+	it('should fall back to environment variable when database is unavailable', async () => {
+		process.env.LOG_LEVEL = 'debug';
+		clearLogLevelCache();
+
+		// The database import will fail in test environment, so it falls back to env
+		await initializeLogLevel();
+
+		expect(getCurrentLogLevel()).toBe('debug');
+	});
+
+	it('should fall back to default when no env var and database unavailable', async () => {
+		delete process.env.LOG_LEVEL;
+		clearLogLevelCache();
+
+		// The database import will fail in test environment, so it falls back to default
+		await initializeLogLevel();
+
+		expect(getCurrentLogLevel()).toBe('info');
+	});
+
+	it('should handle case-insensitive environment variable', async () => {
+		process.env.LOG_LEVEL = 'TRACE';
+		clearLogLevelCache();
+
+		await initializeLogLevel();
+
+		expect(getCurrentLogLevel()).toBe('trace');
+	});
+
+	it('should fall back to default for invalid environment variable', async () => {
+		process.env.LOG_LEVEL = 'invalid_level';
+		clearLogLevelCache();
+
+		await initializeLogLevel();
+
+		expect(getCurrentLogLevel()).toBe('info');
+	});
+
+	it('should not throw when database is unavailable', async () => {
+		delete process.env.LOG_LEVEL;
+		clearLogLevelCache();
+
+		// Should not throw even if database is unavailable
+		await expect(initializeLogLevel()).resolves.toBeUndefined();
+	});
+});
+
+describe('Runtime log level change integration (Requirement 31.5)', () => {
+	let consoleSpy: ReturnType<typeof vi.spyOn>;
+	let originalEnv: string | undefined;
+
+	beforeEach(() => {
+		consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+		originalEnv = process.env.LOG_LEVEL;
+		clearLogLevelCache();
+	});
+
+	afterEach(() => {
+		consoleSpy.mockRestore();
+		if (originalEnv !== undefined) {
+			process.env.LOG_LEVEL = originalEnv;
+		} else {
+			delete process.env.LOG_LEVEL;
+		}
+		clearLogLevelCache();
+	});
+
+	it('should change log level at runtime and take effect immediately', () => {
+		// Start at info level
+		setLogLevel('info');
+		const logger = createLogger('test');
+
+		// Debug should not be logged at info level
+		logger.debug('Debug message before');
+		expect(consoleSpy).not.toHaveBeenCalled();
+
+		// Change to debug level at runtime
+		setLogLevel('debug');
+
+		// Now debug should be logged
+		logger.debug('Debug message after');
+		expect(consoleSpy).toHaveBeenCalledTimes(1);
+
+		const output = consoleSpy.mock.calls[0]![0] as string;
+		const entry = JSON.parse(output) as LogEntry;
+		expect(entry.level).toBe('debug');
+		expect(entry.message).toBe('Debug message after');
+	});
+
+	it('should allow changing from verbose to less verbose level', () => {
+		// Start at trace level (most verbose)
+		setLogLevel('trace');
+		const logger = createLogger('test');
+
+		// Trace should be logged
+		logger.trace('Trace message');
+		expect(consoleSpy).toHaveBeenCalledTimes(1);
+
+		// Change to error level (least verbose)
+		setLogLevel('error');
+
+		// Clear the spy
+		consoleSpy.mockClear();
+
+		// Info should not be logged at error level
+		logger.info('Info message');
+		expect(consoleSpy).not.toHaveBeenCalled();
+
+		// Error should still be logged
+		logger.error('Error message');
+		expect(consoleSpy).toHaveBeenCalledTimes(1);
+	});
+
+	it('should maintain log level change across multiple logger instances', () => {
+		// Set initial level
+		setLogLevel('warn');
+
+		const logger1 = createLogger('module1');
+		const logger2 = createLogger('module2');
+
+		// Debug should not be logged at warn level
+		logger1.debug('Debug from module1');
+		logger2.debug('Debug from module2');
+		expect(consoleSpy).not.toHaveBeenCalled();
+
+		// Change level at runtime
+		setLogLevel('debug');
+
+		// Both loggers should now log debug
+		logger1.debug('Debug from module1 after');
+		logger2.debug('Debug from module2 after');
+		expect(consoleSpy).toHaveBeenCalledTimes(2);
 	});
 });
