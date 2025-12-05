@@ -1,0 +1,359 @@
+/**
+ * Structured JSON logging module.
+ *
+ * Requirements:
+ * - 31.1: Output structured JSON with timestamp, level, module, message, and correlation_id fields
+ * - 31.4: When LOG_LEVEL is set to trace, include full request and response bodies
+ */
+
+import { logLevels, type LogLevel } from '$lib/schemas/settings';
+
+// =============================================================================
+// Types
+// =============================================================================
+
+/**
+ * Structured log entry format.
+ * All log output follows this structure for machine parsing.
+ */
+export interface LogEntry {
+	/** ISO 8601 timestamp */
+	timestamp: string;
+	/** Log level */
+	level: LogLevel;
+	/** Module/component name */
+	module: string;
+	/** Log message */
+	message: string;
+	/** Request correlation ID for tracing */
+	correlationId?: string;
+	/** Additional context fields */
+	[key: string]: unknown;
+}
+
+/**
+ * Options for HTTP request logging.
+ */
+export interface RequestLogOptions {
+	/** Request headers (redacted sensitive values) */
+	headers?: Record<string, string>;
+	/** Request body (only included at trace level) */
+	body?: unknown;
+	/** Correlation ID for request tracing */
+	correlationId?: string;
+}
+
+/**
+ * Options for HTTP response logging.
+ */
+export interface ResponseLogOptions {
+	/** Response headers */
+	headers?: Record<string, string>;
+	/** Response body (only included at trace level) */
+	body?: unknown;
+	/** Request duration in milliseconds */
+	durationMs?: number;
+	/** Correlation ID for request tracing */
+	correlationId?: string;
+}
+
+// =============================================================================
+// Log Level Management
+// =============================================================================
+
+/**
+ * Log level priority map.
+ * Lower index = higher priority (fewer messages logged).
+ */
+const LOG_LEVEL_PRIORITY: Record<LogLevel, number> = {
+	error: 0,
+	warn: 1,
+	info: 2,
+	debug: 3,
+	trace: 4
+};
+
+/**
+ * Default log level when not configured.
+ */
+const DEFAULT_LOG_LEVEL: LogLevel = 'info';
+
+/**
+ * Cached log level to avoid repeated lookups.
+ * Initialized on first use.
+ */
+let cachedLogLevel: LogLevel | null = null;
+
+/**
+ * Gets the current log level from environment or defaults.
+ * Priority: LOG_LEVEL env var > default ('info')
+ *
+ * Note: Database setting override is handled by task 47.3 (runtime level change).
+ *
+ * @returns Current log level
+ */
+export function getCurrentLogLevel(): LogLevel {
+	if (cachedLogLevel !== null) {
+		return cachedLogLevel;
+	}
+
+	const envLevel = process.env.LOG_LEVEL?.toLowerCase();
+
+	if (envLevel && logLevels.includes(envLevel as LogLevel)) {
+		cachedLogLevel = envLevel as LogLevel;
+	} else {
+		cachedLogLevel = DEFAULT_LOG_LEVEL;
+	}
+
+	return cachedLogLevel;
+}
+
+/**
+ * Sets the log level (for runtime changes).
+ * This allows changing the log level without restart (Requirement 31.5 - task 47.3).
+ *
+ * @param level - New log level to set
+ */
+export function setLogLevel(level: LogLevel): void {
+	cachedLogLevel = level;
+}
+
+/**
+ * Clears the cached log level, forcing re-read from environment.
+ * Useful for testing.
+ */
+export function clearLogLevelCache(): void {
+	cachedLogLevel = null;
+}
+
+/**
+ * Checks if a message at the given level should be logged
+ * based on the current log level setting.
+ *
+ * @param messageLevel - Level of the message to log
+ * @param currentLevel - Current log level threshold
+ * @returns True if the message should be logged
+ */
+export function shouldLog(messageLevel: LogLevel, currentLevel: LogLevel): boolean {
+	return LOG_LEVEL_PRIORITY[messageLevel] <= LOG_LEVEL_PRIORITY[currentLevel];
+}
+
+// =============================================================================
+// Sensitive Data Redaction
+// =============================================================================
+
+/**
+ * Headers that should have their values redacted in logs.
+ */
+const SENSITIVE_HEADERS = new Set([
+	'authorization',
+	'x-api-key',
+	'cookie',
+	'set-cookie',
+	'x-auth-token'
+]);
+
+/**
+ * Redacts sensitive header values.
+ *
+ * @param headers - Headers to redact
+ * @returns Headers with sensitive values redacted
+ */
+function redactHeaders(headers: Record<string, string>): Record<string, string> {
+	const redacted: Record<string, string> = {};
+
+	for (const [key, value] of Object.entries(headers)) {
+		if (SENSITIVE_HEADERS.has(key.toLowerCase())) {
+			redacted[key] = '[REDACTED]';
+		} else {
+			redacted[key] = value;
+		}
+	}
+
+	return redacted;
+}
+
+// =============================================================================
+// Logger Class
+// =============================================================================
+
+/**
+ * Structured logger for a specific module.
+ * Outputs JSON to stdout for machine parsing.
+ *
+ * @example
+ * ```typescript
+ * const logger = createLogger('scheduler');
+ * logger.info('Sweep cycle started', { connectorId: 1 });
+ * // Output: {"timestamp":"...","level":"info","module":"scheduler","message":"Sweep cycle started","connectorId":1}
+ * ```
+ */
+export class Logger {
+	private readonly module: string;
+
+	constructor(module: string) {
+		this.module = module;
+	}
+
+	/**
+	 * Internal log method that handles level checking and output.
+	 */
+	private log(level: LogLevel, message: string, context?: Record<string, unknown>): void {
+		const currentLevel = getCurrentLogLevel();
+
+		if (!shouldLog(level, currentLevel)) {
+			return;
+		}
+
+		const entry: LogEntry = {
+			timestamp: new Date().toISOString(),
+			level,
+			module: this.module,
+			message,
+			...context
+		};
+
+		// Output as JSON to stdout
+		console.log(JSON.stringify(entry));
+	}
+
+	/**
+	 * Logs an error message.
+	 * Always logged (highest priority).
+	 */
+	error(message: string, context?: Record<string, unknown>): void {
+		this.log('error', message, context);
+	}
+
+	/**
+	 * Logs a warning message.
+	 * Logged at warn level and above.
+	 */
+	warn(message: string, context?: Record<string, unknown>): void {
+		this.log('warn', message, context);
+	}
+
+	/**
+	 * Logs an informational message.
+	 * Logged at info level and above (default).
+	 */
+	info(message: string, context?: Record<string, unknown>): void {
+		this.log('info', message, context);
+	}
+
+	/**
+	 * Logs a debug message.
+	 * Logged at debug level and above.
+	 */
+	debug(message: string, context?: Record<string, unknown>): void {
+		this.log('debug', message, context);
+	}
+
+	/**
+	 * Logs a trace message.
+	 * Logged only at trace level (most verbose).
+	 */
+	trace(message: string, context?: Record<string, unknown>): void {
+		this.log('trace', message, context);
+	}
+
+	/**
+	 * Logs an HTTP request.
+	 * - Logs at debug level with method, URL, and headers (redacted)
+	 * - Includes request body only at trace level (Requirement 31.4)
+	 *
+	 * @param method - HTTP method (GET, POST, etc.)
+	 * @param url - Request URL
+	 * @param options - Optional headers, body, and correlation ID
+	 */
+	logRequest(method: string, url: string, options?: RequestLogOptions): void {
+		const currentLevel = getCurrentLogLevel();
+
+		// Don't log at all if below debug level
+		if (!shouldLog('debug', currentLevel)) {
+			return;
+		}
+
+		const context: Record<string, unknown> = {
+			method,
+			url
+		};
+
+		if (options?.correlationId) {
+			context.correlationId = options.correlationId;
+		}
+
+		if (options?.headers) {
+			context.headers = redactHeaders(options.headers);
+		}
+
+		// Include body only at trace level (Requirement 31.4)
+		if (options?.body !== undefined && shouldLog('trace', currentLevel)) {
+			context.body = options.body;
+		}
+
+		this.log('debug', `HTTP ${method} ${url}`, context);
+	}
+
+	/**
+	 * Logs an HTTP response.
+	 * - Logs at debug level with status code, URL, and duration
+	 * - Includes response body only at trace level (Requirement 31.4)
+	 *
+	 * @param statusCode - HTTP status code
+	 * @param url - Request URL
+	 * @param options - Optional headers, body, duration, and correlation ID
+	 */
+	logResponse(statusCode: number, url: string, options?: ResponseLogOptions): void {
+		const currentLevel = getCurrentLogLevel();
+
+		// Don't log at all if below debug level
+		if (!shouldLog('debug', currentLevel)) {
+			return;
+		}
+
+		const context: Record<string, unknown> = {
+			statusCode,
+			url
+		};
+
+		if (options?.correlationId) {
+			context.correlationId = options.correlationId;
+		}
+
+		if (options?.durationMs !== undefined) {
+			context.durationMs = options.durationMs;
+		}
+
+		if (options?.headers) {
+			context.headers = options.headers;
+		}
+
+		// Include body only at trace level (Requirement 31.4)
+		if (options?.body !== undefined && shouldLog('trace', currentLevel)) {
+			context.body = options.body;
+		}
+
+		this.log('debug', `HTTP ${statusCode} ${url}`, context);
+	}
+}
+
+// =============================================================================
+// Factory Function
+// =============================================================================
+
+/**
+ * Creates a logger instance for a specific module.
+ *
+ * @param module - Module/component name for log entries
+ * @returns Logger instance
+ *
+ * @example
+ * ```typescript
+ * const logger = createLogger('sync');
+ * logger.info('Starting sync', { connectorId: 1 });
+ * ```
+ */
+export function createLogger(module: string): Logger {
+	return new Logger(module);
+}
