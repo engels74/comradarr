@@ -19,8 +19,9 @@
  * - analyticsEvents: Raw analytics event tracking (Requirements 12.1)
  * - analyticsHourlyStats: Hourly aggregated statistics (Requirements 12.1, 12.2, 12.3)
  * - analyticsDailyStats: Daily aggregated statistics (Requirements 12.1, 12.2, 12.4)
+ * - appSettings: Application-wide configuration settings (Requirement 21.1)
  *
- * Requirements: 7.1, 7.4, 7.5, 9.1, 9.2, 9.3, 9.4, 10.1, 10.2, 12.1, 12.2, 12.3, 12.4, 14.1, 14.2, 14.3, 15.4, 19.1, 36.1, 38.1, 38.2, 38.4
+ * Requirements: 7.1, 7.4, 7.5, 9.1, 9.2, 9.3, 9.4, 10.1, 10.2, 12.1, 12.2, 12.3, 12.4, 14.1, 14.2, 14.3, 15.4, 19.1, 21.1, 36.1, 38.1, 38.2, 38.4
  */
 
 import {
@@ -744,3 +745,21 @@ export const analyticsDailyStats = pgTable(
 
 export type AnalyticsDailyStat = typeof analyticsDailyStats.$inferSelect;
 export type NewAnalyticsDailyStat = typeof analyticsDailyStats.$inferInsert;
+
+// =============================================================================
+// App Settings Table (Requirement 21.1)
+// =============================================================================
+
+/**
+ * Stores application-wide configuration settings as key-value pairs.
+ * Used for general settings like app name, timezone, log level, and update preferences.
+ */
+export const appSettings = pgTable('app_settings', {
+	id: integer('id').primaryKey().generatedAlwaysAsIdentity(),
+	key: varchar('key', { length: 100 }).notNull().unique(),
+	value: text('value').notNull(),
+	updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow()
+});
+
+export type AppSetting = typeof appSettings.$inferSelect;
+export type NewAppSetting = typeof appSettings.$inferInsert;

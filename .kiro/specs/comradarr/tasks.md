@@ -637,7 +637,7 @@
 ## Phase 19: Settings UI
 
 - [ ] 42. Create settings pages
-  - [ ] 42.1 Create general settings page
+  - [x] 42.1 Create general settings page
     - Add application name, timezone, log level options
     - _Requirements: 21.1_
 
