@@ -1,7 +1,7 @@
 /**
  * Analytics components barrel export.
  *
- * Requirements: 12.2, 12.3, 20.1, 20.2, 20.3
+ * Requirements: 12.2, 12.3, 12.4, 20.1, 20.2, 20.3, 20.4
  */
 
 // Types
@@ -27,3 +27,4 @@ export { default as QueueDepthChart } from './QueueDepthChart.svelte';
 export { default as ConnectorComparison } from './ConnectorComparison.svelte';
 export { default as ContentAnalysis } from './ContentAnalysis.svelte';
 export { default as AnalyticsSummaryCards } from './AnalyticsSummaryCards.svelte';
+export { default as ExportDialog } from './ExportDialog.svelte';

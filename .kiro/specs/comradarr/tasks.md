@@ -609,7 +609,7 @@
 
 ## Phase 18: Analytics
 
-- [ ] 40. Implement analytics
+- [x] 40. Implement analytics
   - [x] 40.1 Create analytics schema
     - Define analytics_events table
     - Define aggregated statistics tables
@@ -627,11 +627,11 @@
     - Show content analysis
     - _Requirements: 12.2, 12.3_
 
-  - [ ] 40.4 Implement CSV export
+  - [x] 40.4 Implement CSV export
     - Export statistics with date range selection
     - _Requirements: 12.4_
 
-- [ ] 41. Checkpoint - Ensure all tests pass
+- [x] 41. Checkpoint - Ensure all tests pass
   - Ensure all tests pass, ask the user if questions arise.
 
 ## Phase 19: Settings UI

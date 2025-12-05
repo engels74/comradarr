@@ -2,12 +2,13 @@
 	/**
 	 * Analytics Dashboard Page
 	 *
-	 * Requirements: 12.2, 12.3, 20.1, 20.2, 20.3
+	 * Requirements: 12.2, 12.3, 12.4, 20.1, 20.2, 20.3, 20.4
 	 *
 	 * Displays:
 	 * - Time-series charts for key metrics
 	 * - Connector comparison table
 	 * - Content analysis (most searched, hardest to find, quality distribution)
+	 * - CSV export with date range selection
 	 */
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
@@ -20,7 +21,8 @@
 		QueueDepthChart,
 		ConnectorComparison,
 		ContentAnalysis,
-		AnalyticsSummaryCards
+		AnalyticsSummaryCards,
+		ExportDialog
 	} from '$lib/components/analytics';
 	import BarChart3Icon from '@lucide/svelte/icons/bar-chart-3';
 
@@ -41,7 +43,7 @@
 </svelte:head>
 
 <div class="container mx-auto p-6">
-	<!-- Header with period selector -->
+	<!-- Header with period selector and export -->
 	<div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
 		<div class="flex items-center gap-3">
 			<div class="p-2 rounded-lg bg-primary/10">
@@ -54,7 +56,10 @@
 				</p>
 			</div>
 		</div>
-		<TimePeriodSelector value={data.period as TimePeriod} onchange={onPeriodChange} />
+		<div class="flex items-center gap-2">
+			<TimePeriodSelector value={data.period as TimePeriod} onchange={onPeriodChange} />
+			<ExportDialog />
+		</div>
 	</div>
 
 	<!-- Summary Cards -->

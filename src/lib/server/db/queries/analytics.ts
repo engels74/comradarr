@@ -21,7 +21,7 @@ import {
 	seasons,
 	series
 } from '$lib/server/db/schema';
-import { and, count, desc, eq, gte, sql, sum } from 'drizzle-orm';
+import { and, count, desc, eq, gte, lte, sql, sum } from 'drizzle-orm';
 
 // =============================================================================
 // Types
@@ -750,4 +750,84 @@ export async function getAnalyticsSummary(
 			avgResponseTimeMs: avgResponseTime !== null && avgResponseTime !== undefined ? Math.round(avgResponseTime) : null
 		};
 	}
+}
+
+// =============================================================================
+// CSV Export Query (Requirement 12.4)
+// =============================================================================
+
+/**
+ * Row structure for CSV export.
+ */
+export interface ExportRow {
+	date: string;
+	connector: string;
+	connectorType: string;
+	gapsDiscovered: number;
+	upgradesDiscovered: number;
+	searchesDispatched: number;
+	searchesSuccessful: number;
+	searchesFailed: number;
+	searchesNoResults: number;
+	avgQueueDepth: number;
+	peakQueueDepth: number;
+	avgResponseTimeMs: number | null;
+	errorCount: number;
+	successRate: number;
+}
+
+/**
+ * Gets daily statistics for CSV export within a date range.
+ *
+ * Requirements: 12.4, 20.4
+ *
+ * @param startDate - Start of date range (inclusive)
+ * @param endDate - End of date range (inclusive)
+ * @returns Array of export rows ordered by date ascending, then connector name
+ */
+export async function getDailyStatsForExport(startDate: Date, endDate: Date): Promise<ExportRow[]> {
+	const results = await db
+		.select({
+			dateBucket: analyticsDailyStats.dateBucket,
+			connectorName: connectors.name,
+			connectorType: connectors.type,
+			gapsDiscovered: analyticsDailyStats.gapsDiscovered,
+			upgradesDiscovered: analyticsDailyStats.upgradesDiscovered,
+			searchesDispatched: analyticsDailyStats.searchesDispatched,
+			searchesSuccessful: analyticsDailyStats.searchesSuccessful,
+			searchesFailed: analyticsDailyStats.searchesFailed,
+			searchesNoResults: analyticsDailyStats.searchesNoResults,
+			avgQueueDepth: analyticsDailyStats.avgQueueDepth,
+			peakQueueDepth: analyticsDailyStats.peakQueueDepth,
+			avgResponseTimeMs: analyticsDailyStats.avgResponseTimeMs,
+			errorCount: analyticsDailyStats.errorCount
+		})
+		.from(analyticsDailyStats)
+		.innerJoin(connectors, eq(analyticsDailyStats.connectorId, connectors.id))
+		.where(and(gte(analyticsDailyStats.dateBucket, startDate), lte(analyticsDailyStats.dateBucket, endDate)))
+		.orderBy(analyticsDailyStats.dateBucket, connectors.name);
+
+	return results.map((row) => {
+		const successRate =
+			row.searchesDispatched > 0
+				? Math.round((row.searchesSuccessful / row.searchesDispatched) * 100)
+				: 0;
+
+		return {
+			date: row.dateBucket.toISOString().split('T')[0]!,
+			connector: row.connectorName,
+			connectorType: row.connectorType,
+			gapsDiscovered: row.gapsDiscovered,
+			upgradesDiscovered: row.upgradesDiscovered,
+			searchesDispatched: row.searchesDispatched,
+			searchesSuccessful: row.searchesSuccessful,
+			searchesFailed: row.searchesFailed,
+			searchesNoResults: row.searchesNoResults,
+			avgQueueDepth: row.avgQueueDepth,
+			peakQueueDepth: row.peakQueueDepth,
+			avgResponseTimeMs: row.avgResponseTimeMs,
+			errorCount: row.errorCount,
+			successRate
+		};
+	});
 }
