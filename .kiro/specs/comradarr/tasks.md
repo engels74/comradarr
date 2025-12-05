@@ -646,7 +646,7 @@
     - Add create/edit custom profile form
     - _Requirements: 21.2_
 
-  - [ ] 42.3 Create notifications settings page
+  - [x] 42.3 Create notifications settings page
     - Add channel configuration
     - Add event filtering
     - Add test notification button
