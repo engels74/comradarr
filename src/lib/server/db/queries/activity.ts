@@ -78,7 +78,7 @@ export async function getRecentActivity(limit: number = 20): Promise<ActivityIte
 		.select({
 			id: sql<string>`'search-' || ${searchHistory.id}::text`.as('id'),
 			type: sql<'search'>`'search'::text`.as('type'),
-			timestamp: searchHistory.createdAt,
+			timestamp: sql<Date>`${searchHistory.createdAt}`.as('timestamp'),
 			outcome: searchHistory.outcome,
 			contentType: sql<'episode'>`'episode'::text`.as('content_type'),
 			contentTitle: episodes.title,
@@ -102,7 +102,7 @@ export async function getRecentActivity(limit: number = 20): Promise<ActivityIte
 		.select({
 			id: sql<string>`'search-' || ${searchHistory.id}::text`.as('id'),
 			type: sql<'search'>`'search'::text`.as('type'),
-			timestamp: searchHistory.createdAt,
+			timestamp: sql<Date>`${searchHistory.createdAt}`.as('timestamp'),
 			outcome: searchHistory.outcome,
 			contentType: sql<'movie'>`'movie'::text`.as('content_type'),
 			contentTitle: movies.title,
@@ -124,7 +124,7 @@ export async function getRecentActivity(limit: number = 20): Promise<ActivityIte
 		.select({
 			id: sql<string>`'discovery-' || ${searchRegistry.id}::text`.as('id'),
 			type: sql<'discovery'>`'discovery'::text`.as('type'),
-			timestamp: searchRegistry.createdAt,
+			timestamp: sql<Date>`${searchRegistry.createdAt}`.as('timestamp'),
 			outcome: sql<null>`NULL::text`.as('outcome'),
 			contentType: sql<'episode'>`'episode'::text`.as('content_type'),
 			contentTitle: episodes.title,
@@ -154,7 +154,7 @@ export async function getRecentActivity(limit: number = 20): Promise<ActivityIte
 		.select({
 			id: sql<string>`'discovery-' || ${searchRegistry.id}::text`.as('id'),
 			type: sql<'discovery'>`'discovery'::text`.as('type'),
-			timestamp: searchRegistry.createdAt,
+			timestamp: sql<Date>`${searchRegistry.createdAt}`.as('timestamp'),
 			outcome: sql<null>`NULL::text`.as('outcome'),
 			contentType: sql<'movie'>`'movie'::text`.as('content_type'),
 			contentTitle: movies.title,
@@ -182,7 +182,7 @@ export async function getRecentActivity(limit: number = 20): Promise<ActivityIte
 		.select({
 			id: sql<string>`'sync-' || ${syncState.id}::text`.as('id'),
 			type: sql<'sync'>`'sync'::text`.as('type'),
-			timestamp: syncState.lastSync,
+			timestamp: sql<Date>`${syncState.lastSync}`.as('timestamp'),
 			outcome: sql<null>`NULL::text`.as('outcome'),
 			contentType: sql<null>`NULL::text`.as('content_type'),
 			contentTitle: sql<null>`NULL::text`.as('content_title'),
