@@ -7,7 +7,7 @@ import { presetShadcn } from 'unocss-preset-shadcn';
 export default defineConfig({
 	extractors: [extractorSvelte()],
 	presets: [
-		presetWind(),
+		presetWind({ preflight: false }),
 		presetAnimations(),
 		presetShadcn()
 	],
