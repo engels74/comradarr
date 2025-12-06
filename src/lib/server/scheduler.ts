@@ -999,18 +999,18 @@ export function getSchedulerStatus(): {
 		initialized,
 		jobs: Array.from(jobs.values()).map((job) => ({
 			name: job.name,
-			isRunning: job.cron.isRunning(),
+			isRunning: job.cron.isBusy(),
 			nextRun: job.cron.nextRun()
 		})),
 		dynamicSchedules: Array.from(dynamicJobs.entries()).map(([id, cron]) => ({
 			id,
-			isRunning: cron.isRunning(),
+			isRunning: cron.isBusy(),
 			nextRun: cron.nextRun()
 		})),
 		scheduledBackup: scheduledBackupJob
 			? {
 					enabled: true,
-					isRunning: scheduledBackupJob.isRunning(),
+					isRunning: scheduledBackupJob.isBusy(),
 					nextRun: scheduledBackupJob.nextRun()
 				}
 			: null
