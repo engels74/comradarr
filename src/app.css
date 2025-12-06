@@ -80,3 +80,27 @@ button.bg-accent,
 [type="submit"].bg-accent {
   background-color: hsl(var(--accent));
 }
+
+/*
+ * Text color overrides for buttons (same specificity fix as background colors).
+ * The reset may also affect text colors on buttons.
+ */
+button.text-primary-foreground,
+[type="submit"].text-primary-foreground {
+  color: hsl(var(--primary-foreground));
+}
+
+button.text-secondary-foreground,
+[type="submit"].text-secondary-foreground {
+  color: hsl(var(--secondary-foreground));
+}
+
+button.text-destructive-foreground,
+[type="submit"].text-destructive-foreground {
+  color: hsl(var(--destructive-foreground));
+}
+
+button.text-accent-foreground,
+[type="submit"].text-accent-foreground {
+  color: hsl(var(--accent-foreground));
+}
