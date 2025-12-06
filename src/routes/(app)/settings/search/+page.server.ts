@@ -1,7 +1,5 @@
 /**
  * Search behavior settings page server load and actions.
- *
- * Requirements: 21.4
  */
 
 import type { PageServerLoad, Actions } from './$types';

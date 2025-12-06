@@ -1,7 +1,5 @@
 /**
  * Validation schemas for settings forms.
- *
- * Requirements: 21.1, 21.5, 34.1, 34.5
  */
 
 import * as v from 'valibot';
@@ -62,7 +60,7 @@ export type GeneralSettingsInput = v.InferInput<typeof GeneralSettingsSchema>;
 export type GeneralSettingsOutput = v.InferOutput<typeof GeneralSettingsSchema>;
 
 // =============================================================================
-// Security Settings (Requirements: 21.5, 10.3)
+// Security Settings
 // =============================================================================
 
 /**
@@ -131,7 +129,7 @@ export type PasswordChangeInput = v.InferInput<typeof PasswordChangeSchema>;
 export type PasswordChangeOutput = v.InferOutput<typeof PasswordChangeSchema>;
 
 // =============================================================================
-// Backup Settings (Requirements: 33.5)
+// Backup Settings
 // =============================================================================
 
 /**

@@ -1,7 +1,5 @@
 /**
  * Validation schemas for Prowlarr instance forms.
- *
- * Requirements: 38.1, 38.4
  */
 
 import * as v from 'valibot';

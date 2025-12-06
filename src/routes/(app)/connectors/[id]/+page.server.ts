@@ -1,7 +1,5 @@
 /**
  * Connector detail page server load and actions.
- *
- * Requirements: 16.4, 16.5
  */
 
 import { error, fail, redirect } from '@sveltejs/kit';

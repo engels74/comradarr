@@ -1,8 +1,6 @@
 <script lang="ts">
 	/**
 	 * Search behavior settings page.
-	 *
-	 * Requirements: 21.4
 	 */
 	import { untrack } from 'svelte';
 	import { enhance } from '$app/forms';

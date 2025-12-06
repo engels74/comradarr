@@ -1,8 +1,6 @@
 <script lang="ts">
 	/**
 	 * Add Prowlarr instance form page.
-	 *
-	 * Requirements: 38.1, 38.4
 	 */
 	import { enhance } from '$app/forms';
 	import * as Card from '$lib/components/ui/card';

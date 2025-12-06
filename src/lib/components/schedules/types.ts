@@ -1,6 +1,5 @@
 /**
  * Type definitions for Schedule Timeline Visualization.
- * Requirements: 19.4 - Display calendar or timeline view of upcoming sweeps
  */
 
 /**

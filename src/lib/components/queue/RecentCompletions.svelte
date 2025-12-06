@@ -7,8 +7,6 @@
 	/**
 	 * Recent completions display component.
 	 * Shows the last N completed searches with outcome indicators.
-	 *
-	 * Requirements: 18.4
 	 */
 
 	interface Props {

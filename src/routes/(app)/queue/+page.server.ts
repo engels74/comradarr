@@ -1,7 +1,6 @@
 /**
  * Queue management page server load and actions.
  *
- * Requirements: 18.1, 18.2, 18.3, 18.4, 18.5
  * - Display items in priority order
  * - Show estimated dispatch time
  * - Show current processing indicator
@@ -29,7 +28,7 @@ import {
 } from '$lib/server/db/queries/queue';
 
 export const load: PageServerLoad = async ({ url, depends }) => {
-	// Register custom dependency for selective invalidation (Requirement 18.5)
+	// Register custom dependency for selective invalidation
 	depends('app:queue');
 
 	// Parse filters from URL params
@@ -122,7 +121,6 @@ function parseConnectorIds(formData: FormData): number[] | undefined {
 export const actions: Actions = {
 	/**
 	 * Pause queue processing for connector(s).
-	 * Requirements: 18.3
 	 */
 	pauseQueue: async ({ request }) => {
 		const formData = await request.formData();
@@ -141,7 +139,6 @@ export const actions: Actions = {
 
 	/**
 	 * Resume queue processing for connector(s).
-	 * Requirements: 18.3
 	 */
 	resumeQueue: async ({ request }) => {
 		const formData = await request.formData();
@@ -160,7 +157,6 @@ export const actions: Actions = {
 
 	/**
 	 * Clear queue items for connector(s).
-	 * Requirements: 18.3
 	 */
 	clearQueue: async ({ request }) => {
 		const formData = await request.formData();
@@ -177,7 +173,6 @@ export const actions: Actions = {
 
 	/**
 	 * Adjust priority for selected queue items.
-	 * Requirements: 18.2
 	 */
 	adjustPriority: async ({ request }) => {
 		const formData = await request.formData();
@@ -208,7 +203,6 @@ export const actions: Actions = {
 
 	/**
 	 * Remove selected items from queue.
-	 * Requirements: 18.2
 	 */
 	removeFromQueue: async ({ request }) => {
 		const formData = await request.formData();

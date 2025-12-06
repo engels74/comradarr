@@ -7,8 +7,6 @@
  *
  * Returns:
  * - CSV file download with analytics data
- *
- * Requirements: 12.4, 20.4, 34.2
  */
 
 import { error } from '@sveltejs/kit';
@@ -112,7 +110,7 @@ function parseDate(dateString: string | null, paramName: string): Date {
 }
 
 export const GET: RequestHandler = async ({ url, locals }) => {
-	// Require read scope for read operations (Requirement 34.2)
+	// Require read scope for read operations
 	requireScope(locals, 'read');
 
 	// Parse and validate date parameters

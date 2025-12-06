@@ -1,7 +1,6 @@
 <script lang="ts">
 	/**
 	 * Conflict Indicator - displays a warning when sweeps conflict.
-	 * Requirements: 19.4 - Identify scheduling conflicts
 	 */
 	import * as Tooltip from '$lib/components/ui/tooltip';
 	import AlertTriangleIcon from '@lucide/svelte/icons/alert-triangle';

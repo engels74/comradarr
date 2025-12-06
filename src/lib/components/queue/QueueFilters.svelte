@@ -6,7 +6,6 @@
 
 	/**
 	 * Queue filter controls with URL-based state.
-	 * Requirements: 18.1 (queue filtering)
 	 */
 
 	interface Props {

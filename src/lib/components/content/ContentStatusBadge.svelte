@@ -3,7 +3,6 @@
 
 	/**
 	 * Search state values for content.
-	 * Requirements: 17.1 (status display)
 	 */
 	type SearchState = 'pending' | 'queued' | 'searching' | 'cooldown' | 'exhausted' | null;
 

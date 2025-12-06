@@ -1,7 +1,5 @@
 <!--
   Edit Prowlarr instance form page.
-
-  Requirements: 38.1, 38.4
 -->
 <script lang="ts">
 	import { enhance } from '$app/forms';

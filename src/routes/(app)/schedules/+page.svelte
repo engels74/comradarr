@@ -1,7 +1,6 @@
 <script lang="ts">
 	/**
 	 * Schedules list page with timeline visualization.
-	 * Requirements: 19.1, 19.4
 	 */
 	import type { PageProps } from './$types';
 	import { ScheduleCard, ScheduleTimeline } from '$lib/components/schedules';

@@ -1,7 +1,5 @@
 /**
  * Database queries for authentication operations.
- *
- * Requirements: 10.1, 10.2, 21.5, 35.1-35.5
  */
 
 import { db } from '$lib/server/db';

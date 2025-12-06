@@ -1,8 +1,6 @@
 /**
  * API key encryption utilities using AES-256-GCM.
  *
- * Requirements: 1.1, 36.1
- *
  * Uses AES-256-GCM for authenticated encryption with:
  * - 256-bit key from SECRET_KEY environment variable
  * - Random 16-byte IV per encryption

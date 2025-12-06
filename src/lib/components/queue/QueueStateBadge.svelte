@@ -4,7 +4,6 @@
 
 	/**
 	 * Queue state badge with processing indicator.
-	 * Requirements: 18.1 (current processing indicator)
 	 */
 	type QueueState = 'pending' | 'queued' | 'searching' | 'cooldown' | 'exhausted';
 

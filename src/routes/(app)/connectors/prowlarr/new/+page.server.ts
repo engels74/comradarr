@@ -1,7 +1,5 @@
 /**
  * Add Prowlarr instance page server-side logic.
- *
- * Requirements: 38.1, 38.4
  */
 
 import { fail, redirect } from '@sveltejs/kit';

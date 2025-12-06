@@ -1,7 +1,5 @@
 /**
  * Validation schemas for schedule forms.
- *
- * Requirements: 19.2, 19.3
  */
 
 import * as v from 'valibot';

@@ -7,8 +7,6 @@
  * Response:
  * - HTTP 200: healthy or degraded (application is operational)
  * - HTTP 503: unhealthy (database unreachable or critical failure)
- *
- * Requirements: 32.1, 32.2, 32.3, 32.4, 32.5
  */
 
 import { json } from '@sveltejs/kit';
@@ -99,14 +97,14 @@ const APP_VERSION = '0.0.1';
  * Returns comprehensive health status for the application.
  *
  * Status codes:
- * - 200: healthy or degraded (Requirement 32.4)
- * - 503: unhealthy/database unreachable (Requirement 32.3)
+ * - 200: healthy or degraded
+ * - 503: unhealthy/database unreachable
  */
 export const GET: RequestHandler = async () => {
 	// Get health summary from database queries
 	const healthSummary = await getHealthSummary();
 
-	// Get memory usage (Requirement 32.1)
+	// Get memory usage
 	const memoryUsage = process.memoryUsage();
 
 	// Build response
@@ -136,8 +134,8 @@ export const GET: RequestHandler = async () => {
 		queue: healthSummary.queue
 	};
 
-	// Return 503 for unhealthy status (Requirement 32.3)
-	// Return 200 for healthy or degraded (Requirement 32.4)
+	// Return 503 for unhealthy status
+	// Return 200 for healthy or degraded
 	const httpStatus = healthSummary.overallStatus === 'unhealthy' ? 503 : 200;
 
 	return json(response, { status: httpStatus });

@@ -5,20 +5,6 @@
  * - `protect: true` to prevent overlapping executions
  * - Error handling that logs but doesn't crash the server
  *
- * Requirements:
- * - 1.4: Connector health checks
- * - 1.5: Skip sweep cycles for unhealthy connectors
- * - 7.4: Reset counters at configured intervals
- * - 8.1: Execute sweeps at specified cron intervals
- * - 8.2: Run discovery for configured search types
- * - 8.4: Log summary of discoveries and items queued
- * - 12.1: Track analytics (gap discovery, search volume, queue depth)
- * - 13.1: Execute VACUUM and ANALYZE database maintenance
- * - 15.4: Capture completion snapshots for trend visualization
- * - 33.5: Automatic scheduled backups at configured interval
- * - 34.5: Reset expired API key rate limit windows
- * - 38.2: Periodic Prowlarr health checks
- *
  * Jobs:
  * - throttle-window-reset: Every minute - resets expired throttle and API key rate limit windows
  * - prowlarr-health-check: Every 5 minutes - checks Prowlarr indexer health
@@ -112,7 +98,7 @@ let initialized = false;
 
 /**
  * Logs connectors that are being skipped due to unhealthy status.
- * Used by sweep cycle jobs to inform about excluded connectors (Requirement 1.5).
+ * Used by sweep cycle jobs to inform about excluded connectors.
  *
  * @param healthyConnectors - Connectors that will be processed
  */
@@ -130,7 +116,7 @@ async function logSkippedUnhealthyConnectors(healthyConnectors: Connector[]): Pr
 
 /**
  * Creates a job executor that wraps the callback in a request context.
- * Ensures all scheduled jobs have proper correlation ID propagation (Requirement 31.2).
+ * Ensures all scheduled jobs have proper correlation ID propagation.
  *
  * @param jobName - Name of the job for context tracking
  * @param callback - The job callback to wrap
@@ -166,7 +152,7 @@ export function initializeScheduler(): void {
 
 	// Throttle window reset - runs every minute
 	// Resets expired per-minute counters, daily counters, and clears expired pauses
-	// Also resets expired API key rate limit windows (Requirement 34.5)
+	// Also resets expired API key rate limit windows
 	const throttleResetJob = new Cron(
 		'* * * * *', // Every minute
 		{
@@ -189,7 +175,7 @@ export function initializeScheduler(): void {
 				});
 			}
 
-			// Reset API key rate limit windows (Requirement 34.5)
+			// Reset API key rate limit windows
 			const apiKeyResets = await apiKeyRateLimiter.resetExpiredWindows();
 
 			if (apiKeyResets > 0) {
@@ -206,7 +192,7 @@ export function initializeScheduler(): void {
 	});
 
 	// Prowlarr health check - runs every 5 minutes
-	// Checks indexer health status from Prowlarr and caches results (Req 38.2)
+	// Checks indexer health status from Prowlarr and caches results
 	const prowlarrHealthJob = new Cron(
 		'*/5 * * * *', // Every 5 minutes
 		{
@@ -243,7 +229,7 @@ export function initializeScheduler(): void {
 	});
 
 	// Connector health check - runs every 5 minutes
-	// Checks *arr connector health status and updates database (Req 1.4)
+	// Checks *arr connector health status and updates database
 	const connectorHealthJob = new Cron(
 		'*/5 * * * *', // Every 5 minutes
 		{
@@ -346,12 +332,12 @@ export function initializeScheduler(): void {
 	});
 
 	// =========================================================================
-	// Sweep Cycle Jobs (Requirements 8.1, 8.2, 8.4)
+	// Sweep Cycle Jobs
 	// =========================================================================
 
 	// Incremental sync sweep - runs every 15 minutes
 	// Syncs content from *arr apps, discovers gaps/upgrades, enqueues items
-	// Only processes healthy connectors (Requirement 1.5)
+	// Only processes healthy connectors
 	const incrementalSyncJob = new Cron(
 		'*/15 * * * *', // Every 15 minutes
 		{
@@ -363,7 +349,7 @@ export function initializeScheduler(): void {
 		},
 		withJobContext('incremental-sync-sweep', async () => {
 			const startTime = Date.now();
-			// Only process healthy connectors (Requirement 1.5)
+			// Only process healthy connectors
 			const connectors = await getHealthyConnectors();
 
 			// Log any unhealthy connectors being skipped
@@ -406,12 +392,12 @@ export function initializeScheduler(): void {
 
 					if (gapsResult.success) {
 						summary.totalGapsFound += gapsResult.registriesCreated;
-						// Record analytics for gap discovery (Requirement 12.1)
+						// Record analytics for gap discovery
 						await analyticsCollector.recordGapDiscovery(connector.id, gapsResult);
 					}
 					if (upgradesResult.success) {
 						summary.totalUpgradesFound += upgradesResult.registriesCreated;
-						// Record analytics for upgrade discovery (Requirement 12.1)
+						// Record analytics for upgrade discovery
 						await analyticsCollector.recordUpgradeDiscovery(connector.id, upgradesResult);
 					}
 
@@ -432,7 +418,7 @@ export function initializeScheduler(): void {
 				}
 			}
 
-			// Log summary (Requirement 8.4)
+			// Log summary
 			const durationMs = Date.now() - startTime;
 			if (
 				summary.totalItemsSynced > 0 ||
@@ -456,7 +442,7 @@ export function initializeScheduler(): void {
 
 	// Full reconciliation - runs daily at 3 AM
 	// Complete sync with deletion of removed items, full discovery and enqueue
-	// Only processes healthy connectors (Requirement 1.5)
+	// Only processes healthy connectors
 	const fullReconciliationJob = new Cron(
 		'0 3 * * *', // Daily at 3:00 AM
 		{
@@ -468,7 +454,7 @@ export function initializeScheduler(): void {
 		},
 		withJobContext('full-reconciliation', async () => {
 			const startTime = Date.now();
-			// Only process healthy connectors (Requirement 1.5)
+			// Only process healthy connectors
 			const connectors = await getHealthyConnectors();
 
 			// Log any unhealthy connectors being skipped
@@ -515,12 +501,12 @@ export function initializeScheduler(): void {
 
 					if (gapsResult.success) {
 						summary.totalGapsFound += gapsResult.registriesCreated;
-						// Record analytics for gap discovery (Requirement 12.1)
+						// Record analytics for gap discovery
 						await analyticsCollector.recordGapDiscovery(connector.id, gapsResult);
 					}
 					if (upgradesResult.success) {
 						summary.totalUpgradesFound += upgradesResult.registriesCreated;
-						// Record analytics for upgrade discovery (Requirement 12.1)
+						// Record analytics for upgrade discovery
 						await analyticsCollector.recordUpgradeDiscovery(connector.id, upgradesResult);
 					}
 
@@ -541,7 +527,7 @@ export function initializeScheduler(): void {
 				}
 			}
 
-			// Log summary (Requirement 8.4)
+			// Log summary
 			const durationMs = Date.now() - startTime;
 			console.log('[scheduler] Full reconciliation completed:', {
 				...summary,
@@ -556,7 +542,7 @@ export function initializeScheduler(): void {
 	});
 
 	// =========================================================================
-	// Completion Snapshot Job (Requirement 15.4)
+	// Completion Snapshot Job
 	// =========================================================================
 
 	// Completion snapshot capture - runs daily at 4 AM (after full reconciliation at 3 AM)
@@ -596,12 +582,11 @@ export function initializeScheduler(): void {
 	});
 
 	// =========================================================================
-	// Database Maintenance Job (Requirement 13.1)
+	// Database Maintenance Job
 	// =========================================================================
 
 	// Database maintenance - runs daily at 4:30 AM (after completion snapshot at 4:00 AM)
 	// Executes VACUUM/ANALYZE and orphan cleanup for optimal database performance
-	// Requirements: 13.1 (VACUUM/ANALYZE), 13.2 (orphan cleanup)
 	const dbMaintenanceJob = new Cron(
 		'30 4 * * *', // Daily at 4:30 AM
 		{
@@ -612,7 +597,7 @@ export function initializeScheduler(): void {
 			}
 		},
 		withJobContext('db-maintenance', async () => {
-			// 1. Run VACUUM and ANALYZE (Requirement 13.1)
+			// 1. Run VACUUM and ANALYZE
 			const maintenanceResult = await runDatabaseMaintenance();
 
 			if (maintenanceResult.success) {
@@ -625,7 +610,7 @@ export function initializeScheduler(): void {
 				console.error('[scheduler] Database maintenance failed:', maintenanceResult.error);
 			}
 
-			// 2. Run orphan cleanup (Requirement 13.2)
+			// 2. Run orphan cleanup
 			const orphanResult = await cleanupOrphanedSearchState();
 
 			if (orphanResult.success) {
@@ -641,7 +626,7 @@ export function initializeScheduler(): void {
 				console.error('[scheduler] Orphan cleanup failed:', orphanResult.error);
 			}
 
-			// 3. Run history pruning (Requirement 13.3)
+			// 3. Run history pruning
 			const historyResult = await pruneSearchHistory();
 
 			if (historyResult.success) {
@@ -664,7 +649,7 @@ export function initializeScheduler(): void {
 
 	// Queue processor - runs every minute
 	// Re-enqueues cooldown items, dequeues and dispatches searches
-	// Only processes healthy connectors (Requirement 1.5)
+	// Only processes healthy connectors
 	const queueProcessorJob = new Cron(
 		'* * * * *', // Every minute
 		{
@@ -688,7 +673,7 @@ export function initializeScheduler(): void {
 				rateLimited: 0
 			};
 
-			// 2. Process queue for each healthy connector (Requirement 1.5)
+			// 2. Process queue for each healthy connector
 			const connectors = await getHealthyConnectors();
 
 			for (const connector of connectors) {
@@ -710,7 +695,7 @@ export function initializeScheduler(): void {
 								? { movieIds: [item.contentId] }
 								: { episodeIds: [item.contentId] };
 
-						// Track response time for analytics (Requirement 12.1)
+						// Track response time for analytics
 						const dispatchStartTime = Date.now();
 						const dispatchResult = await dispatchSearch(
 							item.connectorId,
@@ -723,7 +708,7 @@ export function initializeScheduler(): void {
 
 						if (dispatchResult.success) {
 							summary.succeeded++;
-							// Record successful dispatch analytics (Requirement 12.1)
+							// Record successful dispatch analytics
 							await analyticsCollector.recordSearchDispatched(
 								item.connectorId,
 								item.searchRegistryId,
@@ -744,7 +729,7 @@ export function initializeScheduler(): void {
 										? 'network_error'
 										: 'server_error';
 
-							// Record failed dispatch analytics (Requirement 12.1)
+							// Record failed dispatch analytics
 							await analyticsCollector.recordSearchFailed(
 								item.connectorId,
 								item.searchRegistryId,
@@ -798,7 +783,7 @@ export function initializeScheduler(): void {
 	});
 
 	// =========================================================================
-	// Notification Batch Processor (Requirement 9.3)
+	// Notification Batch Processor
 	// =========================================================================
 
 	// Notification batch processor - runs every minute
@@ -835,7 +820,7 @@ export function initializeScheduler(): void {
 	});
 
 	// =========================================================================
-	// Analytics Jobs (Requirement 12.1)
+	// Analytics Jobs
 	// =========================================================================
 
 	// Queue depth sampler - runs every 5 minutes
@@ -943,7 +928,7 @@ export function initializeScheduler(): void {
 	});
 
 	// =========================================================================
-	// Scheduled Backup Job (Requirement 33.5)
+	// Scheduled Backup Job
 	// =========================================================================
 
 	// Initialize scheduled backup job from settings
@@ -1033,7 +1018,7 @@ export function getSchedulerStatus(): {
 }
 
 // =============================================================================
-// Dynamic Schedule Management (Requirement 19.1)
+// Dynamic Schedule Management
 // =============================================================================
 
 /**
@@ -1094,14 +1079,12 @@ export async function refreshDynamicSchedules(): Promise<void> {
 }
 
 // =============================================================================
-// Scheduled Backup Management (Requirement 33.5)
+// Scheduled Backup Management
 // =============================================================================
 
 /**
  * Initialize the scheduled backup job from database settings.
  * Called during scheduler initialization.
- *
- * Requirements: 33.5
  */
 async function initializeScheduledBackup(): Promise<void> {
 	try {
@@ -1197,8 +1180,6 @@ async function createScheduledBackupJob(
 /**
  * Refresh the scheduled backup job from database settings.
  * Called when backup settings are updated.
- *
- * Requirements: 33.5
  */
 export async function refreshScheduledBackup(): Promise<void> {
 	console.log('[scheduler] Refreshing scheduled backup configuration...');

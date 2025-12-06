@@ -1,8 +1,6 @@
 <script lang="ts">
 	/**
 	 * General settings page.
-	 *
-	 * Requirements: 21.1
 	 */
 	import { untrack } from 'svelte';
 	import { enhance } from '$app/forms';

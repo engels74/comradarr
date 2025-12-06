@@ -1,7 +1,5 @@
 /**
  * Logout page server-side logic.
- *
- * Requirements: 10.1, 10.2
  */
 
 import { redirect } from '@sveltejs/kit';

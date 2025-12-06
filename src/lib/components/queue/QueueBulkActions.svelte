@@ -7,8 +7,6 @@
 	/**
 	 * Bulk action bar for selected queue items.
 	 * Provides priority adjustment and removal from queue.
-	 *
-	 * Requirements: 18.2
 	 */
 
 	interface Props {

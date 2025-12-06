@@ -1,8 +1,6 @@
 /**
  * Database queries for analytics dashboard.
  *
- * Requirements: 12.2, 12.3, 20.1, 20.2, 20.3
- *
  * Provides queries for:
  * - Time series metrics (discovery, search volume, queue depth)
  * - Connector comparison (success rate, response time, errors)

@@ -1,7 +1,6 @@
 <!--
   Connector detail page.
 
-  Requirements: 16.4, 16.5
   - Display full configuration
   - Show connection health/sync status
   - Show per-connector statistics

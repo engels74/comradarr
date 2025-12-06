@@ -1,7 +1,5 @@
 /**
  * Backup settings page server load and actions.
- *
- * Requirements: 33.5
  */
 
 import type { PageServerLoad, Actions } from './$types';

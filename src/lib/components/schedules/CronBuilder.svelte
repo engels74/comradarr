@@ -1,8 +1,6 @@
 <!--
 	CronBuilder - Full Visual Builder for Cron Expressions
 
-	Requirements: 19.2, 19.3
-
 	Provides a visual interface for building cron expressions with:
 	- Frequency mode selection (minutes, hourly, daily, weekly, monthly, custom)
 	- Dynamic input fields based on frequency mode

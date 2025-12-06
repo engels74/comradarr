@@ -1,8 +1,6 @@
 /**
  * Authentication module exports.
  *
- * Requirements: 10.1, 10.2, 10.3, 34.2
- *
  * Provides password hashing, session management, network utilities,
  * and API key authentication.
  */
@@ -23,7 +21,7 @@ export {
 // Network utilities for local bypass
 export { isLocalNetworkIP, getClientIP } from './network';
 
-// API key authentication and scope enforcement (Requirement 34.2)
+// API key authentication and scope enforcement
 export {
 	requireAuth,
 	requireScope,

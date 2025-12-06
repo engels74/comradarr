@@ -1,8 +1,6 @@
 <script lang="ts">
 	/**
 	 * Login page component.
-	 *
-	 * Requirements: 10.1, 10.2
 	 */
 	import { enhance } from '$app/forms';
 	import * as Card from '$lib/components/ui/card';

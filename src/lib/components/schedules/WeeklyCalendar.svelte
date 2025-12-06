@@ -1,7 +1,6 @@
 <script lang="ts">
 	/**
 	 * Weekly Calendar - 7-day grid view of scheduled sweeps.
-	 * Requirements: 19.4 - Display calendar view of upcoming sweeps
 	 */
 	import { cn } from '$lib/utils.js';
 	import { TimelineEvent } from './index';

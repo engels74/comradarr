@@ -10,8 +10,6 @@
 	/**
 	 * Queue controls component for global queue management.
 	 * Provides pause/resume and clear actions for all or specific connectors.
-	 *
-	 * Requirements: 18.3
 	 */
 
 	interface Props {

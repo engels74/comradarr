@@ -1,6 +1,5 @@
 /**
  * Types for queue components.
- * Requirements: 18.1, 18.2, 18.3
  */
 
 /**
@@ -43,7 +42,6 @@ export interface SerializedThrottleInfo {
 
 /**
  * Serialized recent completion for display.
- * Requirements: 18.4
  */
 export interface SerializedCompletion {
 	id: number;

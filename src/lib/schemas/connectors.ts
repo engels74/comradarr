@@ -1,7 +1,5 @@
 /**
  * Validation schemas for connector forms.
- *
- * Requirements: 16.2, 16.3
  */
 
 import * as v from 'valibot';

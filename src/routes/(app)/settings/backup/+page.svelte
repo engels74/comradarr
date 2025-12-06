@@ -1,8 +1,6 @@
 <script lang="ts">
 	/**
 	 * Backup settings page.
-	 *
-	 * Requirements: 33.5
 	 */
 	import { untrack } from 'svelte';
 	import { enhance } from '$app/forms';

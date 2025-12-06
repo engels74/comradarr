@@ -1,8 +1,6 @@
 /**
  * Polling utility for real-time data updates.
  * Provides visibility-aware polling with automatic pause/resume.
- *
- * Requirements: 18.5 - Real-time queue updates without page refresh
  */
 
 import { invalidate } from '$app/navigation';

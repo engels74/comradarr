@@ -2,7 +2,6 @@
 	/**
 	 * Library completion visualization panel.
 	 * Shows per-connector completion percentages with trend sparklines.
-	 * Requirements: 15.4
 	 */
 	import * as Card from '$lib/components/ui/card';
 	import { Badge } from '$lib/components/ui/badge';

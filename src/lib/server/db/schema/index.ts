@@ -2,29 +2,27 @@
  * Core database schema for Comradarr
  *
  * Tables defined:
- * - throttleProfiles: Rate-limiting configuration presets (Requirements 7.1, 7.5)
+ * - throttleProfiles: Rate-limiting configuration presets
  * - connectors: *arr application connections with encrypted API keys
- * - throttleState: Runtime rate-limiting state per connector (Requirements 7.1, 7.4)
+ * - throttleState: Runtime rate-limiting state per connector
  * - series, seasons, episodes: Sonarr/Whisparr content mirror
  * - movies: Radarr content mirror
  * - searchRegistry, requestQueue, searchHistory: Search state tracking
  * - syncState: Sync tracking per connector
- * - users, sessions: Authentication (Requirements 10.1, 10.2)
- * - apiKeys: External API authentication keys (Requirements 34.1, 34.3, 34.5)
- * - apiKeyUsageLogs: API key usage audit logs (Requirement 34.4)
- * - apiKeyRateLimitState: Runtime rate-limiting state per API key (Requirement 34.5)
- * - prowlarrInstances: Prowlarr connections for indexer health monitoring (Requirements 38.1)
- * - prowlarrIndexerHealth: Cached indexer health status (Requirements 38.2, 38.4)
- * - notificationChannels: Notification channel configurations (Requirements 9.1, 9.2, 9.3, 9.4, 36.1)
- * - notificationHistory: Sent notification tracking (Requirements 9.2, 9.3)
- * - completionSnapshots: Library completion history for trend visualization (Requirements 15.4)
- * - sweepSchedules: Per-connector sweep schedule configurations (Requirements 19.1)
- * - analyticsEvents: Raw analytics event tracking (Requirements 12.1)
- * - analyticsHourlyStats: Hourly aggregated statistics (Requirements 12.1, 12.2, 12.3)
- * - analyticsDailyStats: Daily aggregated statistics (Requirements 12.1, 12.2, 12.4)
- * - appSettings: Application-wide configuration settings (Requirement 21.1)
- *
- * Requirements: 7.1, 7.4, 7.5, 9.1, 9.2, 9.3, 9.4, 10.1, 10.2, 12.1, 12.2, 12.3, 12.4, 14.1, 14.2, 14.3, 15.4, 19.1, 21.1, 34.1, 34.3, 34.4, 34.5, 36.1, 38.1, 38.2, 38.4
+ * - users, sessions: Authentication
+ * - apiKeys: External API authentication keys
+ * - apiKeyUsageLogs: API key usage audit logs
+ * - apiKeyRateLimitState: Runtime rate-limiting state per API key
+ * - prowlarrInstances: Prowlarr connections for indexer health monitoring
+ * - prowlarrIndexerHealth: Cached indexer health status
+ * - notificationChannels: Notification channel configurations
+ * - notificationHistory: Sent notification tracking
+ * - completionSnapshots: Library completion history for trend visualization
+ * - sweepSchedules: Per-connector sweep schedule configurations
+ * - analyticsEvents: Raw analytics event tracking
+ * - analyticsHourlyStats: Hourly aggregated statistics
+ * - analyticsDailyStats: Daily aggregated statistics
+ * - appSettings: Application-wide configuration settings
  */
 
 import {
@@ -40,7 +38,7 @@ import {
 } from 'drizzle-orm/pg-core';
 
 // =============================================================================
-// Throttle Profiles Table (Requirements 7.1, 7.5)
+// Throttle Profiles Table
 // =============================================================================
 
 export const throttleProfiles = pgTable('throttle_profiles', {
@@ -79,7 +77,7 @@ export const connectors = pgTable('connectors', {
 });
 
 // =============================================================================
-// Throttle State Table (Requirements 7.1, 7.4)
+// Throttle State Table
 // =============================================================================
 
 export const throttleState = pgTable('throttle_state', {
@@ -145,7 +143,7 @@ export const seasons = pgTable(
 );
 
 // =============================================================================
-// Episodes Table (Requirement 14.1)
+// Episodes Table
 // =============================================================================
 
 export const episodes = pgTable(
@@ -174,14 +172,14 @@ export const episodes = pgTable(
 	},
 	(table) => [
 		uniqueIndex('episodes_connector_arr_idx').on(table.connectorId, table.arrId),
-		// Requirement 14.3: Indexes for efficient gap and upgrade queries
+		// Indexes for efficient gap and upgrade queries
 		index('episodes_gap_idx').on(table.connectorId, table.hasFile),
 		index('episodes_upgrade_idx').on(table.connectorId, table.qualityCutoffNotMet)
 	]
 );
 
 // =============================================================================
-// Movies Table (Requirement 14.2)
+// Movies Table
 // =============================================================================
 
 export const movies = pgTable(
@@ -207,7 +205,7 @@ export const movies = pgTable(
 	},
 	(table) => [
 		uniqueIndex('movies_connector_arr_idx').on(table.connectorId, table.arrId),
-		// Requirement 14.3: Indexes for efficient gap and upgrade queries
+		// Indexes for efficient gap and upgrade queries
 		index('movies_gap_idx').on(table.connectorId, table.hasFile),
 		index('movies_upgrade_idx').on(table.connectorId, table.qualityCutoffNotMet)
 	]
@@ -232,7 +230,7 @@ export const searchRegistry = pgTable(
 		lastSearched: timestamp('last_searched', { withTimezone: true }),
 		nextEligible: timestamp('next_eligible', { withTimezone: true }),
 		failureCategory: varchar('failure_category', { length: 50 }),
-		seasonPackFailed: boolean('season_pack_failed').notNull().default(false), // Requirement 6.5: Track if season pack search failed for fallback to individual episodes
+		seasonPackFailed: boolean('season_pack_failed').notNull().default(false), // Track if season pack search failed for fallback to individual episodes
 		priority: integer('priority').notNull().default(0),
 		createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 		updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow()
@@ -321,7 +319,7 @@ export const syncState = pgTable('sync_state', {
 });
 
 // =============================================================================
-// Users Table (Requirements 10.1, 10.2)
+// Users Table
 // =============================================================================
 
 export const users = pgTable('users', {
@@ -331,7 +329,7 @@ export const users = pgTable('users', {
 	displayName: varchar('display_name', { length: 100 }),
 	role: varchar('role', { length: 20 }).notNull().default('user'), // 'admin' | 'user'
 
-	// Account lockout fields (for Requirements 35.1-35.5, logic implemented later)
+	// Account lockout fields
 	failedLoginAttempts: integer('failed_login_attempts').notNull().default(0),
 	lockedUntil: timestamp('locked_until', { withTimezone: true }),
 	lastFailedLogin: timestamp('last_failed_login', { withTimezone: true }),
@@ -343,7 +341,7 @@ export const users = pgTable('users', {
 });
 
 // =============================================================================
-// Sessions Table (Requirements 10.1, 10.2)
+// Sessions Table
 // =============================================================================
 
 export const sessions = pgTable(
@@ -366,7 +364,7 @@ export const sessions = pgTable(
 );
 
 // =============================================================================
-// API Keys Table (Requirements 34.1, 34.3, 34.5)
+// API Keys Table
 // =============================================================================
 
 /**
@@ -386,9 +384,9 @@ export const apiKeys = pgTable(
 		scope: varchar('scope', { length: 20 }).notNull().default('read'), // 'read' | 'full'
 		keyPrefix: varchar('key_prefix', { length: 8 }).notNull(), // First 8 chars for UI identification
 		keyHash: text('key_hash').notNull(), // Argon2id hash of full key
-		rateLimitPerMinute: integer('rate_limit_per_minute'), // null = unlimited (Requirement 34.5)
+		rateLimitPerMinute: integer('rate_limit_per_minute'), // null = unlimited
 		expiresAt: timestamp('expires_at', { withTimezone: true }), // null = never expires
-		revokedAt: timestamp('revoked_at', { withTimezone: true }), // null = active, set = revoked (Requirement 34.3)
+		revokedAt: timestamp('revoked_at', { withTimezone: true }), // null = active, set = revoked
 		lastUsedAt: timestamp('last_used_at', { withTimezone: true }),
 		createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow()
 	},
@@ -399,12 +397,12 @@ export const apiKeys = pgTable(
 );
 
 // =============================================================================
-// API Key Usage Logs Table (Requirement 34.4)
+// API Key Usage Logs Table
 // =============================================================================
 
 /**
  * Logs API key usage for auditing and debugging.
- * Records key identifier, endpoint, method, and timestamp per requirement 34.4.
+ * Records key identifier, endpoint, method, and timestamp.
  */
 export const apiKeyUsageLogs = pgTable(
 	'api_key_usage_logs',
@@ -428,7 +426,7 @@ export const apiKeyUsageLogs = pgTable(
 );
 
 // =============================================================================
-// API Key Rate Limit State Table (Requirement 34.5)
+// API Key Rate Limit State Table
 // =============================================================================
 
 /**
@@ -453,7 +451,7 @@ export const apiKeyRateLimitState = pgTable(
 );
 
 // =============================================================================
-// Prowlarr Instances Table (Requirements 38.1)
+// Prowlarr Instances Table
 // =============================================================================
 
 export const prowlarrInstances = pgTable('prowlarr_instances', {
@@ -469,7 +467,7 @@ export const prowlarrInstances = pgTable('prowlarr_instances', {
 });
 
 // =============================================================================
-// Prowlarr Indexer Health Cache Table (Requirements 38.2, 38.4)
+// Prowlarr Indexer Health Cache Table
 // =============================================================================
 
 export const prowlarrIndexerHealth = pgTable(
@@ -560,7 +558,7 @@ export type ProwlarrIndexerHealth = typeof prowlarrIndexerHealth.$inferSelect;
 export type NewProwlarrIndexerHealth = typeof prowlarrIndexerHealth.$inferInsert;
 
 // =============================================================================
-// Notification Channels Table (Requirements 9.1, 9.2, 9.3, 9.4, 36.1)
+// Notification Channels Table
 // =============================================================================
 
 /**
@@ -578,10 +576,10 @@ export const notificationChannels = pgTable(
 		configEncrypted: text('config_encrypted'), // AES-256-GCM encrypted sensitive credentials (API keys, tokens, passwords)
 		enabled: boolean('enabled').notNull().default(true),
 		enabledEvents: jsonb('enabled_events'), // Array of event types to notify on (e.g., ['sweep_completed', 'search_success'])
-		// Batching configuration (Requirement 9.3)
+		// Batching configuration
 		batchingEnabled: boolean('batching_enabled').notNull().default(false),
 		batchingWindowSeconds: integer('batching_window_seconds').notNull().default(60),
-		// Quiet hours configuration (Requirement 9.4)
+		// Quiet hours configuration
 		quietHoursEnabled: boolean('quiet_hours_enabled').notNull().default(false),
 		quietHoursStart: varchar('quiet_hours_start', { length: 5 }), // HH:MM format (e.g., '22:00')
 		quietHoursEnd: varchar('quiet_hours_end', { length: 5 }), // HH:MM format (e.g., '08:00')
@@ -599,7 +597,7 @@ export type NotificationChannel = typeof notificationChannels.$inferSelect;
 export type NewNotificationChannel = typeof notificationChannels.$inferInsert;
 
 // =============================================================================
-// Notification History Table (Requirements 9.2, 9.3)
+// Notification History Table
 // =============================================================================
 
 /**
@@ -635,7 +633,7 @@ export type NotificationHistory = typeof notificationHistory.$inferSelect;
 export type NewNotificationHistory = typeof notificationHistory.$inferInsert;
 
 // =============================================================================
-// Completion Snapshots Table (Requirements 15.4)
+// Completion Snapshots Table
 // =============================================================================
 
 /**
@@ -671,7 +669,7 @@ export type CompletionSnapshot = typeof completionSnapshots.$inferSelect;
 export type NewCompletionSnapshot = typeof completionSnapshots.$inferInsert;
 
 // =============================================================================
-// Sweep Schedules Table (Requirements 19.1)
+// Sweep Schedules Table
 // =============================================================================
 
 /**
@@ -710,7 +708,7 @@ export type SweepSchedule = typeof sweepSchedules.$inferSelect;
 export type NewSweepSchedule = typeof sweepSchedules.$inferInsert;
 
 // =============================================================================
-// Analytics Events Table (Requirements 12.1)
+// Analytics Events Table
 // =============================================================================
 
 /**
@@ -742,7 +740,7 @@ export type AnalyticsEvent = typeof analyticsEvents.$inferSelect;
 export type NewAnalyticsEvent = typeof analyticsEvents.$inferInsert;
 
 // =============================================================================
-// Analytics Hourly Statistics Table (Requirements 12.1, 12.2, 12.3)
+// Analytics Hourly Statistics Table
 // =============================================================================
 
 /**
@@ -793,7 +791,7 @@ export type AnalyticsHourlyStat = typeof analyticsHourlyStats.$inferSelect;
 export type NewAnalyticsHourlyStat = typeof analyticsHourlyStats.$inferInsert;
 
 // =============================================================================
-// Analytics Daily Statistics Table (Requirements 12.1, 12.2, 12.4)
+// Analytics Daily Statistics Table
 // =============================================================================
 
 /**
@@ -846,7 +844,7 @@ export type AnalyticsDailyStat = typeof analyticsDailyStats.$inferSelect;
 export type NewAnalyticsDailyStat = typeof analyticsDailyStats.$inferInsert;
 
 // =============================================================================
-// App Settings Table (Requirement 21.1)
+// App Settings Table
 // =============================================================================
 
 /**

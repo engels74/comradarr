@@ -1,7 +1,6 @@
 /**
  * Content browser page server load and actions.
  *
- * Requirements: 17.1, 17.2, 17.5
  * - Filters for connector, content type, and status
  * - Title search with URL-based state
  * - Sortable columns

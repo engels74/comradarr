@@ -16,8 +16,6 @@
 	/**
 	 * Activity feed component for the dashboard.
 	 * Displays recent discoveries, search outcomes, and system events.
-	 *
-	 * Requirements: 15.3
 	 */
 
 	interface Props {

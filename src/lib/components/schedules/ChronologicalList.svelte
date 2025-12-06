@@ -1,7 +1,6 @@
 <script lang="ts">
 	/**
 	 * Chronological List - sorted list view of upcoming sweeps grouped by day.
-	 * Requirements: 19.4 - Display timeline view of upcoming sweeps
 	 */
 	import { cn } from '$lib/utils.js';
 	import { TimelineEvent } from './index';

@@ -11,7 +11,6 @@
 	/**
 	 * Virtualized content table for large datasets.
 	 * Uses TanStack Virtual to only render visible rows.
-	 * Requirements: 17.1 (sortable columns), 17.5 (bulk selection)
 	 */
 
 	interface Props {

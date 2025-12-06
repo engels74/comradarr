@@ -2,8 +2,6 @@
 	/**
 	 * Layout for authentication pages (login, logout).
 	 * Provides centered card container with no navigation.
-	 *
-	 * Requirements: 10.1, 10.2
 	 */
 	let { children } = $props();
 </script>

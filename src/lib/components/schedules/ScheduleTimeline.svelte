@@ -1,7 +1,6 @@
 <script lang="ts">
 	/**
 	 * Schedule Timeline - main container with calendar and list views.
-	 * Requirements: 19.4 - Display calendar or timeline view to identify conflicts
 	 */
 	import { cn } from '$lib/utils.js';
 	import * as Tabs from '$lib/components/ui/tabs';

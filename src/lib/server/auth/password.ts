@@ -1,8 +1,6 @@
 /**
  * Password hashing utilities using Argon2id.
  *
- * Requirements: 10.2
- *
  * Uses @node-rs/argon2 with OWASP-recommended parameters:
  * - memoryCost: 65536 KiB (64 MiB)
  * - timeCost: 3 iterations

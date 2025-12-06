@@ -1,7 +1,6 @@
 <script lang="ts">
 	/**
 	 * Timeline Event - reusable event block for calendar and list views.
-	 * Requirements: 19.4 - Display sweeps in timeline
 	 */
 	import { cn } from '$lib/utils.js';
 	import { ConflictIndicator } from './index';

@@ -1,7 +1,6 @@
 <script lang="ts">
 	/**
 	 * Upcoming Schedule Panel - displays next scheduled sweeps and current sweep progress.
-	 * Requirements: 15.5
 	 */
 	import * as Card from '$lib/components/ui/card';
 	import { Badge } from '$lib/components/ui/badge';

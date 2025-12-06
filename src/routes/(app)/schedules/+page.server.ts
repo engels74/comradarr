@@ -1,7 +1,5 @@
 /**
  * Schedule list page server load and actions.
- *
- * Requirements: 19.1, 19.4
  */
 
 import type { PageServerLoad, Actions } from './$types';
@@ -41,7 +39,6 @@ const MAX_RUNS_PER_SCHEDULE = 100;
 
 /**
  * Compute timeline data for the next 7 days.
- * Requirements: 19.4 - Display calendar or timeline view to identify conflicts
  *
  * @param schedules - All schedules with relations
  * @returns Timeline data for calendar and list views

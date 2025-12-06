@@ -1,8 +1,6 @@
 /**
  * Network utilities for local network bypass authentication.
  *
- * Requirements: 10.3
- *
  * Provides RFC1918 private address detection for local network bypass mode.
  */
 

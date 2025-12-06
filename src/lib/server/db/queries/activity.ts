@@ -1,6 +1,6 @@
 /**
  * Activity feed query functions.
- * Requirements: 15.3 - Display recent discoveries, search outcomes, and system events
+ * Display recent discoveries, search outcomes, and system events.
  */
 
 import { desc, eq, sql, gte, and } from 'drizzle-orm';

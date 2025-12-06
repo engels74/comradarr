@@ -1,7 +1,5 @@
 /**
  * Edit schedule page server load and actions.
- *
- * Requirements: 19.2
  */
 
 import type { PageServerLoad, Actions } from './$types';

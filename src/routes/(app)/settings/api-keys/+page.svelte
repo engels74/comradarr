@@ -1,8 +1,6 @@
 <script lang="ts">
 	/**
 	 * API Keys settings page.
-	 *
-	 * Requirements: 34.1, 34.3, 34.5
 	 */
 	import { enhance } from '$app/forms';
 	import * as Card from '$lib/components/ui/card';

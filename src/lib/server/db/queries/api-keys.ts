@@ -1,15 +1,8 @@
 /**
  * Database queries for API key operations.
  *
- * Requirements: 34.1, 34.3, 34.4, 34.5
- *
  * API keys are hashed using Argon2id (same as passwords) since they cannot be recovered.
  * The full key is shown only once at creation, following industry best practices.
- *
- * - 34.1: API key generation and storage
- * - 34.3: Key revocation with immediate rejection
- * - 34.4: Usage logging (key identifier, endpoint, timestamp)
- * - 34.5: Per-key rate limiting configuration
  */
 
 import { db } from '$lib/server/db';
@@ -42,7 +35,7 @@ export interface ApiKeyDisplay {
 	description: string | null;
 	scope: ApiKeyScope;
 	keyPrefix: string;
-	rateLimitPerMinute: number | null; // null = unlimited (Requirement 34.5)
+	rateLimitPerMinute: number | null; // null = unlimited
 	expiresAt: Date | null;
 	revokedAt: Date | null;
 	lastUsedAt: Date | null;
@@ -181,7 +174,7 @@ export interface ValidateApiKeyResult {
 	userId: number;
 	scope: ApiKeyScope;
 	keyId: number;
-	rateLimitPerMinute: number | null; // null = unlimited (Requirement 34.5)
+	rateLimitPerMinute: number | null; // null = unlimited
 }
 
 /**

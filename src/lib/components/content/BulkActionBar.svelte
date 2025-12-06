@@ -9,8 +9,6 @@
 	/**
 	 * Bulk action bar component for content browser.
 	 * Displays a sticky toolbar when items are selected.
-	 *
-	 * Requirements: 17.5
 	 */
 
 	interface Props {

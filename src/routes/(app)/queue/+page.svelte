@@ -9,7 +9,7 @@
 
 	/**
 	 * Queue management page with virtualized table.
-	 * Requirements: 18.1, 18.2, 18.3, 18.4, 18.5
+	 *
 	 * - Display items in priority order
 	 * - Show estimated dispatch time
 	 * - Show current processing indicator
@@ -21,7 +21,7 @@
 
 	let { data }: PageProps = $props();
 
-	// Polling controller for real-time updates (Requirement 18.5)
+	// Polling controller for real-time updates
 	const polling = createPollingController({
 		dependencyKey: 'app:queue',
 		interval: POLLING_INTERVALS.FAST
@@ -213,7 +213,7 @@
 		</div>
 	{/if}
 
-	<!-- Recent Completions (Requirement 18.4) -->
+	<!-- Recent Completions -->
 	<RecentCompletions
 		completions={data.recentCompletions}
 		class="mt-8"

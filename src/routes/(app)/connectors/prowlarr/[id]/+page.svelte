@@ -1,7 +1,6 @@
 <!--
   Prowlarr instance detail page.
 
-  Requirements: 38.4
   - Display configuration
   - Show indexer health status table
   - Provide actionable quick actions

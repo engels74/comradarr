@@ -7,7 +7,6 @@
 
 	/**
 	 * Outcome badge for search completion results.
-	 * Requirements: 18.4 (outcome indicators)
 	 */
 	type Outcome = 'success' | 'no_results' | 'error' | 'timeout';
 

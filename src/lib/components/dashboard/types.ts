@@ -1,11 +1,9 @@
 /**
  * Types for dashboard components.
- * Requirements: 15.1, 15.2, 15.3, 15.4, 15.5
  */
 
 /**
  * Serialized activity item for display in the activity feed.
- * Requirements: 15.3
  */
 export interface SerializedActivity {
 	/** Unique identifier with type prefix (e.g., 'search-1', 'discovery-2', 'sync-3') */
@@ -45,12 +43,11 @@ export interface SerializedActivity {
 }
 
 // =============================================================================
-// Library Completion Types (Requirement 15.4)
+// Library Completion Types
 // =============================================================================
 
 /**
  * Serialized completion data point for sparklines.
- * Requirements: 15.4
  */
 export interface SerializedCompletionDataPoint {
 	/** ISO timestamp string when snapshot was captured */
@@ -61,7 +58,6 @@ export interface SerializedCompletionDataPoint {
 
 /**
  * Serialized connector completion stats with trend data for dashboard display.
- * Requirements: 15.4
  */
 export interface SerializedConnectorCompletion {
 	/** Connector ID */
@@ -91,12 +87,11 @@ export interface SerializedConnectorCompletion {
 }
 
 // =============================================================================
-// Scheduler Status Types (Requirement 15.5)
+// Scheduler Status Types
 // =============================================================================
 
 /**
  * Serialized scheduled job for display in the upcoming schedule panel.
- * Requirements: 15.5
  */
 export interface SerializedScheduledJob {
 	/** Internal job name (e.g., 'incremental-sync-sweep') */

@@ -1,8 +1,6 @@
 <script lang="ts">
 	/**
 	 * Notification settings page.
-	 *
-	 * Requirements: 21.3
 	 */
 	import { enhance } from '$app/forms';
 	import * as Card from '$lib/components/ui/card';

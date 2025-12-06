@@ -5,8 +5,6 @@
  * - Window expiration calculations
  * - Time utility functions
  * - Edge cases for boundary conditions
- *
- * Requirements: 7.1, 7.4
  */
 
 import { describe, it, expect } from 'vitest';

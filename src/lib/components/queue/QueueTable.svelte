@@ -9,7 +9,6 @@
 	/**
 	 * Virtualized queue table for large datasets.
 	 * Uses TanStack Virtual to only render visible rows.
-	 * Requirements: 18.1, 18.2 (priority order, dispatch time, processing indicator, selection)
 	 */
 
 	interface Props {

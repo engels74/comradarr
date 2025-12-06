@@ -1,8 +1,6 @@
 <script lang="ts">
 	/**
 	 * Security settings page.
-	 *
-	 * Requirements: 21.5, 10.3
 	 */
 	import { enhance } from '$app/forms';
 	import * as Card from '$lib/components/ui/card';

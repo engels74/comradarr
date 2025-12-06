@@ -1,7 +1,5 @@
 /**
  * Throttle profiles settings page server load and actions.
- *
- * Requirements: 21.2
  */
 
 import type { PageServerLoad, Actions } from './$types';

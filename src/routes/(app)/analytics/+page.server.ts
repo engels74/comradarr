@@ -1,8 +1,6 @@
 /**
  * Analytics dashboard server load function.
  *
- * Requirements: 12.2, 12.3, 20.1, 20.2, 20.3
- *
  * Provides:
  * - Time series metrics (discovery, search volume, queue depth)
  * - Connector comparison statistics

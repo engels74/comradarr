@@ -1,6 +1,5 @@
 /**
  * Queue management components.
- * Requirements: 18.1, 18.2, 18.3, 18.4
  */
 
 export { default as OutcomeBadge } from './OutcomeBadge.svelte';

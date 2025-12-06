@@ -1,7 +1,5 @@
 /**
  * Prowlarr instance detail page server load and actions.
- *
- * Requirements: 38.4
  */
 
 import { error, fail, redirect } from '@sveltejs/kit';

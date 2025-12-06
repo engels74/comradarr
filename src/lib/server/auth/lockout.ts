@@ -3,18 +3,16 @@
  *
  * This file contains only pure functions that don't depend on the database,
  * making them easy to test without mocking.
- *
- * Requirements: 35.2, 35.3, 35.4
  */
 
 // ============================================================================
-// Account Lockout Configuration (Requirements 35.2, 35.4)
+// Account Lockout Configuration
 // ============================================================================
 
-/** Maximum failed login attempts before account lockout (Req 35.2) */
+/** Maximum failed login attempts before account lockout */
 export const MAX_FAILED_ATTEMPTS = 3;
 
-/** Lockout duration in minutes (Req 35.2, 35.4) */
+/** Lockout duration in minutes */
 export const LOCKOUT_DURATION_MINUTES = 30;
 
 // ============================================================================
@@ -22,7 +20,7 @@ export const LOCKOUT_DURATION_MINUTES = 30;
 // ============================================================================
 
 /**
- * Checks if a user account is currently locked (Req 35.3).
+ * Checks if a user account is currently locked.
  *
  * @param user - User object with lockedUntil field
  * @returns true if account is locked, false otherwise
@@ -33,7 +31,7 @@ export function isAccountLocked(user: { lockedUntil: Date | null }): boolean {
 }
 
 /**
- * Gets the remaining lockout time in seconds (Req 35.3).
+ * Gets the remaining lockout time in seconds.
  *
  * @param user - User object with lockedUntil field
  * @returns Remaining seconds until lockout expires, or null if not locked

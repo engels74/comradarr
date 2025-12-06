@@ -1,7 +1,5 @@
 /**
  * API Keys settings page server load and actions.
- *
- * Requirements: 34.1, 34.3, 34.5
  */
 
 import type { PageServerLoad, Actions } from './$types';
@@ -180,8 +178,6 @@ export const actions: Actions = {
 
 	/**
 	 * Update an API key's rate limit.
-	 *
-	 * Requirement 34.5: Per-key rate limiting configuration.
 	 */
 	updateRateLimit: async ({ request, locals }) => {
 		if (locals.isLocalBypass || !locals.user || locals.user.id === 0) {
@@ -252,8 +248,6 @@ export const actions: Actions = {
 
 	/**
 	 * Revoke an API key (soft delete).
-	 *
-	 * Requirement 34.3: Revoked keys are immediately rejected but remain visible.
 	 */
 	revokeKey: async ({ request, locals }) => {
 		if (locals.isLocalBypass || !locals.user || locals.user.id === 0) {

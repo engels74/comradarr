@@ -1,8 +1,6 @@
 <script lang="ts">
 	/**
 	 * Add connector form page.
-	 *
-	 * Requirements: 16.2, 16.3
 	 */
 	import { enhance } from '$app/forms';
 	import * as Card from '$lib/components/ui/card';

@@ -1,8 +1,6 @@
 /**
  * Session management service for PostgreSQL-backed sessions.
  *
- * Requirements: 10.1, 10.2
- *
  * Sessions are stored in PostgreSQL with configurable expiry (default 7 days).
  * Session IDs are 64-character hex strings (256 bits of entropy).
  */

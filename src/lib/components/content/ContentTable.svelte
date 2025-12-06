@@ -10,7 +10,6 @@
 
 	/**
 	 * Content table with sortable columns and selection support.
-	 * Requirements: 17.1 (sortable columns), 17.5 (bulk selection)
 	 */
 
 	interface Props {

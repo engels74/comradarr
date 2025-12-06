@@ -1,7 +1,5 @@
 /**
  * Validation schemas for authentication forms.
- *
- * Requirements: 10.1, 10.2
  */
 
 import * as v from 'valibot';

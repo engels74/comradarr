@@ -1,7 +1,5 @@
 /**
  * Login page server-side logic.
- *
- * Requirements: 10.1, 10.2, 35.1-35.5
  */
 
 import { fail, redirect } from '@sveltejs/kit';

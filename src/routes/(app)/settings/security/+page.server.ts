@@ -1,7 +1,5 @@
 /**
  * Security settings page server load and actions.
- *
- * Requirements: 21.5, 10.3
  */
 
 import type { PageServerLoad, Actions } from './$types';

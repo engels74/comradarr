@@ -2,8 +2,6 @@
 	/**
 	 * Analytics Dashboard Page
 	 *
-	 * Requirements: 12.2, 12.3, 12.4, 20.1, 20.2, 20.3, 20.4
-	 *
 	 * Displays:
 	 * - Time-series charts for key metrics
 	 * - Connector comparison table

@@ -10,7 +10,6 @@
 
 	/**
 	 * Content browser page with virtualized table and "Load More" pagination.
-	 * Requirements: 17.1, 17.2, 17.5
 	 */
 
 	let { data }: PageProps = $props();

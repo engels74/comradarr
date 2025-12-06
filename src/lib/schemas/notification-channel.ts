@@ -1,7 +1,5 @@
 /**
  * Validation schemas for notification channel forms.
- *
- * Requirements: 21.3
  */
 
 import * as v from 'valibot';

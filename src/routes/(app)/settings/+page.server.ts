@@ -1,7 +1,5 @@
 /**
  * Settings page server load and actions.
- *
- * Requirements: 21.1
  */
 
 import type { PageServerLoad, Actions } from './$types';
@@ -73,7 +71,7 @@ export const actions: Actions = {
 				checkForUpdates: config.checkForUpdates
 			});
 
-			// Apply log level change immediately without restart (Requirement 31.5)
+			// Apply log level change immediately without restart
 			setLogLevel(config.logLevel as LogLevel);
 		} catch (err) {
 			console.error('[settings] Failed to update settings:', err);

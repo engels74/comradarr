@@ -1,7 +1,5 @@
 <!--
   Edit connector form page.
-
-  Requirements: 1.1, 1.2
 -->
 <script lang="ts">
 	import { enhance } from '$app/forms';

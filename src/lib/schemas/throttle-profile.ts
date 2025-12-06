@@ -1,7 +1,5 @@
 /**
  * Validation schemas for throttle profile forms.
- *
- * Requirements: 21.2
  */
 
 import * as v from 'valibot';

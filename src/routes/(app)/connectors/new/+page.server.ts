@@ -1,7 +1,5 @@
 /**
  * Add connector page server-side logic.
- *
- * Requirements: 16.2, 16.3
  */
 
 import { fail, redirect } from '@sveltejs/kit';

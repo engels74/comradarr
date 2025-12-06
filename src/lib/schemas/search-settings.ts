@@ -1,7 +1,5 @@
 /**
  * Validation schemas for search behavior settings forms.
- *
- * Requirements: 21.4
  */
 
 import * as v from 'valibot';

@@ -1,7 +1,5 @@
 /**
  * Connector list page server load and actions.
- *
- * Requirements: 16.1, 38.4
  */
 
 import type { PageServerLoad, Actions } from './$types';
@@ -78,7 +76,6 @@ export const actions: Actions = {
 
 	/**
 	 * Toggle Prowlarr instance enabled status.
-	 * Requirement 38.4
 	 */
 	toggleProwlarr: async ({ request }) => {
 		const data = await request.formData();

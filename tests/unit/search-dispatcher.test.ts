@@ -7,8 +7,6 @@
  * - Fallback to profile config when no Retry-After
  * - Batch dispatch stopping on rate limit
  * - Prowlarr health check integration (informational, non-blocking)
- *
- * Requirements: 7.3, 38.5, 38.6
  */
 
 import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest';
@@ -194,7 +192,7 @@ describe('dispatchSearch', () => {
 		});
 	});
 
-	describe('HTTP 429 handling (Requirement 7.3)', () => {
+	describe('HTTP 429 handling', () => {
 		it('should call handleRateLimitResponse when RateLimitError is thrown', async () => {
 			const rateLimitError = new RateLimitError(undefined);
 			mockSonarrClient.sendEpisodeSearch.mockRejectedValue(rateLimitError);
@@ -313,7 +311,7 @@ describe('dispatchSearch', () => {
 		});
 	});
 
-	describe('Prowlarr health check integration (Requirements 38.5, 38.6)', () => {
+	describe('Prowlarr health check integration', () => {
 		it('should call getAllCachedHealth during dispatch', async () => {
 			mockSonarrClient.sendEpisodeSearch.mockResolvedValue({ id: 123, status: 'queued' });
 
@@ -324,7 +322,7 @@ describe('dispatchSearch', () => {
 			expect(prowlarrHealthMonitor.getAllCachedHealth).toHaveBeenCalled();
 		});
 
-		it('should proceed with dispatch when indexers are rate-limited (Requirement 38.5)', async () => {
+		it('should proceed with dispatch when indexers are rate-limited', async () => {
 			// Mock rate-limited indexers
 			(prowlarrHealthMonitor.getAllCachedHealth as Mock).mockResolvedValue([
 				{
@@ -350,7 +348,7 @@ describe('dispatchSearch', () => {
 			expect(result.commandId).toBe(123);
 		});
 
-		it('should proceed with dispatch when Prowlarr health check throws (Requirement 38.6)', async () => {
+		it('should proceed with dispatch when Prowlarr health check throws', async () => {
 			// Simulate Prowlarr being unreachable
 			(prowlarrHealthMonitor.getAllCachedHealth as Mock).mockRejectedValue(
 				new Error('Database connection failed')

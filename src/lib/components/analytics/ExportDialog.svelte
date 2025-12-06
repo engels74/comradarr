@@ -2,8 +2,6 @@
 	/**
 	 * Export dialog for downloading analytics data as CSV.
 	 * Provides date range selection and triggers CSV download.
-	 *
-	 * Requirements: 12.4, 20.4
 	 */
 
 	import { Button } from '$lib/components/ui/button';

@@ -6,7 +6,6 @@
 
 	/**
 	 * Content filter controls with URL-based state.
-	 * Requirements: 17.1 (filters), 17.2 (title search)
 	 */
 
 	interface Props {

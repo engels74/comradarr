@@ -1,8 +1,6 @@
 <script lang="ts">
 	/**
 	 * Edit schedule form page.
-	 *
-	 * Requirements: 19.2, 19.3
 	 */
 	import { untrack } from 'svelte';
 	import { enhance } from '$app/forms';

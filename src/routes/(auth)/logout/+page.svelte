@@ -3,8 +3,6 @@
 	 * Logout page component.
 	 * This page should rarely be seen as the server immediately redirects.
 	 * Shown only if JavaScript is disabled and redirect fails.
-	 *
-	 * Requirements: 10.1, 10.2
 	 */
 	import * as Card from '$lib/components/ui/card';
 	import { Button } from '$lib/components/ui/button';
