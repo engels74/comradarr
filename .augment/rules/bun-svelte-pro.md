@@ -1,3 +1,8 @@
+---
+type: "agent_requested"
+description: "Bun + Svelte 5 + SvelteKit Coding Guidelines"
+---
+
 # Modern Bun + Svelte 5 + SvelteKit Best Practices for 2025
 
 **Svelte 5's Runes fundamentally transform how you build reactive applications**—replacing the implicit reactivity and store patterns of Svelte 4 with explicit, universal primitives that work identically inside and outside components. Combined with Bun's native PostgreSQL driver, Drizzle ORM's type-safe queries, and SvelteKit 2.x's mature data loading patterns, this stack offers exceptional developer experience with production-grade performance.
