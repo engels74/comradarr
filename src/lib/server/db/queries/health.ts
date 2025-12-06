@@ -1,7 +1,6 @@
 /**
  * Database queries for health check operations.
  *
- * Requirements: 32.1, 32.2, 32.3, 32.4, 32.5
  *
  * Provides queries for the /health endpoint including:
  * - Database connection check with latency measurement
@@ -33,7 +32,6 @@ export interface DatabaseHealthResult {
 
 /**
  * Per-connector health summary for health check endpoint.
- * Requirements: 32.2
  */
 export interface ConnectorHealthSummary {
 	id: number;
@@ -46,7 +44,6 @@ export interface ConnectorHealthSummary {
 
 /**
  * Global queue status aggregation.
- * Requirements: 32.5
  */
 export interface QueueHealthSummary {
 	totalDepth: number;
@@ -71,7 +68,6 @@ export interface HealthSummary {
  * Checks database connection by executing a simple query.
  * Measures round-trip latency in milliseconds.
  *
- * Requirements: 32.1, 32.3
  *
  * @returns Database connection status with latency
  */
@@ -103,7 +99,6 @@ export async function checkDatabaseConnection(): Promise<DatabaseHealthResult> {
 /**
  * Gets health summary for all connectors including queue depth per connector.
  *
- * Requirements: 32.2
  *
  * @returns Array of connector health summaries
  */
@@ -145,7 +140,6 @@ export async function getConnectorHealthSummary(): Promise<ConnectorHealthSummar
 /**
  * Gets global queue health summary.
  *
- * Requirements: 32.5
  *
  * @returns Queue status including total depth and paused connector count
  */
@@ -179,7 +173,6 @@ export async function getQueueHealthSummary(): Promise<QueueHealthSummary> {
  * - Database connection (unreachable = unhealthy)
  * - Connector health (any unhealthy/offline = degraded)
  *
- * Requirements: 32.1, 32.2, 32.3, 32.4, 32.5
  *
  * @returns Complete health summary including overall status
  */

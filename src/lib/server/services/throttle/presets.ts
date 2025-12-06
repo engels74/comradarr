@@ -7,7 +7,6 @@
  * 2. Fallback when no database profile is available
  * 3. Reference for profile resolution logic
  *
- * Requirements: 7.5
  */
 
 /**

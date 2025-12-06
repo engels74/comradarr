@@ -1,7 +1,6 @@
 /**
  * Database queries for queue management operations.
  *
- * Requirements: 18.1
  *
  * Provides queue queries for:
  * - Queue items in priority order with content joins
@@ -160,7 +159,6 @@ export function parseQueueFilters(searchParams: URLSearchParams): QueueFilters {
  * - For movies: direct join
  * - Sort by priority DESC, then scheduled time ASC
  *
- * Requirements: 18.1
  */
 export async function getQueueList(filters: QueueFilters): Promise<QueueListResult> {
 	// Build base conditions for search registry
@@ -749,7 +747,6 @@ export async function clearQueueForConnectors(connectorIds?: number[]): Promise<
 
 /**
  * Recent completion entry with content and connector info.
- * Requirements: 18.4
  */
 export interface RecentCompletion {
 	id: number;
@@ -773,7 +770,6 @@ export interface RecentCompletion {
  * Fetches recent entries from search_history table, joined with content
  * tables to get titles and connector info for display.
  *
- * Requirements: 18.4
  *
  * @param limit - Maximum number of entries to return (default 25)
  * @returns Recent completion entries with content and connector info
@@ -855,7 +851,7 @@ export async function getRecentCompletions(limit: number = 25): Promise<RecentCo
 }
 
 // =============================================================================
-// Today's Search Statistics (Requirement 15.2)
+// Today's Search Statistics
 // =============================================================================
 
 /**
@@ -875,7 +871,6 @@ export interface TodaySearchStats {
  * - successfulToday: Searches with outcome='success' today
  * - successRate: Percentage (0-100), 0 if no searches
  *
- * Requirements: 15.2
  */
 export async function getTodaySearchStats(): Promise<TodaySearchStats> {
 	// Get start of today in UTC

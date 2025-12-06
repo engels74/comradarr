@@ -215,7 +215,7 @@ export async function hasUsers(): Promise<boolean> {
 }
 
 // =============================================================================
-// Session Management (Requirements 21.5)
+// Session Management
 // =============================================================================
 
 /**

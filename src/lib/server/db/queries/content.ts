@@ -1,7 +1,6 @@
 /**
  * Database queries for content browser operations.
  *
- * Requirements: 17.1, 17.2
  *
  * Provides unified content queries for series and movies with:
  * - Connector, type, and status filtering
@@ -148,7 +147,7 @@ export interface ContentStatusCounts {
 }
 
 // =============================================================================
-// Series Detail Types (Requirement 17.3)
+// Series Detail Types
 // =============================================================================
 
 /**
@@ -252,7 +251,7 @@ export interface SeasonSummary {
 }
 
 // =============================================================================
-// Movie Detail Types (Requirement 17.4)
+// Movie Detail Types
 // =============================================================================
 
 /**
@@ -982,7 +981,7 @@ export async function getContentStatusCounts(connectorId?: number): Promise<Cont
 }
 
 // =============================================================================
-// Series Detail Queries (Requirement 17.3)
+// Series Detail Queries
 // =============================================================================
 
 /**
@@ -1262,7 +1261,7 @@ export async function getSeriesSearchHistory(
 }
 
 // =============================================================================
-// Movie Detail Queries (Requirement 17.4)
+// Movie Detail Queries
 // =============================================================================
 
 /**
@@ -1347,7 +1346,7 @@ export async function getMovieSearchHistory(
 }
 
 // =============================================================================
-// Bulk Action Types and Queries (Requirement 17.5)
+// Bulk Action Types and Queries
 // =============================================================================
 
 /**

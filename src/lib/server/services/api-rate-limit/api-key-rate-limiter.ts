@@ -1,7 +1,6 @@
 /**
  * ApiKeyRateLimiter service for external API rate limiting enforcement.
  *
- * Requirement: 34.5
  *
  * This service enforces rate limiting for external API requests:
  * - Checks if requests are allowed based on per-minute rate limits

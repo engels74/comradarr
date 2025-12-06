@@ -1,7 +1,6 @@
 /**
  * Database queries for notification channel operations.
  *
- * Requirements: 9.1, 9.2, 9.3, 9.4, 36.1
  *
  * Sensitive credentials (API keys, tokens, passwords) are encrypted using AES-256-GCM
  * before storage. Decryption happens lazily, only when needed for sending notifications.

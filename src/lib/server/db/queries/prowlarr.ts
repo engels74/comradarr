@@ -242,7 +242,7 @@ function normalizeUrl(url: string): string {
 }
 
 // =============================================================================
-// Indexer Health Cache Operations (Requirements 38.2, 38.4)
+// Indexer Health Cache Operations
 // =============================================================================
 
 /**

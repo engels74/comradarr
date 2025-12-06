@@ -1,7 +1,6 @@
 /**
  * Database queries for application settings operations.
  *
- * Requirements: 21.1, 21.4, 21.5
  *
  * Application settings are stored as key-value pairs with defaults applied
  * when a setting is not explicitly configured.
@@ -29,7 +28,6 @@ export const GENERAL_SETTINGS_DEFAULTS = {
 /**
  * Default values for security settings.
  *
- * Requirements: 21.5, 10.3
  */
 export const SECURITY_SETTINGS_DEFAULTS = {
 	auth_mode: 'full'
@@ -39,7 +37,6 @@ export const SECURITY_SETTINGS_DEFAULTS = {
  * Default values for search behavior settings.
  * These match the original hard-coded constants in queue/config.ts.
  *
- * Requirements: 21.4
  */
 export const SEARCH_SETTINGS_DEFAULTS = {
 	// Priority Weights
@@ -66,7 +63,6 @@ export const SEARCH_SETTINGS_DEFAULTS = {
 /**
  * Default values for maintenance settings.
  *
- * Requirements: 13.3
  */
 export const MAINTENANCE_SETTINGS_DEFAULTS = {
 	// History retention in days (search_history table)
@@ -76,7 +72,6 @@ export const MAINTENANCE_SETTINGS_DEFAULTS = {
 /**
  * Default values for backup settings.
  *
- * Requirements: 33.5
  */
 export const BACKUP_SETTINGS_DEFAULTS = {
 	// Whether scheduled backups are enabled
@@ -288,7 +283,6 @@ export async function deleteSetting(key: string): Promise<boolean> {
 /**
  * Represents the search behavior settings.
  *
- * Requirements: 21.4
  */
 export interface SearchSettings {
 	priorityWeights: {
@@ -320,7 +314,6 @@ export interface SearchSettings {
 /**
  * Gets search behavior settings with defaults applied.
  *
- * Requirements: 21.4
  *
  * @returns Search settings object with all fields populated
  */
@@ -388,7 +381,6 @@ export async function getSearchSettings(): Promise<SearchSettings> {
 /**
  * Updates search behavior settings.
  *
- * Requirements: 21.4
  *
  * @param input - Settings to update
  */
@@ -460,7 +452,6 @@ export type AuthMode = 'full' | 'local_bypass';
 /**
  * Represents the security settings.
  *
- * Requirements: 21.5
  */
 export interface SecuritySettings {
 	authMode: AuthMode;
@@ -473,7 +464,6 @@ export interface SecuritySettings {
 /**
  * Gets security settings with defaults applied.
  *
- * Requirements: 21.5
  *
  * @returns Security settings object with all fields populated
  */
@@ -488,7 +478,6 @@ export async function getSecuritySettings(): Promise<SecuritySettings> {
 /**
  * Updates security settings.
  *
- * Requirements: 21.5
  *
  * @param input - Settings to update
  */
@@ -503,7 +492,6 @@ export async function updateSecuritySettings(input: { authMode: AuthMode }): Pro
 /**
  * Represents the backup settings.
  *
- * Requirements: 33.5
  */
 export interface BackupSettings {
 	/** Whether scheduled backups are enabled */
@@ -521,7 +509,6 @@ export interface BackupSettings {
 /**
  * Gets backup settings with defaults applied.
  *
- * Requirements: 33.5
  *
  * @returns Backup settings object with all fields populated
  */
@@ -544,7 +531,6 @@ export async function getBackupSettings(): Promise<BackupSettings> {
 /**
  * Updates backup settings.
  *
- * Requirements: 33.5
  *
  * @param input - Settings to update
  */

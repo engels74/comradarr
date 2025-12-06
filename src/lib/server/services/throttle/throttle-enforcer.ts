@@ -1,7 +1,6 @@
 /**
  * ThrottleEnforcer service for rate limiting enforcement.
  *
- * Requirements: 7.1, 7.2, 7.7
  *
  * This service enforces rate limiting during search dispatch operations:
  * - Checks if dispatches are allowed based on per-minute rate limits

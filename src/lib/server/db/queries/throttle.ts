@@ -1,7 +1,6 @@
 /**
  * Database queries for throttle profile operations.
  *
- * Requirements: 7.1, 7.5, 7.6
  *
  * Throttle profiles control rate limiting for search dispatches.
  * Profile resolution follows: connector profile -> default profile -> fallback preset.
@@ -247,7 +246,7 @@ export async function throttleProfileNameExists(
 }
 
 // =============================================================================
-// Profile Resolution (Requirements 7.5, 7.6)
+// Profile Resolution
 // =============================================================================
 
 /**

@@ -1,7 +1,6 @@
 /**
  * Database queries for connector operations.
  *
- * Requirements: 1.1, 36.1
  *
  * API keys are encrypted using AES-256-GCM before storage.
  * Decryption happens lazily, only when the key is needed for API calls.
@@ -114,7 +113,7 @@ export async function getEnabledConnectors(): Promise<Connector[]> {
 /**
  * Gets all enabled connectors with healthy status (healthy or degraded).
  * Excludes unhealthy, offline, and unknown status connectors from sweep cycles.
- * Used by scheduler to skip sweep cycles for unhealthy connectors (Requirement 1.5).
+ * Used by scheduler to skip sweep cycles for unhealthy connectors.
  *
  * @returns Array of healthy, enabled connectors
  */
@@ -263,7 +262,7 @@ function normalizeUrl(url: string): string {
 }
 
 // =============================================================================
-// Connector Statistics (Requirement 16.1)
+// Connector Statistics
 // =============================================================================
 
 /**
@@ -381,7 +380,7 @@ export async function getAllConnectorStats(): Promise<Map<number, ConnectorStats
 }
 
 // =============================================================================
-// Connector Detail Queries (Requirements 16.4, 16.5)
+// Connector Detail Queries
 // =============================================================================
 
 /**

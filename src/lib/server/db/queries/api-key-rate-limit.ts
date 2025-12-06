@@ -1,7 +1,6 @@
 /**
  * Database queries for API key rate limit state operations.
  *
- * Requirement: 34.5
  *
  * Rate limit state tracks runtime rate-limiting counters per API key:
  * - requestsThisMinute: Counter for per-minute rate limit

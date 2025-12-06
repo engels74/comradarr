@@ -4,7 +4,6 @@
  * These functions have no database dependencies and can be used
  * in both server-side code and unit tests.
  *
- * Requirements: 7.4
  */
 
 /**

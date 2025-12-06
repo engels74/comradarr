@@ -1,7 +1,6 @@
 /**
  * Database queries for library completion tracking.
  *
- * Requirements: 15.4
  *
  * Provides:
  * - Current completion stats per connector

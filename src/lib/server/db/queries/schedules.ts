@@ -1,7 +1,6 @@
 /**
  * Database queries for sweep schedule operations.
  *
- * Requirements: 19.1
  *
  * Sweep schedules allow per-connector configuration of cron-based
  * sweep cycles for gap and upgrade discovery.

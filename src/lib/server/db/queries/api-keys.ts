@@ -59,7 +59,7 @@ export interface CreateApiKeyInput {
 	name: string;
 	description?: string | null;
 	scope: ApiKeyScope;
-	rateLimitPerMinute?: number | null; // null = unlimited (Requirement 34.5)
+	rateLimitPerMinute?: number | null; // null = unlimited
 	expiresAt?: Date | null;
 }
 
@@ -314,7 +314,7 @@ export async function apiKeyNameExists(
 }
 
 // =============================================================================
-// API Key Usage Logging (Requirement 34.4)
+// API Key Usage Logging
 // =============================================================================
 
 /**
@@ -355,7 +355,7 @@ export async function logApiKeyUsage(input: ApiKeyUsageLogInput): Promise<void> 
 }
 
 // =============================================================================
-// API Key Rate Limit Management (Requirement 34.5)
+// API Key Rate Limit Management
 // =============================================================================
 
 /**

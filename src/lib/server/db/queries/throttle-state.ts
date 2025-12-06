@@ -1,7 +1,6 @@
 /**
  * Database queries for throttle state operations.
  *
- * Requirements: 7.1, 7.4
  *
  * Throttle state tracks runtime rate-limiting counters per connector:
  * - requestsThisMinute: Counter for per-minute rate limit

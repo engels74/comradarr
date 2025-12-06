@@ -136,7 +136,6 @@ function useHourlyStats(period: TimePeriod): boolean {
 /**
  * Gets discovery metrics (gaps and upgrades discovered) over time.
  *
- * Requirements: 20.1
  */
 export async function getDiscoveryMetrics(period: TimePeriod): Promise<DiscoveryMetrics[]> {
 	const startDate = getStartDate(period);
@@ -221,7 +220,6 @@ function groupByConnector<T extends { connectorId: number; connectorName: string
 /**
  * Gets search volume metrics over time.
  *
- * Requirements: 20.1
  */
 export async function getSearchMetrics(period: TimePeriod): Promise<SearchMetrics[]> {
 	const startDate = getStartDate(period);
@@ -310,7 +308,6 @@ function groupSearchMetrics<
 /**
  * Gets queue depth metrics over time.
  *
- * Requirements: 20.1
  */
 export async function getQueueMetrics(period: TimePeriod): Promise<QueueMetrics[]> {
 	const startDate = getStartDate(period);
@@ -389,7 +386,6 @@ function groupQueueMetrics<
 /**
  * Gets aggregated statistics per connector for comparison.
  *
- * Requirements: 12.3, 20.2
  */
 export async function getConnectorComparison(period: TimePeriod): Promise<ConnectorStats[]> {
 	const startDate = getStartDate(period);
@@ -471,7 +467,6 @@ function calculateRates(row: {
 /**
  * Gets the most searched content items.
  *
- * Requirements: 20.3
  */
 export async function getMostSearchedItems(limit: number = 10): Promise<MostSearchedItem[]> {
 	// Episode query
@@ -550,7 +545,6 @@ export async function getMostSearchedItems(limit: number = 10): Promise<MostSear
 /**
  * Gets the hardest to find content (highest attempt count, still not found).
  *
- * Requirements: 20.3
  */
 export async function getHardestToFindItems(limit: number = 10): Promise<HardestToFindItem[]> {
 	// Episode query for items still being searched
@@ -627,7 +621,6 @@ export async function getHardestToFindItems(limit: number = 10): Promise<Hardest
 /**
  * Gets the quality distribution for acquired content.
  *
- * Requirements: 20.3
  */
 export async function getQualityDistribution(): Promise<QualityDistribution[]> {
 	// Get quality distribution from episodes and movies that have files
@@ -751,7 +744,7 @@ export async function getAnalyticsSummary(
 }
 
 // =============================================================================
-// CSV Export Query (Requirement 12.4)
+// CSV Export Query
 // =============================================================================
 
 /**
@@ -777,7 +770,6 @@ export interface ExportRow {
 /**
  * Gets daily statistics for CSV export within a date range.
  *
- * Requirements: 12.4, 20.4
  *
  * @param startDate - Start of date range (inclusive)
  * @param endDate - End of date range (inclusive)
