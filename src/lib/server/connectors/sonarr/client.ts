@@ -5,7 +5,7 @@
  * Inherits ping(), getSystemStatus(), and getHealth() from base class.
  *
  * @module connectors/sonarr/client
- * @requirements 1.2, 1.3, 1.4, 24.1, 24.2, 24.3, 24.4, 24.5, 24.6, 24.7
+
  */
 
 import { BaseArrClient } from '../common/base-client.js';
@@ -68,7 +68,7 @@ export class SonarrClient extends BaseArrClient {
 	 *
 	 * @returns Array of all series in the library
 	 * @throws {ArrClientError} On API error (network, auth, rate limit, etc.)
-	 * @requirements 24.1
+
 	 *
 	 * @example
 	 * ```typescript
@@ -101,7 +101,7 @@ export class SonarrClient extends BaseArrClient {
 	 * @param seriesId - The Sonarr internal series ID
 	 * @returns Array of episodes for the series
 	 * @throws {ArrClientError} On API error (network, auth, rate limit, etc.)
-	 * @requirements 24.2
+
 	 *
 	 * @example
 	 * ```typescript
@@ -190,7 +190,7 @@ export class SonarrClient extends BaseArrClient {
 	 * @param options - Pagination and filter options
 	 * @returns Array of all missing episodes
 	 * @throws {ArrClientError} On API error (network, auth, rate limit, etc.)
-	 * @requirements 24.3
+
 	 *
 	 * @example
 	 * ```typescript
@@ -219,7 +219,7 @@ export class SonarrClient extends BaseArrClient {
 	 * @param options - Pagination and filter options
 	 * @returns Array of all upgrade candidate episodes
 	 * @throws {ArrClientError} On API error (network, auth, rate limit, etc.)
-	 * @requirements 24.4
+
 	 *
 	 * @example
 	 * ```typescript
@@ -248,7 +248,7 @@ export class SonarrClient extends BaseArrClient {
 	 * @returns Command response with initial execution status
 	 * @throws {ArrClientError} On API error (network, auth, rate limit, etc.)
 	 * @throws {Error} If response parsing fails
-	 * @requirements 24.5
+
 	 *
 	 * @example
 	 * ```typescript
@@ -291,7 +291,7 @@ export class SonarrClient extends BaseArrClient {
 	 * @returns Command response with initial execution status
 	 * @throws {ArrClientError} On API error (network, auth, rate limit, etc.)
 	 * @throws {Error} If response parsing fails
-	 * @requirements 24.6
+
 	 *
 	 * @example
 	 * ```typescript
@@ -334,7 +334,7 @@ export class SonarrClient extends BaseArrClient {
 	 * @throws {ArrClientError} On API error (network, auth, rate limit, etc.)
 	 * @throws {NotFoundError} If command ID does not exist
 	 * @throws {Error} If response parsing fails
-	 * @requirements 24.7
+
 	 *
 	 * @example
 	 * ```typescript

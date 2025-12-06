@@ -2,7 +2,7 @@
  * API endpoint for fetching episodes of a specific season.
  * Used for lazy loading episodes on the series detail page.
  *
- * @requirements 34.2
+
  */
 
 import { json, error } from '@sveltejs/kit';

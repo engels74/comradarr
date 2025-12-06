@@ -5,7 +5,7 @@
  * `category` and `retryable` properties for intelligent error handling.
  *
  * @module services/notifications/errors
- * @requirements 36.2
+
  */
 
 // =============================================================================

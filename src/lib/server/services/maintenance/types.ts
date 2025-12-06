@@ -2,7 +2,7 @@
  * Types for the database maintenance service.
  *
  * @module services/maintenance/types
- * @requirements 13.1
+
  */
 
 // =============================================================================

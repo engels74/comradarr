@@ -5,7 +5,7 @@
  * Fetches all series, seasons, and episodes from the API and upserts them into the content mirror.
  *
  * @module services/sync/handlers/sonarr
- * @requirements 2.1, 2.3
+
  */
 
 import { db } from '$lib/server/db';
@@ -97,7 +97,7 @@ async function parallelLimit<T, R>(
  * @param options - Sync options for concurrency and rate limiting
  * @returns The total number of episodes processed
  *
- * @requirements 2.3 - Store series, seasons, episodes with tvdbId, seasonNumber, episodeNumber, airDateUtc, qualityCutoffNotMet
+
  */
 export async function syncSonarrContent(
 	client: SeriesClient,

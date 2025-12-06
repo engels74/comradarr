@@ -16,7 +16,7 @@
  * - Search type (gaps prioritized over upgrades)
  *
  * @module services/queue
- * @requirements 5.1, 5.2, 5.5, 5.6, 6.1, 6.2, 6.3
+
  */
 
 // Types - Priority

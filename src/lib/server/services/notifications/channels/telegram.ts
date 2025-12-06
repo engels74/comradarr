@@ -6,7 +6,7 @@
  * Reference: https://core.telegram.org/bots/api#sendmessage
  *
  * @module services/notifications/channels/telegram
- * @requirements 9.1, 36.2
+
  */
 
 import type { NotificationChannel } from '$lib/server/db/schema';

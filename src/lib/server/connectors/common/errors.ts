@@ -11,7 +11,7 @@
  * - SSLError: SSL certificate validation failure (not retryable)
  *
  * @module connectors/common/errors
- * @requirements 23.3, 23.4, 28.1, 28.2, 28.3, 28.4, 28.5, 28.6
+
  */
 
 /**
@@ -75,7 +75,7 @@ export class NetworkError extends ArrClientError {
  * Authentication errors (HTTP 401)
  * These are NOT retryable as they indicate invalid credentials
  *
- * @requirements 28.1
+
  */
 export class AuthenticationError extends ArrClientError {
 	readonly category = 'authentication' as const;
@@ -91,7 +91,7 @@ export class AuthenticationError extends ArrClientError {
  * Rate limit errors (HTTP 429)
  * These are retryable after the specified delay
  *
- * @requirements 28.3
+
  */
 export class RateLimitError extends ArrClientError {
 	readonly category = 'rate_limit' as const;
@@ -110,7 +110,7 @@ export class RateLimitError extends ArrClientError {
  * Server errors (HTTP 5xx)
  * These are generally retryable as they indicate server-side issues
  *
- * @requirements 28.4
+
  */
 export class ServerError extends ArrClientError {
 	readonly category = 'server' as const;
@@ -129,7 +129,7 @@ export class ServerError extends ArrClientError {
  * Request timeout errors
  * These are retryable as they may be due to temporary network issues
  *
- * @requirements 23.4
+
  */
 export class TimeoutError extends ArrClientError {
 	readonly category = 'timeout' as const;
@@ -166,7 +166,7 @@ export class ValidationError extends ArrClientError {
  * Not found errors (HTTP 404)
  * NOT retryable - the resource does not exist
  *
- * @requirements 28.2
+
  */
 export class NotFoundError extends ArrClientError {
 	readonly category = 'not_found' as const;
@@ -186,7 +186,7 @@ export class NotFoundError extends ArrClientError {
  * SSL certificate validation errors
  * NOT retryable by default - indicates configuration issue
  *
- * @requirements 28.6
+
  */
 export class SSLError extends ArrClientError {
 	readonly category = 'ssl' as const;

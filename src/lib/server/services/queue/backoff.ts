@@ -6,7 +6,7 @@
  * database dependencies.
  *
  * @module services/queue/backoff
- * @requirements 5.5, 21.4
+
  */
 
 import { calculateBackoffDelay } from '$lib/server/connectors/common/retry.js';
@@ -34,7 +34,7 @@ import { STATE_TRANSITION_CONFIG, getStateTransitionConfig } from './config';
  * // Returns a Date approximately 2 hours from now (with jitter)
  * ```
  *
- * @requirements 5.5
+
  */
 export function calculateNextEligibleTime(attemptCount: number, now: Date = new Date()): Date {
 	// Create retry config from state transition config
@@ -58,7 +58,7 @@ export function calculateNextEligibleTime(attemptCount: number, now: Date = new 
  * @param attemptCount - Current attempt count (after incrementing for failure)
  * @returns True if the item has reached max attempts and should be exhausted
  *
- * @requirements 5.6
+
  */
 export function shouldMarkExhausted(attemptCount: number): boolean {
 	return attemptCount >= STATE_TRANSITION_CONFIG.MAX_ATTEMPTS;
@@ -78,7 +78,7 @@ export function shouldMarkExhausted(attemptCount: number): boolean {
  * @param now - Current time (default: new Date())
  * @returns Promise resolving to Date when the item becomes eligible for retry
  *
- * @requirements 21.4
+
  */
 export async function calculateNextEligibleTimeWithConfig(
 	attemptCount: number,
@@ -107,7 +107,7 @@ export async function calculateNextEligibleTimeWithConfig(
  * @param attemptCount - Current attempt count (after incrementing for failure)
  * @returns Promise resolving to true if the item has reached max attempts
  *
- * @requirements 21.4
+
  */
 export async function shouldMarkExhaustedWithConfig(attemptCount: number): Promise<boolean> {
 	const stateConfig = await getStateTransitionConfig();

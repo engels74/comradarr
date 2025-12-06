@@ -6,7 +6,7 @@
  * Also respects quiet hours configuration by deferring batch sends.
  *
  * @module services/notifications/batcher
- * @requirements 9.3, 9.4
+
  */
 
 import type { NotificationChannel, NotificationHistory } from '$lib/server/db/schema';

@@ -9,7 +9,7 @@
  * - Generic webhooks with HMAC signature support
  *
  * @module services/notifications
- * @requirements 9.1, 9.2, 9.4, 9.5, 36.2, 36.3
+
  *
  * @example
  * ```typescript

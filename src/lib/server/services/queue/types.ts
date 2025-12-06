@@ -6,7 +6,7 @@
  * are dispatched to *arr applications.
  *
  * @module services/queue/types
- * @requirements 5.1
+
  */
 
 /**
@@ -82,7 +82,7 @@ export interface PriorityWeights {
 /**
  * Input data required to calculate priority for a queue item.
  *
- * @requirements 5.1
+
  */
 export interface PriorityInput {
 	/**
@@ -143,7 +143,7 @@ export interface PriorityBreakdown {
 /**
  * Result of priority calculation.
  *
- * @requirements 5.1
+
  */
 export interface PriorityResult {
 	/**
@@ -166,7 +166,7 @@ export interface PriorityResult {
 /**
  * A single item in the request queue with joined data from search registry.
  *
- * @requirements 5.2
+
  */
 export interface QueueItem {
 	/** Request queue row ID */
@@ -197,7 +197,7 @@ export interface QueueItem {
 /**
  * Result of an enqueue operation.
  *
- * @requirements 5.2
+
  */
 export interface EnqueueResult {
 	/** Whether the operation completed successfully */
@@ -222,7 +222,7 @@ export interface EnqueueResult {
 /**
  * Result of a dequeue operation.
  *
- * @requirements 5.2
+
  */
 export interface DequeueResult {
 	/** Whether the operation completed successfully */
@@ -244,7 +244,7 @@ export interface DequeueResult {
 /**
  * Result of a queue control operation (pause/resume/clear).
  *
- * @requirements 5.2
+
  */
 export interface QueueControlResult {
 	/** Whether the operation completed successfully */
@@ -266,7 +266,7 @@ export interface QueueControlResult {
 /**
  * Queue status information for a connector.
  *
- * @requirements 5.2
+
  */
 export interface QueueStatus {
 	/** Connector ID */
@@ -318,7 +318,7 @@ export interface DequeueOptions {
  * - cooldown: Failed search, waiting for retry eligibility
  * - exhausted: Max attempts reached, no more automatic retries
  *
- * @requirements 5.5, 5.6
+
  */
 export type SearchState = 'pending' | 'queued' | 'searching' | 'cooldown' | 'exhausted';
 
@@ -333,7 +333,7 @@ export type SearchState = 'pending' | 'queued' | 'searching' | 'cooldown' | 'exh
  * - `server_error`: HTTP 5xx from *arr application
  * - `timeout`: Request timed out
  *
- * @requirements 5.5
+
  */
 export type FailureCategory =
 	| 'no_results'
@@ -345,7 +345,7 @@ export type FailureCategory =
 /**
  * Input for marking a search as failed.
  *
- * @requirements 5.5, 6.5
+
  */
 export interface MarkSearchFailedInput {
 	/** ID of the search registry entry */
@@ -365,7 +365,7 @@ export interface MarkSearchFailedInput {
 /**
  * Result of a state transition operation.
  *
- * @requirements 5.5, 5.6
+
  */
 export interface StateTransitionResult {
 	/** Whether the operation completed successfully */
@@ -393,7 +393,7 @@ export interface StateTransitionResult {
 /**
  * Result of re-enqueue operation for cooldown items.
  *
- * @requirements 5.5
+
  */
 export interface ReenqueueCooldownResult {
 	/** Whether the operation completed successfully */

@@ -8,7 +8,7 @@
  * - Request recording for rate limiting
  *
  * @module services/queue/search-dispatcher
- * @requirements 7.3, 38.5, 38.6
+
  */
 
 import { getConnector, getDecryptedApiKey } from '$lib/server/db/queries/connectors';
@@ -139,7 +139,7 @@ async function executeSearchCommand(
  * This is informational only - does NOT block dispatch.
  * Uses cached data to avoid additional API calls.
  *
- * @requirements 38.5, 38.6
+
  */
 async function checkProwlarrHealth(): Promise<void> {
 	try {
@@ -215,7 +215,7 @@ async function checkProwlarrHealth(): Promise<void> {
  * }
  * ```
  *
- * @requirements 7.3
+
  */
 export async function dispatchSearch(
 	connectorId: number,
@@ -309,7 +309,7 @@ export async function dispatchSearch(
  * @param dispatches - Array of dispatch parameters
  * @returns Array of dispatch results
  *
- * @requirements 7.3
+
  */
 export async function dispatchBatch(
 	dispatches: Array<{

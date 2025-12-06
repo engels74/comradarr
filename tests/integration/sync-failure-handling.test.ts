@@ -9,7 +9,7 @@
  * NOTE: These tests require a running PostgreSQL database with DATABASE_URL set.
  * Run with: bun test tests/integration/sync-failure-handling.test.ts
  *
- * @requirements 2.6
+
  */
 
 import { describe, it, expect, beforeAll, afterAll, afterEach } from 'bun:test';

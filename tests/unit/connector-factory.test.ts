@@ -6,7 +6,7 @@
  * - Error handling for unknown connector types
  * - Configuration passthrough
  *
- * @requirements 1.4
+
  */
 
 import { describe, it, expect } from 'vitest';

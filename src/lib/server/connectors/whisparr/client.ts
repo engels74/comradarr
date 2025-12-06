@@ -8,7 +8,7 @@
  * since it's a fork of Sonarr for adult content management.
  *
  * @module connectors/whisparr/client
- * @requirements 26.1, 26.2, 26.3, 26.4, 26.5
+
  */
 
 import { BaseArrClient } from '../common/base-client.js';
@@ -75,7 +75,7 @@ export class WhisparrClient extends BaseArrClient {
 	 *
 	 * @returns Array of all series in the library
 	 * @throws {ArrClientError} On API error (network, auth, rate limit, etc.)
-	 * @requirements 26.1
+
 	 *
 	 * @example
 	 * ```typescript
@@ -108,7 +108,7 @@ export class WhisparrClient extends BaseArrClient {
 	 * @param seriesId - The Whisparr internal series ID
 	 * @returns Array of episodes for the series
 	 * @throws {ArrClientError} On API error (network, auth, rate limit, etc.)
-	 * @requirements 26.2
+
 	 *
 	 * @example
 	 * ```typescript
@@ -197,7 +197,7 @@ export class WhisparrClient extends BaseArrClient {
 	 * @param options - Pagination and filter options
 	 * @returns Array of all missing episodes
 	 * @throws {ArrClientError} On API error (network, auth, rate limit, etc.)
-	 * @requirements 26.3
+
 	 *
 	 * @example
 	 * ```typescript
@@ -226,7 +226,7 @@ export class WhisparrClient extends BaseArrClient {
 	 * @param options - Pagination and filter options
 	 * @returns Array of all upgrade candidate episodes
 	 * @throws {ArrClientError} On API error (network, auth, rate limit, etc.)
-	 * @requirements 26.4
+
 	 *
 	 * @example
 	 * ```typescript
@@ -255,7 +255,7 @@ export class WhisparrClient extends BaseArrClient {
 	 * @returns Command response with initial execution status
 	 * @throws {ArrClientError} On API error (network, auth, rate limit, etc.)
 	 * @throws {Error} If response parsing fails
-	 * @requirements 26.5
+
 	 *
 	 * @example
 	 * ```typescript
@@ -298,7 +298,7 @@ export class WhisparrClient extends BaseArrClient {
 	 * @returns Command response with initial execution status
 	 * @throws {ArrClientError} On API error (network, auth, rate limit, etc.)
 	 * @throws {Error} If response parsing fails
-	 * @requirements 26.5
+
 	 *
 	 * @example
 	 * ```typescript
@@ -341,7 +341,7 @@ export class WhisparrClient extends BaseArrClient {
 	 * @throws {ArrClientError} On API error (network, auth, rate limit, etc.)
 	 * @throws {NotFoundError} If command ID does not exist
 	 * @throws {Error} If response parsing fails
-	 * @requirements 26.5
+
 	 *
 	 * @example
 	 * ```typescript

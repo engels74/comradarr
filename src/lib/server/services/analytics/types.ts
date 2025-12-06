@@ -7,7 +7,7 @@
  * - Queue depth over time
  *
  * @module services/analytics/types
- * @requirements 12.1
+
  */
 
 // =============================================================================

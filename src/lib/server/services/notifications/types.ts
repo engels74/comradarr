@@ -2,7 +2,7 @@
  * Types for notification channel implementations.
  *
  * @module services/notifications/types
- * @requirements 9.1, 9.5, 36.2
+
  */
 
 import type { NotificationEventType } from '$lib/server/db/queries/notifications';

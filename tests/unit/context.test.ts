@@ -8,7 +8,7 @@
  * - Context detection (hasContext)
  * - Correlation ID generation
  *
- * @requirements 31.2
+
  */
 
 import { describe, it, expect } from 'vitest';

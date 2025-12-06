@@ -10,7 +10,7 @@
  * - Upgrade registries cleaned when qualityCutoffNotMet becomes false (Requirement 4.4)
  *
  * @module services/discovery/types
- * @requirements 3.1, 3.2, 3.3, 3.4, 4.1, 4.2, 4.3, 4.4
+
  */
 
 /**
@@ -19,7 +19,7 @@
  * Gap discovery identifies monitored content items that have `hasFile=false`
  * and creates search registry entries with state "pending" and searchType "gap".
  *
- * @requirements 3.1, 3.3
+
  */
 export interface GapDiscoveryResult {
 	/** Whether the discovery completed successfully */
@@ -36,7 +36,7 @@ export interface GapDiscoveryResult {
 	registriesSkipped: number;
 	/**
 	 * Number of gap registries deleted because content now has hasFile=true.
-	 * @requirements 3.4
+
 	 */
 	registriesResolved: number;
 	/** Duration of the discovery operation in milliseconds */
@@ -52,7 +52,7 @@ export interface GapDiscoveryResult {
  * `qualityCutoffNotMet=true` and creates search registry entries
  * with state "pending" and searchType "upgrade".
  *
- * @requirements 4.1, 4.3
+
  */
 export interface UpgradeDiscoveryResult {
 	/** Whether the discovery completed successfully */
@@ -69,7 +69,7 @@ export interface UpgradeDiscoveryResult {
 	registriesSkipped: number;
 	/**
 	 * Number of upgrade registries deleted because content now has qualityCutoffNotMet=false.
-	 * @requirements 4.4
+
 	 */
 	registriesResolved: number;
 	/** Duration of the discovery operation in milliseconds */

@@ -5,7 +5,7 @@
  * Used by parsers to validate and type API responses.
  *
  * @module connectors/radarr/types
- * @requirements 27.4
+
  */
 
 import type { QualityModel } from '$lib/utils/quality';
@@ -29,7 +29,7 @@ export interface RadarrMovieFile {
  * Movie response from Radarr API
  * GET /api/v3/movie
  *
- * @requirements 27.4 - Extract id, title, tmdbId, imdbId, year, hasFile, qualityCutoffNotMet
+
  */
 export interface RadarrMovie {
 	/** Radarr's internal movie ID */

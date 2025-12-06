@@ -9,7 +9,7 @@
  * - Malformed records return errors instead of throwing (Requirement 27.8)
  *
  * @module connectors/radarr/parsers
- * @requirements 27.4, 27.7, 27.8
+
  */
 
 import * as v from 'valibot';
@@ -44,7 +44,7 @@ export const RadarrMovieFileSchema = v.object({
  * Required fields per Requirement 27.4:
  * - id, title, tmdbId, imdbId, year, hasFile, qualityCutoffNotMet
  *
- * @requirements 27.4
+
  */
 export const RadarrMovieSchema = v.object({
 	id: v.number(),
@@ -70,7 +70,7 @@ export const RadarrMovieSchema = v.object({
  * @param data - Unknown data from API response
  * @returns ParseResult with typed RadarrMovie or error details
  *
- * @requirements 27.4, 27.7, 27.8
+
  *
  * @example
  * ```typescript
@@ -121,7 +121,7 @@ export function parseRadarrMovie(data: unknown): ParseResult<RadarrMovie> {
  * @param data - Unknown data from API response
  * @returns ParseResult with typed PaginatedResponse<RadarrMovie> or error details
  *
- * @requirements 27.1, 27.4, 27.7, 27.8
+
  *
  * @example
  * ```typescript
@@ -190,7 +190,7 @@ export function parsePaginatedMovies(
  * @param onInvalid - Optional callback for invalid records (for logging warnings)
  * @returns LenientParseResult with typed PaginatedResponse<RadarrMovie>, skipped count, or error
  *
- * @requirements 27.1, 27.4, 27.7, 27.8
+
  *
  * @example
  * ```typescript

@@ -5,7 +5,7 @@
  * Templates include appropriate titles, messages, fields, and colors for each event.
  *
  * @module services/notifications/templates
- * @requirements 9.2, 36.3
+
  */
 
 import type { NotificationEventType } from '$lib/server/db/queries/notifications';

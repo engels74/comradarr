@@ -10,7 +10,7 @@
  * - Race conditions between sync and search operations
  *
  * @module services/maintenance/orphan-cleanup
- * @requirements 13.2
+
  */
 
 import { db } from '$lib/server/db';

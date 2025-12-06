@@ -10,7 +10,7 @@
  * Note: Database-dependent functions (markSearchFailed, markSearchExhausted,
  * reenqueueEligibleCooldownItems) are tested in integration tests.
  *
- * @requirements 5.5, 5.6
+
  */
 
 import { describe, it, expect } from 'vitest';

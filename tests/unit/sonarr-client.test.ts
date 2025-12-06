@@ -6,7 +6,7 @@
  * - Inherited methods (ping, getSystemStatus, getHealth)
  * - Library data methods (getSeries, getEpisodes)
  *
- * @requirements 1.2, 1.3, 1.4, 24.1, 24.2
+
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach, type Mock } from 'vitest';

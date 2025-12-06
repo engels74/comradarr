@@ -5,7 +5,7 @@
  * Authentication via X-Api-Key header.
  *
  * @module services/prowlarr/client
- * @requirements 38.1, 38.2, 38.3
+
  */
 
 import {
@@ -41,7 +41,7 @@ const API_VERSION = 'v1';
  *
  * Provides methods to query Prowlarr for indexer health and rate-limit status.
  *
- * @requirements 38.1, 38.2, 38.3
+
  *
  * @example
  * ```typescript
@@ -249,7 +249,7 @@ export class ProwlarrClient {
 	 * @returns Array of indexer status objects
 	 * @throws ArrClientError on API failure
 	 *
-	 * @requirements 38.2
+
 	 *
 	 * @example
 	 * ```typescript
@@ -317,7 +317,7 @@ export class ProwlarrClient {
 	 * @returns Array of IndexerHealth with rate-limit status
 	 * @throws ArrClientError on API failure
 	 *
-	 * @requirements 38.3
+
 	 *
 	 * @example
 	 * ```typescript

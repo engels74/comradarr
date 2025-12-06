@@ -15,7 +15,7 @@
  * 5. Optionally verify timestamp is recent (within 5 minutes)
  *
  * @module services/notifications/channels/webhook
- * @requirements 9.1, 9.5, 36.2
+
  */
 
 import type { NotificationChannel } from '$lib/server/db/schema';

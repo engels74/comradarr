@@ -8,7 +8,7 @@
  * - Same-day ranges (e.g., 13:00-15:00)
  *
  * @module services/notifications/quiet-hours
- * @requirements 9.4
+
  */
 
 import type { NotificationChannel } from '$lib/server/db/schema';

@@ -8,7 +8,7 @@
  * - Migration support for older backups
  *
  * @module services/backup/restore-service
- * @requirements 33.2, 33.3, 33.4
+
  */
 
 import { readFile } from 'node:fs/promises';
@@ -77,7 +77,7 @@ function validateFormatVersion(backup: BackupFile): boolean {
 
 /**
  * Validates backup checksum to detect corruption.
- * @requirements 33.2
+
  *
  * @param backup - The backup file to validate
  * @returns True if checksum matches
@@ -95,7 +95,7 @@ async function validateChecksum(backup: BackupFile): Promise<boolean> {
 
 /**
  * Validates that the SECRET_KEY matches the one used during backup.
- * @requirements 33.3
+
  *
  * @param secretKeyVerifier - The encrypted verifier from backup metadata
  * @returns True if SECRET_KEY matches
@@ -149,7 +149,7 @@ async function getCurrentSchemaVersion(): Promise<SchemaVersion> {
 
 /**
  * Gets pending migrations that need to be applied after restore.
- * @requirements 33.4
+
  *
  * @param backupSchemaVersion - Schema version from backup
  * @returns List of pending migration tags
@@ -314,7 +314,7 @@ async function insertTableData(tableExport: TableExport): Promise<number> {
 
 /**
  * Applies pending database migrations.
- * @requirements 33.4
+
  *
  * @returns Number of migrations applied
  */
@@ -389,7 +389,7 @@ async function clearSessions(): Promise<void> {
  * @param backupId - The backup ID to validate
  * @returns Validation result with errors and warnings
  *
- * @requirements 33.2, 33.3, 33.4
+
  *
  * @example
  * ```typescript
@@ -499,7 +499,7 @@ export async function validateBackup(backupId: string): Promise<RestoreValidatio
  * @param options - Restore options
  * @returns Restore result with success status
  *
- * @requirements 33.2, 33.3, 33.4
+
  *
  * @example
  * ```typescript

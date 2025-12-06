@@ -21,10 +21,6 @@ const SESSION_COOKIE_NAME = 'session';
 /**
  * Initialize application on server startup.
  * Only runs in non-test environments to avoid interference with tests.
- *
- * Requirements:
- * - 31.5: Initialize log level from database settings
- * - 7.4: Reset throttle counters at configured intervals
  */
 if (process.env.NODE_ENV !== 'test') {
 	// Initialize log level from database (Requirement 31.5)
@@ -109,7 +105,6 @@ export const handle: Handle = async ({ event, resolve }) => {
 		}
 	}
 
-	// Session validation (Requirements 10.1, 10.2)
 	// Only check session if not already authenticated via API key
 	if (!event.locals.user) {
 		const sessionId = event.cookies.get(SESSION_COOKIE_NAME);
@@ -159,7 +154,6 @@ export const handle: Handle = async ({ event, resolve }) => {
 	return runWithContext(context, async () => {
 		const response = await resolve(event);
 
-		// API key rate limiting and usage logging (Requirements 34.4, 34.5)
 		if (event.locals.isApiKey && event.locals.apiKeyId) {
 			const apiKeyId = event.locals.apiKeyId;
 			const rateLimitPerMinute = event.locals.apiKeyRateLimitPerMinute ?? null;

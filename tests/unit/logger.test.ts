@@ -12,7 +12,7 @@
  * - HTTP request/response logging
  * - Trace level body inclusion
  *
- * @requirements 31.1, 31.2, 31.4
+
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';

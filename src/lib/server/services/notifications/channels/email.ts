@@ -4,7 +4,7 @@
  * Uses nodemailer for SMTP transport.
  *
  * @module services/notifications/channels/email
- * @requirements 9.1, 36.2
+
  */
 
 import type { NotificationChannel } from '$lib/server/db/schema';

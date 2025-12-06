@@ -2,7 +2,7 @@
  * Common types for *arr API clients
  *
  * @module connectors/common/types
- * @requirements 23.1, 23.2
+
  */
 
 /**
@@ -13,7 +13,7 @@ export type ConnectorType = 'sonarr' | 'radarr' | 'whisparr';
 /**
  * Configuration for retry behavior with exponential backoff
  *
- * @requirements 23.5
+
  */
 export interface RetryConfig {
 	/** Maximum number of retry attempts (default: 3) */

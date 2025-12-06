@@ -13,7 +13,7 @@
  * ```
  *
  * @module services/queue/state-transitions
- * @requirements 5.5, 5.6
+
  */
 
 import { db } from '$lib/server/db';
@@ -62,7 +62,7 @@ export { calculateNextEligibleTime, shouldMarkExhausted } from './backoff';
  * }
  * ```
  *
- * @requirements 5.5, 5.6, 6.5
+
  */
 export async function markSearchFailed(
 	input: MarkSearchFailedInput
@@ -190,7 +190,7 @@ export async function markSearchFailed(
  * @param connectorId - The connector ID for filtering search registry entries
  * @param now - Current timestamp for updatedAt
  *
- * @requirements 6.5
+
  */
 async function markSeasonPackFailedForSeason(
 	episodeContentId: number,
@@ -251,7 +251,7 @@ async function markSeasonPackFailedForSeason(
  * @param searchRegistryId - ID of the search registry entry
  * @returns State transition result
  *
- * @requirements 5.6
+
  */
 export async function markSearchExhausted(
 	searchRegistryId: number
@@ -340,7 +340,7 @@ export async function markSearchExhausted(
  * const result = await reenqueueEligibleCooldownItems(1);
  * ```
  *
- * @requirements 5.5
+
  */
 export async function reenqueueEligibleCooldownItems(
 	connectorId?: number

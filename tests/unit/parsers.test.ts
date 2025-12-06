@@ -8,7 +8,7 @@
  * - parseRecordsWithWarnings() filtering behavior
  * - Edge cases for all parsers
  *
- * @requirements 27.1, 27.5, 27.6, 27.7, 27.8
+
  */
 
 import { describe, it, expect, vi } from 'vitest';

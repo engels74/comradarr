@@ -7,7 +7,7 @@
  * - calculateSyncBackoffDelay() exponential backoff
  * - SYNC_CONFIG default values
  *
- * @requirements 2.6
+
  */
 
 import { describe, it, expect } from 'vitest';

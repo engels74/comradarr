@@ -10,7 +10,7 @@
  * - Upgrade registries cleaned when qualityCutoffNotMet becomes false
  *
  * @module services/sync/search-state-cleanup
- * @requirements 2.2, 3.4, 4.4
+
  */
 
 import { db } from '$lib/server/db';
@@ -106,7 +106,7 @@ export async function deleteSearchRegistryForMovies(
  * @param connectorId - The connector ID to scope the cleanup
  * @returns The total number of search registry entries deleted (episodes + movies)
  *
- * @requirements 3.4 - WHEN an item's hasFile status changes from false to true
+
  *                     THEN the System SHALL delete the corresponding search registry entry
  *
  * @example
@@ -164,7 +164,7 @@ export async function cleanupResolvedGapRegistries(connectorId: number): Promise
  * @param connectorId - The connector ID to scope the cleanup
  * @returns The total number of search registry entries deleted (episodes + movies)
  *
- * @requirements 4.4 - WHEN an item's qualityCutoffNotMet status changes from true to false
+
  *                     THEN the System SHALL delete the corresponding search registry entry
  *
  * @example

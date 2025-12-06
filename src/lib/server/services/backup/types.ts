@@ -2,7 +2,7 @@
  * Types for the backup service.
  *
  * @module services/backup/types
- * @requirements 33.1
+
  */
 
 // =============================================================================
@@ -253,7 +253,7 @@ export const TABLE_DELETE_ORDER = [...TABLE_EXPORT_ORDER].reverse();
 
 /**
  * Restore-specific error codes.
- * @requirements 33.2, 33.3, 33.4
+
  */
 export type RestoreErrorCode =
 	| 'BACKUP_NOT_FOUND'
@@ -301,7 +301,7 @@ export interface RestoreOptions {
 
 /**
  * Result of backup validation before restore.
- * @requirements 33.2, 33.3, 33.4
+
  */
 export interface RestoreValidation {
 	/** Whether the backup is valid for restore */

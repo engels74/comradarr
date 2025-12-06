@@ -5,7 +5,7 @@
  * into a single digest notification payload.
  *
  * @module services/notifications/aggregators
- * @requirements 9.3
+
  */
 
 import type { NotificationHistory } from '$lib/server/db/schema';

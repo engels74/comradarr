@@ -5,7 +5,7 @@
  * statistics in analytics_hourly_stats and analytics_daily_stats.
  *
  * @module services/analytics/aggregator
- * @requirements 12.1, 12.2
+
  */
 
 import { db } from '$lib/server/db';

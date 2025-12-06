@@ -14,7 +14,7 @@
  * - Counter resets to zero at window boundary
  * - Post-reset requests unaffected by pre-reset counts
  *
- * @requirements 7.1, 7.2, 7.4
+
  */
 
 import { describe, it, expect } from 'vitest';

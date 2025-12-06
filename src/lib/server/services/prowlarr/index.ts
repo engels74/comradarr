@@ -5,7 +5,7 @@
  * It provides visibility into indexer rate-limiting status.
  *
  * @module services/prowlarr
- * @requirements 38.1, 38.2, 38.3, 38.4
+
  */
 
 // Client

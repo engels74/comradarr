@@ -6,7 +6,7 @@
  * gap registries when content has been successfully downloaded.
  *
  * @module services/discovery/gap-detector
- * @requirements 3.1, 3.2, 3.3, 3.4
+
  */
 
 import { db } from '$lib/server/db';
@@ -40,7 +40,7 @@ const DEFAULT_BATCH_SIZE = 1000;
  * console.log(`Found ${result.gapsFound} gaps, created ${result.registriesCreated} registries`);
  * ```
  *
- * @requirements 3.1, 3.2, 3.3
+
  */
 export async function discoverGaps(
 	connectorId: number,
@@ -128,7 +128,7 @@ export async function discoverGaps(
  * @param batchSize - Batch size for inserting registries
  * @returns Statistics about discovered gaps
  *
- * @requirements 3.1, 3.3
+
  */
 async function discoverEpisodeGaps(connectorId: number, batchSize: number): Promise<DiscoveryStats> {
 	// Find all episode gaps (monitored=true AND hasFile=false)
@@ -218,7 +218,7 @@ async function discoverEpisodeGaps(connectorId: number, batchSize: number): Prom
  * @param batchSize - Batch size for inserting registries
  * @returns Statistics about discovered gaps
  *
- * @requirements 3.1, 3.3
+
  */
 async function discoverMovieGaps(connectorId: number, batchSize: number): Promise<DiscoveryStats> {
 	// Find all movie gaps (monitored=true AND hasFile=false)

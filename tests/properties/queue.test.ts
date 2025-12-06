@@ -9,7 +9,7 @@
  * dispatched in strictly descending priority order (highest priority first),
  * subject to throttle profile constraints."
  *
- * @requirements 5.2
+
  */
 
 import { describe, it, expect } from 'vitest';

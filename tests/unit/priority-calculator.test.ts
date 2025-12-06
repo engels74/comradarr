@@ -11,7 +11,7 @@
  * - comparePriority() sorting
  * - Edge cases and boundary conditions
  *
- * @requirements 5.1
+
  */
 
 import { describe, it, expect } from 'vitest';

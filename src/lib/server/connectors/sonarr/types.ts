@@ -5,7 +5,7 @@
  * Used by parsers to validate and type API responses.
  *
  * @module connectors/sonarr/types
- * @requirements 27.2, 27.3
+
  */
 
 import type { QualityModel } from '$lib/utils/quality';
@@ -61,7 +61,7 @@ export interface SonarrSeriesStatistics {
  * Series response from Sonarr API
  * GET /api/v3/series
  *
- * @requirements 27.2 - Extract id, title, tvdbId, status, seasons array, statistics
+
  */
 export interface SonarrSeries {
 	/** Sonarr's internal series ID */
@@ -101,7 +101,7 @@ export interface SonarrEpisodeFile {
  * Episode response from Sonarr API
  * GET /api/v3/episode or GET /api/v3/wanted/missing
  *
- * @requirements 27.3 - Extract id, seriesId, seasonNumber, episodeNumber,
+
  *                      hasFile, airDateUtc, qualityCutoffNotMet
  */
 export interface SonarrEpisode {

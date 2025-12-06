@@ -10,7 +10,7 @@
  * - Quiet hours suppression (Requirement 9.4)
  *
  * @module services/notifications/dispatcher
- * @requirements 9.2, 9.4, 36.3
+
  */
 
 import type { NotificationChannel } from '$lib/server/db/schema';

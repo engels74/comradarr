@@ -12,7 +12,7 @@
  * - sort: Sort column ('title', 'connector', 'year')
  * - order: Sort direction ('asc', 'desc')
  *
- * @requirements 34.2
+
  */
 
 import { json, error } from '@sveltejs/kit';

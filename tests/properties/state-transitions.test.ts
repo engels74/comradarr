@@ -11,7 +11,7 @@
  * The state should not become exhausted before max attempts, and should
  * always become exhausted at max attempts."
  *
- * @requirements 5.5, 5.6
+
  */
 
 import { describe, it, expect } from 'vitest';

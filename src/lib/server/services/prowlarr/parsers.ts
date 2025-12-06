@@ -10,7 +10,7 @@
  * - Malformed records return errors instead of throwing
  *
  * @module services/prowlarr/parsers
- * @requirements 38.2, 38.3
+
  */
 
 import * as v from 'valibot';
@@ -21,7 +21,7 @@ import type { ProwlarrIndexerStatus, ProwlarrIndexer } from './types.js';
  * Valibot schema for indexer status response.
  * Retrieved via GET /api/v1/indexerstatus
  *
- * @requirements 38.2
+
  */
 export const ProwlarrIndexerStatusSchema = v.object({
 	id: v.number(),
@@ -50,7 +50,7 @@ export const ProwlarrIndexerSchema = v.object({
  * @param data - Unknown data from API response
  * @returns ParseResult with typed ProwlarrIndexerStatus or error details
  *
- * @requirements 38.2
+
  *
  * @example
  * ```typescript

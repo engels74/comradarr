@@ -4,7 +4,7 @@
  * GET /api/backup/[id] - Download a backup file
  * DELETE /api/backup/[id] - Delete a backup
  *
- * @requirements 33.1, 34.2
+
  */
 
 import { error, json } from '@sveltejs/kit';

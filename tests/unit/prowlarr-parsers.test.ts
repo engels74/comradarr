@@ -7,7 +7,7 @@
  * - Nullable field handling
  * - Unknown field tolerance (ignored fields)
  *
- * @requirements 38.2, 38.3
+
  */
 
 import { describe, it, expect } from 'vitest';

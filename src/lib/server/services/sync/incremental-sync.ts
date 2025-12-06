@@ -5,7 +5,7 @@
  * Routes to appropriate handler based on connector type and manages sync state.
  *
  * @module services/sync/incremental-sync
- * @requirements 2.1, 2.6
+
  */
 
 import { db } from '$lib/server/db';
@@ -53,7 +53,7 @@ import type { SyncResult, SyncOptions } from './types';
  * }
  * ```
  *
- * @requirements 2.1, 2.6
+
  */
 export async function runIncrementalSync(
 	connector: Connector,

@@ -6,7 +6,7 @@
  * - parsePaginatedMovies() valid and invalid inputs
  * - Edge cases for all parsers
  *
- * @requirements 27.4, 27.7, 27.8
+
  */
 
 import { describe, it, expect, vi } from 'vitest';

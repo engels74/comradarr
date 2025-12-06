@@ -6,7 +6,7 @@
  * that no longer exist in the *arr application.
  *
  * @module services/sync/handlers/radarr-reconcile
- * @requirements 2.2
+
  */
 
 import { db } from '$lib/server/db';
@@ -39,7 +39,7 @@ export interface RadarrReconcileResult {
  * @param connectorId - The database ID of the connector being reconciled
  * @returns Detailed result of the reconciliation operation
  *
- * @requirements 2.2 - Full reconciliation with deletion of removed items
+
  */
 export async function reconcileRadarrMovies(
 	client: RadarrClient,

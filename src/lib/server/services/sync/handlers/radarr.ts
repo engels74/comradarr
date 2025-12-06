@@ -5,7 +5,7 @@
  * Fetches all movies from the Radarr API and upserts them into the content mirror.
  *
  * @module services/sync/handlers/radarr
- * @requirements 2.1, 2.4
+
  */
 
 import { db } from '$lib/server/db';
@@ -25,7 +25,7 @@ import { mapMovieToDb } from '../mappers';
  * @param connectorId - The database ID of the connector being synced
  * @returns The number of movies processed
  *
- * @requirements 2.4 - Store movies with tmdbId, imdbId, year, hasFile, movieFileId, qualityCutoffNotMet
+
  */
 export async function syncRadarrMovies(client: RadarrClient, connectorId: number): Promise<number> {
 	// Fetch all movies from Radarr (single API call)

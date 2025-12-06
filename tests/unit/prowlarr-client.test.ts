@@ -10,7 +10,7 @@
  * - getIndexerStatuses() parsing
  * - getIndexerHealth() rate-limit detection
  *
- * @requirements 38.1, 38.2, 38.3
+
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach, type Mock } from 'vitest';

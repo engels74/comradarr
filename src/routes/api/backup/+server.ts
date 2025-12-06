@@ -4,7 +4,7 @@
  * POST /api/backup - Create a new backup
  * GET /api/backup - List all available backups
  *
- * @requirements 33.1, 34.2
+
  */
 
 import { json, error } from '@sveltejs/kit';

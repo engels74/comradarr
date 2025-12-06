@@ -8,7 +8,7 @@
  * - Clearing queue items
  *
  * @module services/queue/queue-service
- * @requirements 5.2
+
  */
 
 import { db } from '$lib/server/db';
@@ -51,7 +51,7 @@ import { QUEUE_CONFIG } from './config';
  * @param options - Optional configuration for enqueue behavior
  * @returns Enqueue result with statistics
  *
- * @requirements 5.2
+
  */
 export async function enqueuePendingItems(
 	connectorId: number,
@@ -346,7 +346,7 @@ async function enqueueMovies(
  * @param options - Optional configuration for dequeue behavior
  * @returns Dequeue result with items in priority order
  *
- * @requirements 5.2
+
  */
 export async function dequeuePriorityItems(
 	connectorId: number,
@@ -474,7 +474,7 @@ export async function dequeuePriorityItems(
  * @param connectorId - The connector ID to pause
  * @returns Control result indicating success/failure
  *
- * @requirements 5.2
+
  */
 export async function pauseQueue(connectorId: number): Promise<QueueControlResult> {
 	const startTime = Date.now();
@@ -522,7 +522,7 @@ export async function pauseQueue(connectorId: number): Promise<QueueControlResul
  * @param connectorId - The connector ID to resume
  * @returns Control result indicating success/failure
  *
- * @requirements 5.2
+
  */
 export async function resumeQueue(connectorId: number): Promise<QueueControlResult> {
 	const startTime = Date.now();
@@ -574,7 +574,7 @@ export async function resumeQueue(connectorId: number): Promise<QueueControlResu
  * @param connectorId - The connector ID to clear queue for (null for all connectors)
  * @returns Control result with count of cleared items
  *
- * @requirements 5.2
+
  */
 export async function clearQueue(connectorId?: number): Promise<QueueControlResult> {
 	const startTime = Date.now();
@@ -653,7 +653,7 @@ export async function clearQueue(connectorId?: number): Promise<QueueControlResu
  * @param connectorId - The connector ID to get status for
  * @returns Queue status including pause state, depth, and next scheduled time
  *
- * @requirements 5.2
+
  */
 export async function getQueueStatus(connectorId: number): Promise<QueueStatus | null> {
 	// Get connector info

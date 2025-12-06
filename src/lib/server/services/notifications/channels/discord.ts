@@ -8,7 +8,7 @@
  * Reference: https://discord.com/developers/docs/resources/webhook
  *
  * @module services/notifications/channels/discord
- * @requirements 9.1, 36.2
+
  */
 
 import type { NotificationChannel } from '$lib/server/db/schema';

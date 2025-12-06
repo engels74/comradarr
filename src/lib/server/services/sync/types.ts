@@ -2,7 +2,7 @@
  * Type definitions for the sync service.
  *
  * @module services/sync/types
- * @requirements 2.1, 2.2, 2.6
+
  */
 
 import type { HealthStatus } from './health';
@@ -36,7 +36,7 @@ export interface SyncResult {
  * items that no longer exist in the *arr application and cleaning up
  * associated search state.
  *
- * @requirements 2.2, 2.6
+
  */
 export interface ReconciliationResult {
 	/** Whether the reconciliation completed successfully */

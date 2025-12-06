@@ -6,7 +6,7 @@
  * while sync retries handle failures of the entire sync operation.
  *
  * @module services/sync/with-sync-retry
- * @requirements 2.6
+
  */
 
 import { getSyncState } from '$lib/server/db/queries/connectors';

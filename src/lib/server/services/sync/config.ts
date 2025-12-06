@@ -5,7 +5,7 @@
  * for sync operations.
  *
  * @module services/sync/config
- * @requirements 2.6
+
  */
 
 /**

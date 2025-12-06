@@ -5,7 +5,7 @@
  * re-export Sonarr parsers with Whisparr-specific names for clarity.
  *
  * @module connectors/whisparr/parsers
- * @requirements 26.1, 26.2, 26.3, 26.4
+
  */
 
 // Re-export Sonarr schemas as Whisparr schemas (identical API structure)

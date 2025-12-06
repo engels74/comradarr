@@ -5,7 +5,7 @@
  * Inherits ping(), getSystemStatus(), and getHealth() from base class.
  *
  * @module connectors/radarr/client
- * @requirements 25.1, 25.2, 25.3, 25.4, 25.5, 25.6
+
  */
 
 import { BaseArrClient } from '../common/base-client.js';
@@ -85,7 +85,7 @@ export class RadarrClient extends BaseArrClient {
 	 *
 	 * @returns API version information including app version and API version
 	 * @throws {ArrClientError} On any API error (network, auth, rate limit, etc.)
-	 * @requirements 25.6 - Support v3, v4, and v5 API versions
+
 	 *
 	 * @example
 	 * ```typescript
@@ -124,7 +124,7 @@ export class RadarrClient extends BaseArrClient {
 	 *
 	 * @returns Array of all movies in the library
 	 * @throws {ArrClientError} On API error (network, auth, rate limit, etc.)
-	 * @requirements 25.1
+
 	 *
 	 * @example
 	 * ```typescript
@@ -213,7 +213,7 @@ export class RadarrClient extends BaseArrClient {
 	 * @param options - Pagination and filter options
 	 * @returns Array of all missing movies
 	 * @throws {ArrClientError} On API error (network, auth, rate limit, etc.)
-	 * @requirements 25.2
+
 	 *
 	 * @example
 	 * ```typescript
@@ -242,7 +242,7 @@ export class RadarrClient extends BaseArrClient {
 	 * @param options - Pagination and filter options
 	 * @returns Array of all upgrade candidate movies
 	 * @throws {ArrClientError} On API error (network, auth, rate limit, etc.)
-	 * @requirements 25.3
+
 	 *
 	 * @example
 	 * ```typescript
@@ -271,7 +271,7 @@ export class RadarrClient extends BaseArrClient {
 	 * @returns Command response with initial execution status
 	 * @throws {ArrClientError} On API error (network, auth, rate limit, etc.)
 	 * @throws {Error} If response parsing fails
-	 * @requirements 25.4
+
 	 *
 	 * @example
 	 * ```typescript
@@ -313,7 +313,7 @@ export class RadarrClient extends BaseArrClient {
 	 * @throws {ArrClientError} On API error (network, auth, rate limit, etc.)
 	 * @throws {NotFoundError} If command ID does not exist
 	 * @throws {Error} If response parsing fails
-	 * @requirements 25.5
+
 	 *
 	 * @example
 	 * ```typescript

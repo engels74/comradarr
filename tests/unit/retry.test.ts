@@ -9,7 +9,7 @@
  * - Rate limit handling with Retry-After header
  * - Jitter behavior
  *
- * @requirements 23.5
+
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';

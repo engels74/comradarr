@@ -4,7 +4,7 @@
  * Provides async iteration over paginated API responses.
  *
  * @module connectors/common/pagination
- * @requirements 29.1, 29.2
+
  */
 
 import type { PaginatedResponse } from './types.js';
@@ -58,8 +58,7 @@ export type PageFetcher<T> = (page: number, pageSize: number) => Promise<Paginat
  * }
  * ```
  *
- * @requirements 29.1 - Default pageSize of 1000 items
- * @requirements 29.2 - Continue until page * pageSize >= totalRecords
+
  */
 export async function* fetchAllPages<T>(
 	fetcher: PageFetcher<T>,
@@ -108,8 +107,7 @@ export async function* fetchAllPages<T>(
  * console.log(`Total movies: ${allMovies.length}`);
  * ```
  *
- * @requirements 29.1 - Default pageSize of 1000 items
- * @requirements 29.2 - Continue until page * pageSize >= totalRecords
+
  */
 export async function collectAllPages<T>(
 	fetcher: PageFetcher<T>,

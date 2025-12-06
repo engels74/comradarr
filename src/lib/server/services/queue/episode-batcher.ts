@@ -9,7 +9,7 @@
  * - EpisodeSearch: Season currently airing OR below threshold
  *
  * @module services/queue/episode-batcher
- * @requirements 6.1, 6.2, 6.3, 21.4
+
  */
 
 import { BATCHING_CONFIG, getBatchingConfig } from './config';
@@ -114,7 +114,7 @@ export interface BatchingDecision {
  *
  * Used to batch episodes by series before creating search commands.
  *
- * @requirements 6.4
+
  */
 export interface EpisodeForGrouping {
 	/**
@@ -138,7 +138,7 @@ export interface EpisodeForGrouping {
  *
  * Used to create batched movie search commands.
  *
- * @requirements 29.5
+
  */
 export interface MovieForBatching {
 	/**
@@ -158,7 +158,7 @@ export interface MovieForBatching {
  * Each batch contains episodes from a single series,
  * with at most MAX_EPISODES_PER_SEARCH episodes.
  *
- * @requirements 6.4, 29.4
+
  */
 export interface EpisodeBatch {
 	/**
@@ -177,7 +177,7 @@ export interface EpisodeBatch {
  *
  * Each batch contains at most MAX_MOVIES_PER_SEARCH movies.
  *
- * @requirements 29.5
+
  */
 export interface MovieBatch {
 	/**
@@ -274,7 +274,7 @@ const DEFAULT_BATCHING_CONFIG: BatchingConfig = {
  * // { command: 'EpisodeSearch', reason: 'season_currently_airing' }
  * ```
  *
- * @requirements 6.1, 6.2, 6.3
+
  */
 export function determineBatchingDecision(
 	stats: SeasonStatistics,
@@ -358,7 +358,7 @@ export function determineBatchingDecision(
  * // { command: 'SeasonSearch', reason: 'season_fully_aired_high_missing' }
  * ```
  *
- * @requirements 6.5
+
  */
 export function determineBatchingDecisionWithFallback(
 	stats: SeasonStatistics,
@@ -403,7 +403,7 @@ export function determineBatchingDecisionWithFallback(
  * // }
  * ```
  *
- * @requirements 6.4
+
  */
 export function groupEpisodesBySeries(
 	episodes: readonly EpisodeForGrouping[]
@@ -445,7 +445,7 @@ export function groupEpisodesBySeries(
  * // ]
  * ```
  *
- * @requirements 6.4, 29.4
+
  */
 export function createEpisodeBatches(
 	episodes: readonly EpisodeForGrouping[],
@@ -505,7 +505,7 @@ export function createEpisodeBatches(
  * // ]
  * ```
  *
- * @requirements 29.5
+
  */
 export function createMovieBatches(
 	movies: readonly MovieForBatching[],
@@ -547,7 +547,7 @@ export function createMovieBatches(
  * @param stats - Season statistics (totalEpisodes, downloadedEpisodes, nextAiring)
  * @returns Promise resolving to batching decision with command and reason
  *
- * @requirements 21.4
+
  */
 export async function determineBatchingDecisionWithConfig(
 	stats: SeasonStatistics
@@ -572,7 +572,7 @@ export async function determineBatchingDecisionWithConfig(
  * @param seasonPackFailed - Whether a season pack search previously failed for this season
  * @returns Promise resolving to batching decision with command and reason
  *
- * @requirements 21.4
+
  */
 export async function determineBatchingDecisionWithFallbackAndConfig(
 	stats: SeasonStatistics,

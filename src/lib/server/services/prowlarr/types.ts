@@ -5,7 +5,7 @@
  * These types represent data from Prowlarr's API v1.
  *
  * @module services/prowlarr/types
- * @requirements 38.2, 38.3
+
  */
 
 /**
@@ -15,7 +15,7 @@
  * This endpoint returns the current operational status of indexers,
  * including rate-limiting information.
  *
- * @requirements 38.2
+
  */
 export interface ProwlarrIndexerStatus {
 	/** Internal status ID */
@@ -57,7 +57,7 @@ export interface ProwlarrIndexer {
  * Joins indexer definitions with status to provide a unified view
  * of indexer availability and rate-limiting.
  *
- * @requirements 38.3
+
  */
 export interface IndexerHealth {
 	/** Indexer ID */
@@ -77,7 +77,7 @@ export interface IndexerHealth {
 /**
  * Configuration for ProwlarrClient.
  *
- * @requirements 38.1
+
  */
 export interface ProwlarrClientConfig {
 	/** Base URL of the Prowlarr instance (e.g., http://localhost:9696) */
@@ -102,7 +102,7 @@ export type ProwlarrHealthStatus = 'healthy' | 'degraded' | 'unhealthy' | 'offli
 /**
  * Result of a health check for a single Prowlarr instance.
  *
- * @requirements 38.2, 38.4
+
  */
 export interface HealthCheckResult {
 	/** Prowlarr instance ID */
@@ -125,7 +125,7 @@ export interface HealthCheckResult {
  * Cached indexer health with stale indicator.
  * Used when retrieving health data for display.
  *
- * @requirements 38.4, 38.6
+
  */
 export interface CachedIndexerHealth {
 	/** Prowlarr instance ID */
@@ -151,7 +151,7 @@ export interface CachedIndexerHealth {
 /**
  * Summary of health status across all Prowlarr instances.
  *
- * @requirements 38.4
+
  */
 export interface HealthSummary {
 	/** Total number of Prowlarr instances configured */

@@ -9,7 +9,7 @@
  * - Wanted missing movies (getWantedMissing)
  * - Wanted cutoff/upgrade candidates (getWantedCutoff)
  *
- * @requirements 25.1, 25.2, 25.3, 25.6
+
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach, type Mock } from 'vitest';

@@ -1,7 +1,7 @@
 /**
  * Database queries for Prowlarr instance and indexer health operations.
  *
- * @requirements 38.1, 38.2, 38.4
+
  *
  * API keys are encrypted using AES-256-GCM before storage.
  * Decryption happens lazily, only when the key is needed for API calls.
@@ -53,7 +53,7 @@ export interface UpdateProwlarrInstanceInput {
  * @returns Created instance (API key is encrypted)
  * @throws SecretKeyError if SECRET_KEY is not configured
  *
- * @requirements 38.1
+
  */
 export async function createProwlarrInstance(
 	input: CreateProwlarrInstanceInput
@@ -255,7 +255,7 @@ function normalizeUrl(url: string): string {
  * @param healthData - Array of indexer health from Prowlarr API
  * @returns Number of rows affected
  *
- * @requirements 38.2, 38.4
+
  */
 export async function upsertIndexerHealth(
 	instanceId: number,
@@ -305,7 +305,7 @@ export async function upsertIndexerHealth(
  * @param instanceId - Prowlarr instance ID
  * @returns Array of cached indexer health records
  *
- * @requirements 38.4
+
  */
 export async function getIndexerHealthByInstance(
 	instanceId: number
@@ -322,7 +322,7 @@ export async function getIndexerHealthByInstance(
  *
  * @returns Array of all cached indexer health records
  *
- * @requirements 38.4
+
  */
 export async function getAllCachedIndexerHealth(): Promise<ProwlarrIndexerHealth[]> {
 	return db.select().from(prowlarrIndexerHealth).orderBy(prowlarrIndexerHealth.name);

@@ -5,7 +5,7 @@
  * and caches the results in the database for quick access by other services.
  *
  * @module services/prowlarr/health-monitor
- * @requirements 38.2, 38.4
+
  */
 
 import { ProwlarrClient } from './client.js';
@@ -49,7 +49,7 @@ const DEFAULT_STALE_THRESHOLD_MS = 10 * 60 * 1000;
  * Provides periodic health checking for Prowlarr instances and caches
  * indexer health status in the database.
  *
- * @requirements 38.2, 38.4
+
  *
  * @example
  * ```typescript
@@ -78,7 +78,7 @@ export class ProwlarrHealthMonitor {
 	 *
 	 * @returns Array of health check results for each instance
 	 *
-	 * @requirements 38.2
+
 	 */
 	async checkAllInstances(): Promise<HealthCheckResult[]> {
 		const instances = await getEnabledProwlarrInstances();
@@ -103,7 +103,7 @@ export class ProwlarrHealthMonitor {
 	 * @param instance - Prowlarr instance to check
 	 * @returns Health check result
 	 *
-	 * @requirements 38.2
+
 	 */
 	async checkInstance(instance: ProwlarrInstance): Promise<HealthCheckResult> {
 		const checkedAt = new Date();
@@ -186,7 +186,7 @@ export class ProwlarrHealthMonitor {
 	 * @param instanceId - Prowlarr instance ID
 	 * @returns Array of cached indexer health with stale indicators
 	 *
-	 * @requirements 38.4, 38.6
+
 	 */
 	async getCachedHealth(instanceId: number): Promise<CachedIndexerHealth[]> {
 		const cached = await getIndexerHealthByInstance(instanceId);
@@ -210,7 +210,7 @@ export class ProwlarrHealthMonitor {
 	 *
 	 * @returns Array of all cached indexer health with stale indicators
 	 *
-	 * @requirements 38.4
+
 	 */
 	async getAllCachedHealth(): Promise<CachedIndexerHealth[]> {
 		const cached = await getAllCachedIndexerHealth();
@@ -234,7 +234,7 @@ export class ProwlarrHealthMonitor {
 	 *
 	 * @returns Health summary
 	 *
-	 * @requirements 38.4
+
 	 */
 	async getHealthSummary(): Promise<HealthSummary> {
 		const instances = await getAllProwlarrInstances();

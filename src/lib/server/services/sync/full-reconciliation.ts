@@ -6,7 +6,7 @@
  * deletes content that no longer exists in the *arr application.
  *
  * @module services/sync/full-reconciliation
- * @requirements 2.2, 2.6
+
  */
 
 import { db } from '$lib/server/db';
@@ -60,7 +60,7 @@ import type { ReconciliationResult, SyncOptions } from './types';
  * }
  * ```
  *
- * @requirements 2.2, 2.6
+
  */
 export async function runFullReconciliation(
 	connector: Connector,

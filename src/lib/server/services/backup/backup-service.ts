@@ -9,7 +9,7 @@
  * - SHA-256 checksum for integrity
  *
  * @module services/backup/backup-service
- * @requirements 33.1
+
  */
 
 import { mkdir, readdir, readFile, rm, stat, writeFile } from 'node:fs/promises';
@@ -217,7 +217,7 @@ async function getSchemaVersion(): Promise<SchemaVersion> {
  * @param options - Optional backup configuration
  * @returns BackupResult with success status and metadata
  *
- * @requirements 33.1
+
  *
  * @example
  * ```typescript
@@ -485,7 +485,7 @@ export interface CleanupResult {
  * @param retentionCount - Number of scheduled backups to retain
  * @returns CleanupResult with success status and deleted count
  *
- * @requirements 33.5
+
  *
  * @example
  * ```typescript

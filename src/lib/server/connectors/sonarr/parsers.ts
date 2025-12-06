@@ -10,7 +10,7 @@
  * - Malformed records return errors instead of throwing (Requirement 27.8)
  *
  * @module connectors/sonarr/parsers
- * @requirements 27.2, 27.3, 27.7, 27.8
+
  */
 
 import * as v from 'valibot';
@@ -73,7 +73,7 @@ export const SonarrSeriesStatisticsSchema = v.object({
  * Required fields per Requirement 27.2:
  * - id, title, tvdbId, status, seasons array, statistics
  *
- * @requirements 27.2
+
  */
 export const SonarrSeriesSchema = v.object({
 	id: v.number(),
@@ -103,7 +103,7 @@ export const SonarrEpisodeFileSchema = v.object({
  * Required fields per Requirement 27.3:
  * - id, seriesId, seasonNumber, episodeNumber, hasFile, airDateUtc, qualityCutoffNotMet
  *
- * @requirements 27.3
+
  */
 export const SonarrEpisodeSchema = v.object({
 	id: v.number(),
@@ -129,7 +129,7 @@ export const SonarrEpisodeSchema = v.object({
  * @param data - Unknown data from API response
  * @returns ParseResult with typed SonarrSeries or error details
  *
- * @requirements 27.2, 27.7, 27.8
+
  *
  * @example
  * ```typescript
@@ -185,7 +185,7 @@ export function parseSonarrSeries(data: unknown): ParseResult<SonarrSeries> {
  * @param data - Unknown data from API response
  * @returns ParseResult with typed SonarrEpisode or error details
  *
- * @requirements 27.3, 27.7, 27.8
+
  *
  * @example
  * ```typescript
@@ -235,7 +235,7 @@ export function parseSonarrEpisode(data: unknown): ParseResult<SonarrEpisode> {
  * @param data - Unknown data from API response
  * @returns ParseResult with typed PaginatedResponse<SonarrSeries> or error details
  *
- * @requirements 27.1, 27.2, 27.7, 27.8
+
  *
  * @example
  * ```typescript
@@ -305,7 +305,7 @@ export function parsePaginatedSeries(
  * @param data - Unknown data from API response
  * @returns ParseResult with typed PaginatedResponse<SonarrEpisode> or error details
  *
- * @requirements 27.1, 27.3, 27.7, 27.8
+
  *
  * @example
  * ```typescript
@@ -374,7 +374,7 @@ export function parsePaginatedEpisodes(
  * @param onInvalid - Optional callback for invalid records (for logging warnings)
  * @returns LenientParseResult with typed PaginatedResponse<SonarrSeries>, skipped count, or error
  *
- * @requirements 27.1, 27.2, 27.7, 27.8
+
  *
  * @example
  * ```typescript
@@ -405,7 +405,7 @@ export function parsePaginatedSeriesLenient(
  * @param onInvalid - Optional callback for invalid records (for logging warnings)
  * @returns LenientParseResult with typed PaginatedResponse<SonarrEpisode>, skipped count, or error
  *
- * @requirements 27.1, 27.3, 27.7, 27.8
+
  *
  * @example
  * ```typescript

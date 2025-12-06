@@ -8,7 +8,7 @@
  * - Title truncation for long lists
  * - Event data extraction
  *
- * @requirements 9.3
+
  */
 
 import { describe, it, expect } from 'vitest';

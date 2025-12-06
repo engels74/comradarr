@@ -11,7 +11,7 @@
  * and is covered in integration tests. Unit tests only test types and
  * constants that don't require database access.
  *
- * @requirements 33.1
+
  */
 
 import { describe, it, expect } from 'vitest';

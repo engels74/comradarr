@@ -9,7 +9,7 @@
  * - isInQuietHours() with various channel configurations
  * - Edge cases and boundary conditions
  *
- * @requirements 9.4
+
  */
 
 import { describe, it, expect, vi } from 'vitest';

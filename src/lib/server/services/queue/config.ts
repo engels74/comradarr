@@ -5,7 +5,7 @@
  * priority score calculation.
  *
  * @module services/queue/config
- * @requirements 5.1, 21.4
+
  */
 
 import type { PriorityWeights } from './types';
@@ -26,7 +26,7 @@ type SearchSettings = Awaited<
  * - Penalizes repeated failures moderately
  * - Prioritizes gaps over upgrades
  *
- * @requirements 5.1
+
  */
 export const DEFAULT_PRIORITY_WEIGHTS: Readonly<PriorityWeights> = {
 	/** Weight for content age factor */
@@ -95,7 +95,7 @@ export type PriorityConstantsType = typeof PRIORITY_CONSTANTS;
  *
  * Defines batch sizes and limits for queue operations.
  *
- * @requirements 5.2
+
  */
 export const QUEUE_CONFIG = {
 	/**
@@ -134,7 +134,7 @@ export type QueueConfigType = typeof QUEUE_CONFIG;
  * Defines cooldown timing and exhaustion thresholds for
  * the search state machine transitions.
  *
- * @requirements 5.5, 5.6
+
  */
 export const STATE_TRANSITION_CONFIG = {
 	/**
@@ -186,7 +186,7 @@ export type StateTransitionConfigType = typeof STATE_TRANSITION_CONFIG;
  * - SeasonSearch: Season fully aired AND missing% >= threshold AND missingCount >= minCount
  * - EpisodeSearch: Season currently airing OR below threshold
  *
- * @requirements 6.1, 6.2, 6.3
+
  */
 export const BATCHING_CONFIG = {
 	/**

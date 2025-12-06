@@ -11,7 +11,7 @@
  * - Malformed records return errors instead of throwing (Requirement 27.8)
  *
  * @module connectors/common/parsers
- * @requirements 27.1, 27.5, 27.6, 27.7, 27.8
+
  */
 
 import * as v from 'valibot';
@@ -30,7 +30,7 @@ export type ParseResult<T> =
  * Result type for lenient parser functions that skip malformed records.
  * Includes a count of skipped records for transparency.
  *
- * @requirements 27.8
+
  */
 export type LenientParseResult<T> =
 	| { success: true; data: T; skipped: number }
@@ -40,7 +40,7 @@ export type LenientParseResult<T> =
  * Valibot schema for QualityModel from *arr API responses.
  * Matches the structure in $lib/utils/quality.ts
  *
- * @requirements 27.5
+
  */
 export const QualityModelSchema = v.object({
 	quality: v.object({
@@ -68,7 +68,7 @@ export const CommandStatusSchema = v.picklist(['queued', 'started', 'completed',
  * Required fields per Requirement 27.6:
  * - id, name, status, started, ended, message
  *
- * @requirements 27.6
+
  */
 export const CommandResponseSchema = v.object({
 	id: v.number(),
@@ -98,7 +98,7 @@ export const CommandResponseSchema = v.object({
  * @param recordSchema - Valibot schema for individual records in the response
  * @returns Paginated response schema
  *
- * @requirements 27.1
+
  */
 export function createPaginatedResponseSchema<T extends v.GenericSchema>(recordSchema: T) {
 	return v.object({
@@ -117,7 +117,7 @@ export function createPaginatedResponseSchema<T extends v.GenericSchema>(recordS
  * @param data - Unknown data from API response
  * @returns ParseResult with typed QualityModel or error details
  *
- * @requirements 27.5, 27.7, 27.8
+
  *
  * @example
  * ```typescript
@@ -149,7 +149,7 @@ export function parseQualityModel(data: unknown): ParseResult<QualityModel> {
  * @param data - Unknown data from API response
  * @returns ParseResult with typed CommandResponse or error details
  *
- * @requirements 27.6, 27.7, 27.8
+
  *
  * @example
  * ```typescript
@@ -207,7 +207,7 @@ export function parseCommandResponse(data: unknown): ParseResult<CommandResponse
  * @param recordSchema - Valibot schema for validating individual records
  * @returns ParseResult with typed PaginatedResponse or error details
  *
- * @requirements 27.1, 27.7, 27.8
+
  *
  * @example
  * ```typescript
@@ -259,7 +259,7 @@ export function parsePaginatedResponse<T extends v.GenericSchema>(
  * @param onInvalid - Optional callback for invalid records (for logging)
  * @returns Array of valid parsed records
  *
- * @requirements 27.8
+
  *
  * @example
  * ```typescript
@@ -313,7 +313,7 @@ const PaginatedMetadataSchema = v.object({
  * @param onInvalid - Optional callback for invalid records (for logging warnings)
  * @returns LenientParseResult with typed PaginatedResponse, skipped count, or error
  *
- * @requirements 27.7, 27.8
+
  *
  * @example
  * ```typescript

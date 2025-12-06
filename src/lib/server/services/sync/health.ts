@@ -8,7 +8,7 @@
  * and provides the database-dependent updateHealthFromSyncResult function.
  *
  * @module services/sync/health
- * @requirements 2.6
+
  */
 
 import { updateConnectorHealth } from '$lib/server/db/queries/connectors';

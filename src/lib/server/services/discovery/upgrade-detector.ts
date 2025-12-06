@@ -10,7 +10,7 @@
  * for Custom Format scores in Radarr/Sonarr v3+.
  *
  * @module services/discovery/upgrade-detector
- * @requirements 4.1, 4.2, 4.3, 4.4
+
  */
 
 import { db } from '$lib/server/db';
@@ -44,7 +44,7 @@ const DEFAULT_BATCH_SIZE = 1000;
  * console.log(`Found ${result.upgradesFound} upgrades, created ${result.registriesCreated} registries`);
  * ```
  *
- * @requirements 4.1, 4.2, 4.3
+
  */
 export async function discoverUpgrades(
 	connectorId: number,
@@ -133,7 +133,7 @@ export async function discoverUpgrades(
  * @param batchSize - Batch size for inserting registries
  * @returns Statistics about discovered upgrade candidates
  *
- * @requirements 4.1, 4.3
+
  */
 async function discoverEpisodeUpgrades(
 	connectorId: number,
@@ -229,7 +229,7 @@ async function discoverEpisodeUpgrades(
  * @param batchSize - Batch size for inserting registries
  * @returns Statistics about discovered upgrade candidates
  *
- * @requirements 4.1, 4.3
+
  */
 async function discoverMovieUpgrades(
 	connectorId: number,

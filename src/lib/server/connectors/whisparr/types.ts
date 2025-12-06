@@ -5,7 +5,7 @@
  * These types are aliases to Sonarr types for clarity and future extensibility.
  *
  * @module connectors/whisparr/types
- * @requirements 26.1, 26.2, 26.3, 26.4
+
  */
 
 import type {
@@ -39,7 +39,7 @@ export type WhisparrSeriesStatistics = SonarrSeriesStatistics;
  * Series response from Whisparr API
  * GET /api/v3/series
  *
- * @requirements 26.1 - Map response using same structure as Sonarr
+
  */
 export type WhisparrSeries = SonarrSeries;
 
@@ -53,6 +53,6 @@ export type WhisparrEpisodeFile = SonarrEpisodeFile;
  * Episode response from Whisparr API
  * GET /api/v3/episode or GET /api/v3/wanted/missing
  *
- * @requirements 26.2 - Map response including seasonNumber, episodeNumber, hasFile, airDateUtc
+
  */
 export type WhisparrEpisode = SonarrEpisode;

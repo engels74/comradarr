@@ -5,7 +5,7 @@
  * to the database insert types (NewSeries, NewMovie, etc.) for upsert operations.
  *
  * @module services/sync/mappers
- * @requirements 2.3, 2.4
+
  */
 
 import type { SonarrSeries, SonarrSeason, SonarrEpisode } from '$lib/server/connectors/sonarr/types';
@@ -19,7 +19,7 @@ import type { NewSeries, NewSeason, NewEpisode, NewMovie } from '$lib/server/db/
  * @param apiSeries - Series data from the Sonarr API
  * @returns Database insert record for series table
  *
- * @requirements 2.3 - Store series with tvdbId, monitored, qualityProfileId
+
  */
 export function mapSeriesToDb(connectorId: number, apiSeries: SonarrSeries): NewSeries {
 	return {
@@ -40,7 +40,7 @@ export function mapSeriesToDb(connectorId: number, apiSeries: SonarrSeries): New
  * @param apiSeason - Season data from the Sonarr API (embedded in series response)
  * @returns Database insert record for seasons table
  *
- * @requirements 2.3 - Store seasons with seasonNumber, monitored
+
  */
 export function mapSeasonToDb(seriesId: number, apiSeason: SonarrSeason): NewSeason {
 	return {
@@ -60,7 +60,7 @@ export function mapSeasonToDb(seriesId: number, apiSeason: SonarrSeason): NewSea
  * @param apiEpisode - Episode data from the Sonarr API
  * @returns Database insert record for episodes table
  *
- * @requirements 2.3 - Store episodes with seasonNumber, episodeNumber, airDateUtc, qualityCutoffNotMet
+
  */
 export function mapEpisodeToDb(
 	connectorId: number,
@@ -90,7 +90,7 @@ export function mapEpisodeToDb(
  * @param apiMovie - Movie data from the Radarr API
  * @returns Database insert record for movies table
  *
- * @requirements 2.4 - Store movies with tmdbId, imdbId, year, hasFile, movieFileId, qualityCutoffNotMet
+
  */
 export function mapMovieToDb(connectorId: number, apiMovie: RadarrMovie): NewMovie {
 	return {

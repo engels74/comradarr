@@ -9,7 +9,7 @@
  * - Automatic retry with exponential backoff
  *
  * @module connectors/common/base-client
- * @requirements 23.1, 23.2, 23.5
+
  */
 
 import type { BaseClientConfig, RequestOptions, SystemStatus, HealthCheck, RetryConfig } from './types.js';
@@ -72,7 +72,7 @@ export class BaseArrClient {
 	 * Create a new BaseArrClient instance
 	 *
 	 * @param config - Client configuration
-	 * @requirements 23.1, 23.2
+
 	 */
 	constructor(config: BaseClientConfig) {
 		// Normalize URL by removing trailing slashes
@@ -105,7 +105,7 @@ export class BaseArrClient {
 	 * @throws {ServerError} When server error occurs (HTTP 5xx)
 	 * @throws {TimeoutError} When request times out
 	 * @throws {NetworkError} When network error occurs
-	 * @requirements 23.1, 23.2
+
 	 */
 	protected async request<T>(endpoint: string, options: RequestOptions = {}): Promise<T> {
 		const url = this.buildUrl(endpoint);
@@ -168,7 +168,7 @@ export class BaseArrClient {
 	 * @param options - Request options (method, body, timeout, signal)
 	 * @returns Parsed JSON response
 	 * @throws {ArrClientError} After all retries exhausted or for non-retryable errors
-	 * @requirements 23.5
+
 	 */
 	protected async requestWithRetry<T>(endpoint: string, options: RequestOptions = {}): Promise<T> {
 		return withRetry(() => this.request<T>(endpoint, options), this.retryConfig);
@@ -180,7 +180,7 @@ export class BaseArrClient {
 	 * @param response - Failed HTTP response
 	 * @param endpoint - The API endpoint that was called (for error context)
 	 * @returns Typed error based on status code
-	 * @requirements 28.1, 28.2, 28.3, 28.4
+
 	 */
 	private handleErrorResponse(response: Response, endpoint: string): ArrClientError {
 		switch (response.status) {
@@ -213,7 +213,7 @@ export class BaseArrClient {
 	 * @param error - The caught error
 	 * @param timeout - Timeout value for timeout error creation
 	 * @returns Typed error
-	 * @requirements 23.4, 28.5, 28.6
+
 	 */
 	private categorizeError(error: unknown, timeout: number): ArrClientError {
 		// Already a typed error, pass through
@@ -287,7 +287,7 @@ export class BaseArrClient {
 	 * This endpoint may or may not require authentication depending on the *arr version.
 	 *
 	 * @returns true if the server responds successfully, false otherwise
-	 * @requirements 1.2
+
 	 */
 	async ping(): Promise<boolean> {
 		try {
@@ -310,7 +310,7 @@ export class BaseArrClient {
 	 *
 	 * @returns System status information including version, build time, etc.
 	 * @throws {ArrClientError} On any API error
-	 * @requirements 1.3
+
 	 */
 	async getSystemStatus(): Promise<SystemStatus> {
 		return this.request<SystemStatus>('system/status');
@@ -321,7 +321,7 @@ export class BaseArrClient {
 	 *
 	 * @returns Array of health check items with status and messages
 	 * @throws {ArrClientError} On any API error
-	 * @requirements 1.4
+
 	 */
 	async getHealth(): Promise<HealthCheck[]> {
 		return this.request<HealthCheck[]>('health');

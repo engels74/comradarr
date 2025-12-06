@@ -6,7 +6,7 @@
  * - requireScope() behavior for different scopes and auth types
  * - canWrite() and canRead() helper functions
  *
- * @requirements 34.2
+
  */
 
 import { describe, it, expect } from 'vitest';

@@ -6,7 +6,7 @@
  * that no longer exists in the *arr application.
  *
  * @module services/sync/handlers/sonarr-reconcile
- * @requirements 2.2
+
  */
 
 import { db } from '$lib/server/db';
@@ -100,7 +100,7 @@ async function parallelLimit<T, R>(
  * @param options - Sync options for concurrency and rate limiting
  * @returns Detailed result of the reconciliation operation
  *
- * @requirements 2.2 - Full reconciliation with deletion of removed items
+
  */
 export async function reconcileSonarrContent(
 	client: SeriesClient,

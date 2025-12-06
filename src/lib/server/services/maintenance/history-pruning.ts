@@ -6,7 +6,7 @@
  * are preserved (stored in separate tables).
  *
  * @module services/maintenance/history-pruning
- * @requirements 13.3
+
  */
 
 import { db } from '$lib/server/db';

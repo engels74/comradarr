@@ -5,7 +5,7 @@
  * allowing them to be imported in vitest unit tests without pulling in bun:sql.
  *
  * @module services/sync/health-utils
- * @requirements 2.6
+
  */
 
 import {
@@ -129,7 +129,7 @@ export function calculateSyncBackoffDelay(attempt: number): number {
  *
  * @param checks - Array of health check items from the *arr API
  * @returns The determined health status
- * @requirements 1.4
+
  */
 export function determineHealthFromChecks(
 	checks: Array<{ type: 'ok' | 'notice' | 'warning' | 'error' }>

@@ -5,7 +5,7 @@
  * Events are recorded with error handling to avoid blocking main operations.
  *
  * @module services/analytics/collector
- * @requirements 12.1
+
  */
 
 import { db } from '$lib/server/db';

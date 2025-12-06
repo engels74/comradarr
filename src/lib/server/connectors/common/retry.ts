@@ -9,7 +9,7 @@
  * - Skip retry for non-retryable errors (auth, not found, SSL)
  *
  * @module connectors/common/retry
- * @requirements 23.5
+
  */
 
 import type { RetryConfig } from './types.js';
@@ -92,7 +92,7 @@ function sleep(ms: number): Promise<void> {
  * );
  * ```
  *
- * @requirements 23.5
+
  */
 export async function withRetry<T>(fn: () => Promise<T>, config?: RetryConfig): Promise<T> {
 	const resolvedConfig: Required<RetryConfig> = {

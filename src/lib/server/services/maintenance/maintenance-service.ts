@@ -7,7 +7,7 @@
  * ANALYZE collects statistics about table contents for the query planner.
  *
  * @module services/maintenance/maintenance-service
- * @requirements 13.1
+
  */
 
 import { db } from '$lib/server/db';

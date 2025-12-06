@@ -15,7 +15,7 @@
  * - Output is always a finite integer
  *
  * @module services/queue/priority-calculator
- * @requirements 5.1
+
  */
 
 import type { PriorityInput, PriorityResult, PriorityWeights, PriorityBreakdown } from './types';
@@ -51,7 +51,7 @@ import { DEFAULT_PRIORITY_WEIGHTS, PRIORITY_CONSTANTS, getPriorityWeights } from
  * console.log(`Priority: ${result.score}`);
  * ```
  *
- * @requirements 5.1
+
  */
 export function calculatePriority(
 	input: PriorityInput,
@@ -174,7 +174,7 @@ export function comparePriority(a: PriorityResult, b: PriorityResult): number {
  * @param now - Current time for age calculations (defaults to current time)
  * @returns Promise resolving to priority result with score and breakdown
  *
- * @requirements 21.4
+
  */
 export async function calculatePriorityWithConfig(
 	input: PriorityInput,

@@ -31,7 +31,6 @@ CREATE TABLE "throttle_state" (
 ALTER TABLE "connectors" ADD COLUMN "throttle_profile_id" integer;--> statement-breakpoint
 ALTER TABLE "throttle_state" ADD CONSTRAINT "throttle_state_connector_id_connectors_id_fk" FOREIGN KEY ("connector_id") REFERENCES "public"."connectors"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "connectors" ADD CONSTRAINT "connectors_throttle_profile_id_throttle_profiles_id_fk" FOREIGN KEY ("throttle_profile_id") REFERENCES "public"."throttle_profiles"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
--- Seed throttle profile presets (Requirements 7.1, 7.5)
 INSERT INTO "throttle_profiles" ("name", "description", "requests_per_minute", "daily_budget", "batch_size", "batch_cooldown_seconds", "rate_limit_pause_seconds", "is_default")
 VALUES
   ('Conservative', 'Low rate limits for shared/public indexers', 2, 200, 5, 120, 600, false),

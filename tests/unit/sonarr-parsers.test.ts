@@ -8,7 +8,7 @@
  * - parsePaginatedEpisodes() valid and invalid inputs
  * - Edge cases for all parsers
  *
- * @requirements 27.2, 27.3, 27.7, 27.8
+
  */
 
 import { describe, it, expect } from 'vitest';

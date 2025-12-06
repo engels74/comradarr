@@ -7,7 +7,7 @@
  * - Error categorization
  * - Ping behavior
  *
- * @requirements 23.1, 23.2
+
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach, type Mock } from 'vitest';

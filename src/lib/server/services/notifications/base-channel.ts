@@ -2,7 +2,7 @@
  * Base interface and default configuration for notification channel implementations.
  *
  * @module services/notifications/base-channel
- * @requirements 36.2
+
  */
 
 import type { NotificationChannel } from '$lib/server/db/schema';
