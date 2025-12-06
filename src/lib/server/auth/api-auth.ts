@@ -1,8 +1,6 @@
 /**
  * API authentication and scope enforcement utilities.
  *
- * Requirement: 34.2
- *
  * Provides utilities for enforcing authentication and scope restrictions
  * on API routes. Works with both session and API key authentication.
  */

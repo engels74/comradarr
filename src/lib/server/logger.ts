@@ -1,10 +1,9 @@
 /**
  * Structured JSON logging module.
  *
- * Requirements:
- * - 31.1: Output structured JSON with timestamp, level, module, message, and correlation_id fields
- * - 31.2: Automatically include correlation ID from request context when available
- * - 31.4: When LOG_LEVEL is set to trace, include full request and response bodies
+ * - Output structured JSON with timestamp, level, module, message, and correlation_id fields
+ * - Automatically include correlation ID from request context when available
+ * - When LOG_LEVEL is set to trace, include full request and response bodies
  */
 
 import { logLevels, type LogLevel } from '$lib/schemas/settings';
