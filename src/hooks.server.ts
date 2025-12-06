@@ -1,8 +1,10 @@
 import type { Handle } from '@sveltejs/kit';
+import { json } from '@sveltejs/kit';
 import { validateSession, isLocalNetworkIP, getClientIP } from '$lib/server/auth';
 import { runWithContext, type RequestContext } from '$lib/server/context';
 import { getSecuritySettings } from '$lib/server/db/queries/settings';
 import { validateApiKey, logApiKeyUsage } from '$lib/server/db/queries/api-keys';
+import { apiKeyRateLimiter } from '$lib/server/services/api-rate-limit';
 import { db } from '$lib/server/db';
 import { users } from '$lib/server/db/schema';
 import { eq } from 'drizzle-orm';
@@ -68,6 +70,41 @@ export const handle: Handle = async ({ event, resolve }) => {
 				event.locals.isApiKey = true;
 				event.locals.apiKeyScope = apiKeyResult.scope;
 				event.locals.apiKeyId = apiKeyResult.keyId;
+				event.locals.apiKeyRateLimitPerMinute = apiKeyResult.rateLimitPerMinute;
+
+				// API key rate limiting (Requirement 34.5)
+				// Check if request is allowed before processing
+				const rateLimitResult = await apiKeyRateLimiter.canMakeRequest(
+					apiKeyResult.keyId,
+					apiKeyResult.rateLimitPerMinute
+				);
+
+				if (!rateLimitResult.allowed) {
+					// Return 429 Too Many Requests with rate limit headers
+					const retryAfterSeconds = Math.ceil(rateLimitResult.retryAfterMs! / 1000);
+					const rateLimitStatus = await apiKeyRateLimiter.getRateLimitStatus(
+						apiKeyResult.keyId,
+						apiKeyResult.rateLimitPerMinute
+					);
+
+					return json(
+						{
+							error: 'Too Many Requests',
+							message: 'Rate limit exceeded. Please try again later.',
+							retryAfter: retryAfterSeconds
+						},
+						{
+							status: 429,
+							headers: {
+								'Retry-After': String(retryAfterSeconds),
+								'X-RateLimit-Limit': String(rateLimitStatus.limit ?? 'unlimited'),
+								'X-RateLimit-Remaining': String(rateLimitStatus.remaining ?? 'unlimited'),
+								'X-RateLimit-Reset': String(rateLimitStatus.resetInSeconds),
+								'X-Correlation-ID': correlationId
+							}
+						}
+					);
+				}
 			}
 		}
 	}
@@ -122,13 +159,39 @@ export const handle: Handle = async ({ event, resolve }) => {
 	return runWithContext(context, async () => {
 		const response = await resolve(event);
 
-		// Log API key usage after request completes (Requirement 34.4)
-		// Fire and forget - don't block the response
+		// API key rate limiting and usage logging (Requirements 34.4, 34.5)
 		if (event.locals.isApiKey && event.locals.apiKeyId) {
+			const apiKeyId = event.locals.apiKeyId;
+			const rateLimitPerMinute = event.locals.apiKeyRateLimitPerMinute ?? null;
+
+			// Record the request for rate limiting (Requirement 34.5)
+			// Only record if rate limit is configured (not unlimited)
+			if (rateLimitPerMinute !== null) {
+				apiKeyRateLimiter.recordRequest(apiKeyId).catch(() => {
+					/* Fire and forget - ignore errors */
+				});
+			}
+
+			// Add rate limit headers to response (Requirement 34.5)
+			if (rateLimitPerMinute !== null) {
+				const rateLimitStatus = await apiKeyRateLimiter.getRateLimitStatus(
+					apiKeyId,
+					rateLimitPerMinute
+				);
+				response.headers.set('X-RateLimit-Limit', String(rateLimitStatus.limit ?? 'unlimited'));
+				response.headers.set(
+					'X-RateLimit-Remaining',
+					String(rateLimitStatus.remaining ?? 'unlimited')
+				);
+				response.headers.set('X-RateLimit-Reset', String(rateLimitStatus.resetInSeconds));
+			}
+
+			// Log API key usage after request completes (Requirement 34.4)
+			// Fire and forget - don't block the response
 			const responseTimeMs = Date.now() - startTime;
 			const clientIP = getClientIP(event.request, event.getClientAddress);
 			logApiKeyUsage({
-				apiKeyId: event.locals.apiKeyId,
+				apiKeyId,
 				endpoint: event.url.pathname,
 				method: event.request.method,
 				statusCode: response.status,

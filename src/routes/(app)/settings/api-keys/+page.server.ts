@@ -1,7 +1,7 @@
 /**
  * API Keys settings page server load and actions.
  *
- * Requirements: 34.1, 34.3
+ * Requirements: 34.1, 34.3, 34.5
  */
 
 import type { PageServerLoad, Actions } from './$types';
@@ -11,11 +11,17 @@ import {
 	deleteApiKey,
 	revokeApiKey,
 	apiKeyNameExists,
+	updateApiKeyRateLimit,
 	type ApiKeyScope
 } from '$lib/server/db/queries/api-keys';
 import { fail } from '@sveltejs/kit';
 import * as v from 'valibot';
-import { CreateApiKeySchema } from '$lib/schemas/settings';
+import {
+	CreateApiKeySchema,
+	UpdateApiKeyRateLimitSchema,
+	parseRateLimitValue,
+	type ApiKeyRateLimitPreset
+} from '$lib/schemas/settings';
 
 export const load: PageServerLoad = async ({ locals }) => {
 	// locals.user is guaranteed by (app) layout guard
@@ -63,11 +69,17 @@ export const actions: Actions = {
 
 		const formData = await request.formData();
 
+		// Parse rateLimitCustom as number if present
+		const rateLimitCustomStr = formData.get('rateLimitCustom')?.toString();
+		const rateLimitCustom = rateLimitCustomStr ? parseInt(rateLimitCustomStr, 10) : undefined;
+
 		const data = {
 			name: formData.get('name')?.toString() ?? '',
 			description: formData.get('description')?.toString() || undefined,
 			scope: formData.get('scope')?.toString() ?? 'read',
-			expiresIn: formData.get('expiresIn')?.toString() || undefined
+			expiresIn: formData.get('expiresIn')?.toString() || undefined,
+			rateLimitPreset: formData.get('rateLimitPreset')?.toString() || undefined,
+			rateLimitCustom: rateLimitCustom && !isNaN(rateLimitCustom) ? rateLimitCustom : undefined
 		};
 
 		// Validate form data
@@ -93,11 +105,17 @@ export const actions: Actions = {
 
 		try {
 			const expiresAt = calculateExpiration(config.expiresIn);
+			const rateLimitPerMinute = parseRateLimitValue(
+				config.rateLimitPreset as ApiKeyRateLimitPreset | undefined,
+				config.rateLimitCustom
+			);
+
 			const created = await createApiKey({
 				userId: locals.user.id,
 				name: config.name,
 				description: config.description ?? null,
 				scope: config.scope as ApiKeyScope,
+				rateLimitPerMinute,
 				expiresAt
 			});
 
@@ -157,6 +175,78 @@ export const actions: Actions = {
 			action: 'deleteKey' as const,
 			success: true,
 			message: 'API key deleted successfully'
+		};
+	},
+
+	/**
+	 * Update an API key's rate limit.
+	 *
+	 * Requirement 34.5: Per-key rate limiting configuration.
+	 */
+	updateRateLimit: async ({ request, locals }) => {
+		if (locals.isLocalBypass || !locals.user || locals.user.id === 0) {
+			return fail(403, {
+				action: 'updateRateLimit' as const,
+				error: 'Cannot manage API keys in local network bypass mode'
+			});
+		}
+
+		const formData = await request.formData();
+		const keyId = parseInt(formData.get('keyId')?.toString() ?? '', 10);
+
+		if (isNaN(keyId)) {
+			return fail(400, {
+				action: 'updateRateLimit' as const,
+				error: 'Invalid key ID'
+			});
+		}
+
+		// Parse rateLimitCustom as number if present
+		const rateLimitCustomStr = formData.get('rateLimitCustom')?.toString();
+		const rateLimitCustom = rateLimitCustomStr ? parseInt(rateLimitCustomStr, 10) : undefined;
+
+		const data = {
+			rateLimitPreset: formData.get('rateLimitPreset')?.toString() ?? 'unlimited',
+			rateLimitCustom: rateLimitCustom && !isNaN(rateLimitCustom) ? rateLimitCustom : undefined
+		};
+
+		// Validate form data
+		const result = v.safeParse(UpdateApiKeyRateLimitSchema, data);
+		if (!result.success) {
+			const errors = result.issues.map((issue) => issue.message);
+			return fail(400, {
+				action: 'updateRateLimit' as const,
+				error: errors[0] ?? 'Invalid input'
+			});
+		}
+
+		const config = result.output;
+
+		try {
+			const rateLimitPerMinute = parseRateLimitValue(
+				config.rateLimitPreset as ApiKeyRateLimitPreset,
+				config.rateLimitCustom
+			);
+
+			const updated = await updateApiKeyRateLimit(keyId, locals.user.id, rateLimitPerMinute);
+			if (!updated) {
+				return fail(404, {
+					action: 'updateRateLimit' as const,
+					error: 'API key not found'
+				});
+			}
+		} catch (err) {
+			console.error('[api-keys] Failed to update rate limit:', err);
+			return fail(500, {
+				action: 'updateRateLimit' as const,
+				error: 'Failed to update rate limit. Please try again.'
+			});
+		}
+
+		return {
+			action: 'updateRateLimit' as const,
+			success: true,
+			message: 'Rate limit updated successfully'
 		};
 	},
 

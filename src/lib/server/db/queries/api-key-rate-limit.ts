@@ -1,0 +1,212 @@
+/**
+ * Database queries for API key rate limit state operations.
+ *
+ * Requirement: 34.5
+ *
+ * Rate limit state tracks runtime rate-limiting counters per API key:
+ * - requestsThisMinute: Counter for per-minute rate limit
+ * - minuteWindowStart: Start of current minute window
+ * - lastRequestAt: Timestamp of last request
+ */
+
+import { db } from '$lib/server/db';
+import { apiKeyRateLimitState, type ApiKeyRateLimitState } from '$lib/server/db/schema';
+import { eq, lt, sql, or, isNull } from 'drizzle-orm';
+import { isMinuteWindowExpired, msUntilMinuteWindowExpires } from '$lib/server/services/throttle/time-utils';
+
+// Re-export time utilities for convenience
+export { isMinuteWindowExpired, msUntilMinuteWindowExpires } from '$lib/server/services/throttle/time-utils';
+
+// =============================================================================
+// Core CRUD Operations
+// =============================================================================
+
+/**
+ * Gets the rate limit state for an API key.
+ *
+ * @param apiKeyId - API key ID
+ * @returns Rate limit state if found, null otherwise
+ */
+export async function getRateLimitState(apiKeyId: number): Promise<ApiKeyRateLimitState | null> {
+	const result = await db
+		.select()
+		.from(apiKeyRateLimitState)
+		.where(eq(apiKeyRateLimitState.apiKeyId, apiKeyId))
+		.limit(1);
+
+	return result[0] ?? null;
+}
+
+/**
+ * Gets or creates rate limit state for an API key.
+ * Creates a new state with zero counters if one doesn't exist.
+ *
+ * @param apiKeyId - API key ID
+ * @returns Rate limit state (existing or newly created)
+ */
+export async function getOrCreateRateLimitState(apiKeyId: number): Promise<ApiKeyRateLimitState> {
+	const existing = await getRateLimitState(apiKeyId);
+	if (existing) {
+		return existing;
+	}
+
+	const now = new Date();
+	const result = await db
+		.insert(apiKeyRateLimitState)
+		.values({
+			apiKeyId,
+			requestsThisMinute: 0,
+			minuteWindowStart: now
+		})
+		.onConflictDoNothing()
+		.returning();
+
+	// Handle race condition - if another process created the state, fetch it
+	if (result.length === 0) {
+		const fetched = await getRateLimitState(apiKeyId);
+		if (!fetched) {
+			throw new Error(`Failed to create or fetch rate limit state for API key ${apiKeyId}`);
+		}
+		return fetched;
+	}
+
+	return result[0]!;
+}
+
+// =============================================================================
+// Counter Operations (Atomic)
+// =============================================================================
+
+/**
+ * Atomically increments the request counter and updates lastRequestAt.
+ * Creates rate limit state if it doesn't exist.
+ *
+ * @param apiKeyId - API key ID
+ * @returns Updated rate limit state
+ */
+export async function incrementRequestCounter(apiKeyId: number): Promise<ApiKeyRateLimitState> {
+	// Ensure state exists
+	await getOrCreateRateLimitState(apiKeyId);
+
+	const now = new Date();
+	const result = await db
+		.update(apiKeyRateLimitState)
+		.set({
+			requestsThisMinute: sql`${apiKeyRateLimitState.requestsThisMinute} + 1`,
+			lastRequestAt: now,
+			updatedAt: now
+		})
+		.where(eq(apiKeyRateLimitState.apiKeyId, apiKeyId))
+		.returning();
+
+	if (result.length === 0) {
+		throw new Error(`Failed to increment counter for API key ${apiKeyId}`);
+	}
+
+	return result[0]!;
+}
+
+// =============================================================================
+// Window Reset Operations
+// =============================================================================
+
+/**
+ * Resets the minute window counter for an API key.
+ * Sets requestsThisMinute to 0 and updates minuteWindowStart to now.
+ *
+ * @param apiKeyId - API key ID
+ */
+export async function resetMinuteWindow(apiKeyId: number): Promise<void> {
+	const now = new Date();
+	await db
+		.update(apiKeyRateLimitState)
+		.set({
+			requestsThisMinute: 0,
+			minuteWindowStart: now,
+			updatedAt: now
+		})
+		.where(eq(apiKeyRateLimitState.apiKeyId, apiKeyId));
+}
+
+/**
+ * Resets minute window for all API keys where the window has expired.
+ * A window is expired if minuteWindowStart + 60 seconds < now.
+ *
+ * @returns Number of API keys reset
+ */
+export async function resetExpiredMinuteWindows(): Promise<number> {
+	const now = new Date();
+	const oneMinuteAgo = new Date(now.getTime() - 60 * 1000);
+
+	const result = await db
+		.update(apiKeyRateLimitState)
+		.set({
+			requestsThisMinute: 0,
+			minuteWindowStart: now,
+			updatedAt: now
+		})
+		.where(
+			or(
+				isNull(apiKeyRateLimitState.minuteWindowStart),
+				lt(apiKeyRateLimitState.minuteWindowStart, oneMinuteAgo)
+			)
+		)
+		.returning({ id: apiKeyRateLimitState.id });
+
+	return result.length;
+}
+
+/**
+ * Gets current request count for an API key, accounting for expired windows.
+ * Returns 0 if the window has expired.
+ *
+ * @param apiKeyId - API key ID
+ * @returns Current request count in this minute window
+ */
+export async function getCurrentRequestCount(apiKeyId: number): Promise<number> {
+	const state = await getRateLimitState(apiKeyId);
+	if (!state) {
+		return 0;
+	}
+
+	// If window expired, count is effectively 0
+	if (isMinuteWindowExpired(state.minuteWindowStart)) {
+		return 0;
+	}
+
+	return state.requestsThisMinute;
+}
+
+/**
+ * Gets the remaining requests allowed in the current minute window.
+ *
+ * @param apiKeyId - API key ID
+ * @param rateLimitPerMinute - Configured rate limit (null = unlimited)
+ * @returns Remaining requests allowed, or null if unlimited
+ */
+export async function getRemainingRequests(
+	apiKeyId: number,
+	rateLimitPerMinute: number | null
+): Promise<number | null> {
+	if (rateLimitPerMinute === null) {
+		return null; // Unlimited
+	}
+
+	const currentCount = await getCurrentRequestCount(apiKeyId);
+	return Math.max(0, rateLimitPerMinute - currentCount);
+}
+
+/**
+ * Gets the time until the current minute window resets.
+ *
+ * @param apiKeyId - API key ID
+ * @returns Milliseconds until reset, or 0 if window already expired
+ */
+export async function getTimeUntilReset(apiKeyId: number): Promise<number> {
+	const state = await getRateLimitState(apiKeyId);
+	if (!state || !state.minuteWindowStart) {
+		return 0;
+	}
+
+	return msUntilMinuteWindowExpires(state.minuteWindowStart);
+}

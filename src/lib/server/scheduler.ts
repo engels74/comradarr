@@ -16,10 +16,11 @@
  * - 13.1: Execute VACUUM and ANALYZE database maintenance
  * - 15.4: Capture completion snapshots for trend visualization
  * - 33.5: Automatic scheduled backups at configured interval
+ * - 34.5: Reset expired API key rate limit windows
  * - 38.2: Periodic Prowlarr health checks
  *
  * Jobs:
- * - throttle-window-reset: Every minute - resets expired throttle windows
+ * - throttle-window-reset: Every minute - resets expired throttle and API key rate limit windows
  * - prowlarr-health-check: Every 5 minutes - checks Prowlarr indexer health
  * - connector-health-check: Every 5 minutes - checks *arr connector health
  * - incremental-sync-sweep: Every 15 minutes - syncs content, discovers gaps/upgrades, enqueues items
@@ -36,6 +37,7 @@
 import { Cron } from 'croner';
 import { runWithContext, generateCorrelationId, type RequestContext } from '$lib/server/context';
 import { throttleEnforcer } from '$lib/server/services/throttle';
+import { apiKeyRateLimiter } from '$lib/server/services/api-rate-limit';
 import { prowlarrHealthMonitor } from '$lib/server/services/prowlarr';
 import {
 	getEnabledConnectors,
@@ -164,6 +166,7 @@ export function initializeScheduler(): void {
 
 	// Throttle window reset - runs every minute
 	// Resets expired per-minute counters, daily counters, and clears expired pauses
+	// Also resets expired API key rate limit windows (Requirement 34.5)
 	const throttleResetJob = new Cron(
 		'* * * * *', // Every minute
 		{
@@ -174,6 +177,7 @@ export function initializeScheduler(): void {
 			}
 		},
 		withJobContext('throttle-window-reset', async () => {
+			// Reset connector throttle windows
 			const result = await throttleEnforcer.resetExpiredWindows();
 
 			// Only log if resets occurred (reduce log noise)
@@ -182,6 +186,15 @@ export function initializeScheduler(): void {
 					minuteResets: result.minuteResets,
 					dayResets: result.dayResets,
 					pausesCleared: result.pausesCleared
+				});
+			}
+
+			// Reset API key rate limit windows (Requirement 34.5)
+			const apiKeyResets = await apiKeyRateLimiter.resetExpiredWindows();
+
+			if (apiKeyResets > 0) {
+				console.log('[scheduler] API key rate limit windows reset:', {
+					windowsReset: apiKeyResets
 				});
 			}
 		})

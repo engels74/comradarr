@@ -24,6 +24,8 @@ declare global {
 			apiKeyScope?: 'read' | 'full';
 			/** API key ID for logging when authenticated via API key (Req 34.4) */
 			apiKeyId?: number;
+			/** API key rate limit per minute (null = unlimited) (Req 34.5) */
+			apiKeyRateLimitPerMinute?: number | null;
 		}
 		// interface PageData {}
 		// interface PageState {}

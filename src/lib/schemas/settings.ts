@@ -1,7 +1,7 @@
 /**
  * Validation schemas for settings forms.
  *
- * Requirements: 21.1, 21.5, 34.1
+ * Requirements: 21.1, 21.5, 34.1, 34.5
  */
 
 import * as v from 'valibot';
@@ -161,7 +161,7 @@ export type BackupSettingsInput = v.InferInput<typeof BackupSettingsSchema>;
 export type BackupSettingsOutput = v.InferOutput<typeof BackupSettingsSchema>;
 
 // =============================================================================
-// API Key Settings (Requirement 34.1)
+// API Key Settings (Requirements 34.1, 34.5)
 // =============================================================================
 
 /**
@@ -206,6 +206,37 @@ export const apiKeyExpirationLabels: Record<ApiKeyExpiration, string> = {
 };
 
 /**
+ * API key rate limit preset options (Requirement 34.5).
+ *
+ * - unlimited: No rate limit
+ * - 60: Standard rate limit (60 requests/minute)
+ * - 120: Elevated rate limit (120 requests/minute)
+ * - custom: User-defined rate limit
+ */
+export const apiKeyRateLimitPresets = ['unlimited', '60', '120', 'custom'] as const;
+export type ApiKeyRateLimitPreset = (typeof apiKeyRateLimitPresets)[number];
+
+/**
+ * API key rate limit preset display names for UI.
+ */
+export const apiKeyRateLimitPresetLabels: Record<ApiKeyRateLimitPreset, string> = {
+	unlimited: 'Unlimited',
+	'60': '60/minute (Standard)',
+	'120': '120/minute (Elevated)',
+	custom: 'Custom'
+};
+
+/**
+ * API key rate limit preset descriptions for UI.
+ */
+export const apiKeyRateLimitPresetDescriptions: Record<ApiKeyRateLimitPreset, string> = {
+	unlimited: 'No rate limit applied',
+	'60': 'Standard rate limit for most use cases',
+	'120': 'Elevated rate limit for high-frequency integrations',
+	custom: 'Set a custom rate limit'
+};
+
+/**
  * Create API key validation schema.
  *
  * Validates:
@@ -213,6 +244,8 @@ export const apiKeyExpirationLabels: Record<ApiKeyExpiration, string> = {
  * - description: Optional string, max 500 characters
  * - scope: Required, one of 'read' | 'full'
  * - expiresIn: Optional, one of 'never' | '30d' | '90d' | '365d'
+ * - rateLimitPreset: Optional, one of 'unlimited' | '60' | '120' | 'custom'
+ * - rateLimitCustom: Optional, number 1-1000 (only used when rateLimitPreset is 'custom')
  */
 export const CreateApiKeySchema = v.object({
 	name: v.pipe(
@@ -225,8 +258,84 @@ export const CreateApiKeySchema = v.object({
 		v.pipe(v.string(), v.trim(), v.maxLength(500, 'Description must be 500 characters or less'))
 	),
 	scope: v.pipe(v.string('Scope is required'), v.picklist(apiKeyScopes, 'Invalid scope')),
-	expiresIn: v.optional(v.pipe(v.string(), v.picklist(apiKeyExpirations, 'Invalid expiration')))
+	expiresIn: v.optional(v.pipe(v.string(), v.picklist(apiKeyExpirations, 'Invalid expiration'))),
+	rateLimitPreset: v.optional(
+		v.pipe(v.string(), v.picklist(apiKeyRateLimitPresets, 'Invalid rate limit preset'))
+	),
+	rateLimitCustom: v.optional(
+		v.pipe(
+			v.number('Custom rate limit must be a number'),
+			v.minValue(1, 'Rate limit must be at least 1'),
+			v.maxValue(1000, 'Rate limit cannot exceed 1000')
+		)
+	)
 });
 
 export type CreateApiKeyInput = v.InferInput<typeof CreateApiKeySchema>;
 export type CreateApiKeyOutput = v.InferOutput<typeof CreateApiKeySchema>;
+
+/**
+ * Update API key rate limit validation schema (Requirement 34.5).
+ *
+ * Validates:
+ * - rateLimitPreset: Required, one of 'unlimited' | '60' | '120' | 'custom'
+ * - rateLimitCustom: Optional, number 1-1000 (only used when rateLimitPreset is 'custom')
+ */
+export const UpdateApiKeyRateLimitSchema = v.object({
+	rateLimitPreset: v.pipe(
+		v.string('Rate limit preset is required'),
+		v.picklist(apiKeyRateLimitPresets, 'Invalid rate limit preset')
+	),
+	rateLimitCustom: v.optional(
+		v.pipe(
+			v.number('Custom rate limit must be a number'),
+			v.minValue(1, 'Rate limit must be at least 1'),
+			v.maxValue(1000, 'Rate limit cannot exceed 1000')
+		)
+	)
+});
+
+export type UpdateApiKeyRateLimitInput = v.InferInput<typeof UpdateApiKeyRateLimitSchema>;
+export type UpdateApiKeyRateLimitOutput = v.InferOutput<typeof UpdateApiKeyRateLimitSchema>;
+
+/**
+ * Converts a rate limit preset/custom value to the actual rate limit.
+ *
+ * @param preset - Rate limit preset selection
+ * @param custom - Custom rate limit value (only used when preset is 'custom')
+ * @returns Rate limit per minute, or null for unlimited
+ */
+export function parseRateLimitValue(
+	preset: ApiKeyRateLimitPreset | undefined,
+	custom: number | undefined
+): number | null {
+	if (!preset || preset === 'unlimited') {
+		return null;
+	}
+	if (preset === 'custom') {
+		return custom ?? null;
+	}
+	return parseInt(preset, 10);
+}
+
+/**
+ * Converts a rate limit value to preset/custom values for the form.
+ *
+ * @param rateLimitPerMinute - Rate limit per minute, or null for unlimited
+ * @returns Object with preset and optional custom value
+ */
+export function toRateLimitFormValues(rateLimitPerMinute: number | null): {
+	preset: ApiKeyRateLimitPreset;
+	custom?: number;
+} {
+	if (rateLimitPerMinute === null) {
+		return { preset: 'unlimited' };
+	}
+	if (rateLimitPerMinute === 60) {
+		return { preset: '60' };
+	}
+	if (rateLimitPerMinute === 120) {
+		return { preset: '120' };
+	}
+	return { preset: 'custom', custom: rateLimitPerMinute };
+}

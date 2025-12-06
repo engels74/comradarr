@@ -10,7 +10,9 @@
  * - searchRegistry, requestQueue, searchHistory: Search state tracking
  * - syncState: Sync tracking per connector
  * - users, sessions: Authentication (Requirements 10.1, 10.2)
- * - apiKeys: External API authentication keys (Requirement 34.1)
+ * - apiKeys: External API authentication keys (Requirements 34.1, 34.3, 34.5)
+ * - apiKeyUsageLogs: API key usage audit logs (Requirement 34.4)
+ * - apiKeyRateLimitState: Runtime rate-limiting state per API key (Requirement 34.5)
  * - prowlarrInstances: Prowlarr connections for indexer health monitoring (Requirements 38.1)
  * - prowlarrIndexerHealth: Cached indexer health status (Requirements 38.2, 38.4)
  * - notificationChannels: Notification channel configurations (Requirements 9.1, 9.2, 9.3, 9.4, 36.1)
@@ -22,7 +24,7 @@
  * - analyticsDailyStats: Daily aggregated statistics (Requirements 12.1, 12.2, 12.4)
  * - appSettings: Application-wide configuration settings (Requirement 21.1)
  *
- * Requirements: 7.1, 7.4, 7.5, 9.1, 9.2, 9.3, 9.4, 10.1, 10.2, 12.1, 12.2, 12.3, 12.4, 14.1, 14.2, 14.3, 15.4, 19.1, 21.1, 34.1, 36.1, 38.1, 38.2, 38.4
+ * Requirements: 7.1, 7.4, 7.5, 9.1, 9.2, 9.3, 9.4, 10.1, 10.2, 12.1, 12.2, 12.3, 12.4, 14.1, 14.2, 14.3, 15.4, 19.1, 21.1, 34.1, 34.3, 34.4, 34.5, 36.1, 38.1, 38.2, 38.4
  */
 
 import {
@@ -364,7 +366,7 @@ export const sessions = pgTable(
 );
 
 // =============================================================================
-// API Keys Table (Requirements 34.1, 34.3)
+// API Keys Table (Requirements 34.1, 34.3, 34.5)
 // =============================================================================
 
 /**
@@ -384,6 +386,7 @@ export const apiKeys = pgTable(
 		scope: varchar('scope', { length: 20 }).notNull().default('read'), // 'read' | 'full'
 		keyPrefix: varchar('key_prefix', { length: 8 }).notNull(), // First 8 chars for UI identification
 		keyHash: text('key_hash').notNull(), // Argon2id hash of full key
+		rateLimitPerMinute: integer('rate_limit_per_minute'), // null = unlimited (Requirement 34.5)
 		expiresAt: timestamp('expires_at', { withTimezone: true }), // null = never expires
 		revokedAt: timestamp('revoked_at', { withTimezone: true }), // null = active, set = revoked (Requirement 34.3)
 		lastUsedAt: timestamp('last_used_at', { withTimezone: true }),
@@ -422,6 +425,31 @@ export const apiKeyUsageLogs = pgTable(
 		index('api_key_usage_logs_key_idx').on(table.apiKeyId),
 		index('api_key_usage_logs_created_idx').on(table.createdAt)
 	]
+);
+
+// =============================================================================
+// API Key Rate Limit State Table (Requirement 34.5)
+// =============================================================================
+
+/**
+ * Tracks runtime rate-limiting state per API key.
+ * Similar to throttleState but for external API access rather than connector operations.
+ */
+export const apiKeyRateLimitState = pgTable(
+	'api_key_rate_limit_state',
+	{
+		id: integer('id').primaryKey().generatedAlwaysAsIdentity(),
+		apiKeyId: integer('api_key_id')
+			.notNull()
+			.references(() => apiKeys.id, { onDelete: 'cascade' })
+			.unique(),
+		requestsThisMinute: integer('requests_this_minute').notNull().default(0),
+		minuteWindowStart: timestamp('minute_window_start', { withTimezone: true }),
+		lastRequestAt: timestamp('last_request_at', { withTimezone: true }),
+		createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+		updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow()
+	},
+	(table) => [index('api_key_rate_limit_state_api_key_idx').on(table.apiKeyId)]
 );
 
 // =============================================================================
@@ -521,6 +549,9 @@ export type NewApiKey = typeof apiKeys.$inferInsert;
 
 export type ApiKeyUsageLog = typeof apiKeyUsageLogs.$inferSelect;
 export type NewApiKeyUsageLog = typeof apiKeyUsageLogs.$inferInsert;
+
+export type ApiKeyRateLimitState = typeof apiKeyRateLimitState.$inferSelect;
+export type NewApiKeyRateLimitState = typeof apiKeyRateLimitState.$inferInsert;
 
 export type ProwlarrInstance = typeof prowlarrInstances.$inferSelect;
 export type NewProwlarrInstance = typeof prowlarrInstances.$inferInsert;

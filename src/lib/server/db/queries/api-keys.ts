@@ -1,7 +1,7 @@
 /**
  * Database queries for API key operations.
  *
- * Requirements: 34.1, 34.3, 34.4
+ * Requirements: 34.1, 34.3, 34.4, 34.5
  *
  * API keys are hashed using Argon2id (same as passwords) since they cannot be recovered.
  * The full key is shown only once at creation, following industry best practices.
@@ -9,6 +9,7 @@
  * - 34.1: API key generation and storage
  * - 34.3: Key revocation with immediate rejection
  * - 34.4: Usage logging (key identifier, endpoint, timestamp)
+ * - 34.5: Per-key rate limiting configuration
  */
 
 import { db } from '$lib/server/db';
@@ -41,6 +42,7 @@ export interface ApiKeyDisplay {
 	description: string | null;
 	scope: ApiKeyScope;
 	keyPrefix: string;
+	rateLimitPerMinute: number | null; // null = unlimited (Requirement 34.5)
 	expiresAt: Date | null;
 	revokedAt: Date | null;
 	lastUsedAt: Date | null;
@@ -64,6 +66,7 @@ export interface CreateApiKeyInput {
 	name: string;
 	description?: string | null;
 	scope: ApiKeyScope;
+	rateLimitPerMinute?: number | null; // null = unlimited (Requirement 34.5)
 	expiresAt?: Date | null;
 }
 
@@ -97,6 +100,7 @@ function toDisplay(row: ApiKey): ApiKeyDisplay {
 		description: row.description,
 		scope: row.scope as ApiKeyScope,
 		keyPrefix: row.keyPrefix,
+		rateLimitPerMinute: row.rateLimitPerMinute,
 		expiresAt: row.expiresAt,
 		revokedAt: row.revokedAt,
 		lastUsedAt: row.lastUsedAt,
@@ -124,6 +128,7 @@ export async function createApiKey(input: CreateApiKeyInput): Promise<CreateApiK
 			scope: input.scope,
 			keyPrefix,
 			keyHash,
+			rateLimitPerMinute: input.rateLimitPerMinute ?? null,
 			expiresAt: input.expiresAt ?? null
 		})
 		.returning();
@@ -176,6 +181,7 @@ export interface ValidateApiKeyResult {
 	userId: number;
 	scope: ApiKeyScope;
 	keyId: number;
+	rateLimitPerMinute: number | null; // null = unlimited (Requirement 34.5)
 }
 
 /**
@@ -225,7 +231,8 @@ export async function validateApiKey(key: string): Promise<ValidateApiKeyResult 
 			return {
 				userId: candidate.userId,
 				scope: candidate.scope as ApiKeyScope,
-				keyId: candidate.id
+				keyId: candidate.id,
+				rateLimitPerMinute: candidate.rateLimitPerMinute
 			};
 		}
 	}
@@ -352,4 +359,33 @@ export async function logApiKeyUsage(input: ApiKeyUsageLogInput): Promise<void> 
 		ipAddress: input.ipAddress,
 		userAgent: input.userAgent
 	});
+}
+
+// =============================================================================
+// API Key Rate Limit Management (Requirement 34.5)
+// =============================================================================
+
+/**
+ * Updates the rate limit for an API key.
+ *
+ * Requirement 34.5: Per-key rate limiting configuration.
+ * Users can modify rate limits on existing keys.
+ *
+ * @param keyId - The API key ID to update
+ * @param userId - The user who owns the key (for authorization)
+ * @param rateLimitPerMinute - New rate limit (null = unlimited)
+ * @returns true if updated, false if not found or unauthorized
+ */
+export async function updateApiKeyRateLimit(
+	keyId: number,
+	userId: number,
+	rateLimitPerMinute: number | null
+): Promise<boolean> {
+	const result = await db
+		.update(apiKeys)
+		.set({ rateLimitPerMinute })
+		.where(and(eq(apiKeys.id, keyId), eq(apiKeys.userId, userId)))
+		.returning({ id: apiKeys.id });
+
+	return result.length > 0;
 }

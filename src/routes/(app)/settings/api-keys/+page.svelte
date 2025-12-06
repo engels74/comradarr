@@ -2,7 +2,7 @@
 	/**
 	 * API Keys settings page.
 	 *
-	 * Requirements: 34.1, 34.3
+	 * Requirements: 34.1, 34.3, 34.5
 	 */
 	import { enhance } from '$app/forms';
 	import * as Card from '$lib/components/ui/card';
@@ -17,7 +17,12 @@
 		apiKeyScopeDescriptions,
 		apiKeyExpirations,
 		apiKeyExpirationLabels,
-		type ApiKeyScope
+		apiKeyRateLimitPresets,
+		apiKeyRateLimitPresetLabels,
+		apiKeyRateLimitPresetDescriptions,
+		toRateLimitFormValues,
+		type ApiKeyScope,
+		type ApiKeyRateLimitPreset
 	} from '$lib/schemas/settings';
 	import type { PageProps } from './$types';
 	import KeyIcon from '@lucide/svelte/icons/key';
@@ -27,14 +32,21 @@
 	import CopyIcon from '@lucide/svelte/icons/copy';
 	import CheckIcon from '@lucide/svelte/icons/check';
 	import AlertTriangleIcon from '@lucide/svelte/icons/alert-triangle';
+	import SettingsIcon from '@lucide/svelte/icons/settings';
 
 	let { data, form }: PageProps = $props();
 
 	let isSubmitting = $state(false);
 	let showCreateDialog = $state(false);
+	let showRateLimitDialog = $state(false);
+	let editingKeyId = $state<number | null>(null);
 	let newKeyValue = $state<string | null>(null);
 	let copied = $state(false);
 	let selectedScope = $state<ApiKeyScope>('read');
+	let selectedRateLimitPreset = $state<ApiKeyRateLimitPreset>('unlimited');
+	let customRateLimit = $state<number>(60);
+	let editRateLimitPreset = $state<ApiKeyRateLimitPreset>('unlimited');
+	let editCustomRateLimit = $state<number>(60);
 
 	// Common select styling
 	const selectClass =
@@ -85,6 +97,31 @@
 	function isRevoked(revokedAt: Date | null): boolean {
 		return revokedAt !== null;
 	}
+
+	function formatRateLimit(rateLimitPerMinute: number | null): string {
+		if (rateLimitPerMinute === null) return 'Unlimited';
+		return `${rateLimitPerMinute}/min`;
+	}
+
+	function openRateLimitDialog(keyId: number, rateLimitPerMinute: number | null) {
+		editingKeyId = keyId;
+		const formValues = toRateLimitFormValues(rateLimitPerMinute);
+		editRateLimitPreset = formValues.preset;
+		editCustomRateLimit = formValues.custom ?? 60;
+		showRateLimitDialog = true;
+	}
+
+	function closeRateLimitDialog() {
+		showRateLimitDialog = false;
+		editingKeyId = null;
+	}
+
+	// Close rate limit dialog on successful update
+	$effect(() => {
+		if (form?.action === 'updateRateLimit' && form?.success) {
+			closeRateLimitDialog();
+		}
+	});
 </script>
 
 <svelte:head>
@@ -251,6 +288,39 @@
 							{/each}
 						</select>
 					</div>
+
+					<div class="grid gap-2">
+						<Label for="rateLimitPreset">Rate Limit</Label>
+						<select
+							id="rateLimitPreset"
+							name="rateLimitPreset"
+							disabled={isSubmitting}
+							class={selectClass}
+							bind:value={selectedRateLimitPreset}
+						>
+							{#each apiKeyRateLimitPresets as preset}
+								<option value={preset}>{apiKeyRateLimitPresetLabels[preset]}</option>
+							{/each}
+						</select>
+						<p class="text-xs text-muted-foreground">
+							{apiKeyRateLimitPresetDescriptions[selectedRateLimitPreset]}
+						</p>
+						{#if selectedRateLimitPreset === 'custom'}
+							<div class="flex items-center gap-2 mt-2">
+								<Input
+									id="rateLimitCustom"
+									name="rateLimitCustom"
+									type="number"
+									min="1"
+									max="1000"
+									bind:value={customRateLimit}
+									disabled={isSubmitting}
+									class="w-24"
+								/>
+								<span class="text-sm text-muted-foreground">requests per minute</span>
+							</div>
+						{/if}
+					</div>
 				</div>
 
 				<Dialog.Footer class="mt-6">
@@ -259,6 +329,82 @@
 					</Button>
 					<Button type="submit" disabled={isSubmitting}>
 						{isSubmitting ? 'Creating...' : 'Create Key'}
+					</Button>
+				</Dialog.Footer>
+			</form>
+		</Dialog.Content>
+	</Dialog.Root>
+
+	<!-- Edit Rate Limit Dialog -->
+	<Dialog.Root bind:open={showRateLimitDialog} onOpenChange={closeRateLimitDialog}>
+		<Dialog.Content>
+			<Dialog.Header>
+				<Dialog.Title>Edit Rate Limit</Dialog.Title>
+				<Dialog.Description>
+					Update the rate limit for this API key.
+				</Dialog.Description>
+			</Dialog.Header>
+			<form
+				method="POST"
+				action="?/updateRateLimit"
+				use:enhance={() => {
+					isSubmitting = true;
+					return async ({ update }) => {
+						await update();
+						isSubmitting = false;
+					};
+				}}
+			>
+				<input type="hidden" name="keyId" value={editingKeyId} />
+				<div class="space-y-4">
+					{#if form?.action === 'updateRateLimit' && form?.error}
+						<div
+							class="bg-destructive/15 text-destructive rounded-md border border-destructive/20 p-3 text-sm"
+						>
+							{form.error}
+						</div>
+					{/if}
+
+					<div class="grid gap-2">
+						<Label for="editRateLimitPreset">Rate Limit</Label>
+						<select
+							id="editRateLimitPreset"
+							name="rateLimitPreset"
+							disabled={isSubmitting}
+							class={selectClass}
+							bind:value={editRateLimitPreset}
+						>
+							{#each apiKeyRateLimitPresets as preset}
+								<option value={preset}>{apiKeyRateLimitPresetLabels[preset]}</option>
+							{/each}
+						</select>
+						<p class="text-xs text-muted-foreground">
+							{apiKeyRateLimitPresetDescriptions[editRateLimitPreset]}
+						</p>
+						{#if editRateLimitPreset === 'custom'}
+							<div class="flex items-center gap-2 mt-2">
+								<Input
+									id="editRateLimitCustom"
+									name="rateLimitCustom"
+									type="number"
+									min="1"
+									max="1000"
+									bind:value={editCustomRateLimit}
+									disabled={isSubmitting}
+									class="w-24"
+								/>
+								<span class="text-sm text-muted-foreground">requests per minute</span>
+							</div>
+						{/if}
+					</div>
+				</div>
+
+				<Dialog.Footer class="mt-6">
+					<Button type="button" variant="outline" onclick={closeRateLimitDialog}>
+						Cancel
+					</Button>
+					<Button type="submit" disabled={isSubmitting}>
+						{isSubmitting ? 'Saving...' : 'Save'}
 					</Button>
 				</Dialog.Footer>
 			</form>
@@ -294,6 +440,9 @@
 									<Badge variant={key.scope === 'full' ? 'default' : 'secondary'}>
 										{apiKeyScopeLabels[key.scope]}
 									</Badge>
+									<Badge variant="outline">
+										{formatRateLimit(key.rateLimitPerMinute)}
+									</Badge>
 									{#if isRevoked(key.revokedAt)}
 										<Badge variant="destructive">Revoked</Badge>
 									{:else if isExpired(key.expiresAt)}
@@ -317,6 +466,18 @@
 
 							<div class="flex items-center gap-1">
 								{#if !isRevoked(key.revokedAt)}
+									<Button
+										type="button"
+										variant="ghost"
+										size="sm"
+										disabled={isSubmitting}
+										class="text-muted-foreground hover:text-foreground"
+										title="Edit rate limit"
+										onclick={() => openRateLimitDialog(key.id, key.rateLimitPerMinute)}
+									>
+										<SettingsIcon class="h-4 w-4" />
+										<span class="sr-only">Edit rate limit</span>
+									</Button>
 									<form
 										method="POST"
 										action="?/revokeKey"
