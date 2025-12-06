@@ -12,6 +12,11 @@
 #   ./scripts/test-dev.sh --db-name mydb     # Use specific database name
 #   ./scripts/test-dev.sh --help             # Show usage information
 #
+# Non-interactive sudo (Linux only):
+#   SUDO_PASSWORD='...' ./scripts/test-dev.sh           # Via environment (recommended)
+#   echo 'pass' | ./scripts/test-dev.sh --sudo-stdin    # Via stdin pipe
+#   ./scripts/test-dev.sh --sudo-password 'pass'        # Via argument (insecure)
+#
 # Requirements:
 #   - bun installed
 #   - PostgreSQL installed and running
@@ -36,6 +41,8 @@ LOG_ENABLED=true
 LOG_FILE=""
 CUSTOM_DB_NAME=""
 CUSTOM_ADMIN_PASSWORD=""
+SUDO_PASSWORD_ARG=""  # Password from --sudo-password argument
+SUDO_FROM_STDIN=false # Whether to read password from stdin
 
 # Generated values (set during initialization)
 DB_NAME=""
@@ -168,6 +175,13 @@ database_exists() {
 
 # Prompt for sudo password upfront and cache credentials (Linux only)
 # This ensures all subsequent sudo commands work without re-prompting
+#
+# Supports multiple authentication methods (in priority order):
+#   1. --sudo-password argument (insecure, shows warning)
+#   2. SUDO_PASSWORD environment variable (recommended for CI/CD)
+#   3. --sudo-stdin flag to read from stdin pipe
+#   4. Pre-cached credentials (existing sudo -n behavior)
+#   5. Interactive prompt (original behavior, fails for automation)
 prompt_sudo_upfront() {
     if [[ "$OS_TYPE" != "linux" ]]; then
         return 0
@@ -178,14 +192,48 @@ prompt_sudo_upfront() {
         return 0
     fi
 
-    echo ""
-    log_info "This script requires sudo privileges for PostgreSQL operations."
-    log_info "Please enter your password to cache sudo credentials."
-    echo ""
+    local password=""
 
-    # Prompt for sudo password (interactive)
-    if ! sudo -v; then
-        log_error "Failed to obtain sudo credentials"
+    # Priority 1: Command-line argument (least secure, but user requested)
+    if [[ -n "$SUDO_PASSWORD_ARG" ]]; then
+        log_warn "Using --sudo-password is insecure (visible in ps output)"
+        password="$SUDO_PASSWORD_ARG"
+    fi
+
+    # Priority 2: Environment variable (secure, recommended for CI/CD)
+    if [[ -z "$password" ]] && [[ -n "${SUDO_PASSWORD:-}" ]]; then
+        password="$SUDO_PASSWORD"
+    fi
+
+    # Priority 3: Stdin if flag is set
+    if [[ -z "$password" ]] && [[ "$SUDO_FROM_STDIN" == "true" ]]; then
+        if [[ -t 0 ]]; then
+            log_error "--sudo-stdin specified but stdin is a terminal (no pipe detected)"
+            exit 1
+        fi
+        read -r password
+    fi
+
+    # If we have a password from any method, try to cache credentials
+    if [[ -n "$password" ]]; then
+        log_info "Caching sudo credentials (non-interactive)..."
+        if ! printf '%s\n' "$password" | sudo -S -v 2>/dev/null; then
+            log_error "Failed to authenticate with provided sudo password"
+            exit 1
+        fi
+        # Clear password variables for security
+        unset SUDO_PASSWORD
+        SUDO_PASSWORD_ARG=""
+    else
+        # No automated password available - fail for non-interactive use
+        log_error "Sudo credentials required but not cached."
+        echo ""
+        echo "For non-interactive use, provide credentials via:"
+        echo "  1. Environment variable: SUDO_PASSWORD='...' $0"
+        echo "  2. Stdin pipe: echo 'password' | $0 --sudo-stdin"
+        echo "  3. Command-line: $0 --sudo-password 'password' (insecure)"
+        echo "  4. Pre-cache: sudo -v && $0"
+        echo ""
         exit 1
     fi
 
@@ -562,6 +610,18 @@ parse_arguments() {
                 LOG_ENABLED=false
                 shift
                 ;;
+            --sudo-password)
+                if [[ -z "${2:-}" ]]; then
+                    log_error "--sudo-password requires a value"
+                    exit 1
+                fi
+                SUDO_PASSWORD_ARG="$2"
+                shift 2
+                ;;
+            --sudo-stdin)
+                SUDO_FROM_STDIN=true
+                shift
+                ;;
             --help|-h)
                 show_help
                 exit 0
@@ -609,6 +669,16 @@ OPTIONS:
     --no-logs               Disable log file creation (console only)
     --help, -h              Show this help message
 
+SUDO OPTIONS (Linux only):
+    --sudo-password <pwd>   Provide sudo password (INSECURE: visible in ps)
+    --sudo-stdin            Read sudo password from stdin (for piped input)
+
+    For non-interactive/automated use, provide sudo password via:
+      - Environment: SUDO_PASSWORD='...' ./scripts/test-dev.sh (recommended)
+      - Stdin pipe:  echo 'password' | ./scripts/test-dev.sh --sudo-stdin
+      - Argument:    ./scripts/test-dev.sh --sudo-password 'pwd' (insecure)
+      - Pre-cached:  sudo -v && ./scripts/test-dev.sh
+
 EXAMPLES:
     # Quick ephemeral development session
     ./scripts/test-dev.sh
@@ -624,6 +694,12 @@ EXAMPLES:
 
     # Fixed admin password for automation
     ./scripts/test-dev.sh --admin-password mysecretpassword
+
+    # Non-interactive with sudo password (Linux, CI/CD)
+    SUDO_PASSWORD="sudopass" ./scripts/test-dev.sh
+
+    # Non-interactive via stdin pipe (Linux)
+    echo "sudopass" | ./scripts/test-dev.sh --sudo-stdin
 
 REQUIREMENTS:
     - bun installed (https://bun.sh)
