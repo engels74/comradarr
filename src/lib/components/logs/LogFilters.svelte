@@ -133,7 +133,9 @@
 	<!-- Search and Actions -->
 	<div class="flex flex-col sm:flex-row gap-3">
 		<div class="relative flex-1">
-			<SearchIcon class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+			<div class="pointer-events-none absolute inset-y-0 left-3 flex items-center">
+				<SearchIcon class="h-4 w-4 text-muted-foreground" />
+			</div>
 			<Input
 				type="text"
 				placeholder="Search logs..."
@@ -144,7 +146,7 @@
 			{#if localSearch}
 				<button
 					type="button"
-					class="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+					class="absolute inset-y-0 right-3 flex items-center text-muted-foreground hover:text-foreground"
 					onclick={clearSearch}
 				>
 					<XIcon class="h-4 w-4" />
