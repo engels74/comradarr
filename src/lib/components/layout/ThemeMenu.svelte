@@ -1,0 +1,48 @@
+<script lang="ts">
+	import * as DropdownMenu from '$lib/components/ui/dropdown-menu';
+	import SunIcon from '@lucide/svelte/icons/sun';
+	import MoonIcon from '@lucide/svelte/icons/moon';
+	import MonitorIcon from '@lucide/svelte/icons/monitor';
+	import { themeStore, type Theme } from '$lib/stores/theme.svelte';
+	import type { Component } from 'svelte';
+
+	interface ThemeOption {
+		value: Theme;
+		label: string;
+		icon: Component;
+	}
+
+	const themes: ThemeOption[] = [
+		{ value: 'light', label: 'Light', icon: SunIcon },
+		{ value: 'dark', label: 'Dark', icon: MoonIcon },
+		{ value: 'system', label: 'System', icon: MonitorIcon }
+	];
+
+	function handleThemeChange(value: string): void {
+		themeStore.setTheme(value as Theme);
+	}
+
+	// Get current icon based on resolved theme for the trigger
+	const getCurrentIcon = () => {
+		return themeStore.resolved === 'dark' ? MoonIcon : SunIcon;
+	};
+</script>
+
+<DropdownMenu.Sub>
+	<DropdownMenu.SubTrigger>
+		{@const Icon = getCurrentIcon()}
+		<Icon class="h-4 w-4 mr-2" />
+		<span>Theme</span>
+	</DropdownMenu.SubTrigger>
+	<DropdownMenu.SubContent>
+		<DropdownMenu.RadioGroup value={themeStore.current} onValueChange={handleThemeChange}>
+			{#each themes as theme (theme.value)}
+				{@const Icon = theme.icon}
+				<DropdownMenu.RadioItem value={theme.value}>
+					<Icon class="h-4 w-4 mr-2" />
+					{theme.label}
+				</DropdownMenu.RadioItem>
+			{/each}
+		</DropdownMenu.RadioGroup>
+	</DropdownMenu.SubContent>
+</DropdownMenu.Sub>

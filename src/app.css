@@ -49,10 +49,16 @@
   * {
     border-color: hsl(var(--border));
   }
-  body {
-    background-color: hsl(var(--background));
-    color: hsl(var(--foreground));
-  }
+}
+
+/*
+ * Body styles outside @layer for higher specificity.
+ * unocss-preset-shadcn injects oklch() styles, but our variables are HSL.
+ * These rules override the preset's body styles.
+ */
+html body {
+  background-color: hsl(var(--background));
+  color: hsl(var(--foreground));
 }
 
 /*

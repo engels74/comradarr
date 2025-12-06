@@ -8,6 +8,7 @@
 	import BarChart3Icon from '@lucide/svelte/icons/bar-chart-3';
 	import SettingsIcon from '@lucide/svelte/icons/settings';
 	import UserMenu from './UserMenu.svelte';
+	import ThemeToggle from './ThemeToggle.svelte';
 	import type { Snippet, Component } from 'svelte';
 
 	interface NavItem {
@@ -44,10 +45,11 @@
 <aside class="fixed left-0 top-0 z-40 h-screen w-60 border-r border-border bg-sidebar">
 	<div class="flex h-full flex-col">
 		<!-- Logo / App Title -->
-		<div class="flex h-16 items-center border-b border-border px-6">
+		<div class="flex h-16 items-center justify-between border-b border-border px-6">
 			<a href="/dashboard" class="flex items-center gap-2">
 				<span class="text-xl font-bold text-foreground">Comradarr</span>
 			</a>
+			<ThemeToggle />
 		</div>
 
 		<!-- Navigation -->

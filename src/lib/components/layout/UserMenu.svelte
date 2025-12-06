@@ -3,6 +3,7 @@
 	import { Button } from '$lib/components/ui/button';
 	import UserIcon from '@lucide/svelte/icons/user';
 	import LogOutIcon from '@lucide/svelte/icons/log-out';
+	import ThemeMenu from './ThemeMenu.svelte';
 
 	interface Props {
 		user: { id: number; username: string } | null;
@@ -23,6 +24,8 @@
 		</DropdownMenu.Trigger>
 		<DropdownMenu.Content align="start" class="w-52">
 			<DropdownMenu.Label>My Account</DropdownMenu.Label>
+			<DropdownMenu.Separator />
+			<ThemeMenu />
 			<DropdownMenu.Separator />
 			<DropdownMenu.Item>
 				<a href="/logout" class="flex w-full items-center gap-2">
