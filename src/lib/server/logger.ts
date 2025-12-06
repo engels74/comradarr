@@ -8,6 +8,7 @@
 
 import { logLevels, type LogLevel } from '$lib/schemas/settings';
 import { getCorrelationId } from '$lib/server/context';
+import { addLogEntry, type BufferedLogEntry } from '$lib/server/services/log-buffer';
 
 // =============================================================================
 // Types
@@ -242,8 +243,10 @@ export class Logger {
 		// Auto-include correlation ID from async context if not provided (Requirement 31.2)
 		const correlationId = (context?.correlationId as string | undefined) ?? getCorrelationId();
 
+		const timestamp = new Date().toISOString();
+
 		const entry: LogEntry = {
-			timestamp: new Date().toISOString(),
+			timestamp,
 			level,
 			module: this.module,
 			message,
@@ -253,6 +256,19 @@ export class Logger {
 
 		// Output as JSON to stdout
 		console.log(JSON.stringify(entry));
+
+		// Add to in-memory buffer for log viewer
+		// Extract non-standard fields as context
+		const { timestamp: _ts, level: _lvl, module: _mod, message: _msg, correlationId: _cid, ...restContext } = entry;
+		const bufferEntry: Omit<BufferedLogEntry, 'id'> = {
+			timestamp,
+			level,
+			module: this.module,
+			message,
+			...(correlationId !== undefined && { correlationId }),
+			...(Object.keys(restContext).length > 0 && { context: restContext })
+		};
+		addLogEntry(bufferEntry);
 	}
 
 	/**

@@ -6,6 +6,7 @@
 	import ListOrderedIcon from '@lucide/svelte/icons/list-ordered';
 	import CalendarClockIcon from '@lucide/svelte/icons/calendar-clock';
 	import BarChart3Icon from '@lucide/svelte/icons/bar-chart-3';
+	import ScrollTextIcon from '@lucide/svelte/icons/scroll-text';
 	import SettingsIcon from '@lucide/svelte/icons/settings';
 	import UserMenu from './UserMenu.svelte';
 	import ThemeToggle from './ThemeToggle.svelte';
@@ -30,6 +31,7 @@
 		{ label: 'Queue', href: '/queue', icon: ListOrderedIcon },
 		{ label: 'Schedules', href: '/schedules', icon: CalendarClockIcon },
 		{ label: 'Analytics', href: '/analytics', icon: BarChart3Icon },
+		{ label: 'Logs', href: '/logs', icon: ScrollTextIcon },
 		{ label: 'Settings', href: '/settings', icon: SettingsIcon }
 	];
 
