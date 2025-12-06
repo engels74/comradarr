@@ -27,9 +27,12 @@
 	</div>
 
 	<!-- Upcoming Schedules Section (Requirement 15.5) -->
-	<div class="mb-6">
-		<UpcomingSchedulePanel scheduledJobs={data.scheduledJobs} />
-	</div>
+	<!-- Only show when connectors are configured, as scheduled jobs are meaningless without them -->
+	{#if data.connectors.length > 0}
+		<div class="mb-6">
+			<UpcomingSchedulePanel scheduledJobs={data.scheduledJobs} />
+		</div>
+	{/if}
 
 	<!-- Connection Status Section -->
 	<div class="mb-6">
