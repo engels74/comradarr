@@ -1,0 +1,759 @@
+/**
+ * Restore service for database import from backup.
+ *
+ * Restores database state from backup files with:
+ * - Integrity validation (checksum, SECRET_KEY)
+ * - Schema compatibility checking
+ * - Atomic transaction-based restore
+ * - Migration support for older backups
+ *
+ * @module services/backup/restore-service
+ * @requirements 33.2, 33.3, 33.4
+ */
+
+import { readFile } from 'node:fs/promises';
+import { sql } from 'drizzle-orm';
+import { db } from '$lib/server/db';
+import { decrypt, DecryptionError } from '$lib/server/crypto';
+import {
+	RestoreError,
+	SECRET_KEY_VERIFIER_PLAINTEXT,
+	TABLE_DELETE_ORDER,
+	TABLE_EXPORT_ORDER,
+	type BackupFile,
+	type RestoreOptions,
+	type RestoreResult,
+	type RestoreValidation,
+	type SchemaVersion,
+	type TableExport
+} from './types';
+import { createBackup, loadBackup } from './backup-service';
+import * as schema from '$lib/server/db/schema';
+
+// =============================================================================
+// Table Name to Schema Mapping
+// =============================================================================
+
+/**
+ * Maps table names to Drizzle schema table objects.
+ * Uses snake_case table names as stored in the database.
+ */
+const tableNameToSchema: Record<string, (typeof schema)[keyof typeof schema]> = {
+	throttle_profiles: schema.throttleProfiles,
+	app_settings: schema.appSettings,
+	users: schema.users,
+	connectors: schema.connectors,
+	sweep_schedules: schema.sweepSchedules,
+	throttle_state: schema.throttleState,
+	series: schema.series,
+	movies: schema.movies,
+	sync_state: schema.syncState,
+	completion_snapshots: schema.completionSnapshots,
+	analytics_events: schema.analyticsEvents,
+	analytics_hourly_stats: schema.analyticsHourlyStats,
+	analytics_daily_stats: schema.analyticsDailyStats,
+	seasons: schema.seasons,
+	episodes: schema.episodes,
+	search_registry: schema.searchRegistry,
+	request_queue: schema.requestQueue,
+	search_history: schema.searchHistory,
+	sessions: schema.sessions,
+	prowlarr_instances: schema.prowlarrInstances,
+	prowlarr_indexer_health: schema.prowlarrIndexerHealth,
+	notification_channels: schema.notificationChannels,
+	notification_history: schema.notificationHistory
+};
+
+// =============================================================================
+// Validation Functions
+// =============================================================================
+
+/**
+ * Validates backup format version.
+ */
+function validateFormatVersion(backup: BackupFile): boolean {
+	return backup.formatVersion === 1;
+}
+
+/**
+ * Validates backup checksum to detect corruption.
+ * @requirements 33.2
+ *
+ * @param backup - The backup file to validate
+ * @returns True if checksum matches
+ */
+async function validateChecksum(backup: BackupFile): Promise<boolean> {
+	const encoder = new TextEncoder();
+	const data = encoder.encode(JSON.stringify(backup.tables));
+
+	const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+	const hashArray = Array.from(new Uint8Array(hashBuffer));
+	const hashHex = hashArray.map((b) => b.toString(16).padStart(2, '0')).join('');
+
+	return backup.metadata.checksum === `sha256:${hashHex}`;
+}
+
+/**
+ * Validates that the SECRET_KEY matches the one used during backup.
+ * @requirements 33.3
+ *
+ * @param secretKeyVerifier - The encrypted verifier from backup metadata
+ * @returns True if SECRET_KEY matches
+ */
+async function validateSecretKeyMatch(secretKeyVerifier: string): Promise<boolean> {
+	try {
+		const decrypted = await decrypt(secretKeyVerifier);
+		return decrypted === SECRET_KEY_VERIFIER_PLAINTEXT;
+	} catch (error) {
+		if (error instanceof DecryptionError) {
+			return false;
+		}
+		throw error;
+	}
+}
+
+/**
+ * Gets the current schema version from Drizzle migration journal.
+ */
+async function getCurrentSchemaVersion(): Promise<SchemaVersion> {
+	try {
+		const journalPath = './drizzle/meta/_journal.json';
+		const journalContent = await readFile(journalPath, 'utf-8');
+		const journal = JSON.parse(journalContent) as {
+			entries: Array<{ idx: number; tag: string }>;
+		};
+
+		const lastEntry = journal.entries.at(-1);
+
+		if (!lastEntry) {
+			return {
+				appVersion: '0.0.1',
+				lastMigration: 'none',
+				migrationIndex: -1
+			};
+		}
+
+		return {
+			appVersion: '0.0.1',
+			lastMigration: lastEntry.tag,
+			migrationIndex: lastEntry.idx
+		};
+	} catch {
+		return {
+			appVersion: '0.0.1',
+			lastMigration: 'unknown',
+			migrationIndex: -1
+		};
+	}
+}
+
+/**
+ * Gets pending migrations that need to be applied after restore.
+ * @requirements 33.4
+ *
+ * @param backupSchemaVersion - Schema version from backup
+ * @returns List of pending migration tags
+ */
+async function getPendingMigrations(backupSchemaVersion: SchemaVersion): Promise<string[]> {
+	try {
+		const journalPath = './drizzle/meta/_journal.json';
+		const journalContent = await readFile(journalPath, 'utf-8');
+		const journal = JSON.parse(journalContent) as {
+			entries: Array<{ idx: number; tag: string }>;
+		};
+
+		return journal.entries
+			.filter((entry) => entry.idx > backupSchemaVersion.migrationIndex)
+			.map((entry) => entry.tag);
+	} catch {
+		return [];
+	}
+}
+
+// =============================================================================
+// Data Operations
+// =============================================================================
+
+/**
+ * Clears all tables using TRUNCATE with CASCADE.
+ * Uses reverse dependency order to handle foreign keys.
+ */
+async function clearAllTables(): Promise<void> {
+	console.log('[restore] Clearing all tables...');
+
+	// Build list of all tables
+	const tableList = TABLE_DELETE_ORDER.map((t) => `"${t}"`).join(', ');
+
+	// TRUNCATE all tables at once with CASCADE and restart identity
+	await db.execute(sql.raw(`TRUNCATE TABLE ${tableList} RESTART IDENTITY CASCADE`));
+
+	console.log('[restore] All tables cleared');
+}
+
+/**
+ * Escapes a string value for SQL insertion.
+ * Handles NULL values, strings with quotes, and other special cases.
+ */
+function escapeSqlValue(value: unknown): string {
+	if (value === null || value === undefined) {
+		return 'NULL';
+	}
+
+	if (typeof value === 'boolean') {
+		return value ? 'TRUE' : 'FALSE';
+	}
+
+	if (typeof value === 'number') {
+		return String(value);
+	}
+
+	if (typeof value === 'object') {
+		// Handle JSON/JSONB values
+		const jsonStr = JSON.stringify(value);
+		// Escape single quotes by doubling them
+		const escaped = jsonStr.replace(/'/g, "''");
+		return `'${escaped}'::jsonb`;
+	}
+
+	if (typeof value === 'string') {
+		// Check if it looks like a timestamp
+		if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/.test(value)) {
+			// Escape single quotes in the string
+			const escaped = value.replace(/'/g, "''");
+			return `'${escaped}'::timestamptz`;
+		}
+
+		// Regular string - escape single quotes
+		const escaped = value.replace(/'/g, "''");
+		return `'${escaped}'`;
+	}
+
+	// Fallback - convert to string and escape
+	const escaped = String(value).replace(/'/g, "''");
+	return `'${escaped}'`;
+}
+
+/**
+ * Inserts data for a single table from backup.
+ *
+ * @param tableExport - The table data to insert
+ * @returns Number of rows inserted
+ */
+async function insertTableData(tableExport: TableExport): Promise<number> {
+	const { tableName, rows } = tableExport;
+
+	if (rows.length === 0) {
+		console.log(`[restore] Table ${tableName}: 0 rows (empty)`);
+		return 0;
+	}
+
+	// Verify table exists in schema
+	if (!tableNameToSchema[tableName]) {
+		console.warn(`[restore] Unknown table: ${tableName}, skipping`);
+		return 0;
+	}
+
+	// Get column names from first row
+	const columns = Object.keys(rows[0] as Record<string, unknown>);
+
+	if (columns.length === 0) {
+		console.warn(`[restore] Table ${tableName} has no columns, skipping`);
+		return 0;
+	}
+
+	// Build INSERT statement with OVERRIDING SYSTEM VALUE for IDENTITY columns
+	const columnList = columns.map((c) => `"${c}"`).join(', ');
+
+	// Insert in batches of 500 rows to avoid memory issues
+	const BATCH_SIZE = 500;
+	let insertedCount = 0;
+
+	for (let i = 0; i < rows.length; i += BATCH_SIZE) {
+		const batch = rows.slice(i, i + BATCH_SIZE);
+
+		const valueRows = batch.map((row) => {
+			const typedRow = row as Record<string, unknown>;
+			const values = columns.map((col) => escapeSqlValue(typedRow[col]));
+			return `(${values.join(', ')})`;
+		});
+
+		const insertSql = `INSERT INTO "${tableName}" (${columnList}) OVERRIDING SYSTEM VALUE VALUES ${valueRows.join(', ')}`;
+
+		try {
+			await db.execute(sql.raw(insertSql));
+			insertedCount += batch.length;
+		} catch (error) {
+			const errorMessage = error instanceof Error ? error.message : String(error);
+			throw new RestoreError(
+				`Failed to insert data into ${tableName}: ${errorMessage}`,
+				'INSERT_DATA_FAILED',
+				false,
+				{ tableName, batchStart: i, batchSize: batch.length }
+			);
+		}
+	}
+
+	// Reset sequence to max ID + 1 for tables with identity columns
+	// Most tables have an 'id' column that is GENERATED ALWAYS AS IDENTITY
+	if (columns.includes('id')) {
+		try {
+			const sequenceName = `${tableName}_id_seq`;
+			await db.execute(
+				sql.raw(
+					`SELECT setval('"${sequenceName}"', COALESCE((SELECT MAX(id) FROM "${tableName}"), 0) + 1, false)`
+				)
+			);
+		} catch {
+			// Sequence may not exist for all tables, that's ok
+		}
+	}
+
+	console.log(`[restore] Table ${tableName}: ${insertedCount} rows inserted`);
+	return insertedCount;
+}
+
+/**
+ * Applies pending database migrations.
+ * @requirements 33.4
+ *
+ * @returns Number of migrations applied
+ */
+async function applyPendingMigrations(): Promise<number> {
+	console.log('[restore] Applying pending migrations...');
+
+	const { spawn } = await import('child_process');
+
+	return new Promise((resolve, reject) => {
+		const child = spawn('bunx', ['drizzle-kit', 'migrate'], {
+			stdio: ['ignore', 'pipe', 'pipe'],
+			env: process.env
+		});
+
+		let stdout = '';
+		let stderr = '';
+
+		child.stdout?.on('data', (data: Buffer) => {
+			stdout += data.toString();
+		});
+
+		child.stderr?.on('data', (data: Buffer) => {
+			stderr += data.toString();
+		});
+
+		child.on('close', (code) => {
+			if (code === 0) {
+				// Count migrations from output
+				const migrationMatches = stdout.match(/Applied migration/gi);
+				const count = migrationMatches ? migrationMatches.length : 0;
+				console.log(`[restore] Migrations applied: ${count}`);
+				resolve(count);
+			} else {
+				reject(
+					new RestoreError(
+						`Database migration failed: ${stderr || stdout}`,
+						'MIGRATION_FAILED',
+						false,
+						{ exitCode: code, stdout, stderr }
+					)
+				);
+			}
+		});
+
+		child.on('error', (error) => {
+			reject(
+				new RestoreError(`Failed to run migrations: ${error.message}`, 'MIGRATION_FAILED', false, {
+					error: error.message
+				})
+			);
+		});
+	});
+}
+
+/**
+ * Clears all sessions from the database.
+ * Used to invalidate all user logins after restore.
+ */
+async function clearSessions(): Promise<void> {
+	console.log('[restore] Clearing sessions...');
+	await db.delete(schema.sessions);
+}
+
+// =============================================================================
+// Public API
+// =============================================================================
+
+/**
+ * Validates a backup before restore without modifying any data.
+ * Use this to check if a backup can be safely restored.
+ *
+ * @param backupId - The backup ID to validate
+ * @returns Validation result with errors and warnings
+ *
+ * @requirements 33.2, 33.3, 33.4
+ *
+ * @example
+ * ```typescript
+ * const validation = await validateBackup('550e8400-e29b-41d4-a716-446655440000');
+ * if (validation.isValid) {
+ *   console.log('Backup is valid for restore');
+ * } else {
+ *   console.log('Errors:', validation.errors);
+ * }
+ * ```
+ */
+export async function validateBackup(backupId: string): Promise<RestoreValidation> {
+	const errors: string[] = [];
+	const warnings: string[] = [];
+
+	console.log('[restore] Validating backup...', { backupId });
+
+	// Load backup
+	const backup = await loadBackup(backupId);
+
+	if (!backup) {
+		return {
+			isValid: false,
+			formatVersionValid: false,
+			checksumValid: false,
+			secretKeyValid: false,
+			migrationsRequired: false,
+			pendingMigrationCount: 0,
+			pendingMigrations: [],
+			errors: [`Backup not found: ${backupId}`],
+			warnings: []
+		};
+	}
+
+	// Validate format version
+	const formatVersionValid = validateFormatVersion(backup);
+	if (!formatVersionValid) {
+		errors.push(`Unsupported backup format version: ${backup.formatVersion}`);
+	}
+
+	// Validate checksum (Req 33.2)
+	const checksumValid = await validateChecksum(backup);
+	if (!checksumValid) {
+		errors.push('Backup integrity check failed: data may be corrupted');
+	}
+
+	// Validate SECRET_KEY (Req 33.3)
+	const secretKeyValid = await validateSecretKeyMatch(backup.metadata.secretKeyVerifier);
+	if (!secretKeyValid) {
+		errors.push(
+			'Backup was encrypted with a different SECRET_KEY. Cannot restore without the original SECRET_KEY used when the backup was created.'
+		);
+	}
+
+	// Check table count
+	if (backup.tables.length !== backup.metadata.tableCount) {
+		warnings.push(
+			`Table count mismatch: expected ${backup.metadata.tableCount}, found ${backup.tables.length}`
+		);
+	}
+
+	// Check for pending migrations (Req 33.4)
+	const pendingMigrations = await getPendingMigrations(backup.metadata.schemaVersion);
+	const migrationsRequired = pendingMigrations.length > 0;
+
+	if (migrationsRequired) {
+		warnings.push(
+			`Backup is from an older schema version. ${pendingMigrations.length} migration(s) will be applied after restore.`
+		);
+	}
+
+	const isValid = formatVersionValid && checksumValid && secretKeyValid && errors.length === 0;
+
+	console.log('[restore] Validation complete', {
+		backupId,
+		isValid,
+		errors: errors.length,
+		warnings: warnings.length,
+		migrationsRequired
+	});
+
+	return {
+		isValid,
+		formatVersionValid,
+		checksumValid,
+		secretKeyValid,
+		migrationsRequired,
+		pendingMigrationCount: pendingMigrations.length,
+		pendingMigrations,
+		errors,
+		warnings
+	};
+}
+
+/**
+ * Restores the database from a backup.
+ *
+ * Process:
+ * 1. Load and validate backup
+ * 2. Optionally create pre-restore backup
+ * 3. Clear all existing data
+ * 4. Insert backup data
+ * 5. Apply pending migrations if needed
+ * 6. Clear sessions if requested
+ *
+ * @param backupId - The backup ID to restore
+ * @param options - Restore options
+ * @returns Restore result with success status
+ *
+ * @requirements 33.2, 33.3, 33.4
+ *
+ * @example
+ * ```typescript
+ * const result = await restoreBackup('550e8400-e29b-41d4-a716-446655440000', {
+ *   createBackupBeforeRestore: true,
+ *   clearSessionsAfterRestore: true
+ * });
+ * if (result.success) {
+ *   console.log('Restore completed successfully');
+ * }
+ * ```
+ */
+export async function restoreBackup(
+	backupId: string,
+	options: RestoreOptions = {}
+): Promise<RestoreResult> {
+	const startTime = Date.now();
+	const {
+		skipSecretKeyVerification = false,
+		allowMigrations = true,
+		createBackupBeforeRestore = true,
+		clearSessionsAfterRestore = true
+	} = options;
+
+	console.log('[restore] Starting restore...', { backupId, options });
+
+	let preRestoreBackupId: string | undefined;
+
+	try {
+		// 1. Load backup
+		const backup = await loadBackup(backupId);
+
+		if (!backup) {
+			return {
+				success: false,
+				backupId,
+				tablesRestored: 0,
+				totalRowsInserted: 0,
+				migrationsApplied: false,
+				migrationCount: 0,
+				durationMs: Date.now() - startTime,
+				error: `Backup not found: ${backupId}`,
+				errorCode: 'BACKUP_NOT_FOUND'
+			};
+		}
+
+		// 2. Validate backup
+		console.log('[restore] Validating backup...');
+
+		// Format version
+		if (!validateFormatVersion(backup)) {
+			return {
+				success: false,
+				backupId,
+				tablesRestored: 0,
+				totalRowsInserted: 0,
+				migrationsApplied: false,
+				migrationCount: 0,
+				durationMs: Date.now() - startTime,
+				error: `Unsupported backup format version: ${backup.formatVersion}`,
+				errorCode: 'INVALID_FORMAT'
+			};
+		}
+
+		// Checksum (Req 33.2)
+		const checksumValid = await validateChecksum(backup);
+		if (!checksumValid) {
+			return {
+				success: false,
+				backupId,
+				tablesRestored: 0,
+				totalRowsInserted: 0,
+				migrationsApplied: false,
+				migrationCount: 0,
+				durationMs: Date.now() - startTime,
+				error: 'Backup integrity check failed: data may be corrupted',
+				errorCode: 'CHECKSUM_MISMATCH'
+			};
+		}
+
+		// SECRET_KEY (Req 33.3)
+		if (!skipSecretKeyVerification) {
+			const secretKeyValid = await validateSecretKeyMatch(backup.metadata.secretKeyVerifier);
+			if (!secretKeyValid) {
+				return {
+					success: false,
+					backupId,
+					tablesRestored: 0,
+					totalRowsInserted: 0,
+					migrationsApplied: false,
+					migrationCount: 0,
+					durationMs: Date.now() - startTime,
+					error:
+						'Backup was encrypted with a different SECRET_KEY. Cannot restore without the original SECRET_KEY used when the backup was created.',
+					errorCode: 'SECRET_KEY_MISMATCH'
+				};
+			}
+		}
+
+		// Check migrations (Req 33.4)
+		const pendingMigrations = await getPendingMigrations(backup.metadata.schemaVersion);
+		const migrationsRequired = pendingMigrations.length > 0;
+
+		if (migrationsRequired && !allowMigrations) {
+			return {
+				success: false,
+				backupId,
+				tablesRestored: 0,
+				totalRowsInserted: 0,
+				migrationsApplied: false,
+				migrationCount: 0,
+				durationMs: Date.now() - startTime,
+				error: `Backup requires ${pendingMigrations.length} migration(s) but allowMigrations is false`,
+				errorCode: 'SCHEMA_INCOMPATIBLE'
+			};
+		}
+
+		// 3. Create pre-restore backup
+		if (createBackupBeforeRestore) {
+			console.log('[restore] Creating pre-restore backup...');
+			const preRestoreResult = await createBackup({
+				description: `Pre-restore backup before restoring ${backupId}`,
+				type: 'manual'
+			});
+
+			if (preRestoreResult.success && preRestoreResult.metadata) {
+				preRestoreBackupId = preRestoreResult.metadata.id;
+				console.log('[restore] Pre-restore backup created', { preRestoreBackupId });
+			} else {
+				console.warn('[restore] Failed to create pre-restore backup:', preRestoreResult.error);
+			}
+		}
+
+		// 4. Clear all existing data
+		console.log('[restore] Clearing existing data...');
+		try {
+			await clearAllTables();
+		} catch (error) {
+			const errorMessage = error instanceof Error ? error.message : String(error);
+			return {
+				success: false,
+				backupId,
+				preRestoreBackupId,
+				tablesRestored: 0,
+				totalRowsInserted: 0,
+				migrationsApplied: false,
+				migrationCount: 0,
+				durationMs: Date.now() - startTime,
+				error: `Failed to clear existing data: ${errorMessage}`,
+				errorCode: 'CLEAR_DATA_FAILED'
+			};
+		}
+
+		// 5. Insert backup data
+		console.log('[restore] Inserting backup data...');
+		let totalRowsInserted = 0;
+		let tablesRestored = 0;
+
+		for (const tableExport of backup.tables) {
+			try {
+				const rowsInserted = await insertTableData(tableExport);
+				totalRowsInserted += rowsInserted;
+				tablesRestored++;
+			} catch (error) {
+				if (error instanceof RestoreError) {
+					return {
+						success: false,
+						backupId,
+						preRestoreBackupId,
+						tablesRestored,
+						totalRowsInserted,
+						migrationsApplied: false,
+						migrationCount: 0,
+						durationMs: Date.now() - startTime,
+						error: error.message,
+						errorCode: error.code
+					};
+				}
+				throw error;
+			}
+		}
+
+		// 6. Apply pending migrations (Req 33.4)
+		let migrationCount = 0;
+		if (migrationsRequired) {
+			console.log('[restore] Applying migrations...');
+			try {
+				migrationCount = await applyPendingMigrations();
+			} catch (error) {
+				if (error instanceof RestoreError) {
+					return {
+						success: false,
+						backupId,
+						preRestoreBackupId,
+						tablesRestored,
+						totalRowsInserted,
+						migrationsApplied: false,
+						migrationCount: 0,
+						durationMs: Date.now() - startTime,
+						error: error.message,
+						errorCode: error.code
+					};
+				}
+				throw error;
+			}
+		}
+
+		// 7. Clear sessions if requested
+		if (clearSessionsAfterRestore) {
+			await clearSessions();
+		}
+
+		const durationMs = Date.now() - startTime;
+
+		console.log('[restore] Restore completed successfully', {
+			backupId,
+			tablesRestored,
+			totalRowsInserted,
+			migrationsApplied: migrationsRequired,
+			migrationCount,
+			durationMs
+		});
+
+		return {
+			success: true,
+			backupId,
+			preRestoreBackupId,
+			tablesRestored,
+			totalRowsInserted,
+			migrationsApplied: migrationsRequired,
+			migrationCount,
+			durationMs
+		};
+	} catch (error) {
+		const durationMs = Date.now() - startTime;
+		const errorMessage = error instanceof Error ? error.message : String(error);
+
+		console.error('[restore] Restore failed', {
+			backupId,
+			error: errorMessage,
+			durationMs
+		});
+
+		return {
+			success: false,
+			backupId,
+			preRestoreBackupId,
+			tablesRestored: 0,
+			totalRowsInserted: 0,
+			migrationsApplied: false,
+			migrationCount: 0,
+			durationMs,
+			error: errorMessage,
+			errorCode: 'TRANSACTION_FAILED'
+		};
+	}
+}

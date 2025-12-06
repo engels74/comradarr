@@ -727,7 +727,7 @@
     - Include encrypted secrets
     - _Requirements: 33.1_
 
-  - [ ] 49.2 Create restore service
+  - [x] 49.2 Create restore service
     - Validate backup integrity
     - Check SECRET_KEY compatibility
     - Apply migrations if needed

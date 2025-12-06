@@ -240,3 +240,129 @@ export const TABLE_EXPORT_ORDER = [
  * to verify that the same SECRET_KEY is being used.
  */
 export const SECRET_KEY_VERIFIER_PLAINTEXT = 'comradarr-backup-verify';
+
+/**
+ * Tables to delete in reverse dependency order (for clearing before restore).
+ * This is the reverse of TABLE_EXPORT_ORDER.
+ */
+export const TABLE_DELETE_ORDER = [...TABLE_EXPORT_ORDER].reverse();
+
+// =============================================================================
+// Restore Types
+// =============================================================================
+
+/**
+ * Restore-specific error codes.
+ * @requirements 33.2, 33.3, 33.4
+ */
+export type RestoreErrorCode =
+	| 'BACKUP_NOT_FOUND'
+	| 'INVALID_FORMAT'
+	| 'CHECKSUM_MISMATCH'
+	| 'SECRET_KEY_MISMATCH'
+	| 'SCHEMA_INCOMPATIBLE'
+	| 'MIGRATION_FAILED'
+	| 'TRANSACTION_FAILED'
+	| 'CLEAR_DATA_FAILED'
+	| 'INSERT_DATA_FAILED'
+	| 'VALIDATION_FAILED';
+
+/**
+ * Restore-specific error class.
+ */
+export class RestoreError extends Error {
+	constructor(
+		message: string,
+		public readonly code: RestoreErrorCode,
+		public readonly recoverable: boolean = false,
+		public readonly details?: Record<string, unknown>
+	) {
+		super(message);
+		this.name = 'RestoreError';
+	}
+}
+
+/**
+ * Options for restore operation.
+ */
+export interface RestoreOptions {
+	/** Skip SECRET_KEY verification (not recommended, for recovery scenarios only) */
+	skipSecretKeyVerification?: boolean;
+
+	/** Force restore even if schema versions don't match (requires migrations) */
+	allowMigrations?: boolean;
+
+	/** Create a backup before restoring (recommended) */
+	createBackupBeforeRestore?: boolean;
+
+	/** Clear sessions after restore (invalidate all logins) */
+	clearSessionsAfterRestore?: boolean;
+}
+
+/**
+ * Result of backup validation before restore.
+ * @requirements 33.2, 33.3, 33.4
+ */
+export interface RestoreValidation {
+	/** Whether the backup is valid for restore */
+	isValid: boolean;
+
+	/** Format version check */
+	formatVersionValid: boolean;
+
+	/** Checksum integrity check (Req 33.2) */
+	checksumValid: boolean;
+
+	/** SECRET_KEY compatibility check (Req 33.3) */
+	secretKeyValid: boolean;
+
+	/** Whether migrations are required (Req 33.4) */
+	migrationsRequired: boolean;
+
+	/** Number of pending migrations */
+	pendingMigrationCount: number;
+
+	/** List of pending migration tags */
+	pendingMigrations: string[];
+
+	/** Any validation errors */
+	errors: string[];
+
+	/** Any validation warnings */
+	warnings: string[];
+}
+
+/**
+ * Result of a restore operation.
+ */
+export interface RestoreResult {
+	/** Whether the restore completed successfully */
+	success: boolean;
+
+	/** Backup ID that was restored */
+	backupId: string;
+
+	/** ID of pre-restore backup if created */
+	preRestoreBackupId?: string | undefined;
+
+	/** Number of tables restored */
+	tablesRestored: number;
+
+	/** Total rows inserted */
+	totalRowsInserted: number;
+
+	/** Whether migrations were applied */
+	migrationsApplied: boolean;
+
+	/** Number of migrations applied */
+	migrationCount: number;
+
+	/** Duration of restore operation in milliseconds */
+	durationMs: number;
+
+	/** Error message if restore failed */
+	error?: string | undefined;
+
+	/** Error code if restore failed */
+	errorCode?: RestoreErrorCode | undefined;
+}
