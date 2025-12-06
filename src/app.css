@@ -8,6 +8,8 @@
  */
 
 :root {
+  color-scheme: light;
+
   /* Core colors - Light mode (raw OKLCH values for UnoCSS compatibility) */
   --background: 0.9824 0.0013 286.3757;
   --foreground: 0.3211 0 0;
@@ -49,6 +51,8 @@
 }
 
 .dark {
+  color-scheme: dark;
+
   /* Core colors - Dark mode (raw OKLCH values for UnoCSS compatibility) */
   --background: 0.2303 0.0125 264.2926;
   --foreground: 0.9219 0 0;
@@ -101,4 +105,17 @@
 html body {
   background-color: oklch(var(--background));
   color: oklch(var(--foreground));
+}
+
+/*
+ * Native select element styling for proper dark mode support.
+ * Ensures dropdown options are readable in both themes.
+ */
+select {
+  color-scheme: inherit;
+}
+
+select option {
+  background-color: oklch(var(--popover));
+  color: oklch(var(--popover-foreground));
 }
