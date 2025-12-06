@@ -162,7 +162,16 @@ describe('ApiKeyRateLimiter', () => {
 
 	describe('recordRequest', () => {
 		it('should increment the request counter', async () => {
-			mockedIncrementRequestCounter.mockResolvedValueOnce();
+			const now = new Date();
+			mockedIncrementRequestCounter.mockResolvedValueOnce({
+				id: 1,
+				apiKeyId: 1,
+				requestsThisMinute: 1,
+				minuteWindowStart: now,
+				lastRequestAt: now,
+				createdAt: now,
+				updatedAt: now
+			});
 
 			await rateLimiter.recordRequest(1);
 
