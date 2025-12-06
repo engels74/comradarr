@@ -87,7 +87,7 @@ export const actions: Actions = {
 		}
 
 		// Verify password
-		const isValid = await verifyPassword(password, user.passwordHash);
+		const isValid = await verifyPassword(user.passwordHash, password);
 		if (!isValid) {
 			// Record failed login attempt (may trigger lockout - Req 35.1, 35.2)
 			const loginResult = await recordFailedLogin(user.id);
