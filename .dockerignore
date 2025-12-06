@@ -1,0 +1,51 @@
+# Dependencies
+node_modules
+
+# Build outputs
+.output
+.vercel
+.netlify
+.wrangler
+.svelte-kit
+build
+
+# Git
+.git
+.gitignore
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# IDE and editors
+.idea
+.vscode
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Tests
+tests
+**/*.test.ts
+**/*.spec.ts
+vitest.config.ts
+playwright.config.ts
+coverage
+
+# Development files
+.claude
+.kiro
+*.md
+!README.md
+
+# Vite cache
+vite.config.js.timestamp-*
+vite.config.ts.timestamp-*
+
+# Misc
+scripts
+*.log
