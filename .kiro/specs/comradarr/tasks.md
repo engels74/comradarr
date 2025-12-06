@@ -721,7 +721,7 @@
 
 ## Phase 22: Backup and Restore
 
-- [ ] 49. Implement backup/restore
+- [x] 49. Implement backup/restore
   - [x] 49.1 Create backup service
     - Export all database tables
     - Include encrypted secrets
@@ -733,7 +733,7 @@
     - Apply migrations if needed
     - _Requirements: 33.2, 33.3, 33.4_
 
-  - [ ] 49.3 Implement scheduled backups
+  - [x] 49.3 Implement scheduled backups
     - Create backups at configured interval
     - _Requirements: 33.5_
 

@@ -74,13 +74,28 @@ export const MAINTENANCE_SETTINGS_DEFAULTS = {
 } as const;
 
 /**
+ * Default values for backup settings.
+ *
+ * Requirements: 33.5
+ */
+export const BACKUP_SETTINGS_DEFAULTS = {
+	// Whether scheduled backups are enabled
+	backup_scheduled_enabled: 'false',
+	// Cron expression for backup schedule (default: daily at 2 AM)
+	backup_scheduled_cron: '0 2 * * *',
+	// Number of scheduled backups to retain
+	backup_retention_count: '7'
+} as const;
+
+/**
  * Combined default values for all application settings.
  */
 export const SETTINGS_DEFAULTS = {
 	...GENERAL_SETTINGS_DEFAULTS,
 	...SECURITY_SETTINGS_DEFAULTS,
 	...SEARCH_SETTINGS_DEFAULTS,
-	...MAINTENANCE_SETTINGS_DEFAULTS
+	...MAINTENANCE_SETTINGS_DEFAULTS,
+	...BACKUP_SETTINGS_DEFAULTS
 } as const;
 
 export type SettingKey = keyof typeof SETTINGS_DEFAULTS;
@@ -479,4 +494,84 @@ export async function getSecuritySettings(): Promise<SecuritySettings> {
  */
 export async function updateSecuritySettings(input: { authMode: AuthMode }): Promise<void> {
 	await setSetting('auth_mode', input.authMode);
+}
+
+// =============================================================================
+// Backup Settings Types
+// =============================================================================
+
+/**
+ * Represents the backup settings.
+ *
+ * Requirements: 33.5
+ */
+export interface BackupSettings {
+	/** Whether scheduled backups are enabled */
+	scheduledEnabled: boolean;
+	/** Cron expression for backup schedule */
+	scheduledCron: string;
+	/** Number of scheduled backups to retain */
+	retentionCount: number;
+}
+
+// =============================================================================
+// Backup Settings Operations
+// =============================================================================
+
+/**
+ * Gets backup settings with defaults applied.
+ *
+ * Requirements: 33.5
+ *
+ * @returns Backup settings object with all fields populated
+ */
+export async function getBackupSettings(): Promise<BackupSettings> {
+	const keys = Object.keys(BACKUP_SETTINGS_DEFAULTS) as Array<keyof typeof BACKUP_SETTINGS_DEFAULTS>;
+	const settings = await getSettings(keys);
+
+	return {
+		scheduledEnabled:
+			(settings['backup_scheduled_enabled'] ?? BACKUP_SETTINGS_DEFAULTS.backup_scheduled_enabled) ===
+			'true',
+		scheduledCron:
+			settings['backup_scheduled_cron'] ?? BACKUP_SETTINGS_DEFAULTS.backup_scheduled_cron,
+		retentionCount: Number(
+			settings['backup_retention_count'] ?? BACKUP_SETTINGS_DEFAULTS.backup_retention_count
+		)
+	};
+}
+
+/**
+ * Updates backup settings.
+ *
+ * Requirements: 33.5
+ *
+ * @param input - Settings to update
+ */
+export async function updateBackupSettings(input: BackupSettings): Promise<void> {
+	const updates: Array<{ key: string; value: string }> = [
+		{ key: 'backup_scheduled_enabled', value: input.scheduledEnabled ? 'true' : 'false' },
+		{ key: 'backup_scheduled_cron', value: input.scheduledCron },
+		{ key: 'backup_retention_count', value: String(input.retentionCount) }
+	];
+
+	// Use a transaction to ensure all settings are updated atomically
+	await db.transaction(async (tx) => {
+		for (const { key, value } of updates) {
+			await tx
+				.insert(appSettings)
+				.values({
+					key,
+					value,
+					updatedAt: new Date()
+				})
+				.onConflictDoUpdate({
+					target: appSettings.key,
+					set: {
+						value,
+						updatedAt: new Date()
+					}
+				});
+		}
+	});
 }

@@ -15,6 +15,7 @@
  * - 12.1: Track analytics (gap discovery, search volume, queue depth)
  * - 13.1: Execute VACUUM and ANALYZE database maintenance
  * - 15.4: Capture completion snapshots for trend visualization
+ * - 33.5: Automatic scheduled backups at configured interval
  * - 38.2: Periodic Prowlarr health checks
  *
  * Jobs:
@@ -29,6 +30,7 @@
  * - queue-depth-sampler: Every 5 minutes - samples queue depth for analytics
  * - analytics-hourly-aggregation: 5 min past each hour - aggregates raw events to hourly stats
  * - analytics-daily-aggregation: Daily at 1 AM - aggregates hourly to daily stats, cleans old events
+ * - scheduled-backup: Configurable cron - creates database backups with retention cleanup
  */
 
 import { Cron } from 'croner';
@@ -71,6 +73,8 @@ import {
 	cleanupOrphanedSearchState,
 	pruneSearchHistory
 } from '$lib/server/services/maintenance';
+import { createBackup, cleanupOldScheduledBackups } from '$lib/server/services/backup';
+import { getBackupSettings } from '$lib/server/db/queries/settings';
 
 // =============================================================================
 // Types
@@ -93,6 +97,9 @@ const jobs: Map<string, ScheduledJob> = new Map();
 
 /** Map of dynamic schedule jobs (loaded from database) */
 const dynamicJobs: Map<number, Cron> = new Map();
+
+/** Scheduled backup job (dynamically created based on settings) */
+let scheduledBackupJob: Cron | null = null;
 
 /** Flag to prevent multiple initializations */
 let initialized = false;
@@ -922,6 +929,16 @@ export function initializeScheduler(): void {
 		cron: dailyAggregationJob
 	});
 
+	// =========================================================================
+	// Scheduled Backup Job (Requirement 33.5)
+	// =========================================================================
+
+	// Initialize scheduled backup job from settings
+	// This is done asynchronously to avoid blocking initialization
+	initializeScheduledBackup().catch((err) => {
+		console.error('[scheduler] Failed to initialize scheduled backup:', err);
+	});
+
 	initialized = true;
 	console.log('[scheduler] Scheduled jobs initialized:', Array.from(jobs.keys()));
 }
@@ -947,6 +964,13 @@ export function stopScheduler(): void {
 	}
 	dynamicJobs.clear();
 
+	// Stop scheduled backup job
+	if (scheduledBackupJob) {
+		scheduledBackupJob.stop();
+		scheduledBackupJob = null;
+		console.log('[scheduler] Stopped scheduled backup job');
+	}
+
 	initialized = false;
 	console.log('[scheduler] All scheduled jobs stopped');
 }
@@ -967,6 +991,11 @@ export function getSchedulerStatus(): {
 		isRunning: boolean;
 		nextRun: Date | null;
 	}>;
+	scheduledBackup: {
+		enabled: boolean;
+		isRunning: boolean;
+		nextRun: Date | null;
+	} | null;
 } {
 	return {
 		initialized,
@@ -979,7 +1008,14 @@ export function getSchedulerStatus(): {
 			id,
 			isRunning: cron.isRunning(),
 			nextRun: cron.nextRun()
-		}))
+		})),
+		scheduledBackup: scheduledBackupJob
+			? {
+					enabled: true,
+					isRunning: scheduledBackupJob.isRunning(),
+					nextRun: scheduledBackupJob.nextRun()
+				}
+			: null
 	};
 }
 
@@ -1042,4 +1078,134 @@ export async function refreshDynamicSchedules(): Promise<void> {
 	}
 
 	console.log(`[scheduler] Loaded ${dynamicJobs.size} dynamic schedules`);
+}
+
+// =============================================================================
+// Scheduled Backup Management (Requirement 33.5)
+// =============================================================================
+
+/**
+ * Initialize the scheduled backup job from database settings.
+ * Called during scheduler initialization.
+ *
+ * Requirements: 33.5
+ */
+async function initializeScheduledBackup(): Promise<void> {
+	try {
+		const settings = await getBackupSettings();
+
+		if (!settings.scheduledEnabled) {
+			console.log('[scheduler] Scheduled backups are disabled');
+			return;
+		}
+
+		await createScheduledBackupJob(settings.scheduledCron, settings.retentionCount);
+	} catch (error) {
+		console.error('[scheduler] Failed to initialize scheduled backup:', error);
+	}
+}
+
+/**
+ * Creates the scheduled backup cron job.
+ *
+ * @param cronExpression - Cron expression for backup schedule
+ * @param retentionCount - Number of scheduled backups to retain
+ */
+async function createScheduledBackupJob(
+	cronExpression: string,
+	retentionCount: number
+): Promise<void> {
+	// Stop existing job if any
+	if (scheduledBackupJob) {
+		scheduledBackupJob.stop();
+		scheduledBackupJob = null;
+	}
+
+	try {
+		scheduledBackupJob = new Cron(
+			cronExpression,
+			{
+				name: 'scheduled-backup',
+				protect: true, // Prevent overlapping executions
+				catch: (err) => {
+					console.error('[scheduler] Scheduled backup failed:', err);
+				}
+			},
+			withJobContext('scheduled-backup', async () => {
+				const startTime = Date.now();
+				console.log('[scheduler] Starting scheduled backup...');
+
+				// Create the backup
+				const backupResult = await createBackup({
+					type: 'scheduled',
+					description: 'Scheduled automatic backup'
+				});
+
+				if (backupResult.success) {
+					console.log('[scheduler] Scheduled backup completed:', {
+						backupId: backupResult.metadata?.id,
+						filePath: backupResult.filePath,
+						fileSizeBytes: backupResult.fileSizeBytes,
+						durationMs: backupResult.durationMs
+					});
+
+					// Clean up old scheduled backups
+					const cleanupResult = await cleanupOldScheduledBackups(retentionCount);
+
+					if (cleanupResult.success && cleanupResult.deletedCount > 0) {
+						console.log('[scheduler] Cleaned up old scheduled backups:', {
+							deletedCount: cleanupResult.deletedCount
+						});
+					}
+				} else {
+					console.error('[scheduler] Scheduled backup failed:', {
+						error: backupResult.error,
+						durationMs: backupResult.durationMs
+					});
+				}
+
+				const totalDurationMs = Date.now() - startTime;
+				console.log('[scheduler] Scheduled backup job completed:', { totalDurationMs });
+			})
+		);
+
+		const nextRun = scheduledBackupJob.nextRun();
+		console.log('[scheduler] Scheduled backup job created:', {
+			cronExpression,
+			retentionCount,
+			nextRun: nextRun?.toISOString()
+		});
+	} catch (error) {
+		console.error('[scheduler] Failed to create scheduled backup job:', error);
+		scheduledBackupJob = null;
+	}
+}
+
+/**
+ * Refresh the scheduled backup job from database settings.
+ * Called when backup settings are updated.
+ *
+ * Requirements: 33.5
+ */
+export async function refreshScheduledBackup(): Promise<void> {
+	console.log('[scheduler] Refreshing scheduled backup configuration...');
+
+	try {
+		const settings = await getBackupSettings();
+
+		if (!settings.scheduledEnabled) {
+			// Disable scheduled backups
+			if (scheduledBackupJob) {
+				scheduledBackupJob.stop();
+				scheduledBackupJob = null;
+				console.log('[scheduler] Scheduled backups disabled');
+			}
+			return;
+		}
+
+		// Create or recreate the job with new settings
+		await createScheduledBackupJob(settings.scheduledCron, settings.retentionCount);
+	} catch (error) {
+		console.error('[scheduler] Failed to refresh scheduled backup:', error);
+	}
 }

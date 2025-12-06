@@ -129,3 +129,33 @@ export const PasswordChangeSchema = v.pipe(
 
 export type PasswordChangeInput = v.InferInput<typeof PasswordChangeSchema>;
 export type PasswordChangeOutput = v.InferOutput<typeof PasswordChangeSchema>;
+
+// =============================================================================
+// Backup Settings (Requirements: 33.5)
+// =============================================================================
+
+/**
+ * Backup settings form validation schema.
+ *
+ * Validates:
+ * - scheduledEnabled: boolean to enable/disable scheduled backups
+ * - scheduledCron: valid cron expression (basic validation)
+ * - retentionCount: number of scheduled backups to retain (1-100)
+ */
+export const BackupSettingsSchema = v.object({
+	scheduledEnabled: v.boolean('Scheduled enabled must be a boolean'),
+	scheduledCron: v.pipe(
+		v.string('Cron expression is required'),
+		v.trim(),
+		v.minLength(9, 'Invalid cron expression'),
+		v.maxLength(100, 'Cron expression is too long')
+	),
+	retentionCount: v.pipe(
+		v.number('Retention count must be a number'),
+		v.minValue(1, 'Retention count must be at least 1'),
+		v.maxValue(100, 'Retention count cannot exceed 100')
+	)
+});
+
+export type BackupSettingsInput = v.InferInput<typeof BackupSettingsSchema>;
+export type BackupSettingsOutput = v.InferOutput<typeof BackupSettingsSchema>;

@@ -460,3 +460,93 @@ export async function getBackupInfo(backupId: string): Promise<BackupInfo | null
 		return null;
 	}
 }
+
+// =============================================================================
+// Scheduled Backup Cleanup
+// =============================================================================
+
+/**
+ * Result of scheduled backup cleanup operation.
+ */
+export interface CleanupResult {
+	/** Whether the cleanup completed successfully */
+	success: boolean;
+	/** Number of scheduled backups deleted */
+	deletedCount: number;
+	/** Error message if cleanup failed */
+	error?: string;
+}
+
+/**
+ * Cleans up old scheduled backups, keeping only the most recent ones.
+ *
+ * Only deletes backups with type: 'scheduled'. Manual backups are preserved.
+ *
+ * @param retentionCount - Number of scheduled backups to retain
+ * @returns CleanupResult with success status and deleted count
+ *
+ * @requirements 33.5
+ *
+ * @example
+ * ```typescript
+ * const result = await cleanupOldScheduledBackups(7);
+ * if (result.success) {
+ *   console.log('Deleted', result.deletedCount, 'old scheduled backups');
+ * }
+ * ```
+ */
+export async function cleanupOldScheduledBackups(retentionCount: number): Promise<CleanupResult> {
+	try {
+		// Get all backups
+		const allBackups = await listBackups();
+
+		// Filter to only scheduled backups
+		const scheduledBackups = allBackups.filter(
+			(backup) => backup.metadata.type === 'scheduled'
+		);
+
+		// If we have fewer or equal to retention count, nothing to delete
+		if (scheduledBackups.length <= retentionCount) {
+			return {
+				success: true,
+				deletedCount: 0
+			};
+		}
+
+		// Backups are already sorted by creation date (newest first)
+		// Delete backups beyond the retention count
+		const backupsToDelete = scheduledBackups.slice(retentionCount);
+		let deletedCount = 0;
+
+		for (const backup of backupsToDelete) {
+			const deleted = await deleteBackup(backup.id);
+			if (deleted) {
+				deletedCount++;
+				console.log('[backup] Cleaned up old scheduled backup:', {
+					backupId: backup.id,
+					createdAt: backup.metadata.createdAt
+				});
+			}
+		}
+
+		console.log('[backup] Scheduled backup cleanup completed:', {
+			totalScheduled: scheduledBackups.length,
+			retained: retentionCount,
+			deleted: deletedCount
+		});
+
+		return {
+			success: true,
+			deletedCount
+		};
+	} catch (error) {
+		const errorMessage = error instanceof Error ? error.message : String(error);
+		console.error('[backup] Scheduled backup cleanup failed:', errorMessage);
+
+		return {
+			success: false,
+			deletedCount: 0,
+			error: errorMessage
+		};
+	}
+}
