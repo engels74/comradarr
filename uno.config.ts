@@ -9,7 +9,7 @@ export default defineConfig({
 	presets: [
 		presetWind(),
 		presetAnimations(),
-		presetShadcn({ color: 'slate' })
+		presetShadcn()
 	],
 	shortcuts: {
 		// Buttons

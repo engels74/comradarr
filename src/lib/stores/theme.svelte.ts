@@ -77,7 +77,8 @@ class ThemeStore {
 		const cycle: Theme[] = ['dark', 'light', 'system'];
 		const currentIndex = cycle.indexOf(this.current);
 		const nextIndex = (currentIndex + 1) % cycle.length;
-		this.setTheme(cycle[nextIndex]);
+		// Safe assertion: nextIndex is always within bounds due to modulo
+		this.setTheme(cycle[nextIndex]!);
 	}
 }
 
