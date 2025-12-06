@@ -43,6 +43,7 @@ CUSTOM_DB_NAME=""
 CUSTOM_ADMIN_PASSWORD=""
 SUDO_PASSWORD_ARG=""  # Password from --sudo-password argument
 SUDO_FROM_STDIN=false # Whether to read password from stdin
+SKIP_AUTH=false       # Enable local network bypass authentication
 
 # Generated values (set during initialization)
 DB_NAME=""
@@ -422,6 +423,23 @@ SCRIPT_EOF
     log_success "Admin user created"
 }
 
+configure_skip_auth() {
+    if [[ "$SKIP_AUTH" != "true" ]]; then
+        return
+    fi
+
+    log_info "Configuring authentication bypass (local_bypass mode)..."
+
+    # Insert auth_mode setting into app_settings table
+    PGPASSWORD="$DB_PASSWORD" psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" -q -c "
+        INSERT INTO app_settings (key, value, updated_at)
+        VALUES ('auth_mode', 'local_bypass', NOW())
+        ON CONFLICT (key) DO UPDATE SET value = 'local_bypass', updated_at = NOW();
+    "
+
+    log_success "Authentication bypass enabled (no login required)"
+}
+
 # -----------------------------------------------------------------------------
 # Cleanup Functions
 # -----------------------------------------------------------------------------
@@ -511,7 +529,11 @@ display_banner() {
     echo -e "${CYAN}${BOLD}║${NC} Mode:        ${mode_label}"
     echo -e "${CYAN}${BOLD}║${NC} Dev Server:  ${GREEN}http://localhost:${DEV_PORT}${NC}"
     echo -e "${CYAN}${BOLD}║${NC} Database:    ${GREEN}postgres://${DB_USER}:${DB_PASSWORD_ENCODED}@${DB_HOST}:${DB_PORT}/${DB_NAME}${NC}"
-    echo -e "${CYAN}${BOLD}║${NC} Admin Login: ${GREEN}admin${NC} / ${GREEN}${ADMIN_PASSWORD}${NC}"
+    if [[ "$SKIP_AUTH" == "true" ]]; then
+        echo -e "${CYAN}${BOLD}║${NC} Auth:        ${YELLOW}Skipped${NC} (local bypass enabled)"
+    else
+        echo -e "${CYAN}${BOLD}║${NC} Admin Login: ${GREEN}admin${NC} / ${GREEN}${ADMIN_PASSWORD}${NC}"
+    fi
     if [[ "$LOG_ENABLED" == "true" ]] && [[ -n "$LOG_FILE" ]]; then
         echo -e "${CYAN}${BOLD}║${NC} Log File:    ${GREEN}${LOG_FILE}${NC}"
     fi
@@ -622,6 +644,10 @@ parse_arguments() {
                 SUDO_FROM_STDIN=true
                 shift
                 ;;
+            --skip-auth)
+                SKIP_AUTH=true
+                shift
+                ;;
             --help|-h)
                 show_help
                 exit 0
@@ -667,6 +693,7 @@ OPTIONS:
     --port <port>           Dev server port (default: 5173)
     --db-port <port>        PostgreSQL port (default: 5432)
     --no-logs               Disable log file creation (console only)
+    --skip-auth             Skip authentication (enables local network bypass)
     --help, -h              Show this help message
 
 SUDO OPTIONS (Linux only):
@@ -784,6 +811,7 @@ main() {
     setup_database
     run_migrations
     create_admin_user
+    configure_skip_auth
 
     # Display startup banner
     display_banner
