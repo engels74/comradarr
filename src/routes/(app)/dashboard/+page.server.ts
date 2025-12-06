@@ -40,6 +40,26 @@ const JOB_METADATA: Record<string, { displayName: string; description: string }>
 	'throttle-window-reset': {
 		displayName: 'Rate Limit Reset',
 		description: 'Resets throttle counters'
+	},
+	'notification-batch-processor': {
+		displayName: 'Notifications',
+		description: 'Processes notification batches'
+	},
+	'queue-depth-sampler': {
+		displayName: 'Queue Sampler',
+		description: 'Samples queue depth for analytics'
+	},
+	'analytics-hourly-aggregation': {
+		displayName: 'Hourly Stats',
+		description: 'Aggregates events to hourly stats'
+	},
+	'analytics-daily-aggregation': {
+		displayName: 'Daily Stats',
+		description: 'Aggregates hourly to daily stats'
+	},
+	'db-maintenance': {
+		displayName: 'DB Maintenance',
+		description: 'Database optimization (VACUUM)'
 	}
 };
 
