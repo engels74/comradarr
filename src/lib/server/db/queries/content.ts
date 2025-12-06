@@ -904,7 +904,7 @@ export async function getContentStatusCounts(connectorId?: number): Promise<Cont
 			.where(movieConnectorCondition),
 		// Series with missing episodes (count distinct series)
 		db
-			.select({ count: sql<number>`COUNT(DISTINCT s.series_id)::int` })
+			.select({ count: sql<number>`COUNT(DISTINCT ${seasons.seriesId})::int` })
 			.from(episodes)
 			.innerJoin(seasons, eq(episodes.seasonId, seasons.id))
 			.where(
@@ -927,7 +927,7 @@ export async function getContentStatusCounts(connectorId?: number): Promise<Cont
 			),
 		// Series with upgrade episodes (count distinct series)
 		db
-			.select({ count: sql<number>`COUNT(DISTINCT s.series_id)::int` })
+			.select({ count: sql<number>`COUNT(DISTINCT ${seasons.seriesId})::int` })
 			.from(episodes)
 			.innerJoin(seasons, eq(episodes.seasonId, seasons.id))
 			.where(
