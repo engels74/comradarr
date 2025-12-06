@@ -20,9 +20,12 @@ import {
 	isArrClientError,
 	type CommandResponse
 } from '$lib/server/connectors';
+import { createLogger } from '$lib/server/logger';
 import { throttleEnforcer } from '$lib/server/services/throttle';
 import { prowlarrHealthMonitor } from '$lib/server/services/prowlarr';
 import type { ContentType, SearchType } from './types';
+
+const logger = createLogger('dispatcher');
 
 // =============================================================================
 // Types
@@ -154,7 +157,7 @@ async function checkProwlarrHealth(): Promise<void> {
 		const staleData = cachedHealth.some((h) => h.isStale);
 
 		if (rateLimitedIndexers.length > 0) {
-			console.warn('[dispatcher] Prowlarr health warning:', {
+			logger.warn('Prowlarr health warning', {
 				rateLimitedIndexers: rateLimitedIndexers.length,
 				totalIndexers: cachedHealth.length,
 				indexerNames: rateLimitedIndexers.map((h) => h.name),
@@ -164,10 +167,9 @@ async function checkProwlarrHealth(): Promise<void> {
 	} catch (error) {
 		// Requirement 38.6: Continue normal operation if Prowlarr unreachable
 		// Log error but do not throw - this check is purely informational
-		console.warn(
-			'[dispatcher] Prowlarr health check failed (continuing dispatch):',
-			error instanceof Error ? error.message : 'Unknown error'
-		);
+		logger.warn('Prowlarr health check failed (continuing dispatch)', {
+			error: error instanceof Error ? error.message : 'Unknown error'
+		});
 	}
 }
 

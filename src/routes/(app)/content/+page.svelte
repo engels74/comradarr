@@ -22,6 +22,23 @@
 	let loadError = $state<string | null>(null);
 	let lastDataContent = $state<ContentItem[] | null>(null);
 
+	// Toast-like feedback state
+	let feedbackMessage = $state<string | null>(null);
+	let feedbackTimeout: ReturnType<typeof setTimeout> | null = null;
+
+	/**
+	 * Show feedback message temporarily.
+	 */
+	function showFeedback(message: string) {
+		if (feedbackTimeout) {
+			clearTimeout(feedbackTimeout);
+		}
+		feedbackMessage = message;
+		feedbackTimeout = setTimeout(() => {
+			feedbackMessage = null;
+		}, 3000);
+	}
+
 	// Reset loaded items when filters change (detected via data.content changing)
 	$effect(() => {
 		// Only update when data.content reference changes (filter change or initial load)
@@ -178,8 +195,7 @@
 	 * Handle action completion (show toast/notification).
 	 */
 	function handleActionComplete(message: string) {
-		// For now, just log - could integrate with a toast system later
-		console.log('Bulk action completed:', message);
+		showFeedback(message);
 	}
 </script>
 
@@ -318,6 +334,13 @@
 					</Dialog.Root>
 				{/if}
 			</div>
+		</div>
+	{/if}
+
+	<!-- Feedback toast -->
+	{#if feedbackMessage}
+		<div class="fixed bottom-4 right-4 z-50 bg-background border rounded-lg shadow-lg px-4 py-3 animate-in slide-in-from-bottom-2">
+			<p class="text-sm font-medium">{feedbackMessage}</p>
 		</div>
 	{/if}
 </div>
