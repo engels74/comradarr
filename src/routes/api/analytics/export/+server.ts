@@ -8,12 +8,13 @@
  * Returns:
  * - CSV file download with analytics data
  *
- * Requirements: 12.4, 20.4
+ * Requirements: 12.4, 20.4, 34.2
  */
 
 import { error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { getDailyStatsForExport, type ExportRow } from '$lib/server/db/queries/analytics';
+import { requireScope } from '$lib/server/auth';
 
 /**
  * CSV column headers.
@@ -110,7 +111,10 @@ function parseDate(dateString: string | null, paramName: string): Date {
 	return date;
 }
 
-export const GET: RequestHandler = async ({ url }) => {
+export const GET: RequestHandler = async ({ url, locals }) => {
+	// Require read scope for read operations (Requirement 34.2)
+	requireScope(locals, 'read');
+
 	// Parse and validate date parameters
 	const startDateParam = url.searchParams.get('startDate');
 	const endDateParam = url.searchParams.get('endDate');

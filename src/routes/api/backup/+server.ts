@@ -4,12 +4,13 @@
  * POST /api/backup - Create a new backup
  * GET /api/backup - List all available backups
  *
- * @requirements 33.1
+ * @requirements 33.1, 34.2
  */
 
 import { json, error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { createBackup, listBackups } from '$lib/server/services/backup';
+import { requireScope } from '$lib/server/auth';
 
 /**
  * POST /api/backup
@@ -21,9 +22,13 @@ import { createBackup, listBackups } from '$lib/server/services/backup';
  *
  * Returns:
  * - 200: Backup metadata on success
+ * - 401: Not authenticated
+ * - 403: Insufficient scope (API key with read-only access)
  * - 500: Error message on failure
  */
-export const POST: RequestHandler = async ({ request }) => {
+export const POST: RequestHandler = async ({ request, locals }) => {
+	// Require full scope for write operations (Requirement 34.2)
+	requireScope(locals, 'full');
 	let description: string | undefined;
 
 	try {
@@ -58,8 +63,12 @@ export const POST: RequestHandler = async ({ request }) => {
  *
  * Returns:
  * - 200: Array of backup info objects
+ * - 401: Not authenticated
  */
-export const GET: RequestHandler = async () => {
+export const GET: RequestHandler = async ({ locals }) => {
+	// Require read scope for read operations (Requirement 34.2)
+	requireScope(locals, 'read');
+
 	const backups = await listBackups();
 
 	return json({

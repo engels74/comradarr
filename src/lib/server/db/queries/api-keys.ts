@@ -164,15 +164,22 @@ export async function getApiKey(id: number, userId: number): Promise<ApiKeyDispl
 }
 
 /**
+ * Result of API key validation.
+ */
+export interface ValidateApiKeyResult {
+	userId: number;
+	scope: ApiKeyScope;
+	keyId: number;
+}
+
+/**
  * Validates an API key and returns user info if valid.
  * Updates lastUsedAt on successful validation.
  *
  * @param key - The full API key to validate
- * @returns User ID and scope if valid, null if invalid/expired
+ * @returns User ID, scope, and key ID if valid, null if invalid/expired
  */
-export async function validateApiKey(
-	key: string
-): Promise<{ userId: number; scope: ApiKeyScope } | null> {
+export async function validateApiKey(key: string): Promise<ValidateApiKeyResult | null> {
 	// Must start with cmdr_ prefix
 	if (!key.startsWith(KEY_PREFIX)) {
 		return null;
@@ -204,7 +211,8 @@ export async function validateApiKey(
 
 			return {
 				userId: candidate.userId,
-				scope: candidate.scope as ApiKeyScope
+				scope: candidate.scope as ApiKeyScope,
+				keyId: candidate.id
 			};
 		}
 	}

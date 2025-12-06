@@ -18,6 +18,12 @@ declare global {
 			sessionId?: string;
 			/** True when auth is bypassed for local network access (Req 10.3) */
 			isLocalBypass?: boolean;
+			/** True when authenticated via API key (Req 34.2) */
+			isApiKey?: boolean;
+			/** API key scope when authenticated via API key (Req 34.2) */
+			apiKeyScope?: 'read' | 'full';
+			/** API key ID for logging when authenticated via API key (Req 34.4) */
+			apiKeyId?: number;
 		}
 		// interface PageData {}
 		// interface PageState {}

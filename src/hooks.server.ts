@@ -2,6 +2,10 @@ import type { Handle } from '@sveltejs/kit';
 import { validateSession, isLocalNetworkIP, getClientIP } from '$lib/server/auth';
 import { runWithContext, type RequestContext } from '$lib/server/context';
 import { getSecuritySettings } from '$lib/server/db/queries/settings';
+import { validateApiKey } from '$lib/server/db/queries/api-keys';
+import { db } from '$lib/server/db';
+import { users } from '$lib/server/db/schema';
+import { eq } from 'drizzle-orm';
 import { initializeScheduler } from '$lib/server/scheduler';
 import { initializeLogLevel } from '$lib/server/logger';
 
@@ -37,15 +41,46 @@ export const handle: Handle = async ({ event, resolve }) => {
 	const correlationId = event.request.headers.get('x-correlation-id') ?? crypto.randomUUID();
 	event.locals.correlationId = correlationId;
 
-	// Session validation (Requirements 10.1, 10.2)
-	const sessionId = event.cookies.get(SESSION_COOKIE_NAME);
-	if (sessionId) {
-		event.locals.user = await validateSession(sessionId);
-		if (event.locals.user) {
-			event.locals.sessionId = sessionId;
+	// API key authentication (Requirement 34.2)
+	// Check X-API-Key header before session validation
+	const apiKey = event.request.headers.get('x-api-key');
+	if (apiKey) {
+		const apiKeyResult = await validateApiKey(apiKey);
+		if (apiKeyResult) {
+			// Look up user data for the API key owner
+			const userResult = await db
+				.select({
+					id: users.id,
+					username: users.username,
+					displayName: users.displayName,
+					role: users.role
+				})
+				.from(users)
+				.where(eq(users.id, apiKeyResult.userId))
+				.limit(1);
+
+			const user = userResult[0];
+			if (user) {
+				event.locals.user = user;
+				event.locals.isApiKey = true;
+				event.locals.apiKeyScope = apiKeyResult.scope;
+				event.locals.apiKeyId = apiKeyResult.keyId;
+			}
 		}
-	} else {
-		event.locals.user = null;
+	}
+
+	// Session validation (Requirements 10.1, 10.2)
+	// Only check session if not already authenticated via API key
+	if (!event.locals.user) {
+		const sessionId = event.cookies.get(SESSION_COOKIE_NAME);
+		if (sessionId) {
+			event.locals.user = await validateSession(sessionId);
+			if (event.locals.user) {
+				event.locals.sessionId = sessionId;
+			}
+		} else {
+			event.locals.user = null;
+		}
 	}
 
 	// Local network bypass (Requirement 10.3)

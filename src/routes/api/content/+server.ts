@@ -11,6 +11,8 @@
  * - search: Search by title
  * - sort: Sort column ('title', 'connector', 'year')
  * - order: Sort direction ('asc', 'desc')
+ *
+ * @requirements 34.2
  */
 
 import { json, error } from '@sveltejs/kit';
@@ -24,11 +26,15 @@ import {
 	type SortColumn,
 	type SortDirection
 } from '$lib/server/db/queries/content';
+import { requireScope } from '$lib/server/auth';
 
 const MAX_LIMIT = 100;
 const DEFAULT_LIMIT = 50;
 
-export const GET: RequestHandler = async ({ url }) => {
+export const GET: RequestHandler = async ({ url, locals }) => {
+	// Require read scope for read operations (Requirement 34.2)
+	requireScope(locals, 'read');
+
 	// Parse query parameters
 	const cursor = url.searchParams.get('cursor') ?? undefined;
 	const limitParam = url.searchParams.get('limit');

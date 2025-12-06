@@ -4,12 +4,13 @@
  * GET /api/backup/[id] - Download a backup file
  * DELETE /api/backup/[id] - Delete a backup
  *
- * @requirements 33.1
+ * @requirements 33.1, 34.2
  */
 
 import { error, json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { deleteBackup, loadBackup, getBackupInfo } from '$lib/server/services/backup';
+import { requireScope } from '$lib/server/auth';
 
 /**
  * GET /api/backup/[id]
@@ -21,9 +22,13 @@ import { deleteBackup, loadBackup, getBackupInfo } from '$lib/server/services/ba
  *
  * Returns:
  * - 200: JSON backup file (Content-Disposition: attachment)
+ * - 401: Not authenticated
  * - 404: Backup not found
  */
-export const GET: RequestHandler = async ({ params }) => {
+export const GET: RequestHandler = async ({ params, locals }) => {
+	// Require read scope for read operations (Requirement 34.2)
+	requireScope(locals, 'read');
+
 	const { id } = params;
 
 	const backup = await loadBackup(id);
@@ -54,9 +59,14 @@ export const GET: RequestHandler = async ({ params }) => {
  *
  * Returns:
  * - 200: Success confirmation
+ * - 401: Not authenticated
+ * - 403: Insufficient scope (API key with read-only access)
  * - 404: Backup not found
  */
-export const DELETE: RequestHandler = async ({ params }) => {
+export const DELETE: RequestHandler = async ({ params, locals }) => {
+	// Require full scope for write operations (Requirement 34.2)
+	requireScope(locals, 'full');
+
 	const { id } = params;
 
 	// Check if backup exists first

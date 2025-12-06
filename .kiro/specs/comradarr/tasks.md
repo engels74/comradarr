@@ -748,7 +748,7 @@
     - Store keys securely
     - _Requirements: 34.1_
 
-  - [ ] 51.2 Implement API key authentication
+  - [x] 51.2 Implement API key authentication
     - Validate X-API-Key header
     - Enforce scope restrictions
     - _Requirements: 34.2_
