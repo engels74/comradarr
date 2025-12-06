@@ -1,7 +1,7 @@
 /**
  * API Keys settings page server load and actions.
  *
- * Requirement: 34.1
+ * Requirements: 34.1, 34.3
  */
 
 import type { PageServerLoad, Actions } from './$types';
@@ -9,6 +9,7 @@ import {
 	getApiKeysByUser,
 	createApiKey,
 	deleteApiKey,
+	revokeApiKey,
 	apiKeyNameExists,
 	type ApiKeyScope
 } from '$lib/server/db/queries/api-keys';
@@ -156,6 +157,52 @@ export const actions: Actions = {
 			action: 'deleteKey' as const,
 			success: true,
 			message: 'API key deleted successfully'
+		};
+	},
+
+	/**
+	 * Revoke an API key (soft delete).
+	 *
+	 * Requirement 34.3: Revoked keys are immediately rejected but remain visible.
+	 */
+	revokeKey: async ({ request, locals }) => {
+		if (locals.isLocalBypass || !locals.user || locals.user.id === 0) {
+			return fail(403, {
+				action: 'revokeKey' as const,
+				error: 'Cannot manage API keys in local network bypass mode'
+			});
+		}
+
+		const formData = await request.formData();
+		const keyId = parseInt(formData.get('keyId')?.toString() ?? '', 10);
+
+		if (isNaN(keyId)) {
+			return fail(400, {
+				action: 'revokeKey' as const,
+				error: 'Invalid key ID'
+			});
+		}
+
+		try {
+			const revoked = await revokeApiKey(keyId, locals.user.id);
+			if (!revoked) {
+				return fail(404, {
+					action: 'revokeKey' as const,
+					error: 'API key not found or already revoked'
+				});
+			}
+		} catch (err) {
+			console.error('[api-keys] Failed to revoke key:', err);
+			return fail(500, {
+				action: 'revokeKey' as const,
+				error: 'Failed to revoke API key. Please try again.'
+			});
+		}
+
+		return {
+			action: 'revokeKey' as const,
+			success: true,
+			message: 'API key revoked successfully'
 		};
 	}
 };

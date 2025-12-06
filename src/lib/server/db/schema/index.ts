@@ -364,7 +364,7 @@ export const sessions = pgTable(
 );
 
 // =============================================================================
-// API Keys Table (Requirement 34.1)
+// API Keys Table (Requirements 34.1, 34.3)
 // =============================================================================
 
 /**
@@ -385,12 +385,42 @@ export const apiKeys = pgTable(
 		keyPrefix: varchar('key_prefix', { length: 8 }).notNull(), // First 8 chars for UI identification
 		keyHash: text('key_hash').notNull(), // Argon2id hash of full key
 		expiresAt: timestamp('expires_at', { withTimezone: true }), // null = never expires
+		revokedAt: timestamp('revoked_at', { withTimezone: true }), // null = active, set = revoked (Requirement 34.3)
 		lastUsedAt: timestamp('last_used_at', { withTimezone: true }),
 		createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow()
 	},
 	(table) => [
 		index('api_keys_user_idx').on(table.userId),
 		index('api_keys_prefix_idx').on(table.keyPrefix)
+	]
+);
+
+// =============================================================================
+// API Key Usage Logs Table (Requirement 34.4)
+// =============================================================================
+
+/**
+ * Logs API key usage for auditing and debugging.
+ * Records key identifier, endpoint, method, and timestamp per requirement 34.4.
+ */
+export const apiKeyUsageLogs = pgTable(
+	'api_key_usage_logs',
+	{
+		id: integer('id').primaryKey().generatedAlwaysAsIdentity(),
+		apiKeyId: integer('api_key_id')
+			.notNull()
+			.references(() => apiKeys.id, { onDelete: 'cascade' }),
+		endpoint: varchar('endpoint', { length: 500 }).notNull(),
+		method: varchar('method', { length: 10 }).notNull(),
+		statusCode: integer('status_code'),
+		responseTimeMs: integer('response_time_ms'),
+		ipAddress: varchar('ip_address', { length: 45 }), // IPv6 max length
+		userAgent: varchar('user_agent', { length: 500 }),
+		createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow()
+	},
+	(table) => [
+		index('api_key_usage_logs_key_idx').on(table.apiKeyId),
+		index('api_key_usage_logs_created_idx').on(table.createdAt)
 	]
 );
 
@@ -488,6 +518,9 @@ export type NewSession = typeof sessions.$inferInsert;
 
 export type ApiKey = typeof apiKeys.$inferSelect;
 export type NewApiKey = typeof apiKeys.$inferInsert;
+
+export type ApiKeyUsageLog = typeof apiKeyUsageLogs.$inferSelect;
+export type NewApiKeyUsageLog = typeof apiKeyUsageLogs.$inferInsert;
 
 export type ProwlarrInstance = typeof prowlarrInstances.$inferSelect;
 export type NewProwlarrInstance = typeof prowlarrInstances.$inferInsert;

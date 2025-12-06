@@ -2,7 +2,7 @@
 	/**
 	 * API Keys settings page.
 	 *
-	 * Requirement: 34.1
+	 * Requirements: 34.1, 34.3
 	 */
 	import { enhance } from '$app/forms';
 	import * as Card from '$lib/components/ui/card';
@@ -23,6 +23,7 @@
 	import KeyIcon from '@lucide/svelte/icons/key';
 	import PlusIcon from '@lucide/svelte/icons/plus';
 	import Trash2Icon from '@lucide/svelte/icons/trash-2';
+	import BanIcon from '@lucide/svelte/icons/ban';
 	import CopyIcon from '@lucide/svelte/icons/copy';
 	import CheckIcon from '@lucide/svelte/icons/check';
 	import AlertTriangleIcon from '@lucide/svelte/icons/alert-triangle';
@@ -79,6 +80,10 @@
 	function isExpired(expiresAt: Date | null): boolean {
 		if (!expiresAt) return false;
 		return new Date(expiresAt) < new Date();
+	}
+
+	function isRevoked(revokedAt: Date | null): boolean {
+		return revokedAt !== null;
 	}
 </script>
 
@@ -280,21 +285,27 @@
 			{:else}
 				<div class="space-y-3">
 					{#each data.apiKeys as key}
-						<div class="flex items-center justify-between p-3 rounded-lg border bg-card">
+						<div
+							class="flex items-center justify-between p-3 rounded-lg border bg-card {isRevoked(key.revokedAt) ? 'opacity-60' : ''}"
+						>
 							<div class="flex flex-col gap-1">
 								<div class="flex items-center gap-2">
 									<span class="font-medium text-sm">{key.name}</span>
 									<Badge variant={key.scope === 'full' ? 'default' : 'secondary'}>
 										{apiKeyScopeLabels[key.scope]}
 									</Badge>
-									{#if isExpired(key.expiresAt)}
+									{#if isRevoked(key.revokedAt)}
+										<Badge variant="destructive">Revoked</Badge>
+									{:else if isExpired(key.expiresAt)}
 										<Badge variant="destructive">Expired</Badge>
 									{/if}
 								</div>
 								<div class="flex items-center gap-3 text-xs text-muted-foreground">
 									<code class="bg-muted px-1 rounded">cmdr_{key.keyPrefix}...</code>
 									<span>Created: {formatDate(key.createdAt)}</span>
-									{#if key.expiresAt}
+									{#if key.revokedAt}
+										<span>Revoked: {formatDate(key.revokedAt)}</span>
+									{:else if key.expiresAt}
 										<span>Expires: {formatDate(key.expiresAt)}</span>
 									{/if}
 									<span>Last used: {formatRelativeTime(key.lastUsedAt)}</span>
@@ -304,29 +315,58 @@
 								{/if}
 							</div>
 
-							<form
-								method="POST"
-								action="?/deleteKey"
-								use:enhance={() => {
-									isSubmitting = true;
-									return async ({ update }) => {
-										await update();
-										isSubmitting = false;
-									};
-								}}
-							>
-								<input type="hidden" name="keyId" value={key.id} />
-								<Button
-									type="submit"
-									variant="ghost"
-									size="sm"
-									disabled={isSubmitting}
-									class="text-destructive hover:text-destructive hover:bg-destructive/10"
+							<div class="flex items-center gap-1">
+								{#if !isRevoked(key.revokedAt)}
+									<form
+										method="POST"
+										action="?/revokeKey"
+										use:enhance={() => {
+											isSubmitting = true;
+											return async ({ update }) => {
+												await update();
+												isSubmitting = false;
+											};
+										}}
+									>
+										<input type="hidden" name="keyId" value={key.id} />
+										<Button
+											type="submit"
+											variant="ghost"
+											size="sm"
+											disabled={isSubmitting}
+											class="text-amber-600 hover:text-amber-600 hover:bg-amber-500/10"
+											title="Revoke key"
+										>
+											<BanIcon class="h-4 w-4" />
+											<span class="sr-only">Revoke key</span>
+										</Button>
+									</form>
+								{/if}
+								<form
+									method="POST"
+									action="?/deleteKey"
+									use:enhance={() => {
+										isSubmitting = true;
+										return async ({ update }) => {
+											await update();
+											isSubmitting = false;
+										};
+									}}
 								>
-									<Trash2Icon class="h-4 w-4" />
-									<span class="sr-only">Delete key</span>
-								</Button>
-							</form>
+									<input type="hidden" name="keyId" value={key.id} />
+									<Button
+										type="submit"
+										variant="ghost"
+										size="sm"
+										disabled={isSubmitting}
+										class="text-destructive hover:text-destructive hover:bg-destructive/10"
+										title="Delete key"
+									>
+										<Trash2Icon class="h-4 w-4" />
+										<span class="sr-only">Delete key</span>
+									</Button>
+								</form>
+							</div>
 						</div>
 					{/each}
 				</div>

@@ -92,6 +92,13 @@
       "when": 1764982217282,
       "tag": "20251206005017_nosy_firebird",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1764983821699,
+      "tag": "20251206011701_left_madripoor",
+      "breakpoints": true
     }
   ]
 }

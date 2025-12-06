@@ -753,7 +753,7 @@
     - Enforce scope restrictions
     - _Requirements: 34.2_
 
-  - [ ] 51.3 Implement key revocation and logging
+  - [x] 51.3 Implement key revocation and logging
     - Revoke keys immediately
     - Log API key usage
     - _Requirements: 34.3, 34.4_

@@ -2,7 +2,7 @@ import type { Handle } from '@sveltejs/kit';
 import { validateSession, isLocalNetworkIP, getClientIP } from '$lib/server/auth';
 import { runWithContext, type RequestContext } from '$lib/server/context';
 import { getSecuritySettings } from '$lib/server/db/queries/settings';
-import { validateApiKey } from '$lib/server/db/queries/api-keys';
+import { validateApiKey, logApiKeyUsage } from '$lib/server/db/queries/api-keys';
 import { db } from '$lib/server/db';
 import { users } from '$lib/server/db/schema';
 import { eq } from 'drizzle-orm';
@@ -37,6 +37,9 @@ if (process.env.NODE_ENV !== 'test') {
 }
 
 export const handle: Handle = async ({ event, resolve }) => {
+	// Track request start time for API key usage logging (Requirement 34.4)
+	const startTime = Date.now();
+
 	// Generate correlation ID for request tracing (Requirement 31.2)
 	const correlationId = event.request.headers.get('x-correlation-id') ?? crypto.randomUUID();
 	event.locals.correlationId = correlationId;
@@ -118,6 +121,24 @@ export const handle: Handle = async ({ event, resolve }) => {
 	// Execute request handling within context
 	return runWithContext(context, async () => {
 		const response = await resolve(event);
+
+		// Log API key usage after request completes (Requirement 34.4)
+		// Fire and forget - don't block the response
+		if (event.locals.isApiKey && event.locals.apiKeyId) {
+			const responseTimeMs = Date.now() - startTime;
+			const clientIP = getClientIP(event.request, event.getClientAddress);
+			logApiKeyUsage({
+				apiKeyId: event.locals.apiKeyId,
+				endpoint: event.url.pathname,
+				method: event.request.method,
+				statusCode: response.status,
+				responseTimeMs,
+				ipAddress: clientIP ?? undefined,
+				userAgent: event.request.headers.get('user-agent')?.substring(0, 500) ?? undefined
+			}).catch(() => {
+				/* Fire and forget - ignore errors to avoid impacting response */
+			});
+		}
 
 		// Security headers (Requirement 10.5)
 		response.headers.set('X-Frame-Options', 'SAMEORIGIN');
