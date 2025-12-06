@@ -466,7 +466,7 @@ async function getSeriesList(filters: ContentFilters): Promise<SeriesWithStats[]
 		.from(series)
 		.innerJoin(connectors, eq(series.connectorId, connectors.id))
 		.leftJoin(episodeCountsSubquery, eq(series.id, episodeCountsSubquery.seriesId))
-		.leftJoin(searchStateSubquery, eq(series.id, searchStateSubquery.seriesId))
+		.leftJoin(searchStateSubquery, sql`${series.id} = sr_state.series_id`)
 		.where(conditions.length > 0 ? and(...conditions) : undefined)
 		.orderBy(orderBy)
 		.limit(filters.limit ?? 50)
@@ -505,7 +505,7 @@ async function getSeriesCount(filters: ContentFilters): Promise<number> {
 			.select({ count: count() })
 			.from(series)
 			.leftJoin(episodeCountsSubquery, eq(series.id, episodeCountsSubquery.seriesId))
-			.leftJoin(searchStateSubquery, eq(series.id, searchStateSubquery.seriesId))
+			.leftJoin(searchStateSubquery, sql`${series.id} = sr_state.series_id`)
 			.where(conditions.length > 0 ? and(...conditions) : undefined);
 
 		return result[0]?.count ?? 0;

@@ -481,7 +481,7 @@ export async function getMostSearchedItems(limit: number = 10): Promise<MostSear
 			seasonNumber: episodes.seasonNumber,
 			episodeNumber: episodes.episodeNumber,
 			connectorName: connectors.name,
-			searchCount: count(),
+			searchCount: count().as('search_count'),
 			lastSearched: sql<Date>`MAX(${searchHistory.createdAt})`.as('last_searched')
 		})
 		.from(searchHistory)
@@ -509,7 +509,7 @@ export async function getMostSearchedItems(limit: number = 10): Promise<MostSear
 			seasonNumber: sql<number | null>`NULL::integer`.as('season_number'),
 			episodeNumber: sql<number | null>`NULL::integer`.as('episode_number'),
 			connectorName: connectors.name,
-			searchCount: count(),
+			searchCount: count().as('search_count'),
 			lastSearched: sql<Date>`MAX(${searchHistory.createdAt})`.as('last_searched')
 		})
 		.from(searchHistory)
