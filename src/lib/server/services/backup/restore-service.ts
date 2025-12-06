@@ -29,6 +29,9 @@ import {
 } from './types';
 import { createBackup, loadBackup } from './backup-service';
 import * as schema from '$lib/server/db/schema';
+import { createLogger } from '$lib/server/logger';
+
+const logger = createLogger('restore');
 
 // =============================================================================
 // Table Name to Schema Mapping
@@ -179,7 +182,7 @@ async function getPendingMigrations(backupSchemaVersion: SchemaVersion): Promise
  * Uses reverse dependency order to handle foreign keys.
  */
 async function clearAllTables(): Promise<void> {
-	console.log('[restore] Clearing all tables...');
+	logger.info('Clearing all tables');
 
 	// Build list of all tables
 	const tableList = TABLE_DELETE_ORDER.map((t) => `"${t}"`).join(', ');
@@ -187,7 +190,7 @@ async function clearAllTables(): Promise<void> {
 	// TRUNCATE all tables at once with CASCADE and restart identity
 	await db.execute(sql.raw(`TRUNCATE TABLE ${tableList} RESTART IDENTITY CASCADE`));
 
-	console.log('[restore] All tables cleared');
+	logger.info('All tables cleared');
 }
 
 /**
@@ -243,13 +246,13 @@ async function insertTableData(tableExport: TableExport): Promise<number> {
 	const { tableName, rows } = tableExport;
 
 	if (rows.length === 0) {
-		console.log(`[restore] Table ${tableName}: 0 rows (empty)`);
+		logger.info('Table is empty', { tableName, rowCount: 0 });
 		return 0;
 	}
 
 	// Verify table exists in schema
 	if (!tableNameToSchema[tableName]) {
-		console.warn(`[restore] Unknown table: ${tableName}, skipping`);
+		logger.warn('Unknown table, skipping', { tableName });
 		return 0;
 	}
 
@@ -257,7 +260,7 @@ async function insertTableData(tableExport: TableExport): Promise<number> {
 	const columns = Object.keys(rows[0] as Record<string, unknown>);
 
 	if (columns.length === 0) {
-		console.warn(`[restore] Table ${tableName} has no columns, skipping`);
+		logger.warn('Table has no columns, skipping', { tableName });
 		return 0;
 	}
 
@@ -308,7 +311,7 @@ async function insertTableData(tableExport: TableExport): Promise<number> {
 		}
 	}
 
-	console.log(`[restore] Table ${tableName}: ${insertedCount} rows inserted`);
+	logger.info('Table rows inserted', { tableName, rowCount: insertedCount });
 	return insertedCount;
 }
 
@@ -319,7 +322,7 @@ async function insertTableData(tableExport: TableExport): Promise<number> {
  * @returns Number of migrations applied
  */
 async function applyPendingMigrations(): Promise<number> {
-	console.log('[restore] Applying pending migrations...');
+	logger.info('Applying pending migrations');
 
 	const { spawn } = await import('child_process');
 
@@ -345,7 +348,7 @@ async function applyPendingMigrations(): Promise<number> {
 				// Count migrations from output
 				const migrationMatches = stdout.match(/Applied migration/gi);
 				const count = migrationMatches ? migrationMatches.length : 0;
-				console.log(`[restore] Migrations applied: ${count}`);
+				logger.info('Migrations applied', { count });
 				resolve(count);
 			} else {
 				reject(
@@ -374,7 +377,7 @@ async function applyPendingMigrations(): Promise<number> {
  * Used to invalidate all user logins after restore.
  */
 async function clearSessions(): Promise<void> {
-	console.log('[restore] Clearing sessions...');
+	logger.info('Clearing sessions');
 	await db.delete(schema.sessions);
 }
 
@@ -405,7 +408,7 @@ export async function validateBackup(backupId: string): Promise<RestoreValidatio
 	const errors: string[] = [];
 	const warnings: string[] = [];
 
-	console.log('[restore] Validating backup...', { backupId });
+	logger.info('Validating backup', { backupId });
 
 	// Load backup
 	const backup = await loadBackup(backupId);
@@ -463,11 +466,11 @@ export async function validateBackup(backupId: string): Promise<RestoreValidatio
 
 	const isValid = formatVersionValid && checksumValid && secretKeyValid && errors.length === 0;
 
-	console.log('[restore] Validation complete', {
+	logger.info('Validation complete', {
 		backupId,
 		isValid,
-		errors: errors.length,
-		warnings: warnings.length,
+		errorCount: errors.length,
+		warningCount: warnings.length,
 		migrationsRequired
 	});
 
@@ -524,7 +527,7 @@ export async function restoreBackup(
 		clearSessionsAfterRestore = true
 	} = options;
 
-	console.log('[restore] Starting restore...', { backupId, options });
+	logger.info('Starting restore', { backupId, options });
 
 	let preRestoreBackupId: string | undefined;
 
@@ -547,7 +550,7 @@ export async function restoreBackup(
 		}
 
 		// 2. Validate backup
-		console.log('[restore] Validating backup...');
+		logger.info('Validating backup for restore');
 
 		// Format version
 		if (!validateFormatVersion(backup)) {
@@ -619,7 +622,7 @@ export async function restoreBackup(
 
 		// 3. Create pre-restore backup
 		if (createBackupBeforeRestore) {
-			console.log('[restore] Creating pre-restore backup...');
+			logger.info('Creating pre-restore backup');
 			const preRestoreResult = await createBackup({
 				description: `Pre-restore backup before restoring ${backupId}`,
 				type: 'manual'
@@ -627,14 +630,14 @@ export async function restoreBackup(
 
 			if (preRestoreResult.success && preRestoreResult.metadata) {
 				preRestoreBackupId = preRestoreResult.metadata.id;
-				console.log('[restore] Pre-restore backup created', { preRestoreBackupId });
+				logger.info('Pre-restore backup created', { preRestoreBackupId });
 			} else {
-				console.warn('[restore] Failed to create pre-restore backup:', preRestoreResult.error);
+				logger.warn('Failed to create pre-restore backup', { error: preRestoreResult.error });
 			}
 		}
 
 		// 4. Clear all existing data
-		console.log('[restore] Clearing existing data...');
+		logger.info('Clearing existing data');
 		try {
 			await clearAllTables();
 		} catch (error) {
@@ -654,7 +657,7 @@ export async function restoreBackup(
 		}
 
 		// 5. Insert backup data
-		console.log('[restore] Inserting backup data...');
+		logger.info('Inserting backup data');
 		let totalRowsInserted = 0;
 		let tablesRestored = 0;
 
@@ -685,7 +688,7 @@ export async function restoreBackup(
 		// 6. Apply pending migrations (Req 33.4)
 		let migrationCount = 0;
 		if (migrationsRequired) {
-			console.log('[restore] Applying migrations...');
+			logger.info('Applying migrations');
 			try {
 				migrationCount = await applyPendingMigrations();
 			} catch (error) {
@@ -714,7 +717,7 @@ export async function restoreBackup(
 
 		const durationMs = Date.now() - startTime;
 
-		console.log('[restore] Restore completed successfully', {
+		logger.info('Restore completed successfully', {
 			backupId,
 			tablesRestored,
 			totalRowsInserted,
@@ -737,7 +740,7 @@ export async function restoreBackup(
 		const durationMs = Date.now() - startTime;
 		const errorMessage = error instanceof Error ? error.message : String(error);
 
-		console.error('[restore] Restore failed', {
+		logger.error('Restore failed', {
 			backupId,
 			error: errorMessage,
 			durationMs

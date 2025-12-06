@@ -12,6 +12,9 @@
  */
 
 import type { NotificationChannel } from '$lib/server/db/schema';
+import { createLogger } from '$lib/server/logger';
+
+const logger = createLogger('quiet-hours');
 
 // =============================================================================
 // Types
@@ -106,7 +109,7 @@ export function getCurrentTimeInTimezone(timezone: string, now: Date = new Date(
 		return { hours, minutes };
 	} catch {
 		// Invalid timezone - fall back to UTC
-		console.warn(`[QuietHours] Invalid timezone "${timezone}", falling back to UTC`);
+		logger.warn('Invalid timezone, falling back to UTC', { timezone });
 		return getCurrentTimeInTimezone('UTC', now);
 	}
 }
@@ -219,10 +222,10 @@ export function isInQuietHours(channel: NotificationChannel, now: Date = new Dat
 		return isTimeInRange(current, start, end);
 	} catch (error) {
 		// Invalid configuration - treat as not in quiet hours
-		console.warn(
-			`[QuietHours] Invalid quiet hours configuration for channel ${channel.id}:`,
-			error instanceof Error ? error.message : String(error)
-		);
+		logger.warn('Invalid quiet hours configuration for channel', {
+			channelId: channel.id,
+			error: error instanceof Error ? error.message : String(error)
+		});
 		return false;
 	}
 }

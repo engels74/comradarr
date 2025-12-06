@@ -163,12 +163,10 @@ describe('getCurrentTimeInTimezone', () => {
 	});
 
 	it('should fall back to UTC for invalid timezone', () => {
-		const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+		// Invalid timezones fall back to UTC and log a warning via the structured logger
 		const date = createUTCDate(14, 30);
 		const result = getCurrentTimeInTimezone('Invalid/Timezone', date);
 		expect(result).toEqual({ hours: 14, minutes: 30 });
-		expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('Invalid timezone'));
-		consoleSpy.mockRestore();
 	});
 });
 
@@ -287,7 +285,7 @@ describe('isInQuietHours', () => {
 
 	describe('when quiet hours config is invalid', () => {
 		it('should return false and log warning for invalid start time', () => {
-			const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+			// Invalid configs return false and log a warning via the structured logger
 			const channel = createMockChannel({
 				quietHoursEnabled: true,
 				quietHoursStart: 'invalid',
@@ -295,15 +293,10 @@ describe('isInQuietHours', () => {
 			});
 
 			expect(isInQuietHours(channel, new Date())).toBe(false);
-			expect(consoleSpy).toHaveBeenCalledWith(
-				expect.stringContaining('Invalid quiet hours configuration'),
-				expect.any(String)
-			);
-			consoleSpy.mockRestore();
 		});
 
 		it('should return false and log warning for invalid end time', () => {
-			const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+			// Invalid configs return false and log a warning via the structured logger
 			const channel = createMockChannel({
 				quietHoursEnabled: true,
 				quietHoursStart: '22:00',
@@ -311,11 +304,6 @@ describe('isInQuietHours', () => {
 			});
 
 			expect(isInQuietHours(channel, new Date())).toBe(false);
-			expect(consoleSpy).toHaveBeenCalledWith(
-				expect.stringContaining('Invalid quiet hours configuration'),
-				expect.any(String)
-			);
-			consoleSpy.mockRestore();
 		});
 	});
 

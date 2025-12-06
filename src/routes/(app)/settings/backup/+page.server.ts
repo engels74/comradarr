@@ -13,6 +13,9 @@ import { refreshScheduledBackup, getSchedulerStatus } from '$lib/server/schedule
 import { fail } from '@sveltejs/kit';
 import * as v from 'valibot';
 import { BackupSettingsSchema } from '$lib/schemas/settings';
+import { createLogger } from '$lib/server/logger';
+
+const logger = createLogger('backup-settings');
 
 export const load: PageServerLoad = async () => {
 	const [settings, backups, schedulerStatus] = await Promise.all([
@@ -83,7 +86,7 @@ export const actions: Actions = {
 			// Refresh the scheduled backup job with new settings
 			await refreshScheduledBackup();
 		} catch (err) {
-			console.error('[settings/backup] Failed to update settings:', err);
+			logger.error('Failed to update settings', { error: err instanceof Error ? err.message : String(err) });
 			return fail(500, {
 				error: 'Failed to update settings. Please try again.',
 				...formValues
@@ -115,7 +118,7 @@ export const actions: Actions = {
 				return fail(404, { deleteError: 'Backup not found' });
 			}
 		} catch (err) {
-			console.error('[settings/backup] Failed to delete backup:', err);
+			logger.error('Failed to delete backup', { error: err instanceof Error ? err.message : String(err) });
 			return fail(500, { deleteError: 'Failed to delete backup. Please try again.' });
 		}
 

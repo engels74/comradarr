@@ -16,6 +16,9 @@
 import { db } from '$lib/server/db';
 import { sql } from 'drizzle-orm';
 import type { OrphanCleanupResult } from './types';
+import { createLogger } from '$lib/server/logger';
+
+const logger = createLogger('orphan-cleanup');
 
 // =============================================================================
 // Public API
@@ -47,7 +50,7 @@ export async function cleanupOrphanedSearchState(): Promise<OrphanCleanupResult>
 	let movieOrphansDeleted = 0;
 
 	try {
-		console.log('[orphan-cleanup] Starting orphan cleanup...');
+		logger.info('Starting orphan cleanup');
 
 		// 1. Delete orphaned episode search registries
 		// These are entries where content_type = 'episode' but the referenced
@@ -65,7 +68,7 @@ export async function cleanupOrphanedSearchState(): Promise<OrphanCleanupResult>
 		episodeOrphansDeleted = episodeResult.length;
 
 		if (episodeOrphansDeleted > 0) {
-			console.log('[orphan-cleanup] Deleted orphaned episode registries:', {
+			logger.info('Deleted orphaned episode registries', {
 				count: episodeOrphansDeleted
 			});
 		}
@@ -86,7 +89,7 @@ export async function cleanupOrphanedSearchState(): Promise<OrphanCleanupResult>
 		movieOrphansDeleted = movieResult.length;
 
 		if (movieOrphansDeleted > 0) {
-			console.log('[orphan-cleanup] Deleted orphaned movie registries:', {
+			logger.info('Deleted orphaned movie registries', {
 				count: movieOrphansDeleted
 			});
 		}
@@ -95,14 +98,14 @@ export async function cleanupOrphanedSearchState(): Promise<OrphanCleanupResult>
 		const durationMs = Date.now() - startTime;
 
 		if (totalOrphansDeleted > 0) {
-			console.log('[orphan-cleanup] Orphan cleanup completed:', {
+			logger.info('Orphan cleanup completed', {
 				episodeOrphansDeleted,
 				movieOrphansDeleted,
 				totalOrphansDeleted,
 				durationMs
 			});
 		} else {
-			console.log('[orphan-cleanup] No orphaned entries found');
+			logger.info('No orphaned entries found');
 		}
 
 		return {
@@ -116,7 +119,7 @@ export async function cleanupOrphanedSearchState(): Promise<OrphanCleanupResult>
 		const durationMs = Date.now() - startTime;
 		const errorMessage = error instanceof Error ? error.message : String(error);
 
-		console.error('[orphan-cleanup] Orphan cleanup failed:', {
+		logger.error('Orphan cleanup failed', {
 			error: errorMessage,
 			episodeOrphansDeleted,
 			movieOrphansDeleted,

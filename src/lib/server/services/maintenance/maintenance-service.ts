@@ -13,6 +13,9 @@
 import { db } from '$lib/server/db';
 import { sql } from 'drizzle-orm';
 import type { MaintenanceOptions, MaintenanceResult } from './types';
+import { createLogger } from '$lib/server/logger';
+
+const logger = createLogger('maintenance');
 
 // =============================================================================
 // Public API
@@ -49,43 +52,43 @@ export async function runDatabaseMaintenance(
 	let analyzeDurationMs = 0;
 
 	try {
-		console.log('[maintenance] Starting database maintenance...');
+		logger.info('Starting database maintenance');
 
 		// 1. Run VACUUM
 		const vacuumStart = Date.now();
 		if (options?.vacuumFull) {
 			// VACUUM FULL rewrites the entire table - use with caution
 			// This locks the table and can take significant time
-			console.log('[maintenance] Running VACUUM FULL...');
+			logger.info('Running VACUUM FULL');
 			await db.execute(sql`VACUUM FULL`);
 		} else {
 			// Regular VACUUM - can run concurrently with normal operations
-			console.log('[maintenance] Running VACUUM...');
+			logger.info('Running VACUUM');
 			await db.execute(sql`VACUUM`);
 		}
 		vacuumDurationMs = Date.now() - vacuumStart;
-		console.log('[maintenance] VACUUM completed:', { durationMs: vacuumDurationMs });
+		logger.info('VACUUM completed', { durationMs: vacuumDurationMs });
 
 		// 2. Run ANALYZE
 		const analyzeStart = Date.now();
 		if (options?.analyzeTables && options.analyzeTables.length > 0) {
 			// Analyze specific tables
 			for (const table of options.analyzeTables) {
-				console.log(`[maintenance] Running ANALYZE on table: ${table}`);
+				logger.info('Running ANALYZE on table', { table });
 				// Use sql.raw for table name since it can't be parameterized
 				// Note: Table names should be validated/sanitized by caller
 				await db.execute(sql.raw(`ANALYZE ${table}`));
 			}
 		} else {
 			// Analyze all tables
-			console.log('[maintenance] Running ANALYZE on all tables...');
+			logger.info('Running ANALYZE on all tables');
 			await db.execute(sql`ANALYZE`);
 		}
 		analyzeDurationMs = Date.now() - analyzeStart;
-		console.log('[maintenance] ANALYZE completed:', { durationMs: analyzeDurationMs });
+		logger.info('ANALYZE completed', { durationMs: analyzeDurationMs });
 
 		const totalDurationMs = Date.now() - startTime;
-		console.log('[maintenance] Database maintenance completed successfully:', {
+		logger.info('Database maintenance completed successfully', {
 			vacuumDurationMs,
 			analyzeDurationMs,
 			totalDurationMs
@@ -101,7 +104,7 @@ export async function runDatabaseMaintenance(
 		const totalDurationMs = Date.now() - startTime;
 		const errorMessage = error instanceof Error ? error.message : String(error);
 
-		console.error('[maintenance] Database maintenance failed:', {
+		logger.error('Database maintenance failed', {
 			error: errorMessage,
 			vacuumDurationMs,
 			analyzeDurationMs,

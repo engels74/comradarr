@@ -23,6 +23,9 @@ import type {
 	QueueDepthSample
 } from './types';
 import type { GapDiscoveryResult, UpgradeDiscoveryResult } from '$lib/server/services/discovery';
+import { createLogger } from '$lib/server/logger';
+
+const logger = createLogger('analytics');
 
 // =============================================================================
 // Analytics Collector Class
@@ -75,7 +78,7 @@ class AnalyticsCollector {
 				eventId: result[0]?.id
 			};
 		} catch (error) {
-			console.error('[analytics] Failed to record event:', {
+			logger.error('Failed to record event', {
 				eventType,
 				connectorId,
 				error: error instanceof Error ? error.message : String(error)
@@ -284,7 +287,7 @@ class AnalyticsCollector {
 				samples.push(sample);
 			}
 		} catch (error) {
-			console.error('[analytics] Failed to sample queue depth:', error);
+			logger.error('Failed to sample queue depth', { error: error instanceof Error ? error.message : String(error) });
 		}
 
 		return samples;

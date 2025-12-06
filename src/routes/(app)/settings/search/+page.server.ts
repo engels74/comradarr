@@ -8,6 +8,9 @@ import { invalidateSearchConfigCache } from '$lib/server/services/queue/config';
 import { fail } from '@sveltejs/kit';
 import * as v from 'valibot';
 import { SearchSettingsSchema, SEARCH_SETTINGS_DEFAULTS } from '$lib/schemas/search-settings';
+import { createLogger } from '$lib/server/logger';
+
+const logger = createLogger('search-settings');
 
 export const load: PageServerLoad = async () => {
 	const settings = await getSearchSettings();
@@ -71,7 +74,7 @@ export const actions: Actions = {
 			await updateSearchSettings(result.output);
 			invalidateSearchConfigCache();
 		} catch (err) {
-			console.error('[search-settings] Failed to update settings:', err);
+			logger.error('Failed to update settings', { error: err instanceof Error ? err.message : String(err) });
 			return fail(500, {
 				error: 'Failed to update settings. Please try again.',
 				values: data
@@ -92,7 +95,7 @@ export const actions: Actions = {
 			await updateSearchSettings(SEARCH_SETTINGS_DEFAULTS);
 			invalidateSearchConfigCache();
 		} catch (err) {
-			console.error('[search-settings] Failed to reset settings:', err);
+			logger.error('Failed to reset settings', { error: err instanceof Error ? err.message : String(err) });
 			return fail(500, {
 				error: 'Failed to reset settings. Please try again.'
 			});

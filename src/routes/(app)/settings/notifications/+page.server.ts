@@ -31,6 +31,9 @@ import {
 	type NotificationChannelType as SchemaChannelType
 } from '$lib/schemas/notification-channel';
 import { getSender, isSupportedChannelType } from '$lib/server/services/notifications';
+import { createLogger } from '$lib/server/logger';
+
+const logger = createLogger('notifications');
 
 /**
  * Channel with statistics for display.
@@ -324,7 +327,7 @@ export const actions: Actions = {
 		try {
 			await createNotificationChannel(channelInput);
 		} catch (err) {
-			console.error('[notifications] Failed to create channel:', err);
+			logger.error('Failed to create channel', { error: err instanceof Error ? err.message : String(err) });
 			return fail(500, {
 				action: 'create',
 				error: 'Failed to create channel. Please try again.',
@@ -462,7 +465,7 @@ export const actions: Actions = {
 				});
 			}
 		} catch (err) {
-			console.error('[notifications] Failed to update channel:', err);
+			logger.error('Failed to update channel', { error: err instanceof Error ? err.message : String(err) });
 			return fail(500, {
 				action: 'update',
 				error: 'Failed to update channel. Please try again.',
@@ -496,7 +499,7 @@ export const actions: Actions = {
 				});
 			}
 		} catch (err) {
-			console.error('[notifications] Failed to delete channel:', err);
+			logger.error('Failed to delete channel', { error: err instanceof Error ? err.message : String(err) });
 			return fail(500, {
 				action: 'delete',
 				error: 'Failed to delete channel. Please try again.'
@@ -530,7 +533,7 @@ export const actions: Actions = {
 				});
 			}
 		} catch (err) {
-			console.error('[notifications] Failed to toggle channel:', err);
+			logger.error('Failed to toggle channel', { error: err instanceof Error ? err.message : String(err) });
 			return fail(500, {
 				action: 'toggle',
 				error: 'Failed to toggle channel. Please try again.'
@@ -579,7 +582,7 @@ export const actions: Actions = {
 		try {
 			sensitiveConfig = await getDecryptedSensitiveConfig(channel);
 		} catch (err) {
-			console.error('[notifications] Failed to decrypt channel config:', err);
+			logger.error('Failed to decrypt channel config', { error: err instanceof Error ? err.message : String(err) });
 			return fail(500, {
 				action: 'test',
 				error: 'Failed to decrypt channel configuration. Check your SECRET_KEY.',
@@ -612,7 +615,7 @@ export const actions: Actions = {
 			};
 		} catch (err) {
 			const duration = Date.now() - startTime;
-			console.error('[notifications] Test notification failed:', err);
+			logger.error('Test notification failed', { error: err instanceof Error ? err.message : String(err), channelId: id, duration });
 
 			const errorMessage = err instanceof Error ? err.message : 'Unknown error';
 			return fail(500, {

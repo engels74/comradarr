@@ -7,7 +7,9 @@ import { getGeneralSettings, updateGeneralSettings } from '$lib/server/db/querie
 import { fail } from '@sveltejs/kit';
 import * as v from 'valibot';
 import { GeneralSettingsSchema, type LogLevel } from '$lib/schemas/settings';
-import { setLogLevel } from '$lib/server/logger';
+import { createLogger, setLogLevel } from '$lib/server/logger';
+
+const logger = createLogger('settings');
 
 export const load: PageServerLoad = async () => {
 	const settings = await getGeneralSettings();
@@ -74,7 +76,7 @@ export const actions: Actions = {
 			// Apply log level change immediately without restart
 			setLogLevel(config.logLevel as LogLevel);
 		} catch (err) {
-			console.error('[settings] Failed to update settings:', err);
+			logger.error('Failed to update settings', { error: err instanceof Error ? err.message : String(err) });
 			return fail(500, {
 				error: 'Failed to update settings. Please try again.',
 				...formValues

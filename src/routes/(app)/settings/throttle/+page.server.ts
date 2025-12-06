@@ -15,6 +15,9 @@ import {
 import { fail } from '@sveltejs/kit';
 import * as v from 'valibot';
 import { ThrottleProfileSchema } from '$lib/schemas/throttle-profile';
+import { createLogger } from '$lib/server/logger';
+
+const logger = createLogger('throttle-profiles');
 
 /**
  * Profile with connector usage count for display.
@@ -114,7 +117,7 @@ export const actions: Actions = {
 				isDefault: config.isDefault ?? false
 			});
 		} catch (err) {
-			console.error('[throttle-profiles] Failed to create profile:', err);
+			logger.error('Failed to create profile', { error: err instanceof Error ? err.message : String(err) });
 			return fail(500, {
 				action: 'create',
 				error: 'Failed to create profile. Please try again.',
@@ -184,7 +187,7 @@ export const actions: Actions = {
 				});
 			}
 		} catch (err) {
-			console.error('[throttle-profiles] Failed to update profile:', err);
+			logger.error('Failed to update profile', { error: err instanceof Error ? err.message : String(err) });
 			return fail(500, {
 				action: 'update',
 				error: 'Failed to update profile. Please try again.',
@@ -225,7 +228,7 @@ export const actions: Actions = {
 					error: err.message
 				});
 			}
-			console.error('[throttle-profiles] Failed to delete profile:', err);
+			logger.error('Failed to delete profile', { error: err instanceof Error ? err.message : String(err) });
 			return fail(500, {
 				action: 'delete',
 				error: 'Failed to delete profile. Please try again.'
@@ -258,7 +261,7 @@ export const actions: Actions = {
 				});
 			}
 		} catch (err) {
-			console.error('[throttle-profiles] Failed to set default profile:', err);
+			logger.error('Failed to set default profile', { error: err instanceof Error ? err.message : String(err) });
 			return fail(500, {
 				action: 'setDefault',
 				error: 'Failed to set default profile. Please try again.'

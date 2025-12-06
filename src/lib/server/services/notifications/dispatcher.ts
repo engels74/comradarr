@@ -27,6 +27,9 @@ import { buildPayload, type EventDataMap } from './templates';
 import type { NotificationPayload, NotificationResult } from './types';
 import { isRetryableNotificationError } from './errors';
 import { isInQuietHours } from './quiet-hours';
+import { createLogger } from '$lib/server/logger';
+
+const logger = createLogger('notifications');
 
 // =============================================================================
 // Types
@@ -203,7 +206,7 @@ export class NotificationDispatcher {
 			});
 			return true;
 		} catch (error) {
-			console.error('[Notifications] Failed to store notification for batching:', {
+			logger.error('Failed to store notification for batching', {
 				channelId: channel.id,
 				channelName: channel.name,
 				eventType,
@@ -332,9 +335,9 @@ export class NotificationDispatcher {
 
 			// Log for debugging (retryable errors are less severe)
 			if (isRetryable) {
-				console.warn(`[Notifications] Retryable error sending to ${channel.name}: ${errorMessage}`);
+				logger.warn('Retryable error sending notification', { channelName: channel.name, error: errorMessage });
 			} else {
-				console.error(`[Notifications] Failed to send to ${channel.name}: ${errorMessage}`);
+				logger.error('Failed to send notification', { channelName: channel.name, error: errorMessage });
 			}
 
 			return result;
@@ -353,7 +356,7 @@ export class NotificationDispatcher {
 			);
 		} catch {
 			// History update failed, log but don't throw
-			console.warn(`[Notifications] Failed to update history entry ${historyId}`);
+			logger.warn('Failed to update history entry', { historyId });
 		}
 	}
 }

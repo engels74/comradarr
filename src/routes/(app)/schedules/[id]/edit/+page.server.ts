@@ -15,6 +15,9 @@ import { error, fail, redirect } from '@sveltejs/kit';
 import * as v from 'valibot';
 import { ScheduleUpdateSchema } from '$lib/schemas/schedules';
 import { Cron } from 'croner';
+import { createLogger } from '$lib/server/logger';
+
+const logger = createLogger('schedules');
 
 export const load: PageServerLoad = async ({ params }) => {
 	const id = parseInt(params.id, 10);
@@ -147,7 +150,7 @@ export const actions: Actions = {
 			// Refresh scheduler to pick up changes
 			await refreshDynamicSchedules();
 		} catch (err) {
-			console.error('[schedules/edit] Failed to update schedule:', err);
+			logger.error('Failed to update schedule', { error: err instanceof Error ? err.message : String(err), scheduleId: id });
 			return fail(500, {
 				error: 'Failed to update schedule. Please try again.',
 				...formValues
@@ -178,7 +181,7 @@ export const actions: Actions = {
 			// Refresh scheduler to remove the deleted schedule
 			await refreshDynamicSchedules();
 		} catch (err) {
-			console.error('[schedules/edit] Failed to delete schedule:', err);
+			logger.error('Failed to delete schedule', { error: err instanceof Error ? err.message : String(err), scheduleId: id });
 			return fail(500, { error: 'Failed to delete schedule. Please try again.' });
 		}
 

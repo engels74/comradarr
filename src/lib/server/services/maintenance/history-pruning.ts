@@ -13,6 +13,9 @@ import { db } from '$lib/server/db';
 import { sql } from 'drizzle-orm';
 import { getSettingWithDefault } from '$lib/server/db/queries/settings';
 import type { HistoryPruningResult } from './types';
+import { createLogger } from '$lib/server/logger';
+
+const logger = createLogger('history-pruning');
 
 // =============================================================================
 // Constants
@@ -63,7 +66,7 @@ export async function pruneSearchHistory(retentionDays?: number): Promise<Histor
 		// Get retention period from settings if not explicitly provided
 		const effectiveRetentionDays = retentionDays ?? (await getRetentionDaysFromSettings());
 
-		console.log('[history-pruning] Starting history pruning...', {
+		logger.info('Starting history pruning', {
 			retentionDays: effectiveRetentionDays
 		});
 
@@ -89,7 +92,7 @@ export async function pruneSearchHistory(retentionDays?: number): Promise<Histor
 			totalDeleted += deletedInBatch;
 
 			if (deletedInBatch > 0) {
-				console.log('[history-pruning] Batch deleted:', {
+				logger.info('Batch deleted', {
 					batchSize: deletedInBatch,
 					totalDeleted
 				});
@@ -99,14 +102,14 @@ export async function pruneSearchHistory(retentionDays?: number): Promise<Histor
 		const durationMs = Date.now() - startTime;
 
 		if (totalDeleted > 0) {
-			console.log('[history-pruning] History pruning completed:', {
+			logger.info('History pruning completed', {
 				searchHistoryDeleted: totalDeleted,
 				retentionDays: effectiveRetentionDays,
 				cutoffDate: cutoffDate.toISOString(),
 				durationMs
 			});
 		} else {
-			console.log('[history-pruning] No history entries to prune');
+			logger.info('No history entries to prune');
 		}
 
 		return {
@@ -118,7 +121,7 @@ export async function pruneSearchHistory(retentionDays?: number): Promise<Histor
 		const durationMs = Date.now() - startTime;
 		const errorMessage = error instanceof Error ? error.message : String(error);
 
-		console.error('[history-pruning] History pruning failed:', {
+		logger.error('History pruning failed', {
 			error: errorMessage,
 			searchHistoryDeleted: totalDeleted,
 			durationMs
@@ -148,7 +151,7 @@ async function getRetentionDaysFromSettings(): Promise<number> {
 
 	// Validate the parsed value
 	if (isNaN(parsed) || parsed < 1) {
-		console.warn('[history-pruning] Invalid retention days setting, using default:', {
+		logger.warn('Invalid retention days setting, using default', {
 			value,
 			default: DEFAULT_RETENTION_DAYS
 		});

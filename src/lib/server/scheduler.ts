@@ -63,6 +63,9 @@ import {
 } from '$lib/server/services/maintenance';
 import { createBackup, cleanupOldScheduledBackups } from '$lib/server/services/backup';
 import { getBackupSettings } from '$lib/server/db/queries/settings';
+import { createLogger } from '$lib/server/logger';
+
+const logger = createLogger('scheduler');
 
 // =============================================================================
 // Types
@@ -107,10 +110,9 @@ async function logSkippedUnhealthyConnectors(healthyConnectors: Connector[]): Pr
 	const skipped = allEnabled.filter((c) => !healthyConnectors.some((hc) => hc.id === c.id));
 
 	if (skipped.length > 0) {
-		console.log(
-			'[scheduler] Skipping unhealthy connectors:',
-			skipped.map((c) => ({ id: c.id, name: c.name, healthStatus: c.healthStatus }))
-		);
+		logger.info('Skipping unhealthy connectors', {
+			connectors: skipped.map((c) => ({ id: c.id, name: c.name, healthStatus: c.healthStatus }))
+		});
 	}
 }
 
@@ -144,11 +146,11 @@ function withJobContext(jobName: string, callback: () => Promise<void>): () => P
  */
 export function initializeScheduler(): void {
 	if (initialized) {
-		console.log('[scheduler] Already initialized, skipping');
+		logger.info('Already initialized, skipping');
 		return;
 	}
 
-	console.log('[scheduler] Initializing scheduled jobs...');
+	logger.info('Initializing scheduled jobs');
 
 	// Throttle window reset - runs every minute
 	// Resets expired per-minute counters, daily counters, and clears expired pauses
@@ -159,7 +161,7 @@ export function initializeScheduler(): void {
 			name: 'throttle-window-reset',
 			protect: true, // Prevent overlapping executions
 			catch: (err) => {
-				console.error('[scheduler] Throttle window reset failed:', err);
+				logger.error('Throttle window reset failed', { error: err instanceof Error ? err.message : String(err) });
 			}
 		},
 		withJobContext('throttle-window-reset', async () => {
@@ -168,7 +170,7 @@ export function initializeScheduler(): void {
 
 			// Only log if resets occurred (reduce log noise)
 			if (result.minuteResets > 0 || result.dayResets > 0 || result.pausesCleared > 0) {
-				console.log('[scheduler] Throttle windows reset:', {
+				logger.info('Throttle windows reset', {
 					minuteResets: result.minuteResets,
 					dayResets: result.dayResets,
 					pausesCleared: result.pausesCleared
@@ -179,7 +181,7 @@ export function initializeScheduler(): void {
 			const apiKeyResets = await apiKeyRateLimiter.resetExpiredWindows();
 
 			if (apiKeyResets > 0) {
-				console.log('[scheduler] API key rate limit windows reset:', {
+				logger.info('API key rate limit windows reset', {
 					windowsReset: apiKeyResets
 				});
 			}
@@ -199,7 +201,7 @@ export function initializeScheduler(): void {
 			name: 'prowlarr-health-check',
 			protect: true, // Prevent overlapping executions
 			catch: (err) => {
-				console.error('[scheduler] Prowlarr health check failed:', err);
+				logger.error('Prowlarr health check failed', { error: err instanceof Error ? err.message : String(err) });
 			}
 		},
 		withJobContext('prowlarr-health-check', async () => {
@@ -209,7 +211,7 @@ export function initializeScheduler(): void {
 			if (results.length > 0) {
 				const unhealthy = results.filter((r) => r.status !== 'healthy');
 				if (unhealthy.length > 0) {
-					console.log('[scheduler] Prowlarr health issues detected:', {
+					logger.warn('Prowlarr health issues detected', {
 						total: results.length,
 						unhealthy: unhealthy.length,
 						issues: unhealthy.map((r) => ({
@@ -236,7 +238,7 @@ export function initializeScheduler(): void {
 			name: 'connector-health-check',
 			protect: true, // Prevent overlapping executions
 			catch: (err) => {
-				console.error('[scheduler] Connector health check failed:', err);
+				logger.error('Connector health check failed', { error: err instanceof Error ? err.message : String(err) });
 			}
 		},
 		withJobContext('connector-health-check', async () => {
@@ -321,7 +323,7 @@ export function initializeScheduler(): void {
 
 			// Log only if there were status changes
 			if (results.length > 0) {
-				console.log('[scheduler] Connector health status changes:', results);
+				logger.info('Connector health status changes', { results });
 			}
 		})
 	);
@@ -344,7 +346,7 @@ export function initializeScheduler(): void {
 			name: 'incremental-sync-sweep',
 			protect: true, // Prevent overlapping executions
 			catch: (err) => {
-				console.error('[scheduler] Incremental sync sweep failed:', err);
+				logger.error('Incremental sync sweep failed', { error: err instanceof Error ? err.message : String(err) });
 			}
 		},
 		withJobContext('incremental-sync-sweep', async () => {
@@ -376,7 +378,7 @@ export function initializeScheduler(): void {
 						summary.totalItemsSynced += syncResult.itemsSynced;
 					} else {
 						summary.syncErrors++;
-						console.warn('[scheduler] Sync failed for connector:', {
+						logger.warn('Sync failed for connector', {
 							connectorId: connector.id,
 							name: connector.name,
 							error: syncResult.error
@@ -410,7 +412,7 @@ export function initializeScheduler(): void {
 					summary.connectorsProcessed++;
 				} catch (error) {
 					summary.syncErrors++;
-					console.error('[scheduler] Error processing connector:', {
+					logger.error('Error processing connector', {
 						connectorId: connector.id,
 						name: connector.name,
 						error: error instanceof Error ? error.message : String(error)
@@ -427,7 +429,7 @@ export function initializeScheduler(): void {
 				summary.totalItemsEnqueued > 0 ||
 				summary.syncErrors > 0
 			) {
-				console.log('[scheduler] Incremental sync sweep completed:', {
+				logger.info('Incremental sync sweep completed', {
 					...summary,
 					durationMs
 				});
@@ -449,7 +451,7 @@ export function initializeScheduler(): void {
 			name: 'full-reconciliation',
 			protect: true, // Prevent overlapping executions
 			catch: (err) => {
-				console.error('[scheduler] Full reconciliation failed:', err);
+				logger.error('Full reconciliation failed', { error: err instanceof Error ? err.message : String(err) });
 			}
 		},
 		withJobContext('full-reconciliation', async () => {
@@ -485,7 +487,7 @@ export function initializeScheduler(): void {
 						summary.totalDeleted += reconcileResult.itemsDeleted;
 					} else {
 						summary.reconciliationErrors++;
-						console.warn('[scheduler] Reconciliation failed for connector:', {
+						logger.warn('Reconciliation failed for connector', {
 							connectorId: connector.id,
 							name: connector.name,
 							error: reconcileResult.error
@@ -519,7 +521,7 @@ export function initializeScheduler(): void {
 					summary.connectorsProcessed++;
 				} catch (error) {
 					summary.reconciliationErrors++;
-					console.error('[scheduler] Error during reconciliation:', {
+					logger.error('Error during reconciliation', {
 						connectorId: connector.id,
 						name: connector.name,
 						error: error instanceof Error ? error.message : String(error)
@@ -529,7 +531,7 @@ export function initializeScheduler(): void {
 
 			// Log summary
 			const durationMs = Date.now() - startTime;
-			console.log('[scheduler] Full reconciliation completed:', {
+			logger.info('Full reconciliation completed', {
 				...summary,
 				durationMs
 			});
@@ -553,7 +555,7 @@ export function initializeScheduler(): void {
 			name: 'completion-snapshot',
 			protect: true, // Prevent overlapping executions
 			catch: (err) => {
-				console.error('[scheduler] Completion snapshot failed:', err);
+				logger.error('Completion snapshot failed', { error: err instanceof Error ? err.message : String(err) });
 			}
 		},
 		withJobContext('completion-snapshot', async () => {
@@ -568,7 +570,7 @@ export function initializeScheduler(): void {
 			const cleaned = await cleanupOldSnapshots(30);
 
 			if (captured > 0 || cleaned > 0) {
-				console.log('[scheduler] Completion snapshot:', {
+				logger.info('Completion snapshot', {
 					snapshotsCaptured: captured,
 					oldSnapshotsCleaned: cleaned
 				});
@@ -593,7 +595,7 @@ export function initializeScheduler(): void {
 			name: 'db-maintenance',
 			protect: true, // Prevent overlapping executions
 			catch: (err) => {
-				console.error('[scheduler] Database maintenance failed:', err);
+				logger.error('Database maintenance failed', { error: err instanceof Error ? err.message : String(err) });
 			}
 		},
 		withJobContext('db-maintenance', async () => {
@@ -601,13 +603,13 @@ export function initializeScheduler(): void {
 			const maintenanceResult = await runDatabaseMaintenance();
 
 			if (maintenanceResult.success) {
-				console.log('[scheduler] Database maintenance completed:', {
+				logger.info('Database maintenance completed', {
 					vacuumDurationMs: maintenanceResult.vacuumDurationMs,
 					analyzeDurationMs: maintenanceResult.analyzeDurationMs,
 					totalDurationMs: maintenanceResult.totalDurationMs
 				});
 			} else {
-				console.error('[scheduler] Database maintenance failed:', maintenanceResult.error);
+				logger.error('Database maintenance failed', { error: maintenanceResult.error });
 			}
 
 			// 2. Run orphan cleanup
@@ -615,7 +617,7 @@ export function initializeScheduler(): void {
 
 			if (orphanResult.success) {
 				if (orphanResult.totalOrphansDeleted > 0) {
-					console.log('[scheduler] Orphan cleanup completed:', {
+					logger.info('Orphan cleanup completed', {
 						episodeOrphansDeleted: orphanResult.episodeOrphansDeleted,
 						movieOrphansDeleted: orphanResult.movieOrphansDeleted,
 						totalOrphansDeleted: orphanResult.totalOrphansDeleted,
@@ -623,7 +625,7 @@ export function initializeScheduler(): void {
 					});
 				}
 			} else {
-				console.error('[scheduler] Orphan cleanup failed:', orphanResult.error);
+				logger.error('Orphan cleanup failed', { error: orphanResult.error });
 			}
 
 			// 3. Run history pruning
@@ -631,13 +633,13 @@ export function initializeScheduler(): void {
 
 			if (historyResult.success) {
 				if (historyResult.searchHistoryDeleted > 0) {
-					console.log('[scheduler] History pruning completed:', {
+					logger.info('History pruning completed', {
 						searchHistoryDeleted: historyResult.searchHistoryDeleted,
 						durationMs: historyResult.durationMs
 					});
 				}
 			} else {
-				console.error('[scheduler] History pruning failed:', historyResult.error);
+				logger.error('History pruning failed', { error: historyResult.error });
 			}
 		})
 	);
@@ -656,7 +658,7 @@ export function initializeScheduler(): void {
 			name: 'queue-processor',
 			protect: true, // Prevent overlapping executions
 			catch: (err) => {
-				console.error('[scheduler] Queue processor failed:', err);
+				logger.error('Queue processor failed', { error: err instanceof Error ? err.message : String(err) });
 			}
 		},
 		withJobContext('queue-processor', async () => {
@@ -753,7 +755,7 @@ export function initializeScheduler(): void {
 						}
 					}
 				} catch (error) {
-					console.error('[scheduler] Error processing queue for connector:', {
+					logger.error('Error processing queue for connector', {
 						connectorId: connector.id,
 						name: connector.name,
 						error: error instanceof Error ? error.message : String(error)
@@ -769,7 +771,7 @@ export function initializeScheduler(): void {
 				summary.failed > 0 ||
 				summary.rateLimited > 0
 			) {
-				console.log('[scheduler] Queue processor completed:', {
+				logger.info('Queue processor completed', {
 					...summary,
 					durationMs
 				});
@@ -794,7 +796,7 @@ export function initializeScheduler(): void {
 			name: 'notification-batch-processor',
 			protect: true, // Prevent overlapping executions
 			catch: (err) => {
-				console.error('[scheduler] Notification batch processing failed:', err);
+				logger.error('Notification batch processing failed', { error: err instanceof Error ? err.message : String(err) });
 			}
 		},
 		withJobContext('notification-batch-processor', async () => {
@@ -804,7 +806,7 @@ export function initializeScheduler(): void {
 
 			// Only log if there was activity
 			if (result.batchesSent > 0 || result.errors > 0) {
-				console.log('[scheduler] Notification batches processed:', {
+				logger.info('Notification batches processed', {
 					channelsProcessed: result.channelsProcessed,
 					batchesSent: result.batchesSent,
 					notificationsBatched: result.notificationsBatched,
@@ -831,7 +833,7 @@ export function initializeScheduler(): void {
 			name: 'queue-depth-sampler',
 			protect: true, // Prevent overlapping executions
 			catch: (err) => {
-				console.error('[scheduler] Queue depth sampling failed:', err);
+				logger.error('Queue depth sampling failed', { error: err instanceof Error ? err.message : String(err) });
 			}
 		},
 		withJobContext('queue-depth-sampler', async () => {
@@ -839,7 +841,7 @@ export function initializeScheduler(): void {
 
 			if (samples.length > 0) {
 				const totalDepth = samples.reduce((sum, s) => sum + s.queueDepth, 0);
-				console.log('[scheduler] Queue depth sampled:', {
+				logger.info('Queue depth sampled', {
 					connectors: samples.length,
 					totalQueueDepth: totalDepth
 				});
@@ -860,7 +862,7 @@ export function initializeScheduler(): void {
 			name: 'analytics-hourly-aggregation',
 			protect: true, // Prevent overlapping executions
 			catch: (err) => {
-				console.error('[scheduler] Hourly analytics aggregation failed:', err);
+				logger.error('Hourly analytics aggregation failed', { error: err instanceof Error ? err.message : String(err) });
 			}
 		},
 		withJobContext('analytics-hourly-aggregation', async () => {
@@ -872,7 +874,7 @@ export function initializeScheduler(): void {
 			const result = await aggregateHourlyStats(previousHour);
 
 			if (result.success && result.hourlyStatsUpdated > 0) {
-				console.log('[scheduler] Hourly analytics aggregated:', {
+				logger.info('Hourly analytics aggregated', {
 					hour: previousHour.toISOString(),
 					statsUpdated: result.hourlyStatsUpdated,
 					eventsProcessed: result.eventsProcessed,
@@ -895,7 +897,7 @@ export function initializeScheduler(): void {
 			name: 'analytics-daily-aggregation',
 			protect: true, // Prevent overlapping executions
 			catch: (err) => {
-				console.error('[scheduler] Daily analytics aggregation failed:', err);
+				logger.error('Daily analytics aggregation failed', { error: err instanceof Error ? err.message : String(err) });
 			}
 		},
 		withJobContext('analytics-daily-aggregation', async () => {
@@ -907,7 +909,7 @@ export function initializeScheduler(): void {
 			const result = await aggregateDailyStats(previousDay);
 
 			if (result.success) {
-				console.log('[scheduler] Daily analytics aggregated:', {
+				logger.info('Daily analytics aggregated', {
 					date: previousDay.toISOString().split('T')[0],
 					statsUpdated: result.dailyStatsUpdated,
 					durationMs: result.durationMs
@@ -917,7 +919,7 @@ export function initializeScheduler(): void {
 			// Cleanup old raw events (keep 7 days)
 			const eventsDeleted = await cleanupOldEvents(7);
 			if (eventsDeleted > 0) {
-				console.log('[scheduler] Old analytics events cleaned up:', eventsDeleted);
+				logger.info('Old analytics events cleaned up', { eventsDeleted });
 			}
 		})
 	);
@@ -934,11 +936,11 @@ export function initializeScheduler(): void {
 	// Initialize scheduled backup job from settings
 	// This is done asynchronously to avoid blocking initialization
 	initializeScheduledBackup().catch((err) => {
-		console.error('[scheduler] Failed to initialize scheduled backup:', err);
+		logger.error('Failed to initialize scheduled backup', { error: err instanceof Error ? err.message : String(err) });
 	});
 
 	initialized = true;
-	console.log('[scheduler] Scheduled jobs initialized:', Array.from(jobs.keys()));
+	logger.info('Scheduled jobs initialized', { jobs: Array.from(jobs.keys()) });
 }
 
 /**
@@ -946,19 +948,19 @@ export function initializeScheduler(): void {
  * Used for graceful shutdown.
  */
 export function stopScheduler(): void {
-	console.log('[scheduler] Stopping all scheduled jobs...');
+	logger.info('Stopping all scheduled jobs');
 
 	// Stop static jobs
 	for (const [name, job] of jobs) {
 		job.cron.stop();
-		console.log(`[scheduler] Stopped job: ${name}`);
+		logger.info('Stopped job', { name });
 	}
 	jobs.clear();
 
 	// Stop dynamic jobs
 	for (const [id, cron] of dynamicJobs) {
 		cron.stop();
-		console.log(`[scheduler] Stopped dynamic schedule: ${id}`);
+		logger.info('Stopped dynamic schedule', { id });
 	}
 	dynamicJobs.clear();
 
@@ -966,11 +968,11 @@ export function stopScheduler(): void {
 	if (scheduledBackupJob) {
 		scheduledBackupJob.stop();
 		scheduledBackupJob = null;
-		console.log('[scheduler] Stopped scheduled backup job');
+		logger.info('Stopped scheduled backup job');
 	}
 
 	initialized = false;
-	console.log('[scheduler] All scheduled jobs stopped');
+	logger.info('All scheduled jobs stopped');
 }
 
 /**
@@ -1032,7 +1034,7 @@ export function getSchedulerStatus(): {
  * 4. Updates nextRunAt for each schedule in the database
  */
 export async function refreshDynamicSchedules(): Promise<void> {
-	console.log('[scheduler] Refreshing dynamic schedules...');
+	logger.info('Refreshing dynamic schedules');
 
 	// Stop all existing dynamic jobs
 	for (const [id, cron] of dynamicJobs) {
@@ -1053,13 +1055,13 @@ export async function refreshDynamicSchedules(): Promise<void> {
 					timezone: schedule.timezone,
 					protect: true, // Prevent overlapping executions
 					catch: (err) => {
-						console.error(`[scheduler] Dynamic schedule ${schedule.id} (${schedule.name}) failed:`, err);
+						logger.error('Dynamic schedule failed', { scheduleId: schedule.id, scheduleName: schedule.name, error: err instanceof Error ? err.message : String(err) });
 					}
 				},
 				withJobContext(`sweep-schedule-${schedule.id}`, async () => {
 					// Job execution will be implemented in a future task
 					// For now, just log that it would run
-					console.log(`[scheduler] Dynamic schedule triggered: ${schedule.name} (ID: ${schedule.id})`);
+					logger.info('Dynamic schedule triggered', { scheduleName: schedule.name, scheduleId: schedule.id });
 				})
 			);
 
@@ -1071,11 +1073,11 @@ export async function refreshDynamicSchedules(): Promise<void> {
 				await updateNextRunAt(schedule.id, nextRun);
 			}
 		} catch (error) {
-			console.error(`[scheduler] Failed to create job for schedule ${schedule.id}:`, error);
+			logger.error('Failed to create job for schedule', { scheduleId: schedule.id, error: error instanceof Error ? error.message : String(error) });
 		}
 	}
 
-	console.log(`[scheduler] Loaded ${dynamicJobs.size} dynamic schedules`);
+	logger.info('Loaded dynamic schedules', { count: dynamicJobs.size });
 }
 
 // =============================================================================
@@ -1091,13 +1093,13 @@ async function initializeScheduledBackup(): Promise<void> {
 		const settings = await getBackupSettings();
 
 		if (!settings.scheduledEnabled) {
-			console.log('[scheduler] Scheduled backups are disabled');
+			logger.info('Scheduled backups are disabled');
 			return;
 		}
 
 		await createScheduledBackupJob(settings.scheduledCron, settings.retentionCount);
 	} catch (error) {
-		console.error('[scheduler] Failed to initialize scheduled backup:', error);
+		logger.error('Failed to initialize scheduled backup', { error: error instanceof Error ? error.message : String(error) });
 	}
 }
 
@@ -1124,12 +1126,12 @@ async function createScheduledBackupJob(
 				name: 'scheduled-backup',
 				protect: true, // Prevent overlapping executions
 				catch: (err) => {
-					console.error('[scheduler] Scheduled backup failed:', err);
+					logger.error('Scheduled backup failed', { error: err instanceof Error ? err.message : String(err) });
 				}
 			},
 			withJobContext('scheduled-backup', async () => {
 				const startTime = Date.now();
-				console.log('[scheduler] Starting scheduled backup...');
+				logger.info('Starting scheduled backup');
 
 				// Create the backup
 				const backupResult = await createBackup({
@@ -1138,7 +1140,7 @@ async function createScheduledBackupJob(
 				});
 
 				if (backupResult.success) {
-					console.log('[scheduler] Scheduled backup completed:', {
+					logger.info('Scheduled backup completed', {
 						backupId: backupResult.metadata?.id,
 						filePath: backupResult.filePath,
 						fileSizeBytes: backupResult.fileSizeBytes,
@@ -1149,30 +1151,30 @@ async function createScheduledBackupJob(
 					const cleanupResult = await cleanupOldScheduledBackups(retentionCount);
 
 					if (cleanupResult.success && cleanupResult.deletedCount > 0) {
-						console.log('[scheduler] Cleaned up old scheduled backups:', {
+						logger.info('Cleaned up old scheduled backups', {
 							deletedCount: cleanupResult.deletedCount
 						});
 					}
 				} else {
-					console.error('[scheduler] Scheduled backup failed:', {
+					logger.error('Scheduled backup failed', {
 						error: backupResult.error,
 						durationMs: backupResult.durationMs
 					});
 				}
 
 				const totalDurationMs = Date.now() - startTime;
-				console.log('[scheduler] Scheduled backup job completed:', { totalDurationMs });
+				logger.info('Scheduled backup job completed', { totalDurationMs });
 			})
 		);
 
 		const nextRun = scheduledBackupJob.nextRun();
-		console.log('[scheduler] Scheduled backup job created:', {
+		logger.info('Scheduled backup job created', {
 			cronExpression,
 			retentionCount,
 			nextRun: nextRun?.toISOString()
 		});
 	} catch (error) {
-		console.error('[scheduler] Failed to create scheduled backup job:', error);
+		logger.error('Failed to create scheduled backup job', { error: error instanceof Error ? error.message : String(error) });
 		scheduledBackupJob = null;
 	}
 }
@@ -1182,7 +1184,7 @@ async function createScheduledBackupJob(
  * Called when backup settings are updated.
  */
 export async function refreshScheduledBackup(): Promise<void> {
-	console.log('[scheduler] Refreshing scheduled backup configuration...');
+	logger.info('Refreshing scheduled backup configuration');
 
 	try {
 		const settings = await getBackupSettings();
@@ -1192,7 +1194,7 @@ export async function refreshScheduledBackup(): Promise<void> {
 			if (scheduledBackupJob) {
 				scheduledBackupJob.stop();
 				scheduledBackupJob = null;
-				console.log('[scheduler] Scheduled backups disabled');
+				logger.info('Scheduled backups disabled');
 			}
 			return;
 		}
@@ -1200,6 +1202,6 @@ export async function refreshScheduledBackup(): Promise<void> {
 		// Create or recreate the job with new settings
 		await createScheduledBackupJob(settings.scheduledCron, settings.retentionCount);
 	} catch (error) {
-		console.error('[scheduler] Failed to refresh scheduled backup:', error);
+		logger.error('Failed to refresh scheduled backup', { error: error instanceof Error ? error.message : String(error) });
 	}
 }

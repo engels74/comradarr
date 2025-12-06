@@ -22,6 +22,9 @@ import { getSender, isSupportedChannelType } from './index';
 import { buildAggregatePayload } from './aggregators';
 import type { NotificationResult } from './types';
 import { isInQuietHours } from './quiet-hours';
+import { createLogger } from '$lib/server/logger';
+
+const logger = createLogger('notification-batcher');
 
 // =============================================================================
 // Types
@@ -135,7 +138,7 @@ export class NotificationBatcher {
 				result.errors += channelResult.errors;
 			} catch (error) {
 				result.errors++;
-				console.error('[NotificationBatcher] Error processing channel:', {
+				logger.error('Error processing channel', {
 					channelId: channel.id,
 					channelName: channel.name,
 					error: error instanceof Error ? error.message : String(error)
@@ -186,7 +189,7 @@ export class NotificationBatcher {
 				}
 			} catch (error) {
 				result.errors++;
-				console.error('[NotificationBatcher] Error processing event type:', {
+				logger.error('Error processing event type', {
 					channelId: channel.id,
 					eventType,
 					error: error instanceof Error ? error.message : String(error)

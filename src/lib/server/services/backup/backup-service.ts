@@ -31,6 +31,9 @@ import {
 
 // Import schema tables for dynamic querying
 import * as schema from '$lib/server/db/schema';
+import { createLogger } from '$lib/server/logger';
+
+const logger = createLogger('backup');
 
 // =============================================================================
 // Configuration
@@ -231,27 +234,25 @@ export async function createBackup(options?: BackupOptions): Promise<BackupResul
 	const startTime = Date.now();
 	const backupId = crypto.randomUUID();
 
-	console.log('[backup] Starting database backup...', { backupId });
+	logger.info('Starting database backup', { backupId });
 
 	try {
 		// 1. Export all tables in dependency order
-		console.log('[backup] Exporting tables...');
+		logger.info('Exporting tables');
 		const tables: TableExport[] = [];
 
 		for (const tableName of TABLE_EXPORT_ORDER) {
 			const tableExport = await exportTable(tableName);
 			tables.push(tableExport);
-			console.log(`[backup] Exported table: ${tableName}`, {
-				rowCount: tableExport.rowCount
-			});
+			logger.info('Exported table', { tableName, rowCount: tableExport.rowCount });
 		}
 
 		// 2. Generate checksum
-		console.log('[backup] Generating checksum...');
+		logger.info('Generating checksum');
 		const checksum = await generateChecksum(tables);
 
 		// 3. Create SECRET_KEY verifier
-		console.log('[backup] Creating SECRET_KEY verifier...');
+		logger.info('Creating SECRET_KEY verifier');
 		const secretKeyVerifier = await createSecretKeyVerifier();
 
 		// 4. Get schema version
@@ -280,7 +281,7 @@ export async function createBackup(options?: BackupOptions): Promise<BackupResul
 		const filename = getBackupFilename(backupId);
 		const filePath = join(backupDir, filename);
 
-		console.log('[backup] Saving backup to file...', { filePath });
+		logger.info('Saving backup to file', { filePath });
 		const backupJson = JSON.stringify(backupFile, null, 2);
 		await writeFile(filePath, backupJson, 'utf-8');
 
@@ -290,7 +291,7 @@ export async function createBackup(options?: BackupOptions): Promise<BackupResul
 
 		const durationMs = Date.now() - startTime;
 
-		console.log('[backup] Backup completed successfully', {
+		logger.info('Backup completed successfully', {
 			backupId,
 			filePath,
 			fileSizeBytes,
@@ -310,7 +311,7 @@ export async function createBackup(options?: BackupOptions): Promise<BackupResul
 		const durationMs = Date.now() - startTime;
 		const errorMessage = error instanceof Error ? error.message : String(error);
 
-		console.error('[backup] Backup failed', {
+		logger.error('Backup failed', {
 			backupId,
 			error: errorMessage,
 			durationMs
@@ -363,7 +364,7 @@ export async function listBackups(): Promise<BackupInfo[]> {
 				});
 			} catch {
 				// Skip invalid backup files
-				console.warn('[backup] Skipping invalid backup file:', file);
+				logger.warn('Skipping invalid backup file', { file });
 			}
 		}
 
@@ -427,7 +428,7 @@ export async function deleteBackup(backupId: string): Promise<boolean> {
 
 	try {
 		await rm(filePath);
-		console.log('[backup] Deleted backup', { backupId, filePath });
+		logger.info('Deleted backup', { backupId, filePath });
 		return true;
 	} catch {
 		return false;
@@ -522,14 +523,14 @@ export async function cleanupOldScheduledBackups(retentionCount: number): Promis
 			const deleted = await deleteBackup(backup.id);
 			if (deleted) {
 				deletedCount++;
-				console.log('[backup] Cleaned up old scheduled backup:', {
+				logger.info('Cleaned up old scheduled backup', {
 					backupId: backup.id,
 					createdAt: backup.metadata.createdAt
 				});
 			}
 		}
 
-		console.log('[backup] Scheduled backup cleanup completed:', {
+		logger.info('Scheduled backup cleanup completed', {
 			totalScheduled: scheduledBackups.length,
 			retained: retentionCount,
 			deleted: deletedCount
@@ -541,7 +542,7 @@ export async function cleanupOldScheduledBackups(retentionCount: number): Promis
 		};
 	} catch (error) {
 		const errorMessage = error instanceof Error ? error.message : String(error);
-		console.error('[backup] Scheduled backup cleanup failed:', errorMessage);
+		logger.error('Scheduled backup cleanup failed', { error: errorMessage });
 
 		return {
 			success: false,

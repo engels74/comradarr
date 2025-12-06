@@ -17,6 +17,9 @@ import {
 } from '$lib/server/db/schema';
 import { sql, and, gte, lt, eq } from 'drizzle-orm';
 import type { AggregationResult } from './types';
+import { createLogger } from '$lib/server/logger';
+
+const logger = createLogger('analytics');
 
 // =============================================================================
 // Helper Functions
@@ -176,7 +179,7 @@ export async function aggregateHourlyStats(hourBucket: Date): Promise<Aggregatio
 			durationMs: Date.now() - startTime
 		};
 	} catch (error) {
-		console.error('[analytics] Hourly aggregation failed:', error);
+		logger.error('Hourly aggregation failed', { error: error instanceof Error ? error.message : String(error) });
 		return {
 			success: false,
 			hourlyStatsUpdated: 0,
@@ -294,7 +297,7 @@ export async function aggregateDailyStats(dateBucket: Date): Promise<Aggregation
 			durationMs: Date.now() - startTime
 		};
 	} catch (error) {
-		console.error('[analytics] Daily aggregation failed:', error);
+		logger.error('Daily aggregation failed', { error: error instanceof Error ? error.message : String(error) });
 		return {
 			success: false,
 			hourlyStatsUpdated: 0,
@@ -327,7 +330,7 @@ export async function cleanupOldEvents(retentionDays: number = 7): Promise<numbe
 
 		return deleted.length;
 	} catch (error) {
-		console.error('[analytics] Failed to cleanup old events:', error);
+		logger.error('Failed to cleanup old events', { error: error instanceof Error ? error.message : String(error) });
 		return 0;
 	}
 }

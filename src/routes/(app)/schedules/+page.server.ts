@@ -19,6 +19,9 @@ import type {
 	DayGroup,
 	SweepType
 } from '$lib/components/schedules/types';
+import { createLogger } from '$lib/server/logger';
+
+const logger = createLogger('schedules');
 
 // =============================================================================
 // Constants
@@ -80,7 +83,7 @@ function computeTimelineData(schedules: ScheduleWithRelations[]): TimelineData {
 				runCount++;
 			}
 		} catch (error) {
-			console.warn(`[schedules] Failed to parse cron for schedule ${schedule.id}:`, error);
+			logger.warn('Failed to parse cron for schedule', { scheduleId: schedule.id, error: error instanceof Error ? error.message : String(error) });
 		}
 	}
 

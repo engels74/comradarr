@@ -20,6 +20,9 @@ import {
 	parseRateLimitValue,
 	type ApiKeyRateLimitPreset
 } from '$lib/schemas/settings';
+import { createLogger } from '$lib/server/logger';
+
+const logger = createLogger('api-keys');
 
 export const load: PageServerLoad = async ({ locals }) => {
 	// locals.user is guaranteed by (app) layout guard
@@ -124,7 +127,7 @@ export const actions: Actions = {
 				plainKey: created.plainKey // Shown only once
 			};
 		} catch (err) {
-			console.error('[api-keys] Failed to create key:', err);
+			logger.error('Failed to create key', { error: err instanceof Error ? err.message : String(err) });
 			return fail(500, {
 				action: 'createKey' as const,
 				error: 'Failed to create API key. Please try again.'
@@ -162,7 +165,7 @@ export const actions: Actions = {
 				});
 			}
 		} catch (err) {
-			console.error('[api-keys] Failed to delete key:', err);
+			logger.error('Failed to delete key', { error: err instanceof Error ? err.message : String(err) });
 			return fail(500, {
 				action: 'deleteKey' as const,
 				error: 'Failed to delete API key. Please try again.'
@@ -232,7 +235,7 @@ export const actions: Actions = {
 				});
 			}
 		} catch (err) {
-			console.error('[api-keys] Failed to update rate limit:', err);
+			logger.error('Failed to update rate limit', { error: err instanceof Error ? err.message : String(err) });
 			return fail(500, {
 				action: 'updateRateLimit' as const,
 				error: 'Failed to update rate limit. Please try again.'
@@ -276,7 +279,7 @@ export const actions: Actions = {
 				});
 			}
 		} catch (err) {
-			console.error('[api-keys] Failed to revoke key:', err);
+			logger.error('Failed to revoke key', { error: err instanceof Error ? err.message : String(err) });
 			return fail(500, {
 				action: 'revokeKey' as const,
 				error: 'Failed to revoke API key. Please try again.'

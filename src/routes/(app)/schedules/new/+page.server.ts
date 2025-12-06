@@ -11,6 +11,9 @@ import { fail, redirect } from '@sveltejs/kit';
 import * as v from 'valibot';
 import { ScheduleSchema } from '$lib/schemas/schedules';
 import { Cron } from 'croner';
+import { createLogger } from '$lib/server/logger';
+
+const logger = createLogger('schedules');
 
 export const load: PageServerLoad = async () => {
 	const [connectors, throttleProfiles] = await Promise.all([
@@ -121,7 +124,7 @@ export const actions: Actions = {
 			// Refresh scheduler to pick up new schedule
 			await refreshDynamicSchedules();
 		} catch (err) {
-			console.error('[schedules/new] Failed to create schedule:', err);
+			logger.error('Failed to create schedule', { error: err instanceof Error ? err.message : String(err) });
 			return fail(500, {
 				error: 'Failed to create schedule. Please try again.',
 				...formValues
