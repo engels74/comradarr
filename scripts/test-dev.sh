@@ -41,6 +41,7 @@ CUSTOM_ADMIN_PASSWORD=""
 DB_NAME=""
 DB_USER=""
 DB_PASSWORD=""
+DB_PASSWORD_ENCODED=""  # URL-encoded version for connection strings
 ADMIN_PASSWORD=""
 SECRET_KEY=""
 TIMESTAMP=""
@@ -98,6 +99,27 @@ generate_password() {
 # Note: || true prevents SIGPIPE from causing script exit with pipefail
 generate_secret_key() {
     (LC_ALL=C tr -dc 'a-f0-9' < /dev/urandom | head -c 64) || true
+}
+
+# URL-encode a string for safe inclusion in connection URLs
+# Encodes all reserved characters that could break URL parsing
+urlencode() {
+    local string="$1"
+    local encoded=""
+    local char
+    for (( i=0; i<${#string}; i++ )); do
+        char="${string:i:1}"
+        case "$char" in
+            [A-Za-z0-9._~-])
+                encoded+="$char"
+                ;;
+            *)
+                # Convert character to hex escape sequence
+                encoded+=$(printf '%%%02X' "'$char")
+                ;;
+        esac
+    done
+    echo "$encoded"
 }
 
 # Execute SQL as superuser (handles platform differences)
@@ -281,7 +303,7 @@ run_migrations() {
     log_info "Running database migrations..."
 
     cd "$PROJECT_ROOT"
-    DATABASE_URL="postgres://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_NAME}" \
+    DATABASE_URL="postgres://${DB_USER}:${DB_PASSWORD_ENCODED}@${DB_HOST}:${DB_PORT}/${DB_NAME}" \
     SECRET_KEY="$SECRET_KEY" \
     bunx drizzle-kit migrate
 
@@ -343,7 +365,7 @@ createAdmin().catch(err => {
 });
 SCRIPT_EOF
 
-    DATABASE_URL="postgres://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_NAME}" \
+    DATABASE_URL="postgres://${DB_USER}:${DB_PASSWORD_ENCODED}@${DB_HOST}:${DB_PORT}/${DB_NAME}" \
     SECRET_KEY="$SECRET_KEY" \
     ADMIN_PASSWORD="$ADMIN_PASSWORD" \
     bun run "$temp_script"
@@ -385,14 +407,14 @@ cleanup() {
             log_success "Resources preserved!"
             echo ""
             echo -e "${CYAN}${BOLD}=== Preserved Resources ===${NC}"
-            echo -e "Database: ${GREEN}postgres://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_NAME}${NC}"
+            echo -e "Database: ${GREEN}postgres://${DB_USER}:${DB_PASSWORD_ENCODED}@${DB_HOST}:${DB_PORT}/${DB_NAME}${NC}"
             echo -e "Admin Login: ${GREEN}admin / ${ADMIN_PASSWORD}${NC}"
             if [[ -n "$LOG_FILE" ]] && [[ -f "$LOG_FILE" ]]; then
                 echo -e "Log File: ${GREEN}${LOG_FILE}${NC}"
             fi
             echo ""
             echo "To reuse this database:"
-            echo "  export DATABASE_URL='postgres://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_NAME}'"
+            echo "  export DATABASE_URL='postgres://${DB_USER}:${DB_PASSWORD_ENCODED}@${DB_HOST}:${DB_PORT}/${DB_NAME}'"
             echo "  export SECRET_KEY='${SECRET_KEY}'"
             echo "  bun run dev --port ${DEV_PORT}"
             echo ""
@@ -440,7 +462,7 @@ display_banner() {
     echo -e "${CYAN}${BOLD}╠══════════════════════════════════════════════════════════════════╣${NC}"
     echo -e "${CYAN}${BOLD}║${NC} Mode:        ${mode_label}"
     echo -e "${CYAN}${BOLD}║${NC} Dev Server:  ${GREEN}http://localhost:${DEV_PORT}${NC}"
-    echo -e "${CYAN}${BOLD}║${NC} Database:    ${GREEN}postgres://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_NAME}${NC}"
+    echo -e "${CYAN}${BOLD}║${NC} Database:    ${GREEN}postgres://${DB_USER}:${DB_PASSWORD_ENCODED}@${DB_HOST}:${DB_PORT}/${DB_NAME}${NC}"
     echo -e "${CYAN}${BOLD}║${NC} Admin Login: ${GREEN}admin${NC} / ${GREEN}${ADMIN_PASSWORD}${NC}"
     if [[ "$LOG_ENABLED" == "true" ]] && [[ -n "$LOG_FILE" ]]; then
         echo -e "${CYAN}${BOLD}║${NC} Log File:    ${GREEN}${LOG_FILE}${NC}"
@@ -460,7 +482,7 @@ start_dev_server() {
     cd "$PROJECT_ROOT"
 
     # Export environment variables
-    export DATABASE_URL="postgres://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_NAME}"
+    export DATABASE_URL="postgres://${DB_USER}:${DB_PASSWORD_ENCODED}@${DB_HOST}:${DB_PORT}/${DB_NAME}"
     export SECRET_KEY="$SECRET_KEY"
 
     if [[ "$LOG_ENABLED" == "true" ]] && [[ -n "$LOG_FILE" ]]; then
@@ -629,6 +651,7 @@ initialize_config() {
 
     # Generate or use provided passwords
     DB_PASSWORD="$(generate_password 16)"
+    DB_PASSWORD_ENCODED="$(urlencode "$DB_PASSWORD")"
 
     if [[ -n "$CUSTOM_ADMIN_PASSWORD" ]]; then
         ADMIN_PASSWORD="$CUSTOM_ADMIN_PASSWORD"
