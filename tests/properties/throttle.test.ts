@@ -27,7 +27,7 @@ import {
 	msUntilMinuteWindowExpires,
 	msUntilMidnightUTC
 } from '../../src/lib/server/services/throttle/time-utils';
-import type { ThrottlePreset } from '../../src/lib/server/services/throttle/presets';
+import type { ThrottlePreset } from '../../src/lib/config/throttle-presets';
 
 // =============================================================================
 // Arbitraries

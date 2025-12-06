@@ -15,7 +15,7 @@
 		CONSERVATIVE_PRESET,
 		MODERATE_PRESET,
 		AGGRESSIVE_PRESET
-	} from '$lib/server/services/throttle/presets';
+	} from '$lib/config/throttle-presets';
 	import {
 		throttleProfileLabels,
 		throttleProfileDescriptions

@@ -18,7 +18,7 @@ import { and, count, eq, ne } from 'drizzle-orm';
 import {
 	DEFAULT_FALLBACK_PRESET,
 	type ThrottlePreset
-} from '$lib/server/services/throttle/presets';
+} from '$lib/config/throttle-presets';
 
 // =============================================================================
 // Input Types

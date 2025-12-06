@@ -21,7 +21,7 @@ import {
 	getThrottleState,
 	getOrCreateThrottleState
 } from '../../src/lib/server/db/queries/throttle-state';
-import { MODERATE_PRESET } from '../../src/lib/server/services/throttle/presets';
+import { MODERATE_PRESET } from '../../src/lib/config/throttle-presets';
 
 // Store original SECRET_KEY to restore after tests
 const originalSecretKey = process.env.SECRET_KEY;

@@ -19,7 +19,7 @@ import {
 	seasons,
 	series
 } from '$lib/server/db/schema';
-import { and, count, desc, eq, gte, lte, sql, sum } from 'drizzle-orm';
+import { and, count, desc, eq, gte, lte, sql } from 'drizzle-orm';
 
 // =============================================================================
 // Types

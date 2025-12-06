@@ -6,6 +6,6 @@
  *
  */
 
-export * from './presets';
+export * from '$lib/config/throttle-presets';
 export * from './throttle-enforcer';
 export * from './time-utils';

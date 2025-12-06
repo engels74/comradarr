@@ -37,7 +37,7 @@ import {
 	assignThrottleProfileToConnector,
 	deleteThrottleProfile
 } from '../../src/lib/server/db/queries/throttle';
-import { MODERATE_PRESET, CONSERVATIVE_PRESET } from '../../src/lib/server/services/throttle/presets';
+import { MODERATE_PRESET, CONSERVATIVE_PRESET } from '../../src/lib/config/throttle-presets';
 
 // Store original SECRET_KEY to restore after tests
 const originalSecretKey = process.env.SECRET_KEY;
