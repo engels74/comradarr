@@ -85,6 +85,13 @@
       "when": 1764919745746,
       "tag": "20251205072905_chemical_shard",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1764982217282,
+      "tag": "20251206005017_nosy_firebird",
+      "breakpoints": true
     }
   ]
 }

@@ -10,6 +10,7 @@
  * - searchRegistry, requestQueue, searchHistory: Search state tracking
  * - syncState: Sync tracking per connector
  * - users, sessions: Authentication (Requirements 10.1, 10.2)
+ * - apiKeys: External API authentication keys (Requirement 34.1)
  * - prowlarrInstances: Prowlarr connections for indexer health monitoring (Requirements 38.1)
  * - prowlarrIndexerHealth: Cached indexer health status (Requirements 38.2, 38.4)
  * - notificationChannels: Notification channel configurations (Requirements 9.1, 9.2, 9.3, 9.4, 36.1)
@@ -21,7 +22,7 @@
  * - analyticsDailyStats: Daily aggregated statistics (Requirements 12.1, 12.2, 12.4)
  * - appSettings: Application-wide configuration settings (Requirement 21.1)
  *
- * Requirements: 7.1, 7.4, 7.5, 9.1, 9.2, 9.3, 9.4, 10.1, 10.2, 12.1, 12.2, 12.3, 12.4, 14.1, 14.2, 14.3, 15.4, 19.1, 21.1, 36.1, 38.1, 38.2, 38.4
+ * Requirements: 7.1, 7.4, 7.5, 9.1, 9.2, 9.3, 9.4, 10.1, 10.2, 12.1, 12.2, 12.3, 12.4, 14.1, 14.2, 14.3, 15.4, 19.1, 21.1, 34.1, 36.1, 38.1, 38.2, 38.4
  */
 
 import {
@@ -363,6 +364,37 @@ export const sessions = pgTable(
 );
 
 // =============================================================================
+// API Keys Table (Requirement 34.1)
+// =============================================================================
+
+/**
+ * Stores API keys for programmatic access to Comradarr.
+ * Keys are hashed (not encrypted) since they cannot be recovered - shown only once at creation.
+ * Follows industry best practices (GitHub, AWS pattern) for API key management.
+ */
+export const apiKeys = pgTable(
+	'api_keys',
+	{
+		id: integer('id').primaryKey().generatedAlwaysAsIdentity(),
+		userId: integer('user_id')
+			.notNull()
+			.references(() => users.id, { onDelete: 'cascade' }),
+		name: varchar('name', { length: 100 }).notNull(),
+		description: text('description'),
+		scope: varchar('scope', { length: 20 }).notNull().default('read'), // 'read' | 'full'
+		keyPrefix: varchar('key_prefix', { length: 8 }).notNull(), // First 8 chars for UI identification
+		keyHash: text('key_hash').notNull(), // Argon2id hash of full key
+		expiresAt: timestamp('expires_at', { withTimezone: true }), // null = never expires
+		lastUsedAt: timestamp('last_used_at', { withTimezone: true }),
+		createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow()
+	},
+	(table) => [
+		index('api_keys_user_idx').on(table.userId),
+		index('api_keys_prefix_idx').on(table.keyPrefix)
+	]
+);
+
+// =============================================================================
 // Prowlarr Instances Table (Requirements 38.1)
 // =============================================================================
 
@@ -453,6 +485,9 @@ export type NewUser = typeof users.$inferInsert;
 
 export type Session = typeof sessions.$inferSelect;
 export type NewSession = typeof sessions.$inferInsert;
+
+export type ApiKey = typeof apiKeys.$inferSelect;
+export type NewApiKey = typeof apiKeys.$inferInsert;
 
 export type ProwlarrInstance = typeof prowlarrInstances.$inferSelect;
 export type NewProwlarrInstance = typeof prowlarrInstances.$inferInsert;

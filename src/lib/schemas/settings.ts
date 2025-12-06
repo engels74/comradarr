@@ -1,7 +1,7 @@
 /**
  * Validation schemas for settings forms.
  *
- * Requirements: 21.1, 21.5
+ * Requirements: 21.1, 21.5, 34.1
  */
 
 import * as v from 'valibot';
@@ -159,3 +159,74 @@ export const BackupSettingsSchema = v.object({
 
 export type BackupSettingsInput = v.InferInput<typeof BackupSettingsSchema>;
 export type BackupSettingsOutput = v.InferOutput<typeof BackupSettingsSchema>;
+
+// =============================================================================
+// API Key Settings (Requirement 34.1)
+// =============================================================================
+
+/**
+ * Supported API key scopes.
+ *
+ * - read: Read-only access (GET requests)
+ * - full: Full access to all API operations
+ */
+export const apiKeyScopes = ['read', 'full'] as const;
+export type ApiKeyScope = (typeof apiKeyScopes)[number];
+
+/**
+ * API key scope display names for UI.
+ */
+export const apiKeyScopeLabels: Record<ApiKeyScope, string> = {
+	read: 'Read Only',
+	full: 'Full Access'
+};
+
+/**
+ * API key scope descriptions for UI.
+ */
+export const apiKeyScopeDescriptions: Record<ApiKeyScope, string> = {
+	read: 'Can only read data (GET requests)',
+	full: 'Full access to all API operations'
+};
+
+/**
+ * API key expiration options.
+ */
+export const apiKeyExpirations = ['never', '30d', '90d', '365d'] as const;
+export type ApiKeyExpiration = (typeof apiKeyExpirations)[number];
+
+/**
+ * API key expiration display names for UI.
+ */
+export const apiKeyExpirationLabels: Record<ApiKeyExpiration, string> = {
+	never: 'Never',
+	'30d': '30 days',
+	'90d': '90 days',
+	'365d': '1 year'
+};
+
+/**
+ * Create API key validation schema.
+ *
+ * Validates:
+ * - name: Required string, 1-100 characters
+ * - description: Optional string, max 500 characters
+ * - scope: Required, one of 'read' | 'full'
+ * - expiresIn: Optional, one of 'never' | '30d' | '90d' | '365d'
+ */
+export const CreateApiKeySchema = v.object({
+	name: v.pipe(
+		v.string('Name is required'),
+		v.trim(),
+		v.minLength(1, 'Name is required'),
+		v.maxLength(100, 'Name must be 100 characters or less')
+	),
+	description: v.optional(
+		v.pipe(v.string(), v.trim(), v.maxLength(500, 'Description must be 500 characters or less'))
+	),
+	scope: v.pipe(v.string('Scope is required'), v.picklist(apiKeyScopes, 'Invalid scope')),
+	expiresIn: v.optional(v.pipe(v.string(), v.picklist(apiKeyExpirations, 'Invalid expiration')))
+});
+
+export type CreateApiKeyInput = v.InferInput<typeof CreateApiKeySchema>;
+export type CreateApiKeyOutput = v.InferOutput<typeof CreateApiKeySchema>;

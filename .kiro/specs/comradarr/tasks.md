@@ -743,7 +743,7 @@
 ## Phase 23: External API
 
 - [ ] 51. Implement external API
-  - [ ] 51.1 Create API key management
+  - [x] 51.1 Create API key management
     - Generate API keys with description and scope
     - Store keys securely
     - _Requirements: 34.1_
