@@ -7,6 +7,7 @@
 	import { Input } from '$lib/components/ui/input';
 	import { Button } from '$lib/components/ui/button';
 	import { Label } from '$lib/components/ui/label';
+	import comradarrIcon from '$lib/assets/comradarr-icon.svg';
 	import type { ActionData } from './$types';
 
 	let { form }: { form: ActionData } = $props();
@@ -18,7 +19,13 @@
 	<title>Login - Comradarr</title>
 </svelte:head>
 
-<Card.Root>
+<div class="flex flex-col items-center gap-6">
+	<div class="flex flex-col items-center gap-2">
+		<img src={comradarrIcon} alt="Comradarr" class="h-20 w-20" />
+		<h1 class="text-2xl font-bold text-foreground">Comradarr</h1>
+	</div>
+
+	<Card.Root class="w-full">
 	<Card.Header class="space-y-1">
 		<Card.Title class="text-2xl font-bold">Login</Card.Title>
 		<Card.Description>Enter your credentials to access Comradarr</Card.Description>
@@ -79,4 +86,5 @@
 			</div>
 		</form>
 	</Card.Content>
-</Card.Root>
+	</Card.Root>
+</div>
