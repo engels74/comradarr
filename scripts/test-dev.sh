@@ -364,65 +364,14 @@ create_admin_user() {
 
     cd "$PROJECT_ROOT"
 
-    # Create a temporary TypeScript file to hash password and insert user
-    # Note: BSD/macOS mktemp requires XXXXXX at the END of template (no suffix allowed)
-    # Using a temp directory is portable across GNU and BSD mktemp
-    local temp_dir
-    temp_dir=$(mktemp -d "${TMPDIR:-/tmp}/create-admin-XXXXXX")
-    local temp_script="$temp_dir/create-admin.ts"
-
-    cat > "$temp_script" << 'SCRIPT_EOF'
-import { hash } from '@node-rs/argon2';
-import { SQL } from 'bun';
-
-const ARGON2_OPTIONS = {
-    memoryCost: 65536,
-    timeCost: 3,
-    parallelism: 1,
-    algorithm: 2
-} as const;
-
-async function createAdmin() {
-    const password = process.env.ADMIN_PASSWORD!;
-    const passwordHash = await hash(password, ARGON2_OPTIONS);
-
-    const client = new SQL({
-        url: process.env.DATABASE_URL!,
-        max: 1,
-        idleTimeout: 5
-    });
-
-    try {
-        // Check if user exists
-        const existing = await client`SELECT id FROM users WHERE username = 'admin' LIMIT 1`;
-        if (existing.length > 0) {
-            console.log('Admin user already exists');
-            return;
-        }
-
-        // Insert admin user
-        await client`
-            INSERT INTO users (username, password_hash, display_name, role)
-            VALUES ('admin', ${passwordHash}, 'Administrator', 'admin')
-        `;
-        console.log('Admin user created');
-    } finally {
-        client.end();
-    }
-}
-
-createAdmin().catch(err => {
-    console.error('Failed to create admin:', err);
-    process.exit(1);
-});
-SCRIPT_EOF
-
+    # Use the permanent create-admin.ts script in the scripts directory
+    # This avoids Bun crashes when running TypeScript from temp directories
+    # (native modules like @node-rs/argon2 require proper module resolution)
     DATABASE_URL="postgres://${DB_USER}:${DB_PASSWORD_ENCODED}@${DB_HOST}:${DB_PORT}/${DB_NAME}" \
     SECRET_KEY="$SECRET_KEY" \
     ADMIN_PASSWORD="$ADMIN_PASSWORD" \
-    bun run "$temp_script"
+    bun "$SCRIPT_DIR/create-admin.ts"
 
-    rm -rf "$temp_dir"
     log_success "Admin user created"
 }
 
