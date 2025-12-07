@@ -33,6 +33,7 @@ PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 # -----------------------------------------------------------------------------
 # Default Configuration
 # -----------------------------------------------------------------------------
+STATE_FILE="/tmp/comradarr-dev-state.json"
 PERSIST_MODE=false
 DEV_PORT=5173
 DB_PORT=5432
@@ -393,6 +394,35 @@ configure_skip_auth() {
 }
 
 # -----------------------------------------------------------------------------
+# State File Functions
+# -----------------------------------------------------------------------------
+write_state_file() {
+    log_info "Writing state file to ${STATE_FILE}..."
+
+    cat > "$STATE_FILE" << EOF
+{
+  "version": "1.0",
+  "pid": ${DEV_SERVER_PID},
+  "port": ${DEV_PORT},
+  "dbName": "${DB_NAME}",
+  "dbUser": "${DB_USER}",
+  "dbPassword": "${DB_PASSWORD}",
+  "dbHost": "${DB_HOST}",
+  "dbPort": ${DB_PORT},
+  "logFile": "${LOG_FILE:-}",
+  "persistMode": ${PERSIST_MODE},
+  "sudoRefreshPid": ${SUDO_REFRESH_PID:-0},
+  "secretKey": "${SECRET_KEY}",
+  "timestamp": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+  "skipAuth": ${SKIP_AUTH}
+}
+EOF
+
+    chmod 600 "$STATE_FILE"
+    log_success "State file created"
+}
+
+# -----------------------------------------------------------------------------
 # Cleanup Functions
 # -----------------------------------------------------------------------------
 cleanup() {
@@ -446,6 +476,11 @@ cleanup() {
 
 cleanup_resources() {
     log_info "Cleaning up resources..."
+
+    # Remove state file
+    if [[ -f "$STATE_FILE" ]]; then
+        rm -f "$STATE_FILE"
+    fi
 
     # Drop database
     if database_exists "$DB_NAME" 2>/dev/null; then
@@ -777,6 +812,9 @@ main() {
 
     # Start dev server
     start_dev_server
+
+    # Write state file for stop-dev.sh
+    write_state_file
 
     # Wait for dev server to exit
     wait "$DEV_SERVER_PID" 2>/dev/null || true
