@@ -501,6 +501,13 @@ cleanup_resources() {
         run_psql_superuser "DROP DATABASE ${DB_NAME};" 2>/dev/null || true
     fi
 
+    # Drop database user (matches DB_NAME for isolation)
+    # Note: DB_USER is set to match DB_NAME in initialize_config
+    if [[ -n "$DB_USER" ]]; then
+        log_info "Dropping database user '${DB_USER}'..."
+        run_psql_superuser "DROP ROLE IF EXISTS ${DB_USER};" 2>/dev/null || true
+    fi
+
     # Remove log file
     if [[ -n "$LOG_FILE" ]] && [[ -f "$LOG_FILE" ]]; then
         log_info "Removing log file..."
