@@ -377,7 +377,7 @@ describe('dispatchSearch', () => {
 		});
 
 		it('should log warning when indexers are rate-limited', async () => {
-			const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+			const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
 
 			(prowlarrHealthMonitor.getAllCachedHealth as Mock).mockResolvedValue([
 				{
@@ -398,19 +398,33 @@ describe('dispatchSearch', () => {
 				episodeIds: [456]
 			});
 
-			expect(warnSpy).toHaveBeenCalledWith(
-				'[dispatcher] Prowlarr health warning:',
-				expect.objectContaining({
-					rateLimitedIndexers: 1,
-					totalIndexers: 1
-				})
+			// Logger outputs structured JSON to console.log
+			const logCalls = logSpy.mock.calls.map((call) => {
+				try {
+					return JSON.parse(call[0] as string);
+				} catch {
+					return null;
+				}
+			});
+
+			const healthWarning = logCalls.find(
+				(entry) =>
+					entry?.level === 'warn' &&
+					entry?.module === 'dispatcher' &&
+					entry?.message === 'Prowlarr health warning'
 			);
 
-			warnSpy.mockRestore();
+			expect(healthWarning).toBeDefined();
+			expect(healthWarning).toMatchObject({
+				rateLimitedIndexers: 1,
+				totalIndexers: 1
+			});
+
+			logSpy.mockRestore();
 		});
 
 		it('should not log warning when all indexers are healthy', async () => {
-			const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+			const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
 
 			(prowlarrHealthMonitor.getAllCachedHealth as Mock).mockResolvedValue([
 				{
@@ -431,16 +445,29 @@ describe('dispatchSearch', () => {
 				episodeIds: [456]
 			});
 
-			expect(warnSpy).not.toHaveBeenCalledWith(
-				'[dispatcher] Prowlarr health warning:',
-				expect.anything()
+			// Logger outputs structured JSON to console.log
+			const logCalls = logSpy.mock.calls.map((call) => {
+				try {
+					return JSON.parse(call[0] as string);
+				} catch {
+					return null;
+				}
+			});
+
+			const healthWarning = logCalls.find(
+				(entry) =>
+					entry?.level === 'warn' &&
+					entry?.module === 'dispatcher' &&
+					entry?.message === 'Prowlarr health warning'
 			);
 
-			warnSpy.mockRestore();
+			expect(healthWarning).toBeUndefined();
+
+			logSpy.mockRestore();
 		});
 
 		it('should log warning when Prowlarr health check fails', async () => {
-			const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+			const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
 
 			(prowlarrHealthMonitor.getAllCachedHealth as Mock).mockRejectedValue(
 				new Error('Connection timeout')
@@ -451,12 +478,28 @@ describe('dispatchSearch', () => {
 				episodeIds: [456]
 			});
 
-			expect(warnSpy).toHaveBeenCalledWith(
-				'[dispatcher] Prowlarr health check failed (continuing dispatch):',
-				'Connection timeout'
+			// Logger outputs structured JSON to console.log
+			const logCalls = logSpy.mock.calls.map((call) => {
+				try {
+					return JSON.parse(call[0] as string);
+				} catch {
+					return null;
+				}
+			});
+
+			const healthCheckFailed = logCalls.find(
+				(entry) =>
+					entry?.level === 'warn' &&
+					entry?.module === 'dispatcher' &&
+					entry?.message === 'Prowlarr health check failed (continuing dispatch)'
 			);
 
-			warnSpy.mockRestore();
+			expect(healthCheckFailed).toBeDefined();
+			expect(healthCheckFailed).toMatchObject({
+				error: 'Connection timeout'
+			});
+
+			logSpy.mockRestore();
 		});
 	});
 });
