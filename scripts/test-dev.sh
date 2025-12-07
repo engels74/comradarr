@@ -365,8 +365,11 @@ create_admin_user() {
     cd "$PROJECT_ROOT"
 
     # Create a temporary TypeScript file to hash password and insert user
-    local temp_script
-    temp_script=$(mktemp /tmp/create-admin-XXXXXX.ts)
+    # Note: BSD/macOS mktemp requires XXXXXX at the END of template (no suffix allowed)
+    # Using a temp directory is portable across GNU and BSD mktemp
+    local temp_dir
+    temp_dir=$(mktemp -d "${TMPDIR:-/tmp}/create-admin-XXXXXX")
+    local temp_script="$temp_dir/create-admin.ts"
 
     cat > "$temp_script" << 'SCRIPT_EOF'
 import { hash } from '@node-rs/argon2';
@@ -419,7 +422,7 @@ SCRIPT_EOF
     ADMIN_PASSWORD="$ADMIN_PASSWORD" \
     bun run "$temp_script"
 
-    rm -f "$temp_script"
+    rm -rf "$temp_dir"
     log_success "Admin user created"
 }
 
