@@ -7,9 +7,13 @@ import * as v from 'valibot';
 import { ProwlarrInstanceSchema } from '$lib/schemas/prowlarr';
 import {
 	createProwlarrInstance,
-	prowlarrInstanceNameExists
+	prowlarrInstanceNameExists,
+	getProwlarrInstance
 } from '$lib/server/db/queries/prowlarr';
-import { ProwlarrClient } from '$lib/server/services/prowlarr';
+import { ProwlarrClient, prowlarrHealthMonitor } from '$lib/server/services/prowlarr';
+import { createLogger } from '$lib/server/logger';
+
+const logger = createLogger('prowlarr-new');
 import {
 	AuthenticationError,
 	NetworkError,
@@ -147,8 +151,9 @@ export const actions: Actions = {
 		}
 
 		// Create the instance (API key is encrypted automatically)
+		let createdInstance;
 		try {
-			await createProwlarrInstance({
+			createdInstance = await createProwlarrInstance({
 				name: config.name,
 				url: config.url,
 				apiKey: config.apiKey,
@@ -160,6 +165,27 @@ export const actions: Actions = {
 				error: message,
 				name: config.name,
 				url: config.url
+			});
+		}
+
+		// Trigger initial health check to populate indexer data
+		// This ensures the connector shows correct status immediately
+		try {
+			const instance = await getProwlarrInstance(createdInstance.id);
+			if (instance) {
+				const result = await prowlarrHealthMonitor.checkInstance(instance);
+				logger.info('Initial health check completed for new Prowlarr instance', {
+					instanceId: instance.id,
+					instanceName: instance.name,
+					status: result.status,
+					indexersChecked: result.indexersChecked
+				});
+			}
+		} catch (error) {
+			// Log but don't fail - the instance was created successfully
+			logger.error('Initial health check failed for new Prowlarr instance', {
+				instanceId: createdInstance.id,
+				error: error instanceof Error ? error.message : String(error)
 			});
 		}
 
