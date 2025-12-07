@@ -124,6 +124,26 @@ discover_dev_server() {
     return 0
 }
 
+# Kill process and all its descendants (depth-first)
+kill_process_tree() {
+    local pid="$1"
+    local signal="${2:-TERM}"
+
+    # Get all child processes
+    local children
+    children=$(pgrep -P "$pid" 2>/dev/null || true)
+
+    # Kill children first (depth-first)
+    for child in $children; do
+        kill_process_tree "$child" "$signal"
+    done
+
+    # Kill the process itself
+    if kill -0 "$pid" 2>/dev/null; then
+        kill "-$signal" "$pid" 2>/dev/null || true
+    fi
+}
+
 # Stop a process gracefully with timeout
 stop_process() {
     local pid="$1"
@@ -135,9 +155,9 @@ stop_process() {
         return 0
     fi
 
-    # Graceful shutdown (SIGTERM)
-    log_info "Stopping $name (PID: $pid) with SIGTERM..."
-    kill -TERM "$pid" 2>/dev/null || true
+    # Graceful shutdown - kill entire process tree (SIGTERM)
+    log_info "Stopping $name (PID: $pid) and child processes with SIGTERM..."
+    kill_process_tree "$pid" "TERM"
 
     # Wait for graceful exit
     local elapsed=0
@@ -155,9 +175,9 @@ stop_process() {
         return 0
     fi
 
-    # Force kill (SIGKILL)
+    # Force kill entire tree (SIGKILL)
     log_warn "$name did not exit within ${GRACEFUL_TIMEOUT}s, sending SIGKILL..."
-    kill -9 "$pid" 2>/dev/null || true
+    kill_process_tree "$pid" "KILL"
     sleep 1
 
     if ! kill -0 "$pid" 2>/dev/null; then
@@ -167,6 +187,56 @@ stop_process() {
         log_error "Failed to stop $name"
         return 1
     fi
+}
+
+# Clean up any orphaned dev server processes (project-specific matching)
+cleanup_orphaned_dev_processes() {
+    local orphan_pids
+
+    # Match only processes running in our project directory
+    orphan_pids=$(pgrep -f "comradarr.*vite.*dev" 2>/dev/null || true)
+
+    # Also check for processes with our specific port
+    if [[ -z "$orphan_pids" ]]; then
+        orphan_pids=$(pgrep -f "vite.*dev.*5173" 2>/dev/null || true)
+    fi
+
+    # Fallback: check lsof for port 5173 owner
+    if [[ -z "$orphan_pids" ]]; then
+        local port_pid
+        port_pid=$(lsof -t -i:5173 2>/dev/null || true)
+        if [[ -n "$port_pid" ]]; then
+            # Verify it's a vite/bun/node process before killing
+            local cmd
+            cmd=$(ps -p "$port_pid" -o comm= 2>/dev/null || true)
+            if [[ "$cmd" == "node" ]] || [[ "$cmd" == "bun" ]]; then
+                orphan_pids="$port_pid"
+            fi
+        fi
+    fi
+
+    if [[ -z "$orphan_pids" ]]; then
+        return 0
+    fi
+
+    log_info "Cleaning up orphaned dev server processes..."
+
+    for pid in $orphan_pids; do
+        if kill -0 "$pid" 2>/dev/null; then
+            log_info "Terminating orphaned process $pid"
+            kill -TERM "$pid" 2>/dev/null || true
+        fi
+    done
+
+    sleep 2
+
+    # Force kill any remaining
+    for pid in $orphan_pids; do
+        if kill -0 "$pid" 2>/dev/null; then
+            log_warn "Force killing orphaned process $pid"
+            kill -9 "$pid" 2>/dev/null || true
+        fi
+    done
 }
 
 # -----------------------------------------------------------------------------
@@ -488,6 +558,8 @@ main() {
             log_success "Found dev server (PID: $discovered_pid)"
 
             if stop_process "$discovered_pid" "dev server"; then
+                # Clean up any orphaned child processes
+                cleanup_orphaned_dev_processes
                 echo ""
                 log_success "Dev server stopped"
                 echo ""
@@ -532,6 +604,9 @@ main() {
     else
         log_warn "No PID found in state file"
     fi
+
+    # Clean up any orphaned child processes
+    cleanup_orphaned_dev_processes
 
     # Stop sudo refresh (Linux only)
     if [[ -n "$sudo_pid" ]] && [[ "$sudo_pid" != "0" ]] && [[ "$sudo_pid" != "null" ]]; then
