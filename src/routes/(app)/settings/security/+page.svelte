@@ -9,6 +9,7 @@
 	import { Label } from '$lib/components/ui/label';
 	import { Badge } from '$lib/components/ui/badge';
 	import { Separator } from '$lib/components/ui/separator';
+	import { toastStore } from '$lib/components/ui/toast';
 	import { authModes, authModeLabels, authModeDescriptions } from '$lib/schemas/settings';
 	import type { PageProps } from './$types';
 	import ShieldIcon from '@lucide/svelte/icons/shield';
@@ -113,23 +114,17 @@
 					action="?/updateAuthMode"
 					use:enhance={() => {
 						isSubmittingAuthMode = true;
-						return async ({ update }) => {
+						return async ({ result, update }) => {
 							await update();
 							isSubmittingAuthMode = false;
+							if (result.type === 'success' && result.data?.success) {
+								toastStore.success((result.data.message as string) || 'Authentication mode updated');
+							}
 						};
 					}}
 				>
 					<div class="grid gap-6">
-						<!-- Success/Error Messages -->
-						{#if form?.action === 'updateAuthMode' && form?.success}
-							<div
-								class="bg-green-500/15 text-green-600 dark:text-green-400 rounded-md border border-green-500/20 p-3 text-sm"
-								role="status"
-							>
-								{form.message}
-							</div>
-						{/if}
-
+						<!-- Error Message -->
 						{#if form?.action === 'updateAuthMode' && form?.error}
 							<div
 								class="bg-destructive/15 text-destructive rounded-md border border-destructive/20 p-3 text-sm"
@@ -204,23 +199,17 @@
 						action="?/changePassword"
 						use:enhance={() => {
 							isSubmittingPassword = true;
-							return async ({ update }) => {
+							return async ({ result, update }) => {
 								await update();
 								isSubmittingPassword = false;
+								if (result.type === 'success' && result.data?.success) {
+									toastStore.success((result.data.message as string) || 'Password changed successfully');
+								}
 							};
 						}}
 					>
 						<div class="grid gap-6">
-							<!-- Success/Error Messages -->
-							{#if form?.action === 'changePassword' && form?.success}
-								<div
-									class="bg-green-500/15 text-green-600 dark:text-green-400 rounded-md border border-green-500/20 p-3 text-sm"
-									role="status"
-								>
-									{form.message}
-								</div>
-							{/if}
-
+							<!-- Error Message -->
 							{#if form?.action === 'changePassword' && form?.error}
 								<div
 									class="bg-destructive/15 text-destructive rounded-md border border-destructive/20 p-3 text-sm"
@@ -303,16 +292,7 @@
 			</Card.Header>
 			<Card.Content>
 				<div class="grid gap-4">
-					<!-- Success/Error Messages -->
-					{#if (form?.action === 'revokeSession' || form?.action === 'revokeAllSessions') && form?.success}
-						<div
-							class="bg-green-500/15 text-green-600 dark:text-green-400 rounded-md border border-green-500/20 p-3 text-sm"
-							role="status"
-						>
-							{form.message}
-						</div>
-					{/if}
-
+					<!-- Error Message -->
 					{#if (form?.action === 'revokeSession' || form?.action === 'revokeAllSessions') && form?.error}
 						<div
 							class="bg-destructive/15 text-destructive rounded-md border border-destructive/20 p-3 text-sm"
@@ -358,9 +338,12 @@
 											action="?/revokeSession"
 											use:enhance={() => {
 												isSubmittingSession = true;
-												return async ({ update }) => {
+												return async ({ result, update }) => {
 													await update();
 													isSubmittingSession = false;
+													if (result.type === 'success' && result.data?.success) {
+														toastStore.success((result.data.message as string) || 'Session revoked');
+													}
 												};
 											}}
 										>
@@ -389,9 +372,12 @@
 								action="?/revokeAllSessions"
 								use:enhance={() => {
 									isSubmittingSession = true;
-									return async ({ update }) => {
+									return async ({ result, update }) => {
 										await update();
 										isSubmittingSession = false;
+										if (result.type === 'success' && result.data?.success) {
+											toastStore.success((result.data.message as string) || 'All other sessions revoked');
+										}
 									};
 								}}
 							>

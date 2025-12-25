@@ -14,9 +14,17 @@
 	import { Button } from '$lib/components/ui/button';
 	import { Badge } from '$lib/components/ui/badge';
 	import { StatusBadge } from '$lib/components/shared';
+	import { toastStore } from '$lib/components/ui/toast';
 	import { cn } from '$lib/utils.js';
 
 	let { data, form }: { data: PageProps['data']; form: ActionData } = $props();
+
+	// Show toast on form result
+	$effect(() => {
+		if (form?.success && form?.message) {
+			toastStore.success(form.message);
+		}
+	});
 
 	// Loading states
 	let isTestingConnection = $state(false);
@@ -89,13 +97,6 @@
 	</div>
 
 	<!-- Action result messages -->
-	{#if form?.success}
-		<div
-			class="mb-6 rounded-md bg-green-50 dark:bg-green-900/20 p-4 text-green-800 dark:text-green-200"
-		>
-			{form.message}
-		</div>
-	{/if}
 	{#if form?.error}
 		<div class="mb-6 rounded-md bg-red-50 dark:bg-red-900/20 p-4 text-red-800 dark:text-red-200">
 			{form.error}

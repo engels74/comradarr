@@ -9,6 +9,7 @@
 	import { Label } from '$lib/components/ui/label';
 	import { Badge } from '$lib/components/ui/badge';
 	import * as Dialog from '$lib/components/ui/dialog';
+	import { toastStore } from '$lib/components/ui/toast';
 	import {
 		apiKeyScopes,
 		apiKeyScopeLabels,
@@ -55,6 +56,7 @@
 		if (form?.action === 'createKey' && form?.success && form?.plainKey) {
 			newKeyValue = form.plainKey;
 			showCreateDialog = false;
+			toastStore.success(form.message ?? 'API key created successfully');
 		}
 	});
 
@@ -118,6 +120,7 @@
 	$effect(() => {
 		if (form?.action === 'updateRateLimit' && form?.success) {
 			closeRateLimitDialog();
+			toastStore.success(form.message ?? 'Rate limit updated successfully');
 		}
 	});
 </script>
@@ -481,9 +484,12 @@
 										action="?/revokeKey"
 										use:enhance={() => {
 											isSubmitting = true;
-											return async ({ update }) => {
+											return async ({ result, update }) => {
 												await update();
 												isSubmitting = false;
+												if (result.type === 'success' && result.data?.success) {
+													toastStore.success((result.data.message as string) || 'API key revoked');
+												}
 											};
 										}}
 									>
@@ -506,9 +512,12 @@
 									action="?/deleteKey"
 									use:enhance={() => {
 										isSubmitting = true;
-										return async ({ update }) => {
+										return async ({ result, update }) => {
 											await update();
 											isSubmitting = false;
+											if (result.type === 'success' && result.data?.success) {
+												toastStore.success((result.data.message as string) || 'API key deleted');
+											}
 										};
 									}}
 								>

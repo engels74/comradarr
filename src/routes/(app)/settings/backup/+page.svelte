@@ -9,6 +9,7 @@
 	import { Button } from '$lib/components/ui/button';
 	import { Label } from '$lib/components/ui/label';
 	import { Checkbox } from '$lib/components/ui/checkbox';
+	import { toastStore } from '$lib/components/ui/toast';
 	import type { PageProps } from './$types';
 	import HardDriveDownloadIcon from '@lucide/svelte/icons/hard-drive-download';
 	import TrashIcon from '@lucide/svelte/icons/trash-2';
@@ -120,23 +121,16 @@
 				action="?/update"
 				use:enhance={() => {
 					isSubmitting = true;
-					return async ({ update }) => {
+					return async ({ result, update }) => {
 						await update();
 						isSubmitting = false;
+						if (result.type === 'success' && result.data?.success) {
+							toastStore.success((result.data.message as string) || 'Backup settings saved successfully');
+						}
 					};
 				}}
 			>
 				<div class="grid gap-6">
-					<!-- Success Message -->
-					{#if form?.success}
-						<div
-							class="bg-green-500/15 text-green-600 dark:text-green-400 rounded-md border border-green-500/20 p-3 text-sm"
-							role="status"
-						>
-							{form.message}
-						</div>
-					{/if}
-
 					<!-- Error Message -->
 					{#if form?.error}
 						<div
@@ -237,15 +231,7 @@
 			</Card.Description>
 		</Card.Header>
 		<Card.Content>
-			<!-- Delete Success/Error Messages -->
-			{#if form?.deleteSuccess}
-				<div
-					class="bg-green-500/15 text-green-600 dark:text-green-400 rounded-md border border-green-500/20 p-3 text-sm mb-4"
-					role="status"
-				>
-					{form.deleteMessage}
-				</div>
-			{/if}
+			<!-- Delete Error Message -->
 			{#if form?.deleteError}
 				<div
 					class="bg-destructive/15 text-destructive rounded-md border border-destructive/20 p-3 text-sm mb-4"
@@ -293,9 +279,12 @@
 								action="?/delete"
 								use:enhance={() => {
 									deletingBackupId = backup.id;
-									return async ({ update }) => {
+									return async ({ result, update }) => {
 										await update();
 										deletingBackupId = null;
+										if (result.type === 'success' && result.data?.deleteSuccess) {
+											toastStore.success((result.data.deleteMessage as string) || 'Backup deleted');
+										}
 									};
 								}}
 							>

@@ -9,6 +9,7 @@
 	import { Button } from '$lib/components/ui/button';
 	import { Label } from '$lib/components/ui/label';
 	import { Checkbox } from '$lib/components/ui/checkbox';
+	import { toastStore } from '$lib/components/ui/toast';
 	import { logLevels, logLevelLabels, logLevelDescriptions } from '$lib/schemas/settings';
 	import type { PageProps } from './$types';
 	import SettingsIcon from '@lucide/svelte/icons/settings';
@@ -72,23 +73,16 @@
 				action="?/update"
 				use:enhance={() => {
 					isSubmitting = true;
-					return async ({ update }) => {
+					return async ({ result, update }) => {
 						await update();
 						isSubmitting = false;
+						if (result.type === 'success' && result.data?.success) {
+							toastStore.success((result.data.message as string) || 'Settings saved successfully');
+						}
 					};
 				}}
 			>
 				<div class="grid gap-6">
-					<!-- Success Message -->
-					{#if form?.success}
-						<div
-							class="bg-green-500/15 text-green-600 dark:text-green-400 rounded-md border border-green-500/20 p-3 text-sm"
-							role="status"
-						>
-							{form.message}
-						</div>
-					{/if}
-
 					<!-- Error Message -->
 					{#if form?.error}
 						<div

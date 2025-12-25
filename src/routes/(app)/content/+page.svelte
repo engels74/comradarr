@@ -4,6 +4,7 @@
 	import { Button } from '$lib/components/ui/button';
 	import * as Dialog from '$lib/components/ui/dialog';
 	import { Input } from '$lib/components/ui/input';
+	import { toastStore } from '$lib/components/ui/toast';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
 	import type { BulkActionTarget, ContentItem } from '$lib/server/db/queries/content';
@@ -21,23 +22,6 @@
 	let isLoadingMore = $state(false);
 	let loadError = $state<string | null>(null);
 	let lastDataContent = $state<ContentItem[] | null>(null);
-
-	// Toast-like feedback state
-	let feedbackMessage = $state<string | null>(null);
-	let feedbackTimeout: ReturnType<typeof setTimeout> | null = null;
-
-	/**
-	 * Show feedback message temporarily.
-	 */
-	function showFeedback(message: string) {
-		if (feedbackTimeout) {
-			clearTimeout(feedbackTimeout);
-		}
-		feedbackMessage = message;
-		feedbackTimeout = setTimeout(() => {
-			feedbackMessage = null;
-		}, 3000);
-	}
 
 	// Reset loaded items when filters change (detected via data.content changing)
 	$effect(() => {
@@ -195,7 +179,7 @@
 	 * Handle action completion (show toast/notification).
 	 */
 	function handleActionComplete(message: string) {
-		showFeedback(message);
+		toastStore.success(message);
 	}
 </script>
 
@@ -334,13 +318,6 @@
 					</Dialog.Root>
 				{/if}
 			</div>
-		</div>
-	{/if}
-
-	<!-- Feedback toast -->
-	{#if feedbackMessage}
-		<div class="fixed bottom-4 right-4 z-50 bg-background border rounded-lg shadow-lg px-4 py-3 animate-in slide-in-from-bottom-2">
-			<p class="text-sm font-medium">{feedbackMessage}</p>
 		</div>
 	{/if}
 </div>

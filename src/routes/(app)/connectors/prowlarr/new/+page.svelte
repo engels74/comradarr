@@ -7,9 +7,17 @@
 	import { Input } from '$lib/components/ui/input';
 	import { Button } from '$lib/components/ui/button';
 	import { Label } from '$lib/components/ui/label';
+	import { toastStore } from '$lib/components/ui/toast';
 	import type { ActionData } from './$types';
 
 	let { form }: { form: ActionData } = $props();
+
+	// Show toast on form result
+	$effect(() => {
+		if (form?.success && form?.message) {
+			toastStore.success(form.message);
+		}
+	});
 
 	let isSubmitting = $state(false);
 	let isTesting = $state(false);
@@ -64,14 +72,6 @@
 						</div>
 					{/if}
 
-					{#if form?.success}
-						<div
-							class="bg-green-500/15 text-green-600 dark:text-green-400 rounded-md border border-green-500/20 p-3 text-sm"
-							role="status"
-						>
-							{form.message}
-						</div>
-					{/if}
 
 					<div class="grid gap-2">
 						<Label for="name">Name</Label>

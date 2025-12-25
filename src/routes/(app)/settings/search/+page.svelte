@@ -10,6 +10,7 @@
 	import { Label } from '$lib/components/ui/label';
 	import { Checkbox } from '$lib/components/ui/checkbox';
 	import { Separator } from '$lib/components/ui/separator';
+	import { toastStore } from '$lib/components/ui/toast';
 	import {
 		priorityWeightLabels,
 		priorityWeightDescriptions,
@@ -104,23 +105,16 @@
 		action="?/update"
 		use:enhance={() => {
 			isSubmitting = true;
-			return async ({ update }) => {
+			return async ({ result, update }) => {
 				await update();
 				isSubmitting = false;
+				if (result.type === 'success' && result.data?.success) {
+					toastStore.success((result.data.message as string) || 'Search settings saved successfully');
+				}
 			};
 		}}
 	>
 		<div class="grid gap-6">
-			<!-- Success Message -->
-			{#if form?.success}
-				<div
-					class="bg-green-500/15 text-green-600 dark:text-green-400 rounded-md border border-green-500/20 p-3 text-sm"
-					role="status"
-				>
-					{form.message}
-				</div>
-			{/if}
-
 			<!-- Error Message -->
 			{#if form?.error}
 				<div
@@ -443,11 +437,14 @@
 				action="?/reset"
 				use:enhance={() => {
 					isResetting = true;
-					return async ({ update }) => {
+					return async ({ result, update }) => {
 						await update();
 						isResetting = false;
-						// Reset jitter state to default after successful reset
-						jitter = true;
+						if (result.type === 'success' && result.data?.success) {
+							toastStore.success((result.data.message as string) || 'Settings reset to defaults');
+							// Reset jitter state to default after successful reset
+							jitter = true;
+						}
 					};
 				}}
 			>

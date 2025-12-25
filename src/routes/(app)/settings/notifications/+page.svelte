@@ -11,6 +11,7 @@
 	import { Badge } from '$lib/components/ui/badge';
 	import { Checkbox } from '$lib/components/ui/checkbox';
 	import { Separator } from '$lib/components/ui/separator';
+	import { toastStore } from '$lib/components/ui/toast';
 	import {
 		NOTIFICATION_CHANNEL_TYPES,
 		NOTIFICATION_EVENT_TYPES,
@@ -71,7 +72,7 @@
 	let editBatchingEnabled = $state(false);
 	let editQuietHoursEnabled = $state(false);
 
-	// Close dialogs on successful submission
+	// Close dialogs on successful submission and show toast
 	$effect(() => {
 		if (form?.success) {
 			createDialogOpen = false;
@@ -84,6 +85,10 @@
 			createSelectedEvents = [];
 			createBatchingEnabled = false;
 			createQuietHoursEnabled = false;
+			// Show success toast
+			if (form.message) {
+				toastStore.success(form.message);
+			}
 		}
 	});
 

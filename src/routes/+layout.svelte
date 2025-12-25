@@ -1,6 +1,7 @@
 <script lang="ts">
 	import 'virtual:uno.css';
 	import '../app.css';
+	import { ToastContainer } from '$lib/components/ui/toast';
 
 	let { children } = $props();
 </script>
@@ -17,3 +18,6 @@
 <div class="min-h-screen bg-background text-foreground">
 	{@render children()}
 </div>
+
+<!-- Toast notifications -->
+<ToastContainer />

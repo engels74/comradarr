@@ -2,6 +2,7 @@
 	import type { PageProps } from './$types';
 	import { QueueBulkActions, QueueControls, QueueFilters, QueueTable, RecentCompletions } from '$lib/components/queue';
 	import { Button } from '$lib/components/ui/button';
+	import { toastStore } from '$lib/components/ui/toast';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
 	import { onMount } from 'svelte';
@@ -58,23 +59,6 @@
 		selectedIds = new Set();
 	}
 
-	// Toast-like feedback state
-	let feedbackMessage = $state<string | null>(null);
-	let feedbackTimeout: ReturnType<typeof setTimeout> | null = null;
-
-	/**
-	 * Show feedback message temporarily.
-	 */
-	function showFeedback(message: string) {
-		if (feedbackTimeout) {
-			clearTimeout(feedbackTimeout);
-		}
-		feedbackMessage = message;
-		feedbackTimeout = setTimeout(() => {
-			feedbackMessage = null;
-		}, 3000);
-	}
-
 	/**
 	 * Handle action start - pause polling during form submission.
 	 */
@@ -86,7 +70,7 @@
 	 * Handle action complete - resume polling and show feedback.
 	 */
 	function handleActionComplete(message: string) {
-		showFeedback(message);
+		toastStore.success(message);
 		// Resume polling after a short delay to allow UI to settle
 		setTimeout(() => {
 			polling.resume();
@@ -118,13 +102,6 @@
 </svelte:head>
 
 <div class="container mx-auto p-6">
-	<!-- Feedback toast -->
-	{#if feedbackMessage}
-		<div class="fixed bottom-4 right-4 z-50 bg-background border rounded-lg shadow-lg px-4 py-3 animate-in slide-in-from-bottom-2">
-			<p class="text-sm font-medium">{feedbackMessage}</p>
-		</div>
-	{/if}
-
 	<!-- Header -->
 	<div class="flex items-center justify-between mb-6">
 		<div>

@@ -11,6 +11,7 @@
 	import { Badge } from '$lib/components/ui/badge';
 	import { Checkbox } from '$lib/components/ui/checkbox';
 	import { Separator } from '$lib/components/ui/separator';
+	import { toastStore } from '$lib/components/ui/toast';
 	import {
 		CONSERVATIVE_PRESET,
 		MODERATE_PRESET,
@@ -46,7 +47,7 @@
 	// Form state for edit dialog
 	let editIsDefault = $state(false);
 
-	// Close dialogs on successful submission
+	// Close dialogs on successful submission and show toast
 	$effect(() => {
 		if (form?.success) {
 			createDialogOpen = false;
@@ -56,6 +57,10 @@
 			deletingProfile = null;
 			// Reset form states
 			createIsDefault = false;
+			// Show success toast
+			if (form.message) {
+				toastStore.success(form.message);
+			}
 		}
 	});
 
@@ -126,16 +131,7 @@
 		</div>
 	</div>
 
-	<!-- Success/Error Messages -->
-	{#if form?.success}
-		<div
-			class="mb-6 bg-green-500/15 text-green-600 dark:text-green-400 rounded-md border border-green-500/20 p-3 text-sm"
-			role="status"
-		>
-			{form.message}
-		</div>
-	{/if}
-
+	<!-- Error Message -->
 	{#if form?.error && !createDialogOpen && !editDialogOpen && !deleteDialogOpen}
 		<div
 			class="mb-6 bg-destructive/15 text-destructive rounded-md border border-destructive/20 p-3 text-sm"
