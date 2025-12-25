@@ -14,6 +14,9 @@ import {
 	getIndexerHealthSummary,
 	updateProwlarrInstance
 } from '$lib/server/db/queries/prowlarr';
+import { createLogger } from '$lib/server/logger';
+
+const logger = createLogger('connectors');
 
 /**
  * Stats for a Prowlarr instance.
@@ -66,10 +69,13 @@ export const actions: Actions = {
 		const enabled = data.get('enabled') === 'true';
 
 		if (isNaN(id)) {
+			logger.warn('Toggle connector failed - invalid ID', { rawId: data.get('id') });
 			return { success: false, error: 'Invalid connector ID' };
 		}
 
 		await updateConnector(id, { enabled });
+
+		logger.info('Connector toggled', { connectorId: id, enabled });
 
 		return { success: true };
 	},
@@ -83,10 +89,13 @@ export const actions: Actions = {
 		const enabled = data.get('enabled') === 'true';
 
 		if (isNaN(id)) {
+			logger.warn('Toggle Prowlarr instance failed - invalid ID', { rawId: data.get('id') });
 			return { success: false, error: 'Invalid Prowlarr instance ID' };
 		}
 
 		await updateProwlarrInstance(id, { enabled });
+
+		logger.info('Prowlarr instance toggled', { instanceId: id, enabled });
 
 		return { success: true };
 	}

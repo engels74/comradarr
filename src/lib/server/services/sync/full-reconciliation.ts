@@ -23,6 +23,9 @@ import { reconcileSonarrContent } from './handlers/sonarr-reconcile';
 import { reconcileRadarrMovies } from './handlers/radarr-reconcile';
 import { withSyncRetry } from './with-sync-retry';
 import type { ReconciliationResult, SyncOptions } from './types';
+import { createLogger } from '$lib/server/logger';
+
+const logger = createLogger('sync');
 
 /**
  * Run a full reconciliation for a connector.
@@ -68,8 +71,19 @@ export async function runFullReconciliation(
 ): Promise<ReconciliationResult> {
 	const startTime = Date.now();
 
+	logger.debug('Starting full reconciliation', {
+		connectorId: connector.id,
+		connectorName: connector.name,
+		type: connector.type,
+		skipRetry: options?.skipRetry ?? false
+	});
+
 	// Validate connector is enabled
 	if (!connector.enabled) {
+		logger.warn('Full reconciliation skipped - connector disabled', {
+			connectorId: connector.id,
+			connectorName: connector.name
+		});
 		return {
 			success: false,
 			connectorId: connector.id,
@@ -188,6 +202,19 @@ async function executeFullReconciliation(
 		// Update connector's lastSync timestamp
 		await updateConnectorLastSync(connector.id);
 
+		const durationMs = Date.now() - startTime;
+
+		logger.info('Full reconciliation completed', {
+			connectorId: connector.id,
+			connectorName: connector.name,
+			type: connector.type,
+			itemsCreated,
+			itemsUpdated,
+			itemsDeleted,
+			searchStateDeleted,
+			durationMs
+		});
+
 		return {
 			success: true,
 			connectorId: connector.id,
@@ -196,11 +223,18 @@ async function executeFullReconciliation(
 			itemsUpdated,
 			itemsDeleted,
 			searchStateDeleted,
-			durationMs: Date.now() - startTime
+			durationMs
 		};
 	} catch (error) {
 		// Update sync state on failure
 		await updateReconciliationState(connector.id, false);
+
+		logger.error('Full reconciliation failed', {
+			connectorId: connector.id,
+			connectorName: connector.name,
+			type: connector.type,
+			error: error instanceof Error ? error.message : String(error)
+		});
 
 		// Re-throw to let the retry wrapper handle it
 		// If skipRetry was used, the error will propagate up

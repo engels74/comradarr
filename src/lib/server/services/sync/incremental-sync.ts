@@ -22,6 +22,9 @@ import { syncSonarrContent } from './handlers/sonarr';
 import { syncRadarrMovies } from './handlers/radarr';
 import { withSyncRetry } from './with-sync-retry';
 import type { SyncResult, SyncOptions } from './types';
+import { createLogger } from '$lib/server/logger';
+
+const logger = createLogger('sync');
 
 /**
  * Run an incremental sync for a connector.
@@ -61,8 +64,19 @@ export async function runIncrementalSync(
 ): Promise<SyncResult> {
 	const startTime = Date.now();
 
+	logger.debug('Starting incremental sync', {
+		connectorId: connector.id,
+		connectorName: connector.name,
+		type: connector.type,
+		skipRetry: options?.skipRetry ?? false
+	});
+
 	// Validate connector is enabled
 	if (!connector.enabled) {
+		logger.warn('Incremental sync skipped - connector disabled', {
+			connectorId: connector.id,
+			connectorName: connector.name
+		});
 		return {
 			success: false,
 			connectorId: connector.id,
@@ -158,16 +172,33 @@ async function executeIncrementalSync(
 		// Update connector's lastSync timestamp
 		await updateConnectorLastSync(connector.id);
 
+		const durationMs = Date.now() - startTime;
+
+		logger.info('Incremental sync completed', {
+			connectorId: connector.id,
+			connectorName: connector.name,
+			type: connector.type,
+			itemsSynced,
+			durationMs
+		});
+
 		return {
 			success: true,
 			connectorId: connector.id,
 			connectorType: connector.type as 'sonarr' | 'radarr' | 'whisparr',
 			itemsSynced,
-			durationMs: Date.now() - startTime
+			durationMs
 		};
 	} catch (error) {
 		// Update sync state on failure
 		await updateSyncState(connector.id, false);
+
+		logger.error('Incremental sync failed', {
+			connectorId: connector.id,
+			connectorName: connector.name,
+			type: connector.type,
+			error: error instanceof Error ? error.message : String(error)
+		});
 
 		// Re-throw to let the retry wrapper handle it
 		// If skipRetry was used, the error will propagate up

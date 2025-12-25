@@ -91,6 +91,10 @@ export const actions: Actions = {
 			const isConnected = await client.ping();
 
 			if (isConnected) {
+				logger.info('Prowlarr connection test successful', {
+					name: config.name,
+					url: config.url
+				});
 				return {
 					success: true,
 					message: 'Connection successful!',
@@ -98,6 +102,10 @@ export const actions: Actions = {
 					url: config.url
 				};
 			} else {
+				logger.warn('Prowlarr connection test failed - no response', {
+					name: config.name,
+					url: config.url
+				});
 				return fail(400, {
 					error: 'Connection failed. Check your URL and API key.',
 					name: config.name,
@@ -105,6 +113,11 @@ export const actions: Actions = {
 				});
 			}
 		} catch (error) {
+			logger.warn('Prowlarr connection test failed', {
+				name: config.name,
+				url: config.url,
+				error: getErrorMessage(error)
+			});
 			return fail(400, {
 				error: getErrorMessage(error),
 				name: config.name,
@@ -143,6 +156,9 @@ export const actions: Actions = {
 		// Check for duplicate instance name
 		const nameExists = await prowlarrInstanceNameExists(config.name);
 		if (nameExists) {
+			logger.warn('Prowlarr instance creation failed - duplicate name', {
+				name: config.name
+			});
 			return fail(400, {
 				error: 'A Prowlarr instance with this name already exists.',
 				name: config.name,
@@ -159,8 +175,18 @@ export const actions: Actions = {
 				apiKey: config.apiKey,
 				enabled: true
 			});
+
+			logger.info('Prowlarr instance created', {
+				instanceId: createdInstance.id,
+				name: config.name,
+				url: config.url
+			});
 		} catch (error) {
 			const message = error instanceof Error ? error.message : 'Failed to create Prowlarr instance';
+			logger.error('Failed to create Prowlarr instance', {
+				name: config.name,
+				error: message
+			});
 			return fail(500, {
 				error: message,
 				name: config.name,

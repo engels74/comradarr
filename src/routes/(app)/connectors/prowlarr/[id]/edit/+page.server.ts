@@ -20,6 +20,9 @@ import {
 	isArrClientError
 } from '$lib/server/connectors';
 import type { PageServerLoad, Actions } from './$types';
+import { createLogger } from '$lib/server/logger';
+
+const logger = createLogger('prowlarr');
 
 /**
  * Returns a user-friendly error message based on the error type.
@@ -121,6 +124,11 @@ export const actions: Actions = {
 			const isConnected = await client.ping();
 
 			if (isConnected) {
+				logger.info('Prowlarr connection test successful', {
+					instanceId: id,
+					instanceName: data.name,
+					url: data.url
+				});
 				return {
 					success: true,
 					message: 'Connection successful!',
@@ -129,6 +137,11 @@ export const actions: Actions = {
 					enabled: data.enabled
 				};
 			} else {
+				logger.warn('Prowlarr connection test failed - no response', {
+					instanceId: id,
+					instanceName: data.name,
+					url: data.url
+				});
 				return fail(400, {
 					error: 'Connection failed. Check your URL and API key.',
 					name: data.name,
@@ -137,6 +150,12 @@ export const actions: Actions = {
 				});
 			}
 		} catch (err) {
+			logger.warn('Prowlarr connection test failed', {
+				instanceId: id,
+				instanceName: data.name,
+				url: data.url,
+				error: getErrorMessage(err)
+			});
 			return fail(400, {
 				error: getErrorMessage(err),
 				name: data.name,
@@ -188,6 +207,10 @@ export const actions: Actions = {
 		// Check for duplicate instance name (excluding self)
 		const nameExists = await prowlarrInstanceNameExists(config.name, id);
 		if (nameExists) {
+			logger.warn('Prowlarr instance update failed - duplicate name', {
+				instanceId: id,
+				name: config.name
+			});
 			return fail(400, {
 				error: 'A Prowlarr instance with this name already exists.',
 				name: config.name,
@@ -210,8 +233,18 @@ export const actions: Actions = {
 				updateData.enabled = config.enabled;
 			}
 			await updateProwlarrInstance(id, updateData);
+
+			logger.info('Prowlarr instance updated', {
+				instanceId: id,
+				instanceName: config.name
+			});
 		} catch (err) {
 			const message = err instanceof Error ? err.message : 'Failed to update Prowlarr instance';
+			logger.error('Failed to update Prowlarr instance', {
+				instanceId: id,
+				instanceName: config.name,
+				error: message
+			});
 			return fail(500, {
 				error: message,
 				name: config.name,

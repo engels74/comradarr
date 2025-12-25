@@ -17,6 +17,9 @@ import {
 	calculateSyncBackoffDelay,
 	type HealthStatus
 } from './health';
+import { createLogger } from '$lib/server/logger';
+
+const logger = createLogger('sync');
 
 /**
  * Options for sync retry behavior.
@@ -97,6 +100,14 @@ export async function withSyncRetry<T>(
 	for (let attempt = 0; attempt <= maxRetries; attempt++) {
 		attempts = attempt + 1;
 
+		if (attempt > 0) {
+			logger.debug('Sync retry attempt', {
+				connectorId,
+				attempt: attempts,
+				maxAttempts: maxRetries + 1
+			});
+		}
+
 		try {
 			const result = await syncFn();
 
@@ -109,6 +120,13 @@ export async function withSyncRetry<T>(
 				0 // Success resets consecutive failures
 			);
 
+			if (attempt > 0) {
+				logger.info('Sync succeeded after retry', {
+					connectorId,
+					attempts
+				});
+			}
+
 			return {
 				success: true,
 				data: result,
@@ -120,12 +138,22 @@ export async function withSyncRetry<T>(
 
 			// Check if we should retry
 			if (!shouldRetrySync(error, attempt)) {
+				logger.debug('Sync error not retryable', {
+					connectorId,
+					attempt: attempts,
+					error: error instanceof Error ? error.message : String(error)
+				});
 				break;
 			}
 
 			// Wait before next attempt (except on last iteration)
 			if (attempt < maxRetries) {
 				const delay = calculateSyncBackoffDelay(attempt);
+				logger.debug('Waiting before sync retry', {
+					connectorId,
+					delayMs: delay,
+					nextAttempt: attempts + 1
+				});
 				await sleep(delay);
 			}
 		}
@@ -144,6 +172,14 @@ export async function withSyncRetry<T>(
 		consecutiveFailures,
 		lastError
 	);
+
+	logger.warn('Sync retries exhausted', {
+		connectorId,
+		attempts,
+		finalHealthStatus,
+		consecutiveFailures,
+		error: lastError instanceof Error ? lastError.message : String(lastError)
+	});
 
 	return {
 		success: false,

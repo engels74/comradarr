@@ -21,6 +21,9 @@ import {
 	isArrClientError
 } from '$lib/server/connectors';
 import type { Actions } from './$types';
+import { createLogger } from '$lib/server/logger';
+
+const logger = createLogger('connectors');
 
 /**
  * Creates an appropriate client for the connector type.
@@ -108,6 +111,11 @@ export const actions: Actions = {
 			const isConnected = await client.ping();
 
 			if (isConnected) {
+				logger.info('Connection test successful', {
+					name: config.name,
+					type: config.type,
+					url: config.url
+				});
 				return {
 					success: true,
 					message: 'Connection successful!',
@@ -116,6 +124,11 @@ export const actions: Actions = {
 					url: config.url
 				};
 			} else {
+				logger.warn('Connection test failed - no response', {
+					name: config.name,
+					type: config.type,
+					url: config.url
+				});
 				return fail(400, {
 					error: 'Connection failed. Check your URL and API key.',
 					name: config.name,
@@ -124,6 +137,12 @@ export const actions: Actions = {
 				});
 			}
 		} catch (error) {
+			logger.warn('Connection test failed', {
+				name: config.name,
+				type: config.type,
+				url: config.url,
+				error: getErrorMessage(error)
+			});
 			return fail(400, {
 				error: getErrorMessage(error),
 				name: config.name,
@@ -165,6 +184,10 @@ export const actions: Actions = {
 		// Check for duplicate connector name
 		const nameExists = await connectorNameExists(config.name);
 		if (nameExists) {
+			logger.warn('Connector creation failed - duplicate name', {
+				name: config.name,
+				type: config.type
+			});
 			return fail(400, {
 				error: 'A connector with this name already exists.',
 				name: config.name,
@@ -182,8 +205,19 @@ export const actions: Actions = {
 				apiKey: config.apiKey,
 				enabled: true
 			});
+
+			logger.info('Connector created', {
+				name: config.name,
+				type: config.type,
+				url: config.url
+			});
 		} catch (error) {
 			const message = error instanceof Error ? error.message : 'Failed to create connector';
+			logger.error('Failed to create connector', {
+				name: config.name,
+				type: config.type,
+				error: message
+			});
 			return fail(500, {
 				error: message,
 				name: config.name,

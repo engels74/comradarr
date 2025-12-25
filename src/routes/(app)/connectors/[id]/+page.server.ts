@@ -26,6 +26,9 @@ import {
 	isArrClientError
 } from '$lib/server/connectors';
 import type { Connector } from '$lib/server/db/schema';
+import { createLogger } from '$lib/server/logger';
+
+const logger = createLogger('connectors');
 
 /**
  * Creates an appropriate client for the connector type.
@@ -119,12 +122,14 @@ export const actions: Actions = {
 		const id = Number(params.id);
 
 		if (isNaN(id)) {
+			logger.warn('Connection test failed - invalid ID', { rawId: params.id });
 			return fail(400, { error: 'Invalid connector ID' });
 		}
 
 		const connector = await getConnector(id);
 
 		if (!connector) {
+			logger.warn('Connection test failed - not found', { connectorId: id });
 			return fail(404, { error: 'Connector not found' });
 		}
 
@@ -137,6 +142,13 @@ export const actions: Actions = {
 				// Update health status to healthy
 				await updateConnectorHealth(id, 'healthy');
 
+				logger.info('Connection test successful', {
+					connectorId: id,
+					connectorName: connector.name,
+					type: connector.type,
+					healthStatus: 'healthy'
+				});
+
 				return {
 					success: true,
 					message: 'Connection successful!'
@@ -145,19 +157,38 @@ export const actions: Actions = {
 				// Update health status to unhealthy
 				await updateConnectorHealth(id, 'unhealthy');
 
+				logger.warn('Connection test failed - no response', {
+					connectorId: id,
+					connectorName: connector.name,
+					type: connector.type,
+					healthStatus: 'unhealthy'
+				});
+
 				return fail(400, {
 					error: 'Connection failed. The application did not respond as expected.'
 				});
 			}
 		} catch (err) {
 			// Update health status based on error type
+			let healthStatus: string;
 			if (err instanceof AuthenticationError) {
+				healthStatus = 'unhealthy';
 				await updateConnectorHealth(id, 'unhealthy');
 			} else if (err instanceof NetworkError) {
+				healthStatus = 'offline';
 				await updateConnectorHealth(id, 'offline');
 			} else {
+				healthStatus = 'unhealthy';
 				await updateConnectorHealth(id, 'unhealthy');
 			}
+
+			logger.warn('Connection test failed', {
+				connectorId: id,
+				connectorName: connector.name,
+				type: connector.type,
+				healthStatus,
+				error: getErrorMessage(err)
+			});
 
 			return fail(400, { error: getErrorMessage(err) });
 		}
@@ -171,18 +202,31 @@ export const actions: Actions = {
 		const id = Number(params.id);
 
 		if (isNaN(id)) {
+			logger.warn('Sync trigger failed - invalid ID', { rawId: params.id });
 			return fail(400, { error: 'Invalid connector ID' });
 		}
 
 		const connector = await getConnector(id);
 
 		if (!connector) {
+			logger.warn('Sync trigger failed - not found', { connectorId: id });
 			return fail(404, { error: 'Connector not found' });
 		}
 
 		if (!connector.enabled) {
+			logger.warn('Sync trigger failed - connector disabled', {
+				connectorId: id,
+				connectorName: connector.name
+			});
 			return fail(400, { error: 'Cannot sync a disabled connector' });
 		}
+
+		// Log the trigger (placeholder behavior preserved)
+		logger.info('Manual sync triggered (placeholder)', {
+			connectorId: connector.id,
+			connectorName: connector.name,
+			type: connector.type
+		});
 
 		// TODO: Integrate with sync service when available
 		// For now, return success to indicate the action was received
@@ -200,16 +244,24 @@ export const actions: Actions = {
 		const id = Number(params.id);
 
 		if (isNaN(id)) {
+			logger.warn('Clear failed searches failed - invalid ID', { rawId: params.id });
 			return fail(400, { error: 'Invalid connector ID' });
 		}
 
 		const connector = await getConnector(id);
 
 		if (!connector) {
+			logger.warn('Clear failed searches failed - not found', { connectorId: id });
 			return fail(404, { error: 'Connector not found' });
 		}
 
 		const clearedCount = await clearFailedSearches(id);
+
+		logger.info('Failed searches cleared', {
+			connectorId: id,
+			connectorName: connector.name,
+			clearedCount
+		});
 
 		return {
 			success: true,
@@ -225,14 +277,22 @@ export const actions: Actions = {
 		const id = Number(params.id);
 
 		if (isNaN(id)) {
+			logger.warn('Delete connector failed - invalid ID', { rawId: params.id });
 			return fail(400, { error: 'Invalid connector ID' });
 		}
 
 		const connector = await getConnector(id);
 
 		if (!connector) {
+			logger.warn('Delete connector failed - not found', { connectorId: id });
 			return fail(404, { error: 'Connector not found' });
 		}
+
+		logger.info('Connector deleted', {
+			connectorId: id,
+			connectorName: connector.name,
+			type: connector.type
+		});
 
 		await deleteConnector(id);
 

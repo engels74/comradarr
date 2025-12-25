@@ -23,6 +23,9 @@ import {
 } from '$lib/server/connectors';
 import type { PageServerLoad, Actions } from './$types';
 import type { Connector } from '$lib/server/db/schema';
+import { createLogger } from '$lib/server/logger';
+
+const logger = createLogger('connectors');
 
 /**
  * Creates an appropriate client for the connector type.
@@ -153,6 +156,12 @@ export const actions: Actions = {
 			const isConnected = await client.ping();
 
 			if (isConnected) {
+				logger.info('Connection test successful', {
+					connectorId: id,
+					connectorName: data.name,
+					type: data.type,
+					url: data.url
+				});
 				return {
 					success: true,
 					message: 'Connection successful!',
@@ -162,6 +171,12 @@ export const actions: Actions = {
 					enabled: data.enabled
 				};
 			} else {
+				logger.warn('Connection test failed - no response', {
+					connectorId: id,
+					connectorName: data.name,
+					type: data.type,
+					url: data.url
+				});
 				return fail(400, {
 					error: 'Connection failed. Check your URL and API key.',
 					name: data.name,
@@ -171,6 +186,13 @@ export const actions: Actions = {
 				});
 			}
 		} catch (err) {
+			logger.warn('Connection test failed', {
+				connectorId: id,
+				connectorName: data.name,
+				type: data.type,
+				url: data.url,
+				error: getErrorMessage(err)
+			});
 			return fail(400, {
 				error: getErrorMessage(err),
 				name: data.name,
@@ -225,6 +247,11 @@ export const actions: Actions = {
 		// Check for duplicate connector name (excluding self)
 		const nameExists = await connectorNameExists(config.name, id);
 		if (nameExists) {
+			logger.warn('Connector update failed - duplicate name', {
+				connectorId: id,
+				name: config.name,
+				type: config.type
+			});
 			return fail(400, {
 				error: 'A connector with this name already exists.',
 				name: config.name,
@@ -248,8 +275,20 @@ export const actions: Actions = {
 				updateData.enabled = config.enabled;
 			}
 			await updateConnector(id, updateData);
+
+			logger.info('Connector updated', {
+				connectorId: id,
+				connectorName: config.name,
+				type: config.type
+			});
 		} catch (err) {
 			const message = err instanceof Error ? err.message : 'Failed to update connector';
+			logger.error('Failed to update connector', {
+				connectorId: id,
+				connectorName: config.name,
+				type: config.type,
+				error: message
+			});
 			return fail(500, {
 				error: message,
 				name: config.name,
