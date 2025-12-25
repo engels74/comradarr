@@ -2,7 +2,7 @@
  * Prowlarr instance detail page server load and actions.
  */
 
-import { error, fail, redirect } from '@sveltejs/kit';
+import { error, fail } from '@sveltejs/kit';
 import type { PageServerLoad, Actions } from './$types';
 import {
 	getProwlarrInstance,
@@ -199,6 +199,11 @@ export const actions: Actions = {
 
 		await deleteProwlarrInstance(id);
 
-		redirect(303, '/connectors');
+		// Return success with redirect target (client will handle navigation after showing toast)
+		return {
+			success: true,
+			message: 'Prowlarr instance deleted successfully',
+			redirectTo: '/connectors'
+		};
 	}
 };

@@ -4,10 +4,12 @@
 	 */
 	import { untrack } from 'svelte';
 	import { enhance } from '$app/forms';
+	import { goto } from '$app/navigation';
 	import * as Card from '$lib/components/ui/card';
 	import { Input } from '$lib/components/ui/input';
 	import { Button } from '$lib/components/ui/button';
 	import { Label } from '$lib/components/ui/label';
+	import { toastStore } from '$lib/components/ui/toast';
 	import { CronBuilder } from '$lib/components/schedules';
 	import { sweepTypes, timezoneOptions } from '$lib/schemas/schedules';
 	import type { PageProps } from './$types';
@@ -122,9 +124,17 @@
 							action="?/delete"
 							use:enhance={() => {
 								isDeleting = true;
-								return async ({ update }) => {
+								return async ({ result, update }) => {
 									await update();
 									isDeleting = false;
+
+									// Show toast and navigate on success
+									if (result.type === 'success' && result.data?.success) {
+										toastStore.success(result.data.message as string);
+										if (result.data.redirectTo) {
+											goto(result.data.redirectTo as string);
+										}
+									}
 								};
 							}}
 						>
@@ -153,9 +163,17 @@
 				action="?/update"
 				use:enhance={() => {
 					isSubmitting = true;
-					return async ({ update }) => {
+					return async ({ result, update }) => {
 						await update();
 						isSubmitting = false;
+
+						// Show toast and navigate on success
+						if (result.type === 'success' && result.data?.success) {
+							toastStore.success(result.data.message as string);
+							if (result.data.redirectTo) {
+								goto(result.data.redirectTo as string);
+							}
+						}
 					};
 				}}
 			>

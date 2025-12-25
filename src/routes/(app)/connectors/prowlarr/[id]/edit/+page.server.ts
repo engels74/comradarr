@@ -2,7 +2,7 @@
  * Edit Prowlarr instance page server-side logic.
  */
 
-import { error, fail, redirect } from '@sveltejs/kit';
+import { error, fail } from '@sveltejs/kit';
 import * as v from 'valibot';
 import { ProwlarrInstanceUpdateSchema } from '$lib/schemas/prowlarr';
 import {
@@ -253,7 +253,11 @@ export const actions: Actions = {
 			});
 		}
 
-		// Redirect to instance detail page on success
-		redirect(303, `/connectors/prowlarr/${id}`);
+		// Return success with redirect target (client will handle navigation after showing toast)
+		return {
+			success: true,
+			message: 'Prowlarr instance updated successfully',
+			redirectTo: `/connectors/prowlarr/${id}`
+		};
 	}
 };

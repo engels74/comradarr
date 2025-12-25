@@ -2,7 +2,7 @@
  * Add Prowlarr instance page server-side logic.
  */
 
-import { fail, redirect } from '@sveltejs/kit';
+import { fail } from '@sveltejs/kit';
 import * as v from 'valibot';
 import { ProwlarrInstanceSchema } from '$lib/schemas/prowlarr';
 import {
@@ -215,7 +215,11 @@ export const actions: Actions = {
 			});
 		}
 
-		// Redirect to connectors list on success
-		redirect(303, '/connectors');
+		// Return success with redirect target (client will handle navigation after showing toast)
+		return {
+			success: true,
+			message: 'Prowlarr instance added successfully',
+			redirectTo: '/connectors'
+		};
 	}
 };

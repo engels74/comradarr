@@ -2,7 +2,7 @@
  * Edit connector page server-side logic.
  */
 
-import { error, fail, redirect } from '@sveltejs/kit';
+import { error, fail } from '@sveltejs/kit';
 import * as v from 'valibot';
 import { ConnectorUpdateSchema } from '$lib/schemas/connectors';
 import {
@@ -298,7 +298,11 @@ export const actions: Actions = {
 			});
 		}
 
-		// Redirect to connector detail page on success
-		redirect(303, `/connectors/${id}`);
+		// Return success with redirect target (client will handle navigation after showing toast)
+		return {
+			success: true,
+			message: 'Connector updated successfully',
+			redirectTo: `/connectors/${id}`
+		};
 	}
 };

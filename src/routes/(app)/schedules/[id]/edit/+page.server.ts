@@ -11,7 +11,7 @@ import {
 	deleteSchedule
 } from '$lib/server/db/queries/schedules';
 import { refreshDynamicSchedules } from '$lib/server/scheduler';
-import { error, fail, redirect } from '@sveltejs/kit';
+import { error, fail } from '@sveltejs/kit';
 import * as v from 'valibot';
 import { ScheduleUpdateSchema } from '$lib/schemas/schedules';
 import { Cron } from 'croner';
@@ -157,8 +157,12 @@ export const actions: Actions = {
 			});
 		}
 
-		// Redirect to schedules list
-		redirect(303, '/schedules');
+		// Return success with redirect target (client will handle navigation after showing toast)
+		return {
+			success: true,
+			message: 'Schedule updated successfully',
+			redirectTo: '/schedules'
+		};
 	},
 
 	/**
@@ -185,7 +189,11 @@ export const actions: Actions = {
 			return fail(500, { error: 'Failed to delete schedule. Please try again.' });
 		}
 
-		// Redirect to schedules list
-		redirect(303, '/schedules');
+		// Return success with redirect target (client will handle navigation after showing toast)
+		return {
+			success: true,
+			message: 'Schedule deleted successfully',
+			redirectTo: '/schedules'
+		};
 	}
 };

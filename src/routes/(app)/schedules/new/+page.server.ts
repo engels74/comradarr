@@ -7,7 +7,7 @@ import { getAllConnectors } from '$lib/server/db/queries/connectors';
 import { getAllThrottleProfiles } from '$lib/server/db/queries/throttle';
 import { createSchedule } from '$lib/server/db/queries/schedules';
 import { refreshDynamicSchedules } from '$lib/server/scheduler';
-import { fail, redirect } from '@sveltejs/kit';
+import { fail } from '@sveltejs/kit';
 import * as v from 'valibot';
 import { ScheduleSchema } from '$lib/schemas/schedules';
 import { Cron } from 'croner';
@@ -131,7 +131,11 @@ export const actions: Actions = {
 			});
 		}
 
-		// Redirect to schedules list
-		redirect(303, '/schedules');
+		// Return success with redirect target (client will handle navigation after showing toast)
+		return {
+			success: true,
+			message: 'Schedule created successfully',
+			redirectTo: '/schedules'
+		};
 	}
 };

@@ -8,6 +8,7 @@
 <script lang="ts">
 	import type { PageProps, ActionData } from './$types';
 	import { enhance } from '$app/forms';
+	import { goto } from '$app/navigation';
 	import * as Card from '$lib/components/ui/card';
 	import * as Table from '$lib/components/ui/table';
 	import * as Dialog from '$lib/components/ui/dialog';
@@ -18,13 +19,6 @@
 	import { cn } from '$lib/utils.js';
 
 	let { data, form }: { data: PageProps['data']; form: ActionData } = $props();
-
-	// Show toast on form result
-	$effect(() => {
-		if (form?.success && form?.message) {
-			toastStore.success(form.message);
-		}
-	});
 
 	// Loading states
 	let isTestingConnection = $state(false);
@@ -179,9 +173,14 @@
 					action="?/testConnection"
 					use:enhance={() => {
 						isTestingConnection = true;
-						return async ({ update }) => {
+						return async ({ result, update }) => {
 							await update();
 							isTestingConnection = false;
+
+							// Show toast on success
+							if (result.type === 'success' && result.data?.success) {
+								toastStore.success(result.data.message as string);
+							}
 						};
 					}}
 				>
@@ -196,9 +195,14 @@
 					action="?/checkHealth"
 					use:enhance={() => {
 						isCheckingHealth = true;
-						return async ({ update }) => {
+						return async ({ result, update }) => {
 							await update();
 							isCheckingHealth = false;
+
+							// Show toast on success
+							if (result.type === 'success' && result.data?.success) {
+								toastStore.success(result.data.message as string);
+							}
 						};
 					}}
 				>
@@ -326,9 +330,17 @@
 								action="?/delete"
 								use:enhance={() => {
 									isDeleting = true;
-									return async ({ update }) => {
+									return async ({ result, update }) => {
 										await update();
 										isDeleting = false;
+
+										// Show toast and navigate on success
+										if (result.type === 'success' && result.data?.success) {
+											toastStore.success(result.data.message as string);
+											if (result.data.redirectTo) {
+												goto(result.data.redirectTo as string);
+											}
+										}
 									};
 								}}
 							>
