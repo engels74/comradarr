@@ -27,6 +27,7 @@ import {
 } from '$lib/server/connectors';
 import type { Connector } from '$lib/server/db/schema';
 import { createLogger } from '$lib/server/logger';
+import { runIncrementalSync } from '$lib/server/services/sync';
 
 const logger = createLogger('connectors');
 
@@ -196,7 +197,7 @@ export const actions: Actions = {
 
 	/**
 	 * Trigger a manual sync for the connector.
-	 * Placeholder - will integrate with sync service when available.
+	 * Runs an incremental sync to update the content mirror from the *arr application.
 	 */
 	triggerSync: async ({ params }) => {
 		const id = Number(params.id);
@@ -221,19 +222,34 @@ export const actions: Actions = {
 			return fail(400, { error: 'Cannot sync a disabled connector' });
 		}
 
-		// Log the trigger (placeholder behavior preserved)
-		logger.info('Manual sync triggered (placeholder)', {
+		logger.info('Manual sync started', {
 			connectorId: connector.id,
 			connectorName: connector.name,
 			type: connector.type
 		});
 
-		// TODO: Integrate with sync service when available
-		// For now, return success to indicate the action was received
-		return {
-			success: true,
-			message: 'Sync triggered. This feature will be fully implemented with the sync service.'
-		};
+		// Run incremental sync (skipRetry for immediate feedback on manual triggers)
+		const result = await runIncrementalSync(connector, { skipRetry: true });
+
+		if (result.success) {
+			logger.info('Manual sync completed', {
+				connectorId: connector.id,
+				connectorName: connector.name,
+				itemsSynced: result.itemsSynced,
+				durationMs: result.durationMs
+			});
+			return {
+				success: true,
+				message: `Sync completed. ${result.itemsSynced} items synced in ${(result.durationMs / 1000).toFixed(1)}s.`
+			};
+		} else {
+			logger.warn('Manual sync failed', {
+				connectorId: connector.id,
+				connectorName: connector.name,
+				error: result.error
+			});
+			return fail(500, { error: result.error ?? 'Sync failed' });
+		}
 	},
 
 	/**

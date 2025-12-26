@@ -26,6 +26,7 @@ import { throttleEnforcer } from '$lib/server/services/throttle';
 import { apiKeyRateLimiter } from '$lib/server/services/api-rate-limit';
 import { prowlarrHealthMonitor } from '$lib/server/services/prowlarr';
 import {
+	getConnector,
 	getEnabledConnectors,
 	getHealthyConnectors,
 	getDecryptedApiKey,
@@ -1059,9 +1060,126 @@ export async function refreshDynamicSchedules(): Promise<void> {
 					}
 				},
 				withJobContext(`sweep-schedule-${schedule.id}`, async () => {
-					// Job execution will be implemented in a future task
-					// For now, just log that it would run
-					logger.info('Dynamic schedule triggered', { scheduleName: schedule.name, scheduleId: schedule.id });
+					const startTime = Date.now();
+
+					// Determine target connectors based on schedule configuration
+					let targetConnectors: Connector[];
+					if (schedule.connectorId) {
+						// Schedule targets a specific connector
+						const connector = await getConnector(schedule.connectorId);
+						if (
+							!connector ||
+							!connector.enabled ||
+							!['healthy', 'degraded'].includes(connector.healthStatus ?? '')
+						) {
+							logger.warn('Schedule skipped - connector not healthy', {
+								scheduleId: schedule.id,
+								scheduleName: schedule.name,
+								connectorId: schedule.connectorId,
+								reason: !connector
+									? 'not found'
+									: !connector.enabled
+										? 'disabled'
+										: 'unhealthy'
+							});
+							return;
+						}
+						targetConnectors = [connector];
+					} else {
+						// Global schedule targets all healthy connectors
+						targetConnectors = await getHealthyConnectors();
+					}
+
+					if (targetConnectors.length === 0) {
+						logger.debug('Schedule skipped - no healthy connectors', {
+							scheduleId: schedule.id,
+							scheduleName: schedule.name
+						});
+						return;
+					}
+
+					const summary = {
+						connectorsProcessed: 0,
+						syncErrors: 0,
+						totalItemsSynced: 0,
+						totalGapsFound: 0,
+						totalUpgradesFound: 0,
+						totalItemsEnqueued: 0
+					};
+
+					for (const connector of targetConnectors) {
+						try {
+							// 1. Run sync based on sweepType
+							const syncResult =
+								schedule.sweepType === 'full_reconciliation'
+									? await runFullReconciliation(connector)
+									: await runIncrementalSync(connector);
+
+							if (!syncResult.success) {
+								summary.syncErrors++;
+								logger.warn('Schedule sync failed for connector', {
+									scheduleId: schedule.id,
+									connectorId: connector.id,
+									connectorName: connector.name,
+									error: syncResult.error
+								});
+								continue;
+							}
+
+							// Handle different result types (incremental vs reconciliation)
+							if ('itemsSynced' in syncResult) {
+								summary.totalItemsSynced += syncResult.itemsSynced;
+							} else if ('itemsCreated' in syncResult) {
+								summary.totalItemsSynced +=
+									syncResult.itemsCreated + syncResult.itemsUpdated;
+							}
+
+							// 2. Run discovery (gaps and upgrades in parallel)
+							const [gapsResult, upgradesResult] = await Promise.all([
+								discoverGaps(connector.id),
+								discoverUpgrades(connector.id)
+							]);
+
+							if (gapsResult.success) {
+								summary.totalGapsFound += gapsResult.registriesCreated;
+							}
+							if (upgradesResult.success) {
+								summary.totalUpgradesFound += upgradesResult.registriesCreated;
+							}
+
+							// 3. Enqueue pending items
+							const enqueueResult = await enqueuePendingItems(connector.id);
+							if (enqueueResult.success) {
+								summary.totalItemsEnqueued += enqueueResult.itemsEnqueued;
+							}
+
+							summary.connectorsProcessed++;
+						} catch (error) {
+							summary.syncErrors++;
+							logger.error('Schedule error processing connector', {
+								scheduleId: schedule.id,
+								connectorId: connector.id,
+								connectorName: connector.name,
+								error: error instanceof Error ? error.message : String(error)
+							});
+						}
+					}
+
+					// Update nextRunAt for timeline display
+					const nextRun = dynamicJobs.get(schedule.id)?.nextRun();
+					if (nextRun) {
+						await updateNextRunAt(schedule.id, nextRun);
+					}
+
+					// Log completion summary
+					const durationMs = Date.now() - startTime;
+					logger.info('Dynamic schedule completed', {
+						scheduleId: schedule.id,
+						scheduleName: schedule.name,
+						sweepType: schedule.sweepType,
+						...summary,
+						durationMs
+					});
 				})
 			);
 
