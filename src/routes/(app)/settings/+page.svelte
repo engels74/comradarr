@@ -30,9 +30,9 @@ $effect(() => {
 	}
 });
 
-// Common select styling
+// Common select styling - glass variant
 const selectClass =
-	'flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 md:text-sm';
+	'flex h-9 w-full rounded-lg border border-glass-border/30 bg-glass/50 backdrop-blur-sm px-3 py-1 text-base transition-all placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary/50 hover:bg-glass/70 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm';
 
 // Get all IANA timezones
 const timezones = Intl.supportedValuesOf('timeZone');
@@ -49,19 +49,21 @@ function getFormValue(formValue: string | undefined, settingsValue: string): str
 	<title>Settings - Comradarr</title>
 </svelte:head>
 
-<div class="container mx-auto p-6 max-w-2xl">
+<div class="container mx-auto p-6 lg:p-8 max-w-2xl">
 	<!-- Page Header -->
-	<div class="mb-6">
+	<header class="mb-8 animate-float-up" style="animation-delay: 0ms;">
 		<div class="flex items-center gap-3">
-			<SettingsIcon class="h-8 w-8 text-muted-foreground" />
+			<div class="p-2.5 rounded-xl bg-muted/50">
+				<SettingsIcon class="h-6 w-6 text-muted-foreground" />
+			</div>
 			<div>
-				<h1 class="text-3xl font-bold">Settings</h1>
-				<p class="text-muted-foreground mt-1">Configure application settings</p>
+				<h1 class="font-display text-3xl font-semibold tracking-tight md:text-4xl">Settings</h1>
+				<p class="text-muted-foreground mt-2">Configure application settings</p>
 			</div>
 		</div>
-	</div>
+	</header>
 
-	<Card.Root>
+	<Card.Root variant="glass" class="animate-float-up" style="animation-delay: 100ms;">
 		<Card.Header>
 			<Card.Title class="text-xl">General Settings</Card.Title>
 			<Card.Description>

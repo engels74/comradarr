@@ -87,20 +87,24 @@ const warnCount = $derived(data.levelCounts.warn);
 	<title>Logs - Comradarr</title>
 </svelte:head>
 
-<div class="container mx-auto p-6">
+<div class="container mx-auto p-6 lg:p-8">
 	<!-- Header -->
-	<div class="flex items-center justify-between mb-6">
+	<header class="flex items-center justify-between mb-8 animate-float-up" style="animation-delay: 0ms;">
 		<div>
 			<div class="flex items-center gap-3">
-				<ScrollTextIcon class="h-8 w-8 text-muted-foreground" />
-				<h1 class="text-3xl font-bold">Logs</h1>
+				<div class="p-2.5 rounded-xl bg-muted/50">
+					<ScrollTextIcon class="h-6 w-6 text-muted-foreground" />
+				</div>
+				<div>
+					<h1 class="font-display text-3xl font-semibold tracking-tight md:text-4xl">Logs</h1>
+					<p class="text-muted-foreground mt-2">View and search application logs</p>
+				</div>
 			</div>
-			<p class="text-muted-foreground mt-1">View and search application logs</p>
 		</div>
 
 		<div class="flex items-center gap-3">
 			<!-- Buffer Status -->
-			<div class="text-sm text-muted-foreground hidden md:block">
+			<div class="text-sm text-muted-foreground hidden md:block glass-panel px-4 py-2">
 				<span class="font-medium">{data.buffer.used.toLocaleString()}</span>
 				<span class="opacity-70"> / {data.buffer.size.toLocaleString()} entries</span>
 				<span class="ml-2 opacity-50">({bufferUsage}%)</span>
@@ -110,7 +114,7 @@ const warnCount = $derived(data.levelCounts.warn);
 			<AlertDialog.Root bind:open={showClearDialog}>
 				<AlertDialog.Trigger>
 					{#snippet child({ props })}
-						<Button variant="outline" size="sm" {...props}>
+						<Button variant="glass" size="sm" {...props}>
 							<TrashIcon class="h-4 w-4 mr-1" />
 							Clear
 						</Button>
@@ -133,27 +137,27 @@ const warnCount = $derived(data.levelCounts.warn);
 				</AlertDialog.Content>
 			</AlertDialog.Root>
 		</div>
-	</div>
+	</header>
 
 	<!-- Stats Summary -->
 	{#if errorCount > 0 || warnCount > 0}
-		<div class="flex gap-4 mb-6">
+		<div class="flex gap-4 mb-6 animate-float-up" style="animation-delay: 50ms;">
 			{#if errorCount > 0}
 				<div
-					class="flex items-center gap-2 rounded-lg bg-red-500/10 border border-red-500/30 px-4 py-2"
+					class="flex items-center gap-2 rounded-xl bg-destructive/10 border border-destructive/30 px-4 py-2 backdrop-blur-sm"
 				>
-					<AlertCircleIcon class="h-4 w-4 text-red-500" />
-					<span class="text-sm font-medium text-red-600 dark:text-red-400">
+					<AlertCircleIcon class="h-4 w-4 text-destructive" />
+					<span class="text-sm font-medium text-destructive">
 						{errorCount} error{errorCount !== 1 ? 's' : ''}
 					</span>
 				</div>
 			{/if}
 			{#if warnCount > 0}
 				<div
-					class="flex items-center gap-2 rounded-lg bg-yellow-500/10 border border-yellow-500/30 px-4 py-2"
+					class="flex items-center gap-2 rounded-xl bg-warning/10 border border-warning/30 px-4 py-2 backdrop-blur-sm"
 				>
-					<AlertCircleIcon class="h-4 w-4 text-yellow-500" />
-					<span class="text-sm font-medium text-yellow-600 dark:text-yellow-400">
+					<AlertCircleIcon class="h-4 w-4 text-warning" />
+					<span class="text-sm font-medium text-warning">
 						{warnCount} warning{warnCount !== 1 ? 's' : ''}
 					</span>
 				</div>

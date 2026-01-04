@@ -17,88 +17,98 @@ interface Props {
 let { contentStats, todayStats, class: className = '' }: Props = $props();
 
 // Determine success rate styling based on percentage
-const successRateBgColor = $derived(() => {
-	if (todayStats.completedToday === 0) return 'bg-gray-500/10';
-	if (todayStats.successRate >= 70) return 'bg-green-500/10';
-	if (todayStats.successRate >= 40) return 'bg-amber-500/10';
-	return 'bg-red-500/10';
+const successRateColors = $derived(() => {
+	if (todayStats.completedToday === 0)
+		return { bg: 'bg-muted/50', text: 'text-muted-foreground', glow: '' };
+	if (todayStats.successRate >= 70)
+		return {
+			bg: 'bg-success/15',
+			text: 'text-success',
+			glow: 'shadow-[0_0_15px_oklch(var(--success)/0.3)]'
+		};
+	if (todayStats.successRate >= 40)
+		return {
+			bg: 'bg-warning/15',
+			text: 'text-warning',
+			glow: 'shadow-[0_0_15px_oklch(var(--warning)/0.3)]'
+		};
+	return {
+		bg: 'bg-destructive/15',
+		text: 'text-destructive',
+		glow: 'shadow-[0_0_15px_oklch(var(--destructive)/0.3)]'
+	};
 });
 
-const successRateTextColor = $derived(() => {
-	if (todayStats.completedToday === 0) return 'text-gray-600 dark:text-gray-400';
-	if (todayStats.successRate >= 70) return 'text-green-600 dark:text-green-400';
-	if (todayStats.successRate >= 40) return 'text-amber-600 dark:text-amber-400';
-	return 'text-red-600 dark:text-red-400';
-});
+interface StatCard {
+	value: number | string;
+	label: string;
+	icon: typeof AlertCircleIcon;
+	bgColor: string;
+	textColor: string;
+	glowColor?: string;
+}
+
+const stats: StatCard[] = $derived([
+	{
+		value: contentStats.missing,
+		label: 'Total Gaps',
+		icon: AlertCircleIcon,
+		bgColor: 'bg-destructive/15',
+		textColor: 'text-destructive',
+		glowColor: contentStats.missing > 0 ? 'shadow-[0_0_15px_oklch(var(--destructive)/0.25)]' : ''
+	},
+	{
+		value: contentStats.upgrade,
+		label: 'Upgrades',
+		icon: ArrowUpCircleIcon,
+		bgColor: 'bg-warning/15',
+		textColor: 'text-warning',
+		glowColor: contentStats.upgrade > 0 ? 'shadow-[0_0_15px_oklch(var(--warning)/0.25)]' : ''
+	},
+	{
+		value: contentStats.queued,
+		label: 'In Queue',
+		icon: ListTodoIcon,
+		bgColor: 'bg-[oklch(var(--accent-sonarr)/0.15)]',
+		textColor: 'text-[oklch(var(--accent-sonarr))]',
+		glowColor: contentStats.queued > 0 ? 'shadow-[0_0_15px_oklch(var(--accent-sonarr)/0.25)]' : ''
+	},
+	{
+		value: todayStats.completedToday,
+		label: 'Today',
+		icon: CheckCircle2Icon,
+		bgColor: 'bg-success/15',
+		textColor: 'text-success',
+		glowColor: todayStats.completedToday > 0 ? 'shadow-[0_0_15px_oklch(var(--success)/0.25)]' : ''
+	},
+	{
+		value: `${todayStats.successRate}%`,
+		label: 'Success',
+		icon: TargetIcon,
+		bgColor: successRateColors().bg,
+		textColor: successRateColors().text,
+		glowColor: successRateColors().glow
+	}
+]);
 </script>
 
 <div class={className}>
-	<h2 class="text-2xl font-semibold mb-4">Statistics</h2>
+	<h2 class="font-display text-xl font-semibold mb-4 tracking-tight">Statistics</h2>
 
 	<div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-		<!-- Total Gaps -->
-		<Card.Root class="p-4">
-			<div class="flex items-center gap-3">
-				<div class="p-2 rounded-lg bg-red-500/10">
-					<AlertCircleIcon class="h-5 w-5 text-red-600 dark:text-red-400" />
+		{#each stats as stat, i}
+			{@const Icon = stat.icon}
+			<Card.Root variant="glass" class="p-4 py-5 transition-all duration-300 hover:scale-[1.02] {stat.glowColor}">
+				<div class="flex items-center gap-3">
+					<div class="p-2.5 rounded-xl {stat.bgColor} transition-transform duration-200">
+						<Icon class="h-5 w-5 {stat.textColor}" />
+					</div>
+					<div>
+						<p class="text-2xl font-display font-bold tracking-tight">{stat.value}</p>
+						<p class="text-sm text-muted-foreground">{stat.label}</p>
+					</div>
 				</div>
-				<div>
-					<p class="text-2xl font-bold">{contentStats.missing}</p>
-					<p class="text-sm text-muted-foreground">Total Gaps</p>
-				</div>
-			</div>
-		</Card.Root>
-
-		<!-- Upgrade Candidates -->
-		<Card.Root class="p-4">
-			<div class="flex items-center gap-3">
-				<div class="p-2 rounded-lg bg-amber-500/10">
-					<ArrowUpCircleIcon class="h-5 w-5 text-amber-600 dark:text-amber-400" />
-				</div>
-				<div>
-					<p class="text-2xl font-bold">{contentStats.upgrade}</p>
-					<p class="text-sm text-muted-foreground">Upgrades</p>
-				</div>
-			</div>
-		</Card.Root>
-
-		<!-- Queue Items -->
-		<Card.Root class="p-4">
-			<div class="flex items-center gap-3">
-				<div class="p-2 rounded-lg bg-blue-500/10">
-					<ListTodoIcon class="h-5 w-5 text-blue-600 dark:text-blue-400" />
-				</div>
-				<div>
-					<p class="text-2xl font-bold">{contentStats.queued}</p>
-					<p class="text-sm text-muted-foreground">In Queue</p>
-				</div>
-			</div>
-		</Card.Root>
-
-		<!-- Completed Today -->
-		<Card.Root class="p-4">
-			<div class="flex items-center gap-3">
-				<div class="p-2 rounded-lg bg-green-500/10">
-					<CheckCircle2Icon class="h-5 w-5 text-green-600 dark:text-green-400" />
-				</div>
-				<div>
-					<p class="text-2xl font-bold">{todayStats.completedToday}</p>
-					<p class="text-sm text-muted-foreground">Today</p>
-				</div>
-			</div>
-		</Card.Root>
-
-		<!-- Success Rate -->
-		<Card.Root class="p-4">
-			<div class="flex items-center gap-3">
-				<div class="p-2 rounded-lg {successRateBgColor()}">
-					<TargetIcon class="h-5 w-5 {successRateTextColor()}" />
-				</div>
-				<div>
-					<p class="text-2xl font-bold">{todayStats.successRate}%</p>
-					<p class="text-sm text-muted-foreground">Success</p>
-				</div>
-			</div>
-		</Card.Root>
+			</Card.Root>
+		{/each}
 	</div>
 </div>

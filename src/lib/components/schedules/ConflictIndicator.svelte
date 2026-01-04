@@ -34,7 +34,7 @@ const tooltipText = $derived(() => {
 		<Tooltip.Root>
 			<Tooltip.Trigger>
 				<span
-					class="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-xs font-medium {conflictColors.bg} {conflictColors.text} {conflictColors.border} border {className}"
+					class="inline-flex items-center gap-1 rounded-lg px-1.5 py-0.5 text-xs font-medium {conflictColors.bg} {conflictColors.text} {conflictColors.border} border backdrop-blur-sm {className}"
 				>
 					<AlertTriangleIcon class="h-3 w-3" />
 					<span class="sr-only">Conflict</span>

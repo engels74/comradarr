@@ -7,7 +7,7 @@ let { data, children }: LayoutProps = $props();
 
 <div class="min-h-screen">
 	<Sidebar user={data.user} />
-	<main class="ml-60">
+	<main class="ml-64 min-h-screen">
 		{@render children()}
 	</main>
 </div>

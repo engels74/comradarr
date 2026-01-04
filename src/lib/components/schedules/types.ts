@@ -94,16 +94,16 @@ export const sweepTypeColors: Record<
 	}
 > = {
 	incremental: {
-		bg: 'bg-blue-500/10',
-		text: 'text-blue-600 dark:text-blue-400',
+		bg: 'bg-blue-500/15',
+		text: 'text-blue-500',
 		border: 'border-blue-500/30',
-		bgHover: 'hover:bg-blue-500/20'
+		bgHover: 'hover:bg-blue-500/25'
 	},
 	full_reconciliation: {
-		bg: 'bg-purple-500/10',
-		text: 'text-purple-600 dark:text-purple-400',
+		bg: 'bg-purple-500/15',
+		text: 'text-purple-500',
 		border: 'border-purple-500/30',
-		bgHover: 'hover:bg-purple-500/20'
+		bgHover: 'hover:bg-purple-500/25'
 	}
 };
 
@@ -111,8 +111,8 @@ export const sweepTypeColors: Record<
  * Conflict indicator colors.
  */
 export const conflictColors = {
-	bg: 'bg-amber-500/10',
-	text: 'text-amber-600 dark:text-amber-400',
+	bg: 'bg-amber-500/15',
+	text: 'text-amber-500',
 	border: 'border-amber-500/30',
 	icon: 'text-amber-500'
 };

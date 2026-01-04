@@ -120,10 +120,10 @@ function getTypeColors(type: string): { bg: string; text: string; border: string
 }
 </script>
 
-<Card.Root class={className}>
+<Card.Root variant="glass" class={className}>
 	<Card.Header>
 		<Card.Title class="text-lg flex items-center gap-2">
-			<LibraryBigIcon class="h-5 w-5" />
+			<LibraryBigIcon class="h-5 w-5 text-primary" />
 			Library Completion
 		</Card.Title>
 		<Card.Description>Monitored content completion status per connector</Card.Description>
@@ -131,10 +131,12 @@ function getTypeColors(type: string): { bg: string; text: string; border: string
 	<Card.Content>
 		{#if completionData.length === 0}
 			<!-- Empty State -->
-			<div class="text-center py-8 text-muted-foreground">
-				<LibraryBigIcon class="h-8 w-8 mx-auto mb-2 opacity-50" />
-				<p>No connectors configured</p>
-				<p class="text-sm mt-1">Add a connector to see library completion stats.</p>
+			<div class="text-center py-12 text-muted-foreground">
+				<div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-glass/50 mb-4">
+					<LibraryBigIcon class="h-8 w-8 opacity-50" />
+				</div>
+				<p class="font-medium">No connectors configured</p>
+				<p class="text-sm mt-1 opacity-75">Add a connector to see library completion stats.</p>
 			</div>
 		{:else}
 			<div class="space-y-4">
@@ -142,7 +144,7 @@ function getTypeColors(type: string): { bg: string; text: string; border: string
 					{@const colors = getTypeColors(data.connectorType)}
 					{@const trendInfo = getTrendInfo(data.trendDelta)}
 
-					<div class="p-4 rounded-lg border {colors.border} bg-card">
+					<div class="p-4 rounded-xl border border-glass-border/30 bg-glass/30 backdrop-blur-sm transition-all duration-200 hover:bg-glass/50">
 						<!-- Header: Connector name and type badge -->
 						<div class="flex items-center justify-between mb-3">
 							<div class="flex items-center gap-2">
@@ -151,13 +153,13 @@ function getTypeColors(type: string): { bg: string; text: string; border: string
 									{formatType(data.connectorType)}
 								</Badge>
 							</div>
-							<span class="text-2xl font-bold {getCompletionColor(data.completionPercentage)}">
+							<span class="text-2xl font-display font-bold {getCompletionColor(data.completionPercentage)}">
 								{data.completionPercentage.toFixed(1)}%
 							</span>
 						</div>
 
 						<!-- Progress bar -->
-						<div class="h-2 bg-muted rounded-full overflow-hidden mb-3">
+						<div class="h-2 bg-muted/30 rounded-full overflow-hidden mb-3">
 							<div
 								class="h-full rounded-full transition-all duration-500 {getProgressBarColor(
 									data.completionPercentage
@@ -189,7 +191,7 @@ function getTypeColors(type: string): { bg: string; text: string; border: string
 											stroke-width="1.5"
 											stroke-linecap="round"
 											stroke-linejoin="round"
-											class={data.trendDelta >= 0 ? 'stroke-green-500' : 'stroke-red-500'}
+											class={data.trendDelta >= 0 ? 'stroke-success' : 'stroke-destructive'}
 										/>
 									</svg>
 									<!-- Trend indicator -->
@@ -206,7 +208,7 @@ function getTypeColors(type: string): { bg: string; text: string; border: string
 						<!-- Breakdown (episodes vs movies if applicable) -->
 						{#if data.episodesMonitored > 0 && data.moviesMonitored > 0}
 							<div
-								class="mt-2 pt-2 border-t border-border/50 flex gap-4 text-xs text-muted-foreground"
+								class="mt-2 pt-2 border-t border-glass-border/20 flex gap-4 text-xs text-muted-foreground"
 							>
 								<span> Episodes: {data.episodesDownloaded}/{data.episodesMonitored} </span>
 								<span> Movies: {data.moviesDownloaded}/{data.moviesMonitored} </span>

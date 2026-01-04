@@ -25,9 +25,9 @@ let isSubmittingAuthMode = $state(false);
 let isSubmittingPassword = $state(false);
 let isSubmittingSession = $state(false);
 
-// Common select styling
+// Common select styling - glass variant
 const selectClass =
-	'flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 md:text-sm';
+	'flex h-9 w-full rounded-lg border border-glass-border/30 bg-glass/50 backdrop-blur-sm px-3 py-1 text-base transition-all placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary/50 hover:bg-glass/70 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm';
 
 /**
  * Format user agent to display friendly device/browser name.
@@ -66,17 +66,19 @@ function formatRelativeTime(date: Date): string {
 	<title>Security Settings - Comradarr</title>
 </svelte:head>
 
-<div class="container mx-auto p-6 max-w-2xl">
+<div class="container mx-auto p-6 lg:p-8 max-w-2xl">
 	<!-- Page Header -->
-	<div class="mb-6">
+	<header class="mb-8 animate-float-up" style="animation-delay: 0ms;">
 		<div class="flex items-center gap-3">
-			<ShieldIcon class="h-8 w-8 text-muted-foreground" />
+			<div class="p-2.5 rounded-xl bg-muted/50">
+				<ShieldIcon class="h-6 w-6 text-muted-foreground" />
+			</div>
 			<div>
-				<h1 class="text-3xl font-bold">Security Settings</h1>
-				<p class="text-muted-foreground mt-1">Manage authentication, passwords, and sessions</p>
+				<h1 class="font-display text-3xl font-semibold tracking-tight md:text-4xl">Security Settings</h1>
+				<p class="text-muted-foreground mt-2">Manage authentication, passwords, and sessions</p>
 			</div>
 		</div>
-	</div>
+	</header>
 
 	<div class="grid gap-6">
 		<!-- Local Bypass Warning -->
@@ -99,9 +101,9 @@ function formatRelativeTime(date: Date): string {
 		{/if}
 
 		<!-- Authentication Mode Card -->
-		<Card.Root>
+		<Card.Root variant="glass" class="animate-float-up" style="animation-delay: 100ms;">
 			<Card.Header>
-				<Card.Title class="text-xl flex items-center gap-2">
+				<Card.Title class="text-xl font-display flex items-center gap-2">
 					<KeyIcon class="h-5 w-5" />
 					Authentication Mode
 				</Card.Title>
@@ -185,9 +187,9 @@ function formatRelativeTime(date: Date): string {
 
 		<!-- Change Password Card (hidden for bypass users) -->
 		{#if !data.isLocalBypass}
-			<Card.Root>
+			<Card.Root variant="glass" class="animate-float-up" style="animation-delay: 150ms;">
 				<Card.Header>
-					<Card.Title class="text-xl">Change Password</Card.Title>
+					<Card.Title class="text-xl font-display">Change Password</Card.Title>
 					<Card.Description>
 						Update your account password. You will need to enter your current password to confirm.
 					</Card.Description>
@@ -279,9 +281,9 @@ function formatRelativeTime(date: Date): string {
 		{/if}
 
 		<!-- Session Management Card -->
-		<Card.Root>
+		<Card.Root variant="glass" class="animate-float-up" style="animation-delay: 200ms;">
 			<Card.Header>
-				<Card.Title class="text-xl flex items-center gap-2">
+				<Card.Title class="text-xl font-display flex items-center gap-2">
 					<MonitorSmartphoneIcon class="h-5 w-5" />
 					Active Sessions
 				</Card.Title>
@@ -309,7 +311,7 @@ function formatRelativeTime(date: Date): string {
 						<!-- Sessions List -->
 						<div class="space-y-3">
 							{#each data.sessions as session}
-								<div class="flex items-center justify-between p-3 rounded-lg border bg-card">
+								<div class="flex items-center justify-between p-3 rounded-xl border border-glass-border/20 bg-glass/30 backdrop-blur-sm hover:bg-glass/50 transition-all duration-200">
 									<div class="flex flex-col gap-1">
 										<div class="flex items-center gap-2">
 											<span class="font-medium text-sm">

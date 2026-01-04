@@ -96,22 +96,24 @@ function getRelativeTime(isoString: string): string {
 	<title>Backup Settings - Comradarr</title>
 </svelte:head>
 
-<div class="container mx-auto p-6 max-w-4xl">
+<div class="container mx-auto p-6 lg:p-8 max-w-4xl">
 	<!-- Page Header -->
-	<div class="mb-6">
+	<header class="mb-8 animate-float-up" style="animation-delay: 0ms;">
 		<div class="flex items-center gap-3">
-			<HardDriveDownloadIcon class="h-8 w-8 text-muted-foreground" />
+			<div class="p-2.5 rounded-xl bg-muted/50">
+				<HardDriveDownloadIcon class="h-6 w-6 text-muted-foreground" />
+			</div>
 			<div>
-				<h1 class="text-3xl font-bold">Backup Settings</h1>
-				<p class="text-muted-foreground mt-1">Configure automatic database backups</p>
+				<h1 class="font-display text-3xl font-semibold tracking-tight md:text-4xl">Backup Settings</h1>
+				<p class="text-muted-foreground mt-2">Configure automatic database backups</p>
 			</div>
 		</div>
-	</div>
+	</header>
 
 	<!-- Scheduled Backup Settings -->
-	<Card.Root class="mb-6">
+	<Card.Root variant="glass" class="mb-6 animate-float-up" style="animation-delay: 100ms;">
 		<Card.Header>
-			<Card.Title class="text-xl">Scheduled Backups</Card.Title>
+			<Card.Title class="text-xl font-display">Scheduled Backups</Card.Title>
 			<Card.Description>Configure automatic backups to run at regular intervals.</Card.Description>
 		</Card.Header>
 		<Card.Content>
@@ -224,9 +226,9 @@ function getRelativeTime(isoString: string): string {
 	</Card.Root>
 
 	<!-- Existing Backups -->
-	<Card.Root>
+	<Card.Root variant="glass" class="animate-float-up" style="animation-delay: 150ms;">
 		<Card.Header>
-			<Card.Title class="text-xl">Existing Backups</Card.Title>
+			<Card.Title class="text-xl font-display">Existing Backups</Card.Title>
 			<Card.Description>
 				View and manage your database backups. Manual backups can be created from the System page.
 			</Card.Description>
@@ -243,16 +245,18 @@ function getRelativeTime(isoString: string): string {
 			{/if}
 
 			{#if data.backups.length === 0}
-				<div class="text-center py-8 text-muted-foreground">
-					<CalendarIcon class="h-12 w-12 mx-auto mb-4 opacity-50" />
-					<p>No backups found</p>
-					<p class="text-sm mt-1">Backups will appear here once created.</p>
+				<div class="glass-panel p-8 text-center">
+					<div class="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-muted/50 mb-4">
+						<CalendarIcon class="h-6 w-6 text-muted-foreground opacity-50" />
+					</div>
+					<p class="font-display font-medium">No backups found</p>
+					<p class="text-sm mt-1 text-muted-foreground">Backups will appear here once created.</p>
 				</div>
 			{:else}
 				<div class="space-y-3">
 					{#each data.backups as backup}
 						<div
-							class="flex items-center justify-between p-4 border rounded-lg bg-card hover:bg-muted/50 transition-colors"
+							class="flex items-center justify-between p-4 border border-glass-border/20 rounded-xl bg-glass/30 backdrop-blur-sm hover:bg-glass/50 transition-all duration-200"
 						>
 							<div class="flex-1">
 								<div class="flex items-center gap-2">

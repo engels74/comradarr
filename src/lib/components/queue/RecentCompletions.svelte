@@ -16,11 +16,11 @@ interface Props {
 
 let { completions, class: className }: Props = $props();
 
-// Connector type badge colors
+// Connector type badge colors using OKLCH accent colors
 const typeColors: Record<string, string> = {
-	sonarr: 'bg-blue-500/10 text-blue-600 dark:text-blue-400',
-	radarr: 'bg-orange-500/10 text-orange-600 dark:text-orange-400',
-	whisparr: 'bg-purple-500/10 text-purple-600 dark:text-purple-400'
+	sonarr: 'bg-[oklch(var(--accent-sonarr)/0.15)] text-[oklch(var(--accent-sonarr))]',
+	radarr: 'bg-[oklch(var(--accent-radarr)/0.15)] text-[oklch(var(--accent-radarr))]',
+	whisparr: 'bg-[oklch(var(--accent-whisparr)/0.15)] text-[oklch(var(--accent-whisparr))]'
 };
 
 /**
@@ -70,9 +70,9 @@ function formatTitle(completion: SerializedCompletion): string {
 }
 </script>
 
-<Card.Root class={className}>
+<Card.Root variant="glass" class={className}>
 	<Card.Header>
-		<Card.Title class="text-lg">Recent Completions</Card.Title>
+		<Card.Title class="text-lg font-display">Recent Completions</Card.Title>
 		<Card.Description>
 			Last {completions.length} completed search{completions.length !== 1 ? 'es' : ''}
 		</Card.Description>
@@ -80,15 +80,20 @@ function formatTitle(completion: SerializedCompletion): string {
 	<Card.Content>
 		{#if completions.length === 0}
 			<div class="text-center py-8 text-muted-foreground">
-				<p>No recent completions yet.</p>
-				<p class="text-sm mt-1">Completed searches will appear here.</p>
+				<div class="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-glass/50 mb-3">
+					<svg class="h-6 w-6 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+					</svg>
+				</div>
+				<p class="font-medium">No recent completions yet.</p>
+				<p class="text-sm mt-1 opacity-75">Completed searches will appear here.</p>
 			</div>
 		{:else}
-			<div class="space-y-3">
+			<div class="space-y-2">
 				{#each completions as completion (completion.id)}
 					{@const link = getContentLink(completion)}
 					<div
-						class="flex items-center justify-between gap-4 p-3 rounded-lg border bg-card hover:bg-muted/50 transition-colors"
+						class="flex items-center justify-between gap-4 p-3 rounded-xl border border-glass-border/20 bg-glass/30 backdrop-blur-sm hover:bg-glass/50 transition-all duration-200"
 					>
 						<!-- Content info -->
 						<div class="flex-1 min-w-0">

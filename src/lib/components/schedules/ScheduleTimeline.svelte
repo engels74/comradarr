@@ -26,28 +26,30 @@ const allRuns = $derived<ScheduledRun[]>(timeline.calendarDays.flatMap((day) => 
 const hasConflicts = $derived(timeline.conflictCount > 0);
 </script>
 
-<div class={cn('', className)}>
+<div class={cn('glass-panel', className)}>
 	<!-- Header -->
-	<div class="flex items-center justify-between mb-4">
-		<div>
-			<h2 class="text-xl font-semibold flex items-center gap-2">
-				<CalendarDaysIcon class="h-5 w-5" />
-				Upcoming Sweeps
-			</h2>
-			<p class="text-sm text-muted-foreground mt-1">
-				7-day view of scheduled sweeps across all connectors
-			</p>
+	<div class="flex items-center justify-between mb-6">
+		<div class="flex items-center gap-3">
+			<div class="p-2 rounded-lg bg-muted/50">
+				<CalendarDaysIcon class="h-5 w-5 text-muted-foreground" />
+			</div>
+			<div>
+				<h2 class="text-xl font-display font-semibold">Upcoming Sweeps</h2>
+				<p class="text-sm text-muted-foreground mt-0.5">
+					7-day view of scheduled sweeps across all connectors
+				</p>
+			</div>
 		</div>
 
 		<!-- Summary Stats -->
-		<div class="flex items-center gap-4 text-sm">
-			<div class="flex items-center gap-1.5">
+		<div class="flex items-center gap-3 text-sm">
+			<div class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-glass/50 border border-glass-border/20">
 				<span class="text-muted-foreground">Total:</span>
 				<span class="font-medium">{timeline.totalRuns} sweeps</span>
 			</div>
 			{#if hasConflicts}
 				<div
-					class="flex items-center gap-1.5 px-2 py-1 rounded-md bg-amber-500/10 text-amber-600 dark:text-amber-400"
+					class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30"
 				>
 					<AlertTriangleIcon class="h-4 w-4" />
 					<span class="font-medium"
@@ -83,13 +85,15 @@ const hasConflicts = $derived(timeline.conflictCount > 0);
 	<!-- Footer note about conflicts -->
 	{#if hasConflicts}
 		<div
-			class="mt-4 p-3 rounded-lg bg-amber-500/10 border border-amber-500/20 text-sm text-amber-700 dark:text-amber-300"
+			class="mt-6 p-4 rounded-xl bg-amber-500/15 border border-amber-500/30 text-sm text-amber-700 dark:text-amber-300"
 		>
-			<div class="flex items-start gap-2">
-				<AlertTriangleIcon class="h-4 w-4 mt-0.5 flex-shrink-0" />
+			<div class="flex items-start gap-3">
+				<div class="p-1.5 rounded-lg bg-amber-500/20">
+					<AlertTriangleIcon class="h-4 w-4 flex-shrink-0" />
+				</div>
 				<div>
-					<p class="font-medium">Scheduling conflicts detected</p>
-					<p class="text-amber-600 dark:text-amber-400 mt-0.5">
+					<p class="font-display font-medium">Scheduling conflicts detected</p>
+					<p class="text-amber-600 dark:text-amber-400 mt-1">
 						{timeline.conflictCount} sweep{timeline.conflictCount !== 1 ? 's are' : ' is'} scheduled within
 						{timeline.conflictThresholdMinutes} minutes of each other. Consider adjusting your schedules
 						to avoid potential indexer overload.

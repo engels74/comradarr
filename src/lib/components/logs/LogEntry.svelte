@@ -63,9 +63,9 @@ function toggleExpanded() {
 
 <div
 	class={cn(
-		'group rounded-lg border bg-card transition-colors hover:bg-muted/30',
-		entry.level === 'error' && 'border-red-500/30 hover:border-red-500/50',
-		entry.level === 'warn' && 'border-yellow-500/30 hover:border-yellow-500/50',
+		'group rounded-xl border border-glass-border/20 bg-glass/30 backdrop-blur-sm transition-all duration-200 hover:bg-glass/50 hover:border-glass-border/40',
+		entry.level === 'error' && 'border-l-2 border-l-red-500 hover:shadow-[0_0_15px_rgba(239,68,68,0.1)]',
+		entry.level === 'warn' && 'border-l-2 border-l-yellow-500 hover:shadow-[0_0_15px_rgba(234,179,8,0.1)]',
 		className
 	)}
 >
@@ -136,13 +136,13 @@ function toggleExpanded() {
 
 	<!-- Expanded Details -->
 	{#if isExpanded && (hasContext || entry.correlationId)}
-		<div class="border-t px-3 py-2 bg-muted/20">
+		<div class="border-t border-glass-border/20 px-3 py-3 bg-glass/20">
 			<!-- Correlation ID -->
 			{#if entry.correlationId}
 				<div class="flex items-center gap-2 mb-2">
 					<LinkIcon class="h-3 w-3 text-muted-foreground" />
 					<span class="text-xs text-muted-foreground">Correlation ID:</span>
-					<code class="text-xs font-mono bg-muted px-1.5 py-0.5 rounded">
+					<code class="text-xs font-mono bg-glass/50 border border-glass-border/30 px-1.5 py-0.5 rounded-md">
 						{entry.correlationId}
 					</code>
 				</div>
@@ -152,7 +152,7 @@ function toggleExpanded() {
 			{#if hasContext}
 				<div class="mt-2">
 					<span class="text-xs text-muted-foreground mb-1 block">Context:</span>
-					<pre class="text-xs font-mono bg-muted p-2 rounded-md overflow-x-auto">{JSON.stringify(
+					<pre class="text-xs font-mono bg-glass/50 border border-glass-border/30 p-3 rounded-lg overflow-x-auto">{JSON.stringify(
 							entry.context,
 							null,
 							2

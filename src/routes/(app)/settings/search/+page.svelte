@@ -87,19 +87,21 @@ function getRetryValue(key: keyof typeof data.settings.retryConfig): number {
 	<title>Search Behavior - Settings - Comradarr</title>
 </svelte:head>
 
-<div class="container mx-auto p-6 max-w-3xl">
+<div class="container mx-auto p-6 lg:p-8 max-w-3xl">
 	<!-- Page Header -->
-	<div class="mb-6">
+	<header class="mb-8 animate-float-up" style="animation-delay: 0ms;">
 		<div class="flex items-center gap-3">
-			<SearchIcon class="h-8 w-8 text-muted-foreground" />
+			<div class="p-2.5 rounded-xl bg-muted/50">
+				<SearchIcon class="h-6 w-6 text-muted-foreground" />
+			</div>
 			<div>
-				<h1 class="text-3xl font-bold">Search Behavior</h1>
-				<p class="text-muted-foreground mt-1">
+				<h1 class="font-display text-3xl font-semibold tracking-tight md:text-4xl">Search Behavior</h1>
+				<p class="text-muted-foreground mt-2">
 					Configure priority weights, season pack thresholds, and retry settings
 				</p>
 			</div>
 		</div>
-	</div>
+	</header>
 
 	<form
 		method="POST"
@@ -129,9 +131,9 @@ function getRetryValue(key: keyof typeof data.settings.retryConfig): number {
 			{/if}
 
 			<!-- Priority Weights Card -->
-			<Card.Root>
+			<Card.Root variant="glass" class="animate-float-up" style="animation-delay: 100ms;">
 				<Card.Header>
-					<Card.Title class="text-xl">Priority Weights</Card.Title>
+					<Card.Title class="text-xl font-display">Priority Weights</Card.Title>
 					<Card.Description>
 						Configure how search requests are prioritized in the queue. Higher weights increase the
 						impact of each factor on the final priority score.
@@ -238,9 +240,9 @@ function getRetryValue(key: keyof typeof data.settings.retryConfig): number {
 			</Card.Root>
 
 			<!-- Season Pack Thresholds Card -->
-			<Card.Root>
+			<Card.Root variant="glass" class="animate-float-up" style="animation-delay: 150ms;">
 				<Card.Header>
-					<Card.Title class="text-xl">Season Pack Thresholds</Card.Title>
+					<Card.Title class="text-xl font-display">Season Pack Thresholds</Card.Title>
 					<Card.Description>
 						Configure when to use season pack searches instead of individual episode searches.
 						Season packs are more efficient but may not be available for all content.
@@ -290,9 +292,9 @@ function getRetryValue(key: keyof typeof data.settings.retryConfig): number {
 			</Card.Root>
 
 			<!-- Cooldown Configuration Card -->
-			<Card.Root>
+			<Card.Root variant="glass" class="animate-float-up" style="animation-delay: 200ms;">
 				<Card.Header>
-					<Card.Title class="text-xl">Cooldown Configuration</Card.Title>
+					<Card.Title class="text-xl font-display">Cooldown Configuration</Card.Title>
 					<Card.Description>
 						Configure the exponential backoff behavior for failed searches. After each failure, the
 						cooldown period increases by the multiplier until reaching the maximum delay.
@@ -374,9 +376,9 @@ function getRetryValue(key: keyof typeof data.settings.retryConfig): number {
 			</Card.Root>
 
 			<!-- Retry Configuration Card -->
-			<Card.Root>
+			<Card.Root variant="glass" class="animate-float-up" style="animation-delay: 250ms;">
 				<Card.Header>
-					<Card.Title class="text-xl">Retry Configuration</Card.Title>
+					<Card.Title class="text-xl font-display">Retry Configuration</Card.Title>
 					<Card.Description>
 						Configure the maximum number of search attempts before an item is marked as exhausted.
 						Exhausted items will not be retried automatically.
@@ -422,9 +424,9 @@ function getRetryValue(key: keyof typeof data.settings.retryConfig): number {
 	<Separator class="my-6" />
 
 	<!-- Reset to Defaults -->
-	<Card.Root>
+	<Card.Root variant="glass" class="animate-float-up" style="animation-delay: 350ms;">
 		<Card.Header>
-			<Card.Title class="text-lg">Reset to Defaults</Card.Title>
+			<Card.Title class="text-lg font-display">Reset to Defaults</Card.Title>
 			<Card.Description>
 				Reset all search behavior settings to their default values. This cannot be undone.
 			</Card.Description>

@@ -60,7 +60,7 @@ function onFilterChange() {
 }
 </script>
 
-<div class="flex flex-wrap gap-4 mb-6">
+<div class="flex flex-wrap gap-3 mb-6 p-4 glass-panel">
 	<!-- Search Input -->
 	<Input
 		type="text"
@@ -74,7 +74,7 @@ function onFilterChange() {
 	<select
 		bind:value={connectorId}
 		onchange={onFilterChange}
-		class="h-9 rounded-md border border-input bg-background px-3 py-1 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+		class="h-9 rounded-lg border border-glass-border/30 bg-glass/50 backdrop-blur-sm px-3 py-1 text-sm transition-all focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary/50 hover:bg-glass/70"
 	>
 		<option value="">All Connectors</option>
 		{#each connectors as c (c.id)}
@@ -86,7 +86,7 @@ function onFilterChange() {
 	<select
 		bind:value={contentType}
 		onchange={onFilterChange}
-		class="h-9 rounded-md border border-input bg-background px-3 py-1 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+		class="h-9 rounded-lg border border-glass-border/30 bg-glass/50 backdrop-blur-sm px-3 py-1 text-sm transition-all focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary/50 hover:bg-glass/70"
 	>
 		<option value="all">All Types</option>
 		<option value="series">Series</option>
@@ -97,7 +97,7 @@ function onFilterChange() {
 	<select
 		bind:value={status}
 		onchange={onFilterChange}
-		class="h-9 rounded-md border border-input bg-background px-3 py-1 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+		class="h-9 rounded-lg border border-glass-border/30 bg-glass/50 backdrop-blur-sm px-3 py-1 text-sm transition-all focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary/50 hover:bg-glass/70"
 	>
 		<option value="all">All Status ({statusCounts.all})</option>
 		<option value="missing">Missing ({statusCounts.missing})</option>

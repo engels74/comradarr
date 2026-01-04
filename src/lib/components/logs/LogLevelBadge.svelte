@@ -18,30 +18,38 @@ interface Props {
 
 let { level, class: className }: Props = $props();
 
-const levelConfig: Record<LogLevel, { bg: string; text: string; Icon: typeof CircleAlertIcon }> = {
+const levelConfig: Record<
+	LogLevel,
+	{ bg: string; text: string; border: string; Icon: typeof CircleAlertIcon }
+> = {
 	error: {
-		bg: 'bg-red-500/20',
-		text: 'text-red-600 dark:text-red-400',
+		bg: 'bg-red-500/15',
+		text: 'text-red-500',
+		border: 'border-red-500/30',
 		Icon: CircleAlertIcon
 	},
 	warn: {
-		bg: 'bg-yellow-500/20',
-		text: 'text-yellow-600 dark:text-yellow-400',
+		bg: 'bg-yellow-500/15',
+		text: 'text-yellow-500',
+		border: 'border-yellow-500/30',
 		Icon: AlertTriangleIcon
 	},
 	info: {
-		bg: 'bg-blue-500/20',
-		text: 'text-blue-600 dark:text-blue-400',
+		bg: 'bg-blue-500/15',
+		text: 'text-blue-500',
+		border: 'border-blue-500/30',
 		Icon: InfoIcon
 	},
 	debug: {
-		bg: 'bg-purple-500/20',
-		text: 'text-purple-600 dark:text-purple-400',
+		bg: 'bg-purple-500/15',
+		text: 'text-purple-500',
+		border: 'border-purple-500/30',
 		Icon: BugIcon
 	},
 	trace: {
-		bg: 'bg-gray-500/20',
-		text: 'text-gray-600 dark:text-gray-400',
+		bg: 'bg-gray-500/15',
+		text: 'text-gray-500',
+		border: 'border-gray-500/30',
 		Icon: ScanIcon
 	}
 };
@@ -51,9 +59,10 @@ const config = $derived(level in levelConfig ? levelConfig[level as LogLevel] : 
 
 <span
 	class={cn(
-		'inline-flex items-center gap-1.5 rounded-md px-2 py-0.5 text-xs font-medium uppercase tracking-wide',
+		'inline-flex items-center gap-1.5 rounded-lg border px-2 py-0.5 text-xs font-medium uppercase tracking-wide backdrop-blur-sm',
 		config.bg,
 		config.text,
+		config.border,
 		className
 	)}
 >

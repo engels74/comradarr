@@ -107,12 +107,12 @@ const activeCount = $derived(data.statusCounts.queued + data.statusCounts.search
 	<title>Queue Management - Comradarr</title>
 </svelte:head>
 
-<div class="container mx-auto p-6">
+<div class="container mx-auto p-6 lg:p-8">
 	<!-- Header -->
-	<div class="flex items-center justify-between mb-6">
+	<header class="flex items-center justify-between mb-8 animate-float-up" style="animation-delay: 0ms;">
 		<div>
-			<h1 class="text-3xl font-bold">Queue</h1>
-			<p class="text-muted-foreground mt-1">
+			<h1 class="font-display text-3xl font-semibold tracking-tight md:text-4xl">Queue</h1>
+			<p class="text-muted-foreground mt-2">
 				{#if activeCount > 0}
 					{activeCount} item{activeCount !== 1 ? 's' : ''} actively processing
 				{:else}
@@ -125,10 +125,12 @@ const activeCount = $derived(data.statusCounts.queued + data.statusCounts.search
 			onActionStart={handleActionStart}
 			onActionComplete={handleActionComplete}
 		/>
-	</div>
+	</header>
 
 	<!-- Filters -->
-	<QueueFilters connectors={data.connectors} statusCounts={data.statusCounts} />
+	<div class="animate-float-up" style="animation-delay: 50ms;">
+		<QueueFilters connectors={data.connectors} statusCounts={data.statusCounts} />
+	</div>
 
 	<!-- Bulk Actions (when items selected) -->
 	<QueueBulkActions
@@ -141,9 +143,14 @@ const activeCount = $derived(data.statusCounts.queued + data.statusCounts.search
 
 	<!-- Content -->
 	{#if data.queue.length === 0}
-		<div class="rounded-lg border border-dashed p-8 text-center">
+		<div class="glass-panel p-8 text-center animate-float-up" style="animation-delay: 100ms;">
+			<div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-glass/50 mb-4">
+				<svg class="h-8 w-8 text-muted-foreground opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+				</svg>
+			</div>
 			<h2 class="text-lg font-medium mb-2">No queue items found</h2>
-			<p class="text-muted-foreground">
+			<p class="text-muted-foreground text-sm">
 				{#if data.filters.search}
 					No results for "{data.filters.search}". Try a different search term.
 				{:else if data.filters.state !== 'all'}

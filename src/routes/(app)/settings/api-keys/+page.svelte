@@ -48,9 +48,9 @@ let customRateLimit = $state<number>(60);
 let editRateLimitPreset = $state<ApiKeyRateLimitPreset>('unlimited');
 let editCustomRateLimit = $state<number>(60);
 
-// Common select styling
+// Common select styling - glass variant
 const selectClass =
-	'flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 md:text-sm';
+	'flex h-9 w-full rounded-lg border border-glass-border/30 bg-glass/50 backdrop-blur-sm px-3 py-1 text-base transition-all placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary/50 hover:bg-glass/70 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm';
 
 // Show new key dialog when a key is created
 $effect(() => {
@@ -132,15 +132,17 @@ $effect(() => {
 	<title>API Keys - Comradarr</title>
 </svelte:head>
 
-<div class="container mx-auto p-6 max-w-2xl">
+<div class="container mx-auto p-6 lg:p-8 max-w-2xl">
 	<!-- Page Header -->
-	<div class="mb-6">
+	<header class="mb-8 animate-float-up" style="animation-delay: 0ms;">
 		<div class="flex items-center justify-between">
 			<div class="flex items-center gap-3">
-				<KeyIcon class="h-8 w-8 text-muted-foreground" />
+				<div class="p-2.5 rounded-xl bg-muted/50">
+					<KeyIcon class="h-6 w-6 text-muted-foreground" />
+				</div>
 				<div>
-					<h1 class="text-3xl font-bold">API Keys</h1>
-					<p class="text-muted-foreground mt-1">Manage API keys for programmatic access</p>
+					<h1 class="font-display text-3xl font-semibold tracking-tight md:text-4xl">API Keys</h1>
+					<p class="text-muted-foreground mt-2">Manage API keys for programmatic access</p>
 				</div>
 			</div>
 			{#if !data.isLocalBypass}
@@ -150,7 +152,7 @@ $effect(() => {
 				</Button>
 			{/if}
 		</div>
-	</div>
+	</header>
 
 	<!-- Local Bypass Warning -->
 	{#if data.isLocalBypass}
@@ -412,9 +414,9 @@ $effect(() => {
 	</Dialog.Root>
 
 	<!-- API Keys List -->
-	<Card.Root>
+	<Card.Root variant="glass" class="animate-float-up" style="animation-delay: 100ms;">
 		<Card.Header>
-			<Card.Title class="text-xl">Your API Keys</Card.Title>
+			<Card.Title class="text-xl font-display">Your API Keys</Card.Title>
 			<Card.Description>
 				Use these keys to authenticate API requests with the Authorization header.
 			</Card.Description>
@@ -432,7 +434,7 @@ $effect(() => {
 				<div class="space-y-3">
 					{#each data.apiKeys as key}
 						<div
-							class="flex items-center justify-between p-3 rounded-lg border bg-card {isRevoked(
+							class="flex items-center justify-between p-3 rounded-xl border border-glass-border/20 bg-glass/30 backdrop-blur-sm hover:bg-glass/50 transition-all duration-200 {isRevoked(
 								key.revokedAt
 							)
 								? 'opacity-60'
@@ -547,9 +549,9 @@ $effect(() => {
 
 	<!-- Usage Instructions -->
 	{#if !data.isLocalBypass}
-		<Card.Root class="mt-6">
+		<Card.Root variant="glass" class="mt-6 animate-float-up" style="animation-delay: 150ms;">
 			<Card.Header>
-				<Card.Title class="text-xl">Usage</Card.Title>
+				<Card.Title class="text-xl font-display">Usage</Card.Title>
 			</Card.Header>
 			<Card.Content>
 				<p class="text-sm text-muted-foreground mb-4">
