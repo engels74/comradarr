@@ -4,6 +4,7 @@
 	"version": "0.0.1",
 	"type": "module",
 	"scripts": {
+		"postinstall": "if [ -d .git ]; then prek install && prek install --hook-type pre-push; fi",
 		"dev": "bun --bun vite dev",
 		"build": "bun --bun vite build",
 		"preview": "bun --bun vite preview",
@@ -28,6 +29,7 @@
 	},
 	"devDependencies": {
 		"@internationalized/date": "^3.10.1",
+		"@j178/prek": "^0.2.25",
 		"prettier": "^3.7.4",
 		"prettier-plugin-svelte": "^3.4.1",
 		"@resvg/resvg-js": "^2.6.2",
