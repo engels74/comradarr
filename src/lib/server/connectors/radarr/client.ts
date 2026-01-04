@@ -9,9 +9,9 @@
  */
 
 import { BaseArrClient } from '../common/base-client.js';
-import type { BaseClientConfig, PaginationOptions, CommandResponse } from '../common/types.js';
 import { parseCommandResponse } from '../common/parsers.js';
-import { parseRadarrMovie, parsePaginatedMoviesLenient } from './parsers.js';
+import type { CommandResponse, PaginationOptions } from '../common/types.js';
+import { parsePaginatedMoviesLenient, parseRadarrMovie } from './parsers.js';
 import type { RadarrMovie } from './types.js';
 
 /**
@@ -62,15 +62,6 @@ export interface ApiVersionInfo {
  * ```
  */
 export class RadarrClient extends BaseArrClient {
-	/**
-	 * Create a new RadarrClient instance
-	 *
-	 * @param config - Client configuration including baseUrl and apiKey
-	 */
-	constructor(config: BaseClientConfig) {
-		super(config);
-	}
-
 	// Inherited from BaseArrClient:
 	// - ping(): Promise<boolean>
 	// - getSystemStatus(): Promise<SystemStatus>

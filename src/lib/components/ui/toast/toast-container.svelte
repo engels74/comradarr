@@ -1,10 +1,10 @@
 <script lang="ts">
-	/**
-	 * Toast container component.
-	 * Renders toast notifications in a fixed position with proper accessibility.
-	 */
-	import { toastStore } from '$lib/stores/toast.svelte';
-	import ToastItem from './toast-item.svelte';
+/**
+ * Toast container component.
+ * Renders toast notifications in a fixed position with proper accessibility.
+ */
+import { toastStore } from '$lib/stores/toast.svelte';
+import ToastItem from './toast-item.svelte';
 </script>
 
 <!-- Toast container - fixed top-right, stacks vertically -->

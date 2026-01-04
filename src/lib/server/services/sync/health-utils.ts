@@ -108,7 +108,7 @@ export function shouldRetrySync(error: unknown, attemptCount: number): boolean {
  */
 export function calculateSyncBackoffDelay(attempt: number): number {
 	const exponentialDelay =
-		SYNC_CONFIG.SYNC_RETRY_BASE_DELAY * Math.pow(SYNC_CONFIG.SYNC_RETRY_MULTIPLIER, attempt);
+		SYNC_CONFIG.SYNC_RETRY_BASE_DELAY * SYNC_CONFIG.SYNC_RETRY_MULTIPLIER ** attempt;
 
 	return Math.min(exponentialDelay, SYNC_CONFIG.SYNC_RETRY_MAX_DELAY);
 }

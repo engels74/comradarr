@@ -1,63 +1,64 @@
 <script lang="ts">
-	/**
-	 * Individual log entry display component.
-	 * Shows log details with expandable context.
-	 */
-	import { cn } from '$lib/utils.js';
-	import LogLevelBadge from './LogLevelBadge.svelte';
-	import type { BufferedLogEntry } from '$lib/server/services/log-buffer';
-	import ChevronDownIcon from '@lucide/svelte/icons/chevron-down';
-	import ChevronRightIcon from '@lucide/svelte/icons/chevron-right';
-	import CopyIcon from '@lucide/svelte/icons/copy';
-	import CheckIcon from '@lucide/svelte/icons/check';
-	import LinkIcon from '@lucide/svelte/icons/link';
+/**
+ * Individual log entry display component.
+ * Shows log details with expandable context.
+ */
 
-	interface Props {
-		entry: BufferedLogEntry;
-		class?: string | undefined;
-	}
+import CheckIcon from '@lucide/svelte/icons/check';
+import ChevronDownIcon from '@lucide/svelte/icons/chevron-down';
+import ChevronRightIcon from '@lucide/svelte/icons/chevron-right';
+import CopyIcon from '@lucide/svelte/icons/copy';
+import LinkIcon from '@lucide/svelte/icons/link';
+import type { BufferedLogEntry } from '$lib/server/services/log-buffer';
+import { cn } from '$lib/utils.js';
+import LogLevelBadge from './LogLevelBadge.svelte';
 
-	let { entry, class: className }: Props = $props();
+interface Props {
+	entry: BufferedLogEntry;
+	class?: string | undefined;
+}
 
-	let isExpanded = $state(false);
-	let isCopied = $state(false);
+let { entry, class: className }: Props = $props();
 
-	const formattedTime = $derived(() => {
-		const date = new Date(entry.timestamp);
-		return date.toLocaleTimeString('en-US', {
-			hour: '2-digit',
-			minute: '2-digit',
-			second: '2-digit',
-			hour12: false
-		});
+let isExpanded = $state(false);
+let isCopied = $state(false);
+
+const formattedTime = $derived(() => {
+	const date = new Date(entry.timestamp);
+	return date.toLocaleTimeString('en-US', {
+		hour: '2-digit',
+		minute: '2-digit',
+		second: '2-digit',
+		hour12: false
 	});
+});
 
-	const formattedDate = $derived(() => {
-		const date = new Date(entry.timestamp);
-		return date.toLocaleDateString('en-US', {
-			month: 'short',
-			day: 'numeric'
-		});
+const formattedDate = $derived(() => {
+	const date = new Date(entry.timestamp);
+	return date.toLocaleDateString('en-US', {
+		month: 'short',
+		day: 'numeric'
 	});
+});
 
-	const hasContext = $derived(entry.context && Object.keys(entry.context).length > 0);
+const hasContext = $derived(entry.context && Object.keys(entry.context).length > 0);
 
-	async function copyToClipboard() {
-		try {
-			const text = JSON.stringify(entry, null, 2);
-			await navigator.clipboard.writeText(text);
-			isCopied = true;
-			setTimeout(() => {
-				isCopied = false;
-			}, 2000);
-		} catch {
-			// Clipboard API not available
-		}
+async function copyToClipboard() {
+	try {
+		const text = JSON.stringify(entry, null, 2);
+		await navigator.clipboard.writeText(text);
+		isCopied = true;
+		setTimeout(() => {
+			isCopied = false;
+		}, 2000);
+	} catch {
+		// Clipboard API not available
 	}
+}
 
-	function toggleExpanded() {
-		isExpanded = !isExpanded;
-	}
+function toggleExpanded() {
+	isExpanded = !isExpanded;
+}
 </script>
 
 <div

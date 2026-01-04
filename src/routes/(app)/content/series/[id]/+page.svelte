@@ -10,117 +10,115 @@
   Episodes are lazy-loaded when seasons are expanded.
 -->
 <script lang="ts">
-	import type { PageProps } from './$types';
-	import type { EpisodeDetail } from '$lib/server/db/queries/content';
-	import * as Card from '$lib/components/ui/card';
-	import * as Table from '$lib/components/ui/table';
-	import { Badge } from '$lib/components/ui/badge';
-	import { ContentStatusBadge } from '$lib/components/content';
-	import { cn } from '$lib/utils.js';
+import { ContentStatusBadge } from '$lib/components/content';
+import { Badge } from '$lib/components/ui/badge';
+import * as Card from '$lib/components/ui/card';
+import * as Table from '$lib/components/ui/table';
+import type { EpisodeDetail } from '$lib/server/db/queries/content';
+import { cn } from '$lib/utils.js';
+import type { PageProps } from './$types';
 
-	let { data }: PageProps = $props();
+let { data }: PageProps = $props();
 
-	// Connector type badge colors (matching existing pattern)
-	const typeColors: Record<string, string> = {
-		sonarr: 'bg-blue-500/10 text-blue-600 dark:text-blue-400',
-		radarr: 'bg-orange-500/10 text-orange-600 dark:text-orange-400',
-		whisparr: 'bg-purple-500/10 text-purple-600 dark:text-purple-400'
-	};
+// Connector type badge colors (matching existing pattern)
+const typeColors: Record<string, string> = {
+	sonarr: 'bg-blue-500/10 text-blue-600 dark:text-blue-400',
+	radarr: 'bg-orange-500/10 text-orange-600 dark:text-orange-400',
+	whisparr: 'bg-purple-500/10 text-purple-600 dark:text-purple-400'
+};
 
-	const typeColor = $derived(
-		typeColors[data.series.connectorType] ?? 'bg-gray-500/10 text-gray-600'
-	);
+const typeColor = $derived(typeColors[data.series.connectorType] ?? 'bg-gray-500/10 text-gray-600');
 
-	// Format series status for display
-	const statusLabel = $derived(
-		data.series.status
-			? data.series.status.charAt(0).toUpperCase() + data.series.status.slice(1)
-			: 'Unknown'
-	);
+// Format series status for display
+const statusLabel = $derived(
+	data.series.status
+		? data.series.status.charAt(0).toUpperCase() + data.series.status.slice(1)
+		: 'Unknown'
+);
 
-	// Collapsible season state - track expanded/collapsed seasons
-	// Using $state.raw() since we always replace collections (immutable pattern)
-	let expandedSeasons = $state.raw<Set<number>>(new Set());
+// Collapsible season state - track expanded/collapsed seasons
+// Using $state.raw() since we always replace collections (immutable pattern)
+let expandedSeasons = $state.raw<Set<number>>(new Set());
 
-	// Episode cache per season - keyed by season ID
-	let episodeCache = $state.raw<Map<number, EpisodeDetail[]>>(new Map());
-	let loadingSeasons = $state.raw<Set<number>>(new Set());
-	let errorSeasons = $state.raw<Map<number, string>>(new Map());
+// Episode cache per season - keyed by season ID
+let episodeCache = $state.raw<Map<number, EpisodeDetail[]>>(new Map());
+let loadingSeasons = $state.raw<Set<number>>(new Set());
+let errorSeasons = $state.raw<Map<number, string>>(new Map());
 
-	function isSeasonExpanded(seasonId: number): boolean {
-		return expandedSeasons.has(seasonId);
-	}
+function isSeasonExpanded(seasonId: number): boolean {
+	return expandedSeasons.has(seasonId);
+}
 
-	async function toggleSeason(seasonId: number) {
-		if (expandedSeasons.has(seasonId)) {
-			// Collapse
-			expandedSeasons = new Set([...expandedSeasons].filter((id) => id !== seasonId));
-		} else {
-			// Expand and fetch episodes if not cached
-			expandedSeasons = new Set([...expandedSeasons, seasonId]);
-			if (!episodeCache.has(seasonId)) {
-				await fetchEpisodes(seasonId);
-			}
+async function toggleSeason(seasonId: number) {
+	if (expandedSeasons.has(seasonId)) {
+		// Collapse
+		expandedSeasons = new Set([...expandedSeasons].filter((id) => id !== seasonId));
+	} else {
+		// Expand and fetch episodes if not cached
+		expandedSeasons = new Set([...expandedSeasons, seasonId]);
+		if (!episodeCache.has(seasonId)) {
+			await fetchEpisodes(seasonId);
 		}
 	}
+}
 
-	async function fetchEpisodes(seasonId: number) {
-		loadingSeasons = new Set([...loadingSeasons, seasonId]);
-		errorSeasons = new Map([...errorSeasons].filter(([id]) => id !== seasonId));
+async function fetchEpisodes(seasonId: number) {
+	loadingSeasons = new Set([...loadingSeasons, seasonId]);
+	errorSeasons = new Map([...errorSeasons].filter(([id]) => id !== seasonId));
 
-		try {
-			const response = await fetch(`/api/seasons/${seasonId}/episodes`);
-			if (!response.ok) {
-				throw new Error(`Failed to load episodes: ${response.statusText}`);
-			}
-			const data = await response.json();
-			episodeCache = new Map(episodeCache).set(seasonId, data.episodes);
-		} catch (e) {
-			const message = e instanceof Error ? e.message : 'Failed to load episodes';
-			errorSeasons = new Map(errorSeasons).set(seasonId, message);
-		} finally {
-			loadingSeasons = new Set([...loadingSeasons].filter((id) => id !== seasonId));
+	try {
+		const response = await fetch(`/api/seasons/${seasonId}/episodes`);
+		if (!response.ok) {
+			throw new Error(`Failed to load episodes: ${response.statusText}`);
 		}
+		const data = await response.json();
+		episodeCache = new Map(episodeCache).set(seasonId, data.episodes);
+	} catch (e) {
+		const message = e instanceof Error ? e.message : 'Failed to load episodes';
+		errorSeasons = new Map(errorSeasons).set(seasonId, message);
+	} finally {
+		loadingSeasons = new Set([...loadingSeasons].filter((id) => id !== seasonId));
 	}
+}
 
-	// Outcome badge styling (matching connector detail pattern)
-	function getOutcomeBadgeVariant(
-		outcome: string
-	): 'default' | 'secondary' | 'destructive' | 'outline' {
-		switch (outcome) {
-			case 'success':
-				return 'default';
-			case 'no_results':
-				return 'secondary';
-			case 'error':
-			case 'timeout':
-				return 'destructive';
-			default:
-				return 'outline';
-		}
+// Outcome badge styling (matching connector detail pattern)
+function getOutcomeBadgeVariant(
+	outcome: string
+): 'default' | 'secondary' | 'destructive' | 'outline' {
+	switch (outcome) {
+		case 'success':
+			return 'default';
+		case 'no_results':
+			return 'secondary';
+		case 'error':
+		case 'timeout':
+			return 'destructive';
+		default:
+			return 'outline';
 	}
+}
 
-	function formatOutcome(outcome: string): string {
-		switch (outcome) {
-			case 'success':
-				return 'Success';
-			case 'no_results':
-				return 'No Results';
-			case 'error':
-				return 'Error';
-			case 'timeout':
-				return 'Timeout';
-			default:
-				return outcome;
-		}
+function formatOutcome(outcome: string): string {
+	switch (outcome) {
+		case 'success':
+			return 'Success';
+		case 'no_results':
+			return 'No Results';
+		case 'error':
+			return 'Error';
+		case 'timeout':
+			return 'Timeout';
+		default:
+			return outcome;
 	}
+}
 
-	// Format quality for display
-	function formatQuality(quality: unknown): string {
-		if (!quality) return '-';
-		const q = quality as { quality?: { name?: string } };
-		return q.quality?.name ?? '-';
-	}
+// Format quality for display
+function formatQuality(quality: unknown): string {
+	if (!quality) return '-';
+	const q = quality as { quality?: { name?: string } };
+	return q.quality?.name ?? '-';
+}
 </script>
 
 <svelte:head>

@@ -7,19 +7,20 @@ import * as v from 'valibot';
 import { ProwlarrInstanceSchema } from '$lib/schemas/prowlarr';
 import {
 	createProwlarrInstance,
-	prowlarrInstanceNameExists,
-	getProwlarrInstance
+	getProwlarrInstance,
+	prowlarrInstanceNameExists
 } from '$lib/server/db/queries/prowlarr';
-import { ProwlarrClient, prowlarrHealthMonitor } from '$lib/server/services/prowlarr';
 import { createLogger } from '$lib/server/logger';
+import { ProwlarrClient, prowlarrHealthMonitor } from '$lib/server/services/prowlarr';
 
 const logger = createLogger('prowlarr-new');
+
 import {
 	AuthenticationError,
+	isArrClientError,
 	NetworkError,
-	TimeoutError,
 	SSLError,
-	isArrClientError
+	TimeoutError
 } from '$lib/server/connectors';
 import type { Actions } from './$types';
 

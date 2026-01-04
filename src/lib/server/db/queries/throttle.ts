@@ -6,16 +6,16 @@
  * Profile resolution follows: connector profile -> default profile -> fallback preset.
  */
 
-import { db } from '$lib/server/db';
-import {
-	connectors,
-	throttleProfiles,
-	type Connector,
-	type ThrottleProfile,
-	type NewThrottleProfile
-} from '$lib/server/db/schema';
 import { and, count, eq, ne } from 'drizzle-orm';
 import { DEFAULT_FALLBACK_PRESET, type ThrottlePreset } from '$lib/config/throttle-presets';
+import { db } from '$lib/server/db';
+import {
+	type Connector,
+	connectors,
+	type NewThrottleProfile,
+	type ThrottleProfile,
+	throttleProfiles
+} from '$lib/server/db/schema';
 
 // =============================================================================
 // Input Types

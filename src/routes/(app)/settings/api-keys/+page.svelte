@@ -1,128 +1,131 @@
 <script lang="ts">
-	/**
-	 * API Keys settings page.
-	 */
-	import { enhance } from '$app/forms';
-	import * as Card from '$lib/components/ui/card';
-	import { Input } from '$lib/components/ui/input';
-	import { Button } from '$lib/components/ui/button';
-	import { Label } from '$lib/components/ui/label';
-	import { Badge } from '$lib/components/ui/badge';
-	import * as Dialog from '$lib/components/ui/dialog';
-	import { toastStore } from '$lib/components/ui/toast';
-	import {
-		apiKeyScopes,
-		apiKeyScopeLabels,
-		apiKeyScopeDescriptions,
-		apiKeyExpirations,
-		apiKeyExpirationLabels,
-		apiKeyRateLimitPresets,
-		apiKeyRateLimitPresetLabels,
-		apiKeyRateLimitPresetDescriptions,
-		toRateLimitFormValues,
-		type ApiKeyScope,
-		type ApiKeyRateLimitPreset
-	} from '$lib/schemas/settings';
-	import type { PageProps } from './$types';
-	import KeyIcon from '@lucide/svelte/icons/key';
-	import PlusIcon from '@lucide/svelte/icons/plus';
-	import Trash2Icon from '@lucide/svelte/icons/trash-2';
-	import BanIcon from '@lucide/svelte/icons/ban';
-	import CopyIcon from '@lucide/svelte/icons/copy';
-	import CheckIcon from '@lucide/svelte/icons/check';
-	import AlertTriangleIcon from '@lucide/svelte/icons/alert-triangle';
-	import SettingsIcon from '@lucide/svelte/icons/settings';
+/**
+ * API Keys settings page.
+ */
 
-	let { data, form }: PageProps = $props();
+import AlertTriangleIcon from '@lucide/svelte/icons/alert-triangle';
+import BanIcon from '@lucide/svelte/icons/ban';
+import CheckIcon from '@lucide/svelte/icons/check';
+import CopyIcon from '@lucide/svelte/icons/copy';
+import KeyIcon from '@lucide/svelte/icons/key';
+import PlusIcon from '@lucide/svelte/icons/plus';
+import SettingsIcon from '@lucide/svelte/icons/settings';
+import Trash2Icon from '@lucide/svelte/icons/trash-2';
+import { enhance } from '$app/forms';
+import { Badge } from '$lib/components/ui/badge';
+import { Button } from '$lib/components/ui/button';
+import * as Card from '$lib/components/ui/card';
+import * as Dialog from '$lib/components/ui/dialog';
+import { Input } from '$lib/components/ui/input';
+import { Label } from '$lib/components/ui/label';
+import { toastStore } from '$lib/components/ui/toast';
+import {
+	type ApiKeyRateLimitPreset,
+	type ApiKeyScope,
+	apiKeyExpirationLabels,
+	apiKeyExpirations,
+	apiKeyRateLimitPresetDescriptions,
+	apiKeyRateLimitPresetLabels,
+	apiKeyRateLimitPresets,
+	apiKeyScopeDescriptions,
+	apiKeyScopeLabels,
+	apiKeyScopes,
+	toRateLimitFormValues
+} from '$lib/schemas/settings';
+import type { PageProps } from './$types';
 
-	let isSubmitting = $state(false);
-	let showCreateDialog = $state(false);
-	let showRateLimitDialog = $state(false);
-	let editingKeyId = $state<number | null>(null);
-	let newKeyValue = $state<string | null>(null);
-	let copied = $state(false);
-	let selectedScope = $state<ApiKeyScope>('read');
-	let selectedRateLimitPreset = $state<ApiKeyRateLimitPreset>('unlimited');
-	let customRateLimit = $state<number>(60);
-	let editRateLimitPreset = $state<ApiKeyRateLimitPreset>('unlimited');
-	let editCustomRateLimit = $state<number>(60);
+let { data, form }: PageProps = $props();
 
-	// Common select styling
-	const selectClass =
-		'flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 md:text-sm';
+let isSubmitting = $state(false);
+let showCreateDialog = $state(false);
+let showRateLimitDialog = $state(false);
+let editingKeyId = $state<number | null>(null);
+let newKeyValue = $state<string | null>(null);
+let copied = $state(false);
+let selectedScope = $state<ApiKeyScope>('read');
+let selectedRateLimitPreset = $state<ApiKeyRateLimitPreset>('unlimited');
+let customRateLimit = $state<number>(60);
+let editRateLimitPreset = $state<ApiKeyRateLimitPreset>('unlimited');
+let editCustomRateLimit = $state<number>(60);
 
-	// Show new key dialog when a key is created
-	$effect(() => {
-		if (form?.action === 'createKey' && form?.success && form?.plainKey) {
-			newKeyValue = form.plainKey;
-			showCreateDialog = false;
-			toastStore.success(form.message ?? 'API key created successfully');
-		}
-	});
+// Common select styling
+const selectClass =
+	'flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 md:text-sm';
 
-	function formatDate(date: Date | null): string {
-		if (!date) return 'Never';
-		return new Date(date).toLocaleDateString();
+// Show new key dialog when a key is created
+$effect(() => {
+	if (form?.action === 'createKey' && form?.success && form?.plainKey) {
+		newKeyValue = form.plainKey;
+		showCreateDialog = false;
+		toastStore.success(form.message ?? 'API key created successfully');
 	}
+});
 
-	function formatRelativeTime(date: Date | null): string {
-		if (!date) return 'Never';
-		const now = new Date();
-		const diff = now.getTime() - new Date(date).getTime();
-		const minutes = Math.floor(diff / 60000);
-		const hours = Math.floor(minutes / 60);
-		const days = Math.floor(hours / 24);
+function formatDate(date: Date | null): string {
+	if (!date) return 'Never';
+	return new Date(date).toLocaleDateString();
+}
 
-		if (minutes < 1) return 'Just now';
-		if (minutes < 60) return `${minutes}m ago`;
-		if (hours < 24) return `${hours}h ago`;
-		return `${days}d ago`;
+function formatRelativeTime(date: Date | null): string {
+	if (!date) return 'Never';
+	const now = new Date();
+	const diff = now.getTime() - new Date(date).getTime();
+	const minutes = Math.floor(diff / 60000);
+	const hours = Math.floor(minutes / 60);
+	const days = Math.floor(hours / 24);
+
+	if (minutes < 1) return 'Just now';
+	if (minutes < 60) return `${minutes}m ago`;
+	if (hours < 24) return `${hours}h ago`;
+	return `${days}d ago`;
+}
+
+async function copyToClipboard(text: string) {
+	await navigator.clipboard.writeText(text);
+	copied = true;
+	setTimeout(() => {
+		copied = false;
+	}, 2000);
+}
+
+function closeNewKeyDialog() {
+	newKeyValue = null;
+}
+
+function isExpired(expiresAt: Date | null): boolean {
+	if (!expiresAt) return false;
+	return new Date(expiresAt) < new Date();
+}
+
+function isRevoked(revokedAt: Date | null): boolean {
+	return revokedAt !== null;
+}
+
+function formatRateLimit(rateLimitPerMinute: number | null): string {
+	if (rateLimitPerMinute === null) return 'Unlimited';
+	return `${rateLimitPerMinute}/min`;
+}
+
+function openRateLimitDialog(keyId: number, rateLimitPerMinute: number | null) {
+	editingKeyId = keyId;
+	const formValues = toRateLimitFormValues(rateLimitPerMinute);
+	editRateLimitPreset = formValues.preset;
+	editCustomRateLimit = formValues.custom ?? 60;
+	showRateLimitDialog = true;
+}
+
+function closeRateLimitDialog() {
+	showRateLimitDialog = false;
+	editingKeyId = null;
+}
+
+// Close rate limit dialog on successful update
+$effect(() => {
+	if (form?.action === 'updateRateLimit' && form?.success) {
+		closeRateLimitDialog();
+		toastStore.success(form.message ?? 'Rate limit updated successfully');
 	}
-
-	async function copyToClipboard(text: string) {
-		await navigator.clipboard.writeText(text);
-		copied = true;
-		setTimeout(() => (copied = false), 2000);
-	}
-
-	function closeNewKeyDialog() {
-		newKeyValue = null;
-	}
-
-	function isExpired(expiresAt: Date | null): boolean {
-		if (!expiresAt) return false;
-		return new Date(expiresAt) < new Date();
-	}
-
-	function isRevoked(revokedAt: Date | null): boolean {
-		return revokedAt !== null;
-	}
-
-	function formatRateLimit(rateLimitPerMinute: number | null): string {
-		if (rateLimitPerMinute === null) return 'Unlimited';
-		return `${rateLimitPerMinute}/min`;
-	}
-
-	function openRateLimitDialog(keyId: number, rateLimitPerMinute: number | null) {
-		editingKeyId = keyId;
-		const formValues = toRateLimitFormValues(rateLimitPerMinute);
-		editRateLimitPreset = formValues.preset;
-		editCustomRateLimit = formValues.custom ?? 60;
-		showRateLimitDialog = true;
-	}
-
-	function closeRateLimitDialog() {
-		showRateLimitDialog = false;
-		editingKeyId = null;
-	}
-
-	// Close rate limit dialog on successful update
-	$effect(() => {
-		if (form?.action === 'updateRateLimit' && form?.success) {
-			closeRateLimitDialog();
-			toastStore.success(form.message ?? 'Rate limit updated successfully');
-		}
-	});
+});
 </script>
 
 <svelte:head>

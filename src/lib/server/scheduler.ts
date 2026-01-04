@@ -21,57 +21,53 @@
  */
 
 import { Cron } from 'croner';
-import { runWithContext, generateCorrelationId, type RequestContext } from '$lib/server/context';
-import { throttleEnforcer } from '$lib/server/services/throttle';
-import { apiKeyRateLimiter } from '$lib/server/services/api-rate-limit';
-import { prowlarrHealthMonitor } from '$lib/server/services/prowlarr';
-import {
-	getConnector,
-	getEnabledConnectors,
-	getHealthyConnectors,
-	getDecryptedApiKey,
-	updateConnectorHealth
-} from '$lib/server/db/queries/connectors';
-import {
-	getEnabledSchedules,
-	updateNextRunAt,
-	type ScheduleWithRelations
-} from '$lib/server/db/queries/schedules';
-import type { Connector } from '$lib/server/db/schema';
-import { createConnectorClient } from '$lib/server/connectors/factory';
-import {
-	determineHealthFromChecks,
-	type HealthStatus
-} from '$lib/server/services/sync/health-utils';
 import {
 	AuthenticationError,
 	NetworkError,
 	TimeoutError
 } from '$lib/server/connectors/common/errors';
-import { runIncrementalSync, runFullReconciliation } from '$lib/server/services/sync';
-import { discoverGaps, discoverUpgrades } from '$lib/server/services/discovery';
+import { createConnectorClient } from '$lib/server/connectors/factory';
+import { generateCorrelationId, type RequestContext, runWithContext } from '$lib/server/context';
 import {
-	enqueuePendingItems,
-	dequeuePriorityItems,
-	reenqueueEligibleCooldownItems,
-	dispatchSearch,
-	markSearchFailed,
-	type FailureCategory
-} from '$lib/server/services/queue';
+	getConnector,
+	getDecryptedApiKey,
+	getEnabledConnectors,
+	getHealthyConnectors,
+	updateConnectorHealth
+} from '$lib/server/db/queries/connectors';
+import { getEnabledSchedules, updateNextRunAt } from '$lib/server/db/queries/schedules';
+import { getBackupSettings } from '$lib/server/db/queries/settings';
+import type { Connector } from '$lib/server/db/schema';
+import { createLogger } from '$lib/server/logger';
 import {
-	analyticsCollector,
-	aggregateHourlyStats,
 	aggregateDailyStats,
+	aggregateHourlyStats,
+	analyticsCollector,
 	cleanupOldEvents
 } from '$lib/server/services/analytics';
+import { apiKeyRateLimiter } from '$lib/server/services/api-rate-limit';
+import { cleanupOldScheduledBackups, createBackup } from '$lib/server/services/backup';
+import { discoverGaps, discoverUpgrades } from '$lib/server/services/discovery';
 import {
-	runDatabaseMaintenance,
 	cleanupOrphanedSearchState,
-	pruneSearchHistory
+	pruneSearchHistory,
+	runDatabaseMaintenance
 } from '$lib/server/services/maintenance';
-import { createBackup, cleanupOldScheduledBackups } from '$lib/server/services/backup';
-import { getBackupSettings } from '$lib/server/db/queries/settings';
-import { createLogger } from '$lib/server/logger';
+import { prowlarrHealthMonitor } from '$lib/server/services/prowlarr';
+import {
+	dequeuePriorityItems,
+	dispatchSearch,
+	enqueuePendingItems,
+	type FailureCategory,
+	markSearchFailed,
+	reenqueueEligibleCooldownItems
+} from '$lib/server/services/queue';
+import { runFullReconciliation, runIncrementalSync } from '$lib/server/services/sync';
+import {
+	determineHealthFromChecks,
+	type HealthStatus
+} from '$lib/server/services/sync/health-utils';
+import { throttleEnforcer } from '$lib/server/services/throttle';
 
 const logger = createLogger('scheduler');
 
@@ -579,8 +575,9 @@ export function initializeScheduler(): void {
 			}
 		},
 		withJobContext('completion-snapshot', async () => {
-			const { captureCompletionSnapshots, cleanupOldSnapshots } =
-				await import('$lib/server/db/queries/completion');
+			const { captureCompletionSnapshots, cleanupOldSnapshots } = await import(
+				'$lib/server/db/queries/completion'
+			);
 
 			// Capture current state
 			const captured = await captureCompletionSnapshots();
@@ -1070,7 +1067,7 @@ export async function refreshDynamicSchedules(): Promise<void> {
 	logger.info('Refreshing dynamic schedules');
 
 	// Stop all existing dynamic jobs
-	for (const [id, cron] of dynamicJobs) {
+	for (const [_id, cron] of dynamicJobs) {
 		cron.stop();
 	}
 	dynamicJobs.clear();

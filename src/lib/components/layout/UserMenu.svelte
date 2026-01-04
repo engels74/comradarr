@@ -1,15 +1,15 @@
 <script lang="ts">
-	import * as DropdownMenu from '$lib/components/ui/dropdown-menu';
-	import { Button } from '$lib/components/ui/button';
-	import UserIcon from '@lucide/svelte/icons/user';
-	import LogOutIcon from '@lucide/svelte/icons/log-out';
-	import ThemeMenu from './ThemeMenu.svelte';
+import LogOutIcon from '@lucide/svelte/icons/log-out';
+import UserIcon from '@lucide/svelte/icons/user';
+import { Button } from '$lib/components/ui/button';
+import * as DropdownMenu from '$lib/components/ui/dropdown-menu';
+import ThemeMenu from './ThemeMenu.svelte';
 
-	interface Props {
-		user: { id: number; username: string } | null;
-	}
+interface Props {
+	user: { id: number; username: string } | null;
+}
 
-	let { user }: Props = $props();
+let { user }: Props = $props();
 </script>
 
 {#if user}

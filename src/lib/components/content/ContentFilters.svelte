@@ -1,63 +1,63 @@
 <script lang="ts">
-	import { goto } from '$app/navigation';
-	import { page } from '$app/stores';
-	import { Input } from '$lib/components/ui/input';
-	import type { ContentStatusCounts } from '$lib/server/db/queries/content';
+import { goto } from '$app/navigation';
+import { page } from '$app/stores';
+import { Input } from '$lib/components/ui/input';
+import type { ContentStatusCounts } from '$lib/server/db/queries/content';
 
-	/**
-	 * Content filter controls with URL-based state.
-	 */
+/**
+ * Content filter controls with URL-based state.
+ */
 
-	interface Props {
-		connectors: Array<{ id: number; name: string; type: string }>;
-		statusCounts: ContentStatusCounts;
-	}
+interface Props {
+	connectors: Array<{ id: number; name: string; type: string }>;
+	statusCounts: ContentStatusCounts;
+}
 
-	let { connectors, statusCounts }: Props = $props();
+let { connectors, statusCounts }: Props = $props();
 
-	// Initialize from URL params
-	let search = $state($page.url.searchParams.get('search') ?? '');
-	let connectorId = $state($page.url.searchParams.get('connector') ?? '');
-	let contentType = $state($page.url.searchParams.get('type') ?? 'all');
-	let status = $state($page.url.searchParams.get('status') ?? 'all');
+// Initialize from URL params
+let search = $state($page.url.searchParams.get('search') ?? '');
+let connectorId = $state($page.url.searchParams.get('connector') ?? '');
+let contentType = $state($page.url.searchParams.get('type') ?? 'all');
+let status = $state($page.url.searchParams.get('status') ?? 'all');
 
-	// Debounced search
-	let searchTimeout: ReturnType<typeof setTimeout>;
+// Debounced search
+let searchTimeout: ReturnType<typeof setTimeout>;
 
-	/**
-	 * Updates URL with current filter state.
-	 */
-	function updateFilters() {
-		const params = new URLSearchParams();
+/**
+ * Updates URL with current filter state.
+ */
+function updateFilters() {
+	const params = new URLSearchParams();
 
-		if (search) params.set('search', search);
-		if (connectorId) params.set('connector', connectorId);
-		if (contentType !== 'all') params.set('type', contentType);
-		if (status !== 'all') params.set('status', status);
+	if (search) params.set('search', search);
+	if (connectorId) params.set('connector', connectorId);
+	if (contentType !== 'all') params.set('type', contentType);
+	if (status !== 'all') params.set('status', status);
 
-		// Preserve sort params if they exist
-		const currentSort = $page.url.searchParams.get('sort');
-		const currentOrder = $page.url.searchParams.get('order');
-		if (currentSort) params.set('sort', currentSort);
-		if (currentOrder) params.set('order', currentOrder);
+	// Preserve sort params if they exist
+	const currentSort = $page.url.searchParams.get('sort');
+	const currentOrder = $page.url.searchParams.get('order');
+	if (currentSort) params.set('sort', currentSort);
+	if (currentOrder) params.set('order', currentOrder);
 
-		goto(`/content?${params.toString()}`, { replaceState: true, keepFocus: true });
-	}
+	goto(`/content?${params.toString()}`, { replaceState: true, keepFocus: true });
+}
 
-	/**
-	 * Handles search input with debounce for real-time updates.
-	 */
-	function onSearchInput() {
-		clearTimeout(searchTimeout);
-		searchTimeout = setTimeout(updateFilters, 300);
-	}
+/**
+ * Handles search input with debounce for real-time updates.
+ */
+function onSearchInput() {
+	clearTimeout(searchTimeout);
+	searchTimeout = setTimeout(updateFilters, 300);
+}
 
-	/**
-	 * Handles filter dropdown changes.
-	 */
-	function onFilterChange() {
-		updateFilters();
-	}
+/**
+ * Handles filter dropdown changes.
+ */
+function onFilterChange() {
+	updateFilters();
+}
 </script>
 
 <div class="flex flex-wrap gap-4 mb-6">

@@ -2,25 +2,25 @@
  * API Keys settings page server load and actions.
  */
 
-import type { PageServerLoad, Actions } from './$types';
-import {
-	getApiKeysByUser,
-	createApiKey,
-	deleteApiKey,
-	revokeApiKey,
-	apiKeyNameExists,
-	updateApiKeyRateLimit,
-	type ApiKeyScope
-} from '$lib/server/db/queries/api-keys';
 import { fail } from '@sveltejs/kit';
 import * as v from 'valibot';
 import {
+	type ApiKeyRateLimitPreset,
 	CreateApiKeySchema,
-	UpdateApiKeyRateLimitSchema,
 	parseRateLimitValue,
-	type ApiKeyRateLimitPreset
+	UpdateApiKeyRateLimitSchema
 } from '$lib/schemas/settings';
+import {
+	type ApiKeyScope,
+	apiKeyNameExists,
+	createApiKey,
+	deleteApiKey,
+	getApiKeysByUser,
+	revokeApiKey,
+	updateApiKeyRateLimit
+} from '$lib/server/db/queries/api-keys';
 import { createLogger } from '$lib/server/logger';
+import type { Actions, PageServerLoad } from './$types';
 
 const logger = createLogger('api-keys');
 
@@ -80,7 +80,8 @@ export const actions: Actions = {
 			scope: formData.get('scope')?.toString() ?? 'read',
 			expiresIn: formData.get('expiresIn')?.toString() || undefined,
 			rateLimitPreset: formData.get('rateLimitPreset')?.toString() || undefined,
-			rateLimitCustom: rateLimitCustom && !isNaN(rateLimitCustom) ? rateLimitCustom : undefined
+			rateLimitCustom:
+				rateLimitCustom && !Number.isNaN(rateLimitCustom) ? rateLimitCustom : undefined
 		};
 
 		// Validate form data
@@ -151,7 +152,7 @@ export const actions: Actions = {
 		const formData = await request.formData();
 		const keyId = parseInt(formData.get('keyId')?.toString() ?? '', 10);
 
-		if (isNaN(keyId)) {
+		if (Number.isNaN(keyId)) {
 			return fail(400, {
 				action: 'deleteKey' as const,
 				error: 'Invalid key ID'
@@ -197,7 +198,7 @@ export const actions: Actions = {
 		const formData = await request.formData();
 		const keyId = parseInt(formData.get('keyId')?.toString() ?? '', 10);
 
-		if (isNaN(keyId)) {
+		if (Number.isNaN(keyId)) {
 			return fail(400, {
 				action: 'updateRateLimit' as const,
 				error: 'Invalid key ID'
@@ -210,7 +211,8 @@ export const actions: Actions = {
 
 		const data = {
 			rateLimitPreset: formData.get('rateLimitPreset')?.toString() ?? 'unlimited',
-			rateLimitCustom: rateLimitCustom && !isNaN(rateLimitCustom) ? rateLimitCustom : undefined
+			rateLimitCustom:
+				rateLimitCustom && !Number.isNaN(rateLimitCustom) ? rateLimitCustom : undefined
 		};
 
 		// Validate form data
@@ -269,7 +271,7 @@ export const actions: Actions = {
 		const formData = await request.formData();
 		const keyId = parseInt(formData.get('keyId')?.toString() ?? '', 10);
 
-		if (isNaN(keyId)) {
+		if (Number.isNaN(keyId)) {
 			return fail(400, {
 				action: 'revokeKey' as const,
 				error: 'Invalid key ID'

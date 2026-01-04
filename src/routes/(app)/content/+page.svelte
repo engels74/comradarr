@@ -1,186 +1,186 @@
 <script lang="ts">
-	import type { PageProps } from './$types';
-	import { BulkActionBar, ContentFilters, VirtualizedContentTable } from '$lib/components/content';
-	import { Button } from '$lib/components/ui/button';
-	import * as Dialog from '$lib/components/ui/dialog';
-	import { Input } from '$lib/components/ui/input';
-	import { toastStore } from '$lib/components/ui/toast';
-	import { goto } from '$app/navigation';
-	import { page } from '$app/stores';
-	import type { BulkActionTarget, ContentItem } from '$lib/server/db/queries/content';
+import { goto } from '$app/navigation';
+import { page } from '$app/stores';
+import { BulkActionBar, ContentFilters, VirtualizedContentTable } from '$lib/components/content';
+import { Button } from '$lib/components/ui/button';
+import * as Dialog from '$lib/components/ui/dialog';
+import { Input } from '$lib/components/ui/input';
+import { toastStore } from '$lib/components/ui/toast';
+import type { BulkActionTarget, ContentItem } from '$lib/server/db/queries/content';
+import type { PageProps } from './$types';
 
-	/**
-	 * Content browser page with virtualized table and "Load More" pagination.
-	 */
+/**
+ * Content browser page with virtualized table and "Load More" pagination.
+ */
 
-	let { data }: PageProps = $props();
+let { data }: PageProps = $props();
 
-	// Loaded items state - starts with initial data, grows as user loads more
-	// Initialize empty and populate via effect to track reactive data changes
-	let loadedItems = $state<ContentItem[]>([]);
-	let nextCursor = $state<string | null>(null);
-	let isLoadingMore = $state(false);
-	let loadError = $state<string | null>(null);
-	let lastDataContent = $state<ContentItem[] | null>(null);
+// Loaded items state - starts with initial data, grows as user loads more
+// Initialize empty and populate via effect to track reactive data changes
+let loadedItems = $state<ContentItem[]>([]);
+let nextCursor = $state<string | null>(null);
+let isLoadingMore = $state(false);
+let loadError = $state<string | null>(null);
+let lastDataContent = $state<ContentItem[] | null>(null);
 
-	// Reset loaded items when filters change (detected via data.content changing)
-	$effect(() => {
-		// Only update when data.content reference changes (filter change or initial load)
-		if (data.content !== lastDataContent) {
-			loadedItems = [...data.content];
-			nextCursor = data.nextCursor;
-			loadError = null;
-			// Clear selection when filters change
-			selectedKeys = new Set();
-			lastClickedKey = null;
-			lastDataContent = data.content;
-		}
-	});
-
-	// Selection state
-	let selectedKeys = $state<Set<string>>(new Set());
-	let lastClickedKey = $state<string | null>(null);
-
-	// Computed selection values
-	const selectedCount = $derived(selectedKeys.size);
-	const selectedTargets = $derived<BulkActionTarget[]>(
-		Array.from(selectedKeys).map((key) => {
-			const [type, id] = key.split('-');
-			return { type: type as 'series' | 'movie', id: Number(id) };
-		})
-	);
-
-	// Has more items to load
-	const hasMore = $derived(nextCursor !== null);
-
-	// Jump to page state
-	let jumpDialogOpen = $state(false);
-	let jumpPageInput = $state('');
-	const pageSize = $derived(data.filters.limit ?? 50);
-	const totalPages = $derived(Math.ceil(data.total / pageSize));
-	const currentPage = $derived(Math.floor((data.filters.offset ?? 0) / pageSize) + 1);
-
-	/**
-	 * Jump to a specific page number.
-	 */
-	function jumpToPage() {
-		const targetPage = parseInt(jumpPageInput, 10);
-		if (isNaN(targetPage) || targetPage < 1 || targetPage > totalPages) {
-			return; // Invalid page number
-		}
-
-		// Navigate to the target page
-		const params = new URLSearchParams($page.url.searchParams);
-		params.set('page', targetPage.toString());
-		goto(`/content?${params.toString()}`);
-
-		// Close dialog and reset input
-		jumpDialogOpen = false;
-		jumpPageInput = '';
-	}
-
-	/**
-	 * Load more items from the API.
-	 */
-	async function loadMore() {
-		if (isLoadingMore || !nextCursor) return;
-
-		isLoadingMore = true;
+// Reset loaded items when filters change (detected via data.content changing)
+$effect(() => {
+	// Only update when data.content reference changes (filter change or initial load)
+	if (data.content !== lastDataContent) {
+		loadedItems = [...data.content];
+		nextCursor = data.nextCursor;
 		loadError = null;
+		// Clear selection when filters change
+		selectedKeys = new Set();
+		lastClickedKey = null;
+		lastDataContent = data.content;
+	}
+});
 
-		try {
-			// Build API URL with current filters
-			const params = new URLSearchParams($page.url.searchParams);
-			params.set('cursor', nextCursor);
-			params.set('offset', loadedItems.length.toString());
+// Selection state
+let selectedKeys = $state<Set<string>>(new Set());
+let lastClickedKey = $state<string | null>(null);
 
-			const response = await fetch(`/api/content?${params.toString()}`);
-			if (!response.ok) {
-				throw new Error(`Failed to load more items: ${response.statusText}`);
-			}
+// Computed selection values
+const selectedCount = $derived(selectedKeys.size);
+const selectedTargets = $derived<BulkActionTarget[]>(
+	Array.from(selectedKeys).map((key) => {
+		const [type, id] = key.split('-');
+		return { type: type as 'series' | 'movie', id: Number(id) };
+	})
+);
 
-			const result = await response.json();
-			loadedItems = [...loadedItems, ...result.items];
-			nextCursor = result.nextCursor;
-		} catch (e) {
-			loadError = e instanceof Error ? e.message : 'Failed to load more items';
-		} finally {
-			isLoadingMore = false;
-		}
+// Has more items to load
+const hasMore = $derived(nextCursor !== null);
+
+// Jump to page state
+let jumpDialogOpen = $state(false);
+let jumpPageInput = $state('');
+const pageSize = $derived(data.filters.limit ?? 50);
+const totalPages = $derived(Math.ceil(data.total / pageSize));
+const currentPage = $derived(Math.floor((data.filters.offset ?? 0) / pageSize) + 1);
+
+/**
+ * Jump to a specific page number.
+ */
+function jumpToPage() {
+	const targetPage = parseInt(jumpPageInput, 10);
+	if (Number.isNaN(targetPage) || targetPage < 1 || targetPage > totalPages) {
+		return; // Invalid page number
 	}
 
-	/**
-	 * Toggle selection for an item, with optional range selection (Shift+click).
-	 */
-	function toggleSelection(key: string, shiftKey: boolean) {
-		const newSet = new Set(selectedKeys);
+	// Navigate to the target page
+	const params = new URLSearchParams($page.url.searchParams);
+	params.set('page', targetPage.toString());
+	goto(`/content?${params.toString()}`);
 
-		if (shiftKey && lastClickedKey) {
-			// Range select: select all items between lastClickedKey and key
-			const keys = loadedItems.map((item) => `${item.type}-${item.id}`);
-			const fromIndex = keys.indexOf(lastClickedKey);
-			const toIndex = keys.indexOf(key);
+	// Close dialog and reset input
+	jumpDialogOpen = false;
+	jumpPageInput = '';
+}
 
-			if (fromIndex !== -1 && toIndex !== -1) {
-				const start = Math.min(fromIndex, toIndex);
-				const end = Math.max(fromIndex, toIndex);
-				for (let i = start; i <= end; i++) {
-					const k = keys[i];
-					if (k !== undefined) {
-						newSet.add(k);
-					}
-				}
-			} else {
-				// Fallback to single toggle
-				if (newSet.has(key)) {
-					newSet.delete(key);
-				} else {
-					newSet.add(key);
+/**
+ * Load more items from the API.
+ */
+async function loadMore() {
+	if (isLoadingMore || !nextCursor) return;
+
+	isLoadingMore = true;
+	loadError = null;
+
+	try {
+		// Build API URL with current filters
+		const params = new URLSearchParams($page.url.searchParams);
+		params.set('cursor', nextCursor);
+		params.set('offset', loadedItems.length.toString());
+
+		const response = await fetch(`/api/content?${params.toString()}`);
+		if (!response.ok) {
+			throw new Error(`Failed to load more items: ${response.statusText}`);
+		}
+
+		const result = await response.json();
+		loadedItems = [...loadedItems, ...result.items];
+		nextCursor = result.nextCursor;
+	} catch (e) {
+		loadError = e instanceof Error ? e.message : 'Failed to load more items';
+	} finally {
+		isLoadingMore = false;
+	}
+}
+
+/**
+ * Toggle selection for an item, with optional range selection (Shift+click).
+ */
+function toggleSelection(key: string, shiftKey: boolean) {
+	const newSet = new Set(selectedKeys);
+
+	if (shiftKey && lastClickedKey) {
+		// Range select: select all items between lastClickedKey and key
+		const keys = loadedItems.map((item) => `${item.type}-${item.id}`);
+		const fromIndex = keys.indexOf(lastClickedKey);
+		const toIndex = keys.indexOf(key);
+
+		if (fromIndex !== -1 && toIndex !== -1) {
+			const start = Math.min(fromIndex, toIndex);
+			const end = Math.max(fromIndex, toIndex);
+			for (let i = start; i <= end; i++) {
+				const k = keys[i];
+				if (k !== undefined) {
+					newSet.add(k);
 				}
 			}
 		} else {
-			// Single toggle
+			// Fallback to single toggle
 			if (newSet.has(key)) {
 				newSet.delete(key);
 			} else {
 				newSet.add(key);
 			}
 		}
-
-		selectedKeys = newSet;
-		lastClickedKey = key;
-	}
-
-	/**
-	 * Toggle all loaded items.
-	 */
-	function toggleAll() {
-		const allKeys = loadedItems.map((item) => `${item.type}-${item.id}`);
-		const allSelected = allKeys.every((key) => selectedKeys.has(key));
-
-		if (allSelected) {
-			// Deselect all
-			selectedKeys = new Set();
+	} else {
+		// Single toggle
+		if (newSet.has(key)) {
+			newSet.delete(key);
 		} else {
-			// Select all loaded
-			selectedKeys = new Set(allKeys);
+			newSet.add(key);
 		}
 	}
 
-	/**
-	 * Clear all selections.
-	 */
-	function clearSelection() {
-		selectedKeys = new Set();
-		lastClickedKey = null;
-	}
+	selectedKeys = newSet;
+	lastClickedKey = key;
+}
 
-	/**
-	 * Handle action completion (show toast/notification).
-	 */
-	function handleActionComplete(message: string) {
-		toastStore.success(message);
+/**
+ * Toggle all loaded items.
+ */
+function toggleAll() {
+	const allKeys = loadedItems.map((item) => `${item.type}-${item.id}`);
+	const allSelected = allKeys.every((key) => selectedKeys.has(key));
+
+	if (allSelected) {
+		// Deselect all
+		selectedKeys = new Set();
+	} else {
+		// Select all loaded
+		selectedKeys = new Set(allKeys);
 	}
+}
+
+/**
+ * Clear all selections.
+ */
+function clearSelection() {
+	selectedKeys = new Set();
+	lastClickedKey = null;
+}
+
+/**
+ * Handle action completion (show toast/notification).
+ */
+function handleActionComplete(message: string) {
+	toastStore.success(message);
+}
 </script>
 
 <svelte:head>

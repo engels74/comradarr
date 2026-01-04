@@ -21,19 +21,17 @@ repos:
   # Local hooks
   - repo: local
     hooks:
-      # Prettier formatting on commit
-      - id: prettier
-        name: Prettier
-        entry: bunx prettier --write --ignore-unknown
+      # Biome formatting and linting on commit
+      - id: biome
+        name: Format and lint with Biome
+        entry: bunx biome check --write
         language: system
         types_or:
           - javascript
           - ts
           - svelte
           - json
-          - markdown
           - css
-          - yaml
 
       # Full TypeScript checking on push (includes tsc --noEmit)
       - id: typecheck

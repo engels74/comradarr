@@ -33,22 +33,22 @@
 // =============================================================================
 
 export type {
+	AggregationResult,
+	AnalyticsEventPayload,
 	// Event types
 	AnalyticsEventType,
-	AnalyticsEventPayload,
 	// Payload interfaces
 	GapDiscoveredPayload,
-	UpgradeDiscoveredPayload,
-	SearchDispatchedPayload,
-	SearchCompletedPayload,
-	SearchFailedPayload,
+	QueueDepthSample,
 	QueueDepthSampledPayload,
-	SyncCompletedPayload,
-	SyncFailedPayload,
 	// Result types
 	RecordEventResult,
-	AggregationResult,
-	QueueDepthSample
+	SearchCompletedPayload,
+	SearchDispatchedPayload,
+	SearchFailedPayload,
+	SyncCompletedPayload,
+	SyncFailedPayload,
+	UpgradeDiscoveredPayload
 } from './types';
 
 // =============================================================================
@@ -61,4 +61,4 @@ export { analyticsCollector } from './collector';
 // Aggregator
 // =============================================================================
 
-export { aggregateHourlyStats, aggregateDailyStats, cleanupOldEvents } from './aggregator';
+export { aggregateDailyStats, aggregateHourlyStats, cleanupOldEvents } from './aggregator';

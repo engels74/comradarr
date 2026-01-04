@@ -10,22 +10,22 @@
  */
 
 import type { NotificationChannel } from '$lib/server/db/schema';
+import type { NotificationSender } from '../base-channel';
+import { DEFAULT_SENDER_CONFIG } from '../base-channel';
+import {
+	NotificationAuthenticationError,
+	NotificationConfigurationError,
+	NotificationNetworkError,
+	NotificationRateLimitError,
+	NotificationServerError,
+	NotificationTimeoutError
+} from '../errors';
 import type {
 	NotificationPayload,
 	NotificationResult,
 	TelegramConfig,
 	TelegramSensitiveConfig
 } from '../types';
-import type { NotificationSender } from '../base-channel';
-import { DEFAULT_SENDER_CONFIG } from '../base-channel';
-import {
-	NotificationConfigurationError,
-	NotificationServerError,
-	NotificationRateLimitError,
-	NotificationAuthenticationError,
-	NotificationNetworkError,
-	NotificationTimeoutError
-} from '../errors';
 
 // =============================================================================
 // Constants

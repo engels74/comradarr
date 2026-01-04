@@ -15,19 +15,19 @@
  * DELETE: Clears the log buffer
  */
 
-import { json, error } from '@sveltejs/kit';
-import type { RequestHandler } from './$types';
-import { logLevels, type LogLevel } from '$lib/schemas/settings';
+import { error, json } from '@sveltejs/kit';
+import { type LogLevel, logLevels } from '$lib/schemas/settings';
+import { requireScope } from '$lib/server/auth';
 import {
-	queryLogs,
 	clearLogBuffer,
+	exportLogsAsJson,
 	getBufferConfig,
 	getLogLevelCounts,
 	getUniqueModules,
-	exportLogsAsJson,
-	type LogFilter
+	type LogFilter,
+	queryLogs
 } from '$lib/server/services/log-buffer';
-import { requireScope } from '$lib/server/auth';
+import type { RequestHandler } from './$types';
 
 const MAX_LIMIT = 500;
 const DEFAULT_LIMIT = 100;
@@ -51,7 +51,7 @@ export const GET: RequestHandler = async ({ url, locals }) => {
 	let limit = DEFAULT_LIMIT;
 	if (limitParam) {
 		const parsed = parseInt(limitParam, 10);
-		if (isNaN(parsed) || parsed < 1) {
+		if (Number.isNaN(parsed) || parsed < 1) {
 			error(400, 'Invalid limit parameter');
 		}
 		limit = Math.min(parsed, MAX_LIMIT);
@@ -61,7 +61,7 @@ export const GET: RequestHandler = async ({ url, locals }) => {
 	let offset = 0;
 	if (offsetParam) {
 		const parsed = parseInt(offsetParam, 10);
-		if (isNaN(parsed) || parsed < 0) {
+		if (Number.isNaN(parsed) || parsed < 0) {
 			error(400, 'Invalid offset parameter');
 		}
 		offset = parsed;

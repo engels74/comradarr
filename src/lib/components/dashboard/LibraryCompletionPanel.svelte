@@ -1,122 +1,123 @@
 <script lang="ts">
-	/**
-	 * Library completion visualization panel.
-	 * Shows per-connector completion percentages with trend sparklines.
-	 */
-	import * as Card from '$lib/components/ui/card';
-	import { Badge } from '$lib/components/ui/badge';
-	import LibraryBigIcon from '@lucide/svelte/icons/library-big';
-	import TrendingUpIcon from '@lucide/svelte/icons/trending-up';
-	import TrendingDownIcon from '@lucide/svelte/icons/trending-down';
-	import MinusIcon from '@lucide/svelte/icons/minus';
-	import type { SerializedConnectorCompletion, SerializedCompletionDataPoint } from './types';
+/**
+ * Library completion visualization panel.
+ * Shows per-connector completion percentages with trend sparklines.
+ */
 
-	interface Props {
-		completionData: SerializedConnectorCompletion[];
-		class?: string;
+import LibraryBigIcon from '@lucide/svelte/icons/library-big';
+import MinusIcon from '@lucide/svelte/icons/minus';
+import TrendingDownIcon from '@lucide/svelte/icons/trending-down';
+import TrendingUpIcon from '@lucide/svelte/icons/trending-up';
+import { Badge } from '$lib/components/ui/badge';
+import * as Card from '$lib/components/ui/card';
+import type { SerializedCompletionDataPoint, SerializedConnectorCompletion } from './types';
+
+interface Props {
+	completionData: SerializedConnectorCompletion[];
+	class?: string;
+}
+
+let { completionData, class: className = '' }: Props = $props();
+
+// Connector type colors (matching existing patterns from ConnectionStatusPanel)
+const typeColors: Record<string, { bg: string; text: string; border: string }> = {
+	sonarr: {
+		bg: 'bg-blue-500',
+		text: 'text-blue-600 dark:text-blue-400',
+		border: 'border-blue-500/20'
+	},
+	radarr: {
+		bg: 'bg-orange-500',
+		text: 'text-orange-600 dark:text-orange-400',
+		border: 'border-orange-500/20'
+	},
+	whisparr: {
+		bg: 'bg-purple-500',
+		text: 'text-purple-600 dark:text-purple-400',
+		border: 'border-purple-500/20'
 	}
+};
 
-	let { completionData, class: className = '' }: Props = $props();
+/**
+ * Get color class for completion percentage.
+ */
+function getCompletionColor(percentage: number): string {
+	if (percentage >= 90) return 'text-green-600 dark:text-green-400';
+	if (percentage >= 70) return 'text-yellow-600 dark:text-yellow-400';
+	if (percentage >= 50) return 'text-orange-600 dark:text-orange-400';
+	return 'text-red-600 dark:text-red-400';
+}
 
-	// Connector type colors (matching existing patterns from ConnectionStatusPanel)
-	const typeColors: Record<string, { bg: string; text: string; border: string }> = {
-		sonarr: {
-			bg: 'bg-blue-500',
-			text: 'text-blue-600 dark:text-blue-400',
-			border: 'border-blue-500/20'
-		},
-		radarr: {
-			bg: 'bg-orange-500',
-			text: 'text-orange-600 dark:text-orange-400',
-			border: 'border-orange-500/20'
-		},
-		whisparr: {
-			bg: 'bg-purple-500',
-			text: 'text-purple-600 dark:text-purple-400',
-			border: 'border-purple-500/20'
-		}
-	};
+/**
+ * Get progress bar color class.
+ */
+function getProgressBarColor(percentage: number): string {
+	if (percentage >= 90) return 'bg-green-500';
+	if (percentage >= 70) return 'bg-yellow-500';
+	if (percentage >= 50) return 'bg-orange-500';
+	return 'bg-red-500';
+}
 
-	/**
-	 * Get color class for completion percentage.
-	 */
-	function getCompletionColor(percentage: number): string {
-		if (percentage >= 90) return 'text-green-600 dark:text-green-400';
-		if (percentage >= 70) return 'text-yellow-600 dark:text-yellow-400';
-		if (percentage >= 50) return 'text-orange-600 dark:text-orange-400';
-		return 'text-red-600 dark:text-red-400';
+/**
+ * Generate SVG path for sparkline.
+ */
+function generateSparklinePath(
+	data: SerializedCompletionDataPoint[],
+	width: number,
+	height: number
+): string {
+	if (data.length < 2) return '';
+
+	const padding = 2;
+	const chartWidth = width - padding * 2;
+	const chartHeight = height - padding * 2;
+
+	// Find min/max for scaling
+	const values = data.map((d) => d.completionPercentage);
+	const min = Math.min(...values);
+	const max = Math.max(...values);
+	const range = max - min || 1; // Avoid division by zero
+
+	// Generate points
+	const points = data.map((d, i) => {
+		const x = padding + (i / (data.length - 1)) * chartWidth;
+		const y = padding + chartHeight - ((d.completionPercentage - min) / range) * chartHeight;
+		return `${x},${y}`;
+	});
+
+	return `M ${points.join(' L ')}`;
+}
+
+/**
+ * Get trend icon component and color.
+ */
+function getTrendInfo(delta: number): {
+	icon: typeof TrendingUpIcon;
+	color: string;
+	label: string;
+} {
+	if (delta > 0.5) {
+		return { icon: TrendingUpIcon, color: 'text-green-500', label: `+${delta.toFixed(1)}%` };
 	}
-
-	/**
-	 * Get progress bar color class.
-	 */
-	function getProgressBarColor(percentage: number): string {
-		if (percentage >= 90) return 'bg-green-500';
-		if (percentage >= 70) return 'bg-yellow-500';
-		if (percentage >= 50) return 'bg-orange-500';
-		return 'bg-red-500';
+	if (delta < -0.5) {
+		return { icon: TrendingDownIcon, color: 'text-red-500', label: `${delta.toFixed(1)}%` };
 	}
+	return { icon: MinusIcon, color: 'text-muted-foreground', label: 'No change' };
+}
 
-	/**
-	 * Generate SVG path for sparkline.
-	 */
-	function generateSparklinePath(
-		data: SerializedCompletionDataPoint[],
-		width: number,
-		height: number
-	): string {
-		if (data.length < 2) return '';
+/**
+ * Format connector type for display.
+ */
+function formatType(type: string): string {
+	return type.charAt(0).toUpperCase() + type.slice(1);
+}
 
-		const padding = 2;
-		const chartWidth = width - padding * 2;
-		const chartHeight = height - padding * 2;
-
-		// Find min/max for scaling
-		const values = data.map((d) => d.completionPercentage);
-		const min = Math.min(...values);
-		const max = Math.max(...values);
-		const range = max - min || 1; // Avoid division by zero
-
-		// Generate points
-		const points = data.map((d, i) => {
-			const x = padding + (i / (data.length - 1)) * chartWidth;
-			const y = padding + chartHeight - ((d.completionPercentage - min) / range) * chartHeight;
-			return `${x},${y}`;
-		});
-
-		return `M ${points.join(' L ')}`;
-	}
-
-	/**
-	 * Get trend icon component and color.
-	 */
-	function getTrendInfo(delta: number): {
-		icon: typeof TrendingUpIcon;
-		color: string;
-		label: string;
-	} {
-		if (delta > 0.5) {
-			return { icon: TrendingUpIcon, color: 'text-green-500', label: `+${delta.toFixed(1)}%` };
-		}
-		if (delta < -0.5) {
-			return { icon: TrendingDownIcon, color: 'text-red-500', label: `${delta.toFixed(1)}%` };
-		}
-		return { icon: MinusIcon, color: 'text-muted-foreground', label: 'No change' };
-	}
-
-	/**
-	 * Format connector type for display.
-	 */
-	function formatType(type: string): string {
-		return type.charAt(0).toUpperCase() + type.slice(1);
-	}
-
-	/**
-	 * Get colors for a connector type (with fallback).
-	 */
-	function getTypeColors(type: string): { bg: string; text: string; border: string } {
-		return typeColors[type] ?? typeColors['sonarr']!;
-	}
+/**
+ * Get colors for a connector type (with fallback).
+ */
+function getTypeColors(type: string): { bg: string; text: string; border: string } {
+	return typeColors[type] ?? typeColors.sonarr!;
+}
 </script>
 
 <Card.Root class={className}>

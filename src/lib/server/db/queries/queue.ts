@@ -8,6 +8,7 @@
  * - Throttle info for dispatch time estimation
  */
 
+import { and, asc, count, eq, ilike, inArray, or, type SQL, sql } from 'drizzle-orm';
 import { db } from '$lib/server/db';
 import {
 	connectors,
@@ -21,7 +22,6 @@ import {
 	throttleProfiles,
 	throttleState
 } from '$lib/server/db/schema';
-import { and, asc, count, desc, eq, ilike, inArray, or, sql, type SQL } from 'drizzle-orm';
 
 // =============================================================================
 // Types

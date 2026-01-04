@@ -1,162 +1,163 @@
 <script lang="ts">
-	/**
-	 * Upcoming Schedule Panel - displays next scheduled sweeps and current sweep progress.
-	 */
-	import * as Card from '$lib/components/ui/card';
-	import { Badge } from '$lib/components/ui/badge';
-	import CalendarClockIcon from '@lucide/svelte/icons/calendar-clock';
-	import RefreshCwIcon from '@lucide/svelte/icons/refresh-cw';
-	import ClockIcon from '@lucide/svelte/icons/clock';
-	import DatabaseIcon from '@lucide/svelte/icons/database';
-	import GaugeIcon from '@lucide/svelte/icons/gauge';
-	import HeartPulseIcon from '@lucide/svelte/icons/heart-pulse';
-	import TimerIcon from '@lucide/svelte/icons/timer';
-	import CameraIcon from '@lucide/svelte/icons/camera';
-	import type { SerializedScheduledJob } from './types';
+/**
+ * Upcoming Schedule Panel - displays next scheduled sweeps and current sweep progress.
+ */
 
-	interface Props {
-		scheduledJobs: SerializedScheduledJob[];
-		class?: string;
+import CalendarClockIcon from '@lucide/svelte/icons/calendar-clock';
+import CameraIcon from '@lucide/svelte/icons/camera';
+import ClockIcon from '@lucide/svelte/icons/clock';
+import DatabaseIcon from '@lucide/svelte/icons/database';
+import GaugeIcon from '@lucide/svelte/icons/gauge';
+import HeartPulseIcon from '@lucide/svelte/icons/heart-pulse';
+import RefreshCwIcon from '@lucide/svelte/icons/refresh-cw';
+import TimerIcon from '@lucide/svelte/icons/timer';
+import { Badge } from '$lib/components/ui/badge';
+import * as Card from '$lib/components/ui/card';
+import type { SerializedScheduledJob } from './types';
+
+interface Props {
+	scheduledJobs: SerializedScheduledJob[];
+	class?: string;
+}
+
+let { scheduledJobs, class: className = '' }: Props = $props();
+
+/**
+ * Get an appropriate icon for each job type.
+ */
+function getJobIcon(jobName: string) {
+	switch (jobName) {
+		case 'incremental-sync-sweep':
+			return RefreshCwIcon;
+		case 'full-reconciliation':
+			return DatabaseIcon;
+		case 'queue-processor':
+			return GaugeIcon;
+		case 'connector-health-check':
+		case 'prowlarr-health-check':
+			return HeartPulseIcon;
+		case 'throttle-window-reset':
+			return TimerIcon;
+		case 'completion-snapshot':
+			return CameraIcon;
+		default:
+			return ClockIcon;
 	}
+}
 
-	let { scheduledJobs, class: className = '' }: Props = $props();
-
-	/**
-	 * Get an appropriate icon for each job type.
-	 */
-	function getJobIcon(jobName: string) {
-		switch (jobName) {
-			case 'incremental-sync-sweep':
-				return RefreshCwIcon;
-			case 'full-reconciliation':
-				return DatabaseIcon;
-			case 'queue-processor':
-				return GaugeIcon;
-			case 'connector-health-check':
-			case 'prowlarr-health-check':
-				return HeartPulseIcon;
-			case 'throttle-window-reset':
-				return TimerIcon;
-			case 'completion-snapshot':
-				return CameraIcon;
-			default:
-				return ClockIcon;
-		}
+/**
+ * Get color classes based on job type.
+ * Sweep jobs get more prominent colors.
+ */
+function getJobColors(jobName: string) {
+	switch (jobName) {
+		case 'incremental-sync-sweep':
+			return {
+				bg: 'bg-blue-500/10',
+				text: 'text-blue-600 dark:text-blue-400',
+				border: 'border-blue-500/20'
+			};
+		case 'full-reconciliation':
+			return {
+				bg: 'bg-purple-500/10',
+				text: 'text-purple-600 dark:text-purple-400',
+				border: 'border-purple-500/20'
+			};
+		case 'queue-processor':
+			return {
+				bg: 'bg-green-500/10',
+				text: 'text-green-600 dark:text-green-400',
+				border: 'border-green-500/20'
+			};
+		case 'connector-health-check':
+		case 'prowlarr-health-check':
+			return {
+				bg: 'bg-amber-500/10',
+				text: 'text-amber-600 dark:text-amber-400',
+				border: 'border-amber-500/20'
+			};
+		default:
+			return {
+				bg: 'bg-gray-500/10',
+				text: 'text-gray-600 dark:text-gray-400',
+				border: 'border-gray-500/20'
+			};
 	}
+}
 
-	/**
-	 * Get color classes based on job type.
-	 * Sweep jobs get more prominent colors.
-	 */
-	function getJobColors(jobName: string) {
-		switch (jobName) {
-			case 'incremental-sync-sweep':
-				return {
-					bg: 'bg-blue-500/10',
-					text: 'text-blue-600 dark:text-blue-400',
-					border: 'border-blue-500/20'
-				};
-			case 'full-reconciliation':
-				return {
-					bg: 'bg-purple-500/10',
-					text: 'text-purple-600 dark:text-purple-400',
-					border: 'border-purple-500/20'
-				};
-			case 'queue-processor':
-				return {
-					bg: 'bg-green-500/10',
-					text: 'text-green-600 dark:text-green-400',
-					border: 'border-green-500/20'
-				};
-			case 'connector-health-check':
-			case 'prowlarr-health-check':
-				return {
-					bg: 'bg-amber-500/10',
-					text: 'text-amber-600 dark:text-amber-400',
-					border: 'border-amber-500/20'
-				};
-			default:
-				return {
-					bg: 'bg-gray-500/10',
-					text: 'text-gray-600 dark:text-gray-400',
-					border: 'border-gray-500/20'
-				};
-		}
+/**
+ * Format relative time from ISO timestamp.
+ * Returns strings like "in 8 minutes", "in 2 hours", etc.
+ */
+function formatRelativeTime(isoTimestamp: string | null): string {
+	if (!isoTimestamp) return 'Not scheduled';
+
+	const now = Date.now();
+	const target = new Date(isoTimestamp).getTime();
+	const diffMs = target - now;
+
+	if (diffMs < 0) return 'Running...';
+
+	const diffSeconds = Math.floor(diffMs / 1000);
+	const diffMinutes = Math.floor(diffSeconds / 60);
+	const diffHours = Math.floor(diffMinutes / 60);
+
+	if (diffMinutes < 1) return 'in < 1 min';
+	if (diffMinutes < 60) return `in ${diffMinutes} min`;
+	if (diffHours < 24) {
+		const mins = diffMinutes % 60;
+		if (mins > 0) return `in ${diffHours}h ${mins}m`;
+		return `in ${diffHours}h`;
 	}
+	const days = Math.floor(diffHours / 24);
+	return `in ${days}d`;
+}
 
-	/**
-	 * Format relative time from ISO timestamp.
-	 * Returns strings like "in 8 minutes", "in 2 hours", etc.
-	 */
-	function formatRelativeTime(isoTimestamp: string | null): string {
-		if (!isoTimestamp) return 'Not scheduled';
+/**
+ * Check if job runs soon (within 5 minutes).
+ */
+function isUpcomingSoon(isoTimestamp: string | null): boolean {
+	if (!isoTimestamp) return false;
+	const now = Date.now();
+	const target = new Date(isoTimestamp).getTime();
+	const diffMs = target - now;
+	return diffMs > 0 && diffMs < 5 * 60 * 1000; // 5 minutes
+}
 
-		const now = Date.now();
-		const target = new Date(isoTimestamp).getTime();
-		const diffMs = target - now;
+// Sort jobs: running first, then by next run time
+const sortedJobs = $derived(
+	[...scheduledJobs].sort((a, b) => {
+		// Running jobs first
+		if (a.isRunning && !b.isRunning) return -1;
+		if (!a.isRunning && b.isRunning) return 1;
 
-		if (diffMs < 0) return 'Running...';
+		// Then by next run time
+		if (!a.nextRun && !b.nextRun) return 0;
+		if (!a.nextRun) return 1;
+		if (!b.nextRun) return -1;
+		return new Date(a.nextRun).getTime() - new Date(b.nextRun).getTime();
+	})
+);
 
-		const diffSeconds = Math.floor(diffMs / 1000);
-		const diffMinutes = Math.floor(diffSeconds / 60);
-		const diffHours = Math.floor(diffMinutes / 60);
+// Filter to show only sweep-related jobs prominently
+const sweepJobs = $derived(
+	sortedJobs.filter(
+		(job) =>
+			job.name === 'incremental-sync-sweep' ||
+			job.name === 'full-reconciliation' ||
+			job.name === 'queue-processor'
+	)
+);
 
-		if (diffMinutes < 1) return 'in < 1 min';
-		if (diffMinutes < 60) return `in ${diffMinutes} min`;
-		if (diffHours < 24) {
-			const mins = diffMinutes % 60;
-			if (mins > 0) return `in ${diffHours}h ${mins}m`;
-			return `in ${diffHours}h`;
-		}
-		const days = Math.floor(diffHours / 24);
-		return `in ${days}d`;
-	}
-
-	/**
-	 * Check if job runs soon (within 5 minutes).
-	 */
-	function isUpcomingSoon(isoTimestamp: string | null): boolean {
-		if (!isoTimestamp) return false;
-		const now = Date.now();
-		const target = new Date(isoTimestamp).getTime();
-		const diffMs = target - now;
-		return diffMs > 0 && diffMs < 5 * 60 * 1000; // 5 minutes
-	}
-
-	// Sort jobs: running first, then by next run time
-	const sortedJobs = $derived(
-		[...scheduledJobs].sort((a, b) => {
-			// Running jobs first
-			if (a.isRunning && !b.isRunning) return -1;
-			if (!a.isRunning && b.isRunning) return 1;
-
-			// Then by next run time
-			if (!a.nextRun && !b.nextRun) return 0;
-			if (!a.nextRun) return 1;
-			if (!b.nextRun) return -1;
-			return new Date(a.nextRun).getTime() - new Date(b.nextRun).getTime();
-		})
-	);
-
-	// Filter to show only sweep-related jobs prominently
-	const sweepJobs = $derived(
-		sortedJobs.filter(
-			(job) =>
-				job.name === 'incremental-sync-sweep' ||
-				job.name === 'full-reconciliation' ||
-				job.name === 'queue-processor'
-		)
-	);
-
-	// Other background jobs
-	const otherJobs = $derived(
-		sortedJobs.filter(
-			(job) =>
-				job.name !== 'incremental-sync-sweep' &&
-				job.name !== 'full-reconciliation' &&
-				job.name !== 'queue-processor'
-		)
-	);
+// Other background jobs
+const otherJobs = $derived(
+	sortedJobs.filter(
+		(job) =>
+			job.name !== 'incremental-sync-sweep' &&
+			job.name !== 'full-reconciliation' &&
+			job.name !== 'queue-processor'
+	)
+);
 </script>
 
 <div class={className}>

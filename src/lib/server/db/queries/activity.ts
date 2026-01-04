@@ -3,17 +3,17 @@
  * Display recent discoveries, search outcomes, and system events.
  */
 
-import { desc, eq, sql, gte, and } from 'drizzle-orm';
+import { and, eq, gte, sql } from 'drizzle-orm';
 import { db } from '../index';
 import {
-	searchHistory,
-	searchRegistry,
-	syncState,
 	connectors,
 	episodes,
 	movies,
+	searchHistory,
+	searchRegistry,
 	seasons,
-	series
+	series,
+	syncState
 } from '../schema';
 
 // =============================================================================

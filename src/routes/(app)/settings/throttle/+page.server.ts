@@ -2,20 +2,20 @@
  * Throttle profiles settings page server load and actions.
  */
 
-import type { PageServerLoad, Actions } from './$types';
-import {
-	getAllThrottleProfiles,
-	getConnectorCountUsingProfile,
-	createThrottleProfile,
-	updateThrottleProfile,
-	deleteThrottleProfile,
-	throttleProfileNameExists,
-	setDefaultThrottleProfile
-} from '$lib/server/db/queries/throttle';
 import { fail } from '@sveltejs/kit';
 import * as v from 'valibot';
 import { ThrottleProfileSchema } from '$lib/schemas/throttle-profile';
+import {
+	createThrottleProfile,
+	deleteThrottleProfile,
+	getAllThrottleProfiles,
+	getConnectorCountUsingProfile,
+	setDefaultThrottleProfile,
+	throttleProfileNameExists,
+	updateThrottleProfile
+} from '$lib/server/db/queries/throttle';
 import { createLogger } from '$lib/server/logger';
+import type { Actions, PageServerLoad } from './$types';
 
 const logger = createLogger('throttle-profiles');
 
@@ -137,7 +137,7 @@ export const actions: Actions = {
 		const formData = await request.formData();
 		const id = Number(formData.get('id'));
 
-		if (!id || isNaN(id)) {
+		if (!id || Number.isNaN(id)) {
 			return fail(400, {
 				action: 'update',
 				error: 'Invalid profile ID'
@@ -209,7 +209,7 @@ export const actions: Actions = {
 		const formData = await request.formData();
 		const id = Number(formData.get('id'));
 
-		if (!id || isNaN(id)) {
+		if (!id || Number.isNaN(id)) {
 			return fail(400, {
 				action: 'delete',
 				error: 'Invalid profile ID'
@@ -251,7 +251,7 @@ export const actions: Actions = {
 		const formData = await request.formData();
 		const id = Number(formData.get('id'));
 
-		if (!id || isNaN(id)) {
+		if (!id || Number.isNaN(id)) {
 			return fail(400, {
 				action: 'setDefault',
 				error: 'Invalid profile ID'

@@ -13,11 +13,11 @@
 
  */
 
+import { and, eq, isNull, sql } from 'drizzle-orm';
 import { db } from '$lib/server/db';
 import { connectors, episodes, movies, searchRegistry } from '$lib/server/db/schema';
-import { and, eq, isNull, sql } from 'drizzle-orm';
-import type { UpgradeDiscoveryResult, DiscoveryOptions, DiscoveryStats } from './types';
 import { cleanupResolvedUpgradeRegistries } from '../sync/search-state-cleanup';
+import type { DiscoveryOptions, DiscoveryStats, UpgradeDiscoveryResult } from './types';
 
 /**
  * Default batch size for inserting search registry entries.

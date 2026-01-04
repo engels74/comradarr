@@ -10,17 +10,17 @@
  * restarts. Cache is updated periodically by ProwlarrHealthMonitor.
  */
 
+import { and, eq, notInArray, sql } from 'drizzle-orm';
+import { DecryptionError, decrypt, encrypt, SecretKeyError } from '$lib/server/crypto';
 import { db } from '$lib/server/db';
 import {
-	prowlarrInstances,
-	prowlarrIndexerHealth,
-	type ProwlarrInstance,
 	type NewProwlarrInstance,
-	type ProwlarrIndexerHealth
+	type ProwlarrIndexerHealth,
+	type ProwlarrInstance,
+	prowlarrIndexerHealth,
+	prowlarrInstances
 } from '$lib/server/db/schema';
-import { eq, and, notInArray, sql } from 'drizzle-orm';
-import { encrypt, decrypt, DecryptionError, SecretKeyError } from '$lib/server/crypto';
-import type { ProwlarrHealthStatus, IndexerHealth } from '$lib/server/services/prowlarr/types';
+import type { IndexerHealth, ProwlarrHealthStatus } from '$lib/server/services/prowlarr/types';
 
 // Re-export crypto errors for consumers
 export { DecryptionError, SecretKeyError };
@@ -281,7 +281,7 @@ export async function upsertIndexerHealth(
 	}));
 
 	// Drizzle upsert with onConflictDoUpdate
-	const result = await db
+	const _result = await db
 		.insert(prowlarrIndexerHealth)
 		.values(values)
 		.onConflictDoUpdate({

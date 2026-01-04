@@ -13,9 +13,9 @@
 
  */
 
+import { and, eq, inArray, sql } from 'drizzle-orm';
 import { db } from '$lib/server/db';
 import { searchRegistry } from '$lib/server/db/schema';
-import { and, eq, inArray, sql } from 'drizzle-orm';
 
 /**
  * Delete search registry entries for content being removed.

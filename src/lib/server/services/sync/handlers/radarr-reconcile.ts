@@ -9,10 +9,10 @@
 
  */
 
-import { db } from '$lib/server/db';
-import { movies } from '$lib/server/db/schema';
 import { and, eq, inArray, sql } from 'drizzle-orm';
 import type { RadarrClient } from '$lib/server/connectors/radarr/client';
+import { db } from '$lib/server/db';
+import { movies } from '$lib/server/db/schema';
 import { mapMovieToDb } from '../mappers';
 import { deleteSearchRegistryForMovies } from '../search-state-cleanup';
 

@@ -45,20 +45,20 @@
 // =============================================================================
 
 export type {
-	ImplementedChannelType,
-	NotificationResult,
-	NotificationPayload,
-	NotificationField,
-	NotificationSenderConfig,
 	// Channel-specific configs
 	DiscordConfig,
 	DiscordSensitiveConfig,
-	TelegramConfig,
-	TelegramSensitiveConfig,
-	SlackConfig,
-	SlackSensitiveConfig,
 	EmailConfig,
 	EmailSensitiveConfig,
+	ImplementedChannelType,
+	NotificationField,
+	NotificationPayload,
+	NotificationResult,
+	NotificationSenderConfig,
+	SlackConfig,
+	SlackSensitiveConfig,
+	TelegramConfig,
+	TelegramSensitiveConfig,
 	WebhookConfig,
 	WebhookSensitiveConfig
 } from './types';
@@ -68,24 +68,24 @@ export type {
 // =============================================================================
 
 export type { NotificationSender } from './base-channel';
-export { DEFAULT_SENDER_CONFIG, EVENT_COLORS, hexColorToInt, getEventColor } from './base-channel';
+export { DEFAULT_SENDER_CONFIG, EVENT_COLORS, getEventColor, hexColorToInt } from './base-channel';
 
 // =============================================================================
 // Error Exports
 // =============================================================================
 
 export {
-	NotificationError,
-	NotificationNetworkError,
+	isNotificationError,
+	isRetryableNotificationError,
 	NotificationAuthenticationError,
+	NotificationConfigurationError,
+	NotificationError,
+	type NotificationErrorCategory,
+	NotificationNetworkError,
 	NotificationRateLimitError,
 	NotificationServerError,
 	NotificationTimeoutError,
-	NotificationConfigurationError,
-	NotificationValidationError,
-	isNotificationError,
-	isRetryableNotificationError,
-	type NotificationErrorCategory
+	NotificationValidationError
 } from './errors';
 
 // =============================================================================
@@ -93,9 +93,9 @@ export {
 // =============================================================================
 
 export { DiscordSender } from './channels/discord';
-export { TelegramSender } from './channels/telegram';
-export { SlackSender } from './channels/slack';
 export { EmailSender } from './channels/email';
+export { SlackSender } from './channels/slack';
+export { TelegramSender } from './channels/telegram';
 export { WebhookSender } from './channels/webhook';
 
 // =============================================================================
@@ -104,9 +104,9 @@ export { WebhookSender } from './channels/webhook';
 
 import type { NotificationSender } from './base-channel';
 import { DiscordSender } from './channels/discord';
-import { TelegramSender } from './channels/telegram';
-import { SlackSender } from './channels/slack';
 import { EmailSender } from './channels/email';
+import { SlackSender } from './channels/slack';
+import { TelegramSender } from './channels/telegram';
 import { WebhookSender } from './channels/webhook';
 import { NotificationConfigurationError } from './errors';
 
@@ -197,11 +197,11 @@ export function clearSenderCache(): void {
 // =============================================================================
 
 export {
-	NotificationDispatcher,
-	getNotificationDispatcher,
-	notify,
+	type DispatchOptions,
 	type DispatchResult,
-	type DispatchOptions
+	getNotificationDispatcher,
+	NotificationDispatcher,
+	notify
 } from './dispatcher';
 
 // =============================================================================
@@ -209,16 +209,16 @@ export {
 // =============================================================================
 
 export {
+	type AppStartedData,
 	buildPayload,
-	type EventDataMap,
-	type SweepStartedData,
-	type SweepCompletedData,
-	type SearchSuccessData,
-	type SearchExhaustedData,
 	type ConnectorHealthChangedData,
+	type EventDataMap,
+	type SearchExhaustedData,
+	type SearchSuccessData,
+	type SweepCompletedData,
+	type SweepStartedData,
 	type SyncCompletedData,
 	type SyncFailedData,
-	type AppStartedData,
 	type UpdateAvailableData
 } from './templates';
 
@@ -226,26 +226,25 @@ export {
 // Batching Exports (Task 36.4, Requirement 9.3)
 // =============================================================================
 
+export { type AggregatedPayloadMetadata, buildAggregatePayload } from './aggregators';
 export {
-	NotificationBatcher,
-	getNotificationBatcher,
-	processBatches,
 	type BatchProcessingResult,
+	type BatchSendResult,
 	type ChannelBatchResult,
-	type BatchSendResult
+	getNotificationBatcher,
+	NotificationBatcher,
+	processBatches
 } from './batcher';
-
-export { buildAggregatePayload, type AggregatedPayloadMetadata } from './aggregators';
 
 // =============================================================================
 // Quiet Hours Exports (Task 36.5, Requirement 9.4)
 // =============================================================================
 
 export {
-	isInQuietHours,
-	parseTimeString,
 	getCurrentTimeInTimezone,
-	timeToMinutes,
+	isInQuietHours,
 	isTimeInRange,
-	type TimeOfDay
+	parseTimeString,
+	type TimeOfDay,
+	timeToMinutes
 } from './quiet-hours';

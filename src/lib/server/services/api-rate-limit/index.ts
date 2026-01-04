@@ -7,7 +7,7 @@
 
 export {
 	ApiKeyRateLimiter,
-	apiKeyRateLimiter,
 	type ApiKeyRateLimitResult,
+	apiKeyRateLimiter,
 	type RateLimitStatus
 } from './api-key-rate-limiter';

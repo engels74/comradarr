@@ -1,94 +1,95 @@
 <script lang="ts">
-	/**
-	 * Backup settings page.
-	 */
-	import { untrack } from 'svelte';
-	import { enhance } from '$app/forms';
-	import * as Card from '$lib/components/ui/card';
-	import { Input } from '$lib/components/ui/input';
-	import { Button } from '$lib/components/ui/button';
-	import { Label } from '$lib/components/ui/label';
-	import { Checkbox } from '$lib/components/ui/checkbox';
-	import { toastStore } from '$lib/components/ui/toast';
-	import type { PageProps } from './$types';
-	import HardDriveDownloadIcon from '@lucide/svelte/icons/hard-drive-download';
-	import TrashIcon from '@lucide/svelte/icons/trash-2';
-	import CalendarIcon from '@lucide/svelte/icons/calendar';
-	import ClockIcon from '@lucide/svelte/icons/clock';
+/**
+ * Backup settings page.
+ */
 
-	let { data, form }: PageProps = $props();
+import CalendarIcon from '@lucide/svelte/icons/calendar';
+import ClockIcon from '@lucide/svelte/icons/clock';
+import HardDriveDownloadIcon from '@lucide/svelte/icons/hard-drive-download';
+import TrashIcon from '@lucide/svelte/icons/trash-2';
+import { untrack } from 'svelte';
+import { enhance } from '$app/forms';
+import { Button } from '$lib/components/ui/button';
+import * as Card from '$lib/components/ui/card';
+import { Checkbox } from '$lib/components/ui/checkbox';
+import { Input } from '$lib/components/ui/input';
+import { Label } from '$lib/components/ui/label';
+import { toastStore } from '$lib/components/ui/toast';
+import type { PageProps } from './$types';
 
-	let isSubmitting = $state(false);
-	let deletingBackupId = $state<string | null>(null);
+let { data, form }: PageProps = $props();
 
-	// Form state with initial values from loaded settings
-	let scheduledEnabled = $state(untrack(() => data.settings.scheduledEnabled));
+let isSubmitting = $state(false);
+let deletingBackupId = $state<string | null>(null);
 
-	// Update scheduledEnabled when form is submitted with errors (preserve user's choice)
-	$effect(() => {
-		if (form && 'scheduledEnabled' in form) {
-			scheduledEnabled = form.scheduledEnabled as boolean;
-		}
-	});
+// Form state with initial values from loaded settings
+let scheduledEnabled = $state(untrack(() => data.settings.scheduledEnabled));
 
-	/**
-	 * Get form value with fallback to loaded data.
-	 */
-	function getFormValue(formValue: string | undefined, settingsValue: string): string {
-		return formValue ?? settingsValue;
+// Update scheduledEnabled when form is submitted with errors (preserve user's choice)
+$effect(() => {
+	if (form && 'scheduledEnabled' in form) {
+		scheduledEnabled = form.scheduledEnabled as boolean;
 	}
+});
 
-	/**
-	 * Get numeric form value with fallback to loaded data.
-	 */
-	function getNumericFormValue(formValue: number | undefined, settingsValue: number): number {
-		return formValue ?? settingsValue;
+/**
+ * Get form value with fallback to loaded data.
+ */
+function getFormValue(formValue: string | undefined, settingsValue: string): string {
+	return formValue ?? settingsValue;
+}
+
+/**
+ * Get numeric form value with fallback to loaded data.
+ */
+function getNumericFormValue(formValue: number | undefined, settingsValue: number): number {
+	return formValue ?? settingsValue;
+}
+
+/**
+ * Format file size in human-readable format.
+ */
+function formatFileSize(bytes: number): string {
+	if (bytes < 1024) return `${bytes} B`;
+	if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+	return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+/**
+ * Format date in human-readable format.
+ */
+function formatDate(isoString: string): string {
+	const date = new Date(isoString);
+	return date.toLocaleString();
+}
+
+/**
+ * Get relative time string.
+ */
+function getRelativeTime(isoString: string): string {
+	const date = new Date(isoString);
+	const now = new Date();
+	const diffMs = date.getTime() - now.getTime();
+	const diffMinutes = Math.round(diffMs / 60000);
+	const diffHours = Math.round(diffMs / 3600000);
+	const diffDays = Math.round(diffMs / 86400000);
+
+	if (diffMs < 0) {
+		// Past
+		const absDiffMinutes = Math.abs(diffMinutes);
+		const absDiffHours = Math.abs(diffHours);
+		const absDiffDays = Math.abs(diffDays);
+
+		if (absDiffMinutes < 60) return `${absDiffMinutes} minutes ago`;
+		if (absDiffHours < 24) return `${absDiffHours} hours ago`;
+		return `${absDiffDays} days ago`;
+	} else {
+		// Future
+		if (diffMinutes < 60) return `in ${diffMinutes} minutes`;
+		if (diffHours < 24) return `in ${diffHours} hours`;
+		return `in ${diffDays} days`;
 	}
-
-	/**
-	 * Format file size in human-readable format.
-	 */
-	function formatFileSize(bytes: number): string {
-		if (bytes < 1024) return `${bytes} B`;
-		if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-		return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-	}
-
-	/**
-	 * Format date in human-readable format.
-	 */
-	function formatDate(isoString: string): string {
-		const date = new Date(isoString);
-		return date.toLocaleString();
-	}
-
-	/**
-	 * Get relative time string.
-	 */
-	function getRelativeTime(isoString: string): string {
-		const date = new Date(isoString);
-		const now = new Date();
-		const diffMs = date.getTime() - now.getTime();
-		const diffMinutes = Math.round(diffMs / 60000);
-		const diffHours = Math.round(diffMs / 3600000);
-		const diffDays = Math.round(diffMs / 86400000);
-
-		if (diffMs < 0) {
-			// Past
-			const absDiffMinutes = Math.abs(diffMinutes);
-			const absDiffHours = Math.abs(diffHours);
-			const absDiffDays = Math.abs(diffDays);
-
-			if (absDiffMinutes < 60) return `${absDiffMinutes} minutes ago`;
-			if (absDiffHours < 24) return `${absDiffHours} hours ago`;
-			return `${absDiffDays} days ago`;
-		} else {
-			// Future
-			if (diffMinutes < 60) return `in ${diffMinutes} minutes`;
-			if (diffHours < 24) return `in ${diffHours} hours`;
-			return `in ${diffDays} days`;
-		}
-	}
+}
 </script>
 
 <svelte:head>

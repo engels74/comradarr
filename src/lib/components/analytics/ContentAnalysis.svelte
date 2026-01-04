@@ -1,81 +1,81 @@
 <script lang="ts">
-	import * as Card from '$lib/components/ui/card';
-	import * as Table from '$lib/components/ui/table';
-	import * as Tabs from '$lib/components/ui/tabs';
-	import { Badge } from '$lib/components/ui/badge';
-	import type {
-		SerializedMostSearchedItem,
-		SerializedHardestToFindItem,
-		SerializedQualityDistribution
-	} from './types';
-	import SearchIcon from '@lucide/svelte/icons/search';
-	import AlertTriangleIcon from '@lucide/svelte/icons/alert-triangle';
-	import StarIcon from '@lucide/svelte/icons/star';
-	import TvIcon from '@lucide/svelte/icons/tv';
-	import FilmIcon from '@lucide/svelte/icons/film';
+import AlertTriangleIcon from '@lucide/svelte/icons/alert-triangle';
+import FilmIcon from '@lucide/svelte/icons/film';
+import SearchIcon from '@lucide/svelte/icons/search';
+import StarIcon from '@lucide/svelte/icons/star';
+import TvIcon from '@lucide/svelte/icons/tv';
+import { Badge } from '$lib/components/ui/badge';
+import * as Card from '$lib/components/ui/card';
+import * as Table from '$lib/components/ui/table';
+import * as Tabs from '$lib/components/ui/tabs';
+import type {
+	SerializedHardestToFindItem,
+	SerializedMostSearchedItem,
+	SerializedQualityDistribution
+} from './types';
 
-	interface Props {
-		mostSearched: SerializedMostSearchedItem[];
-		hardestToFind: SerializedHardestToFindItem[];
-		qualityDistribution: SerializedQualityDistribution[];
-		class?: string;
+interface Props {
+	mostSearched: SerializedMostSearchedItem[];
+	hardestToFind: SerializedHardestToFindItem[];
+	qualityDistribution: SerializedQualityDistribution[];
+	class?: string;
+}
+
+let { mostSearched, hardestToFind, qualityDistribution, class: className = '' }: Props = $props();
+
+/**
+ * Formats content title with episode info if applicable.
+ */
+function formatTitle(item: SerializedMostSearchedItem | SerializedHardestToFindItem): string {
+	if (item.contentType === 'episode' && item.seriesTitle) {
+		const epNum =
+			item.seasonNumber !== null && item.episodeNumber !== null
+				? ` S${String(item.seasonNumber).padStart(2, '0')}E${String(item.episodeNumber).padStart(2, '0')}`
+				: '';
+		return `${item.seriesTitle}${epNum}`;
 	}
+	return item.title;
+}
 
-	let { mostSearched, hardestToFind, qualityDistribution, class: className = '' }: Props = $props();
+/**
+ * Formats date for display.
+ */
+function formatDate(isoString: string): string {
+	return new Date(isoString).toLocaleDateString(undefined, {
+		month: 'short',
+		day: 'numeric'
+	});
+}
 
-	/**
-	 * Formats content title with episode info if applicable.
-	 */
-	function formatTitle(item: SerializedMostSearchedItem | SerializedHardestToFindItem): string {
-		if (item.contentType === 'episode' && item.seriesTitle) {
-			const epNum =
-				item.seasonNumber !== null && item.episodeNumber !== null
-					? ` S${String(item.seasonNumber).padStart(2, '0')}E${String(item.episodeNumber).padStart(2, '0')}`
-					: '';
-			return `${item.seriesTitle}${epNum}`;
-		}
-		return item.title;
+/**
+ * Gets state badge variant based on state.
+ */
+function getStateBadge(state: string): {
+	variant: 'default' | 'secondary' | 'destructive' | 'outline';
+	label: string;
+} {
+	switch (state) {
+		case 'exhausted':
+			return { variant: 'destructive', label: 'Exhausted' };
+		case 'cooldown':
+			return { variant: 'secondary', label: 'Cooldown' };
+		case 'searching':
+			return { variant: 'default', label: 'Searching' };
+		default:
+			return { variant: 'outline', label: state };
 	}
+}
 
-	/**
-	 * Formats date for display.
-	 */
-	function formatDate(isoString: string): string {
-		return new Date(isoString).toLocaleDateString(undefined, {
-			month: 'short',
-			day: 'numeric'
-		});
-	}
+/**
+ * Calculates quality bar width percentage.
+ */
+function getBarWidth(percentage: number): string {
+	return `${Math.max(2, percentage)}%`;
+}
 
-	/**
-	 * Gets state badge variant based on state.
-	 */
-	function getStateBadge(state: string): {
-		variant: 'default' | 'secondary' | 'destructive' | 'outline';
-		label: string;
-	} {
-		switch (state) {
-			case 'exhausted':
-				return { variant: 'destructive', label: 'Exhausted' };
-			case 'cooldown':
-				return { variant: 'secondary', label: 'Cooldown' };
-			case 'searching':
-				return { variant: 'default', label: 'Searching' };
-			default:
-				return { variant: 'outline', label: state };
-		}
-	}
-
-	/**
-	 * Calculates quality bar width percentage.
-	 */
-	function getBarWidth(percentage: number): string {
-		return `${Math.max(2, percentage)}%`;
-	}
-
-	const hasSearchData = $derived(mostSearched.length > 0);
-	const hasFindData = $derived(hardestToFind.length > 0);
-	const hasQualityData = $derived(qualityDistribution.length > 0);
+const hasSearchData = $derived(mostSearched.length > 0);
+const hasFindData = $derived(hardestToFind.length > 0);
+const hasQualityData = $derived(qualityDistribution.length > 0);
 </script>
 
 <Card.Root class={className}>

@@ -12,14 +12,14 @@
  */
 
 import { BaseArrClient } from '../common/base-client.js';
-import type { BaseClientConfig, PaginationOptions, CommandResponse } from '../common/types.js';
 import { parseCommandResponse } from '../common/parsers.js';
+import type { CommandResponse, PaginationOptions } from '../common/types.js';
 import {
-	parseWhisparrSeries,
+	parsePaginatedWhisparrEpisodesLenient,
 	parseWhisparrEpisode,
-	parsePaginatedWhisparrEpisodesLenient
+	parseWhisparrSeries
 } from './parsers.js';
-import type { WhisparrSeries, WhisparrEpisode } from './types.js';
+import type { WhisparrEpisode, WhisparrSeries } from './types.js';
 
 /**
  * Options for fetching wanted episodes (missing or cutoff unmet)
@@ -53,15 +53,6 @@ export interface WantedOptions extends PaginationOptions {
  * ```
  */
 export class WhisparrClient extends BaseArrClient {
-	/**
-	 * Create a new WhisparrClient instance
-	 *
-	 * @param config - Client configuration including baseUrl and apiKey
-	 */
-	constructor(config: BaseClientConfig) {
-		super(config);
-	}
-
 	// Inherited from BaseArrClient:
 	// - ping(): Promise<boolean>
 	// - getSystemStatus(): Promise<SystemStatus>

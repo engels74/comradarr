@@ -70,13 +70,13 @@ export {
 // =============================================================================
 
 export {
+	type CleanupResult,
 	cleanupOldScheduledBackups,
 	createBackup,
 	deleteBackup,
 	getBackupInfo,
 	listBackups,
-	loadBackup,
-	type CleanupResult
+	loadBackup
 } from './backup-service';
 
 // =============================================================================

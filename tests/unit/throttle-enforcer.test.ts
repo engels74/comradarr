@@ -7,14 +7,14 @@
  * - Edge cases for boundary conditions
  */
 
-import { describe, it, expect } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import {
 	getStartOfDayUTC,
 	getStartOfNextDayUTC,
-	isMinuteWindowExpired,
 	isDayWindowExpired,
-	msUntilMinuteWindowExpires,
-	msUntilMidnightUTC
+	isMinuteWindowExpired,
+	msUntilMidnightUTC,
+	msUntilMinuteWindowExpires
 } from '../../src/lib/server/services/throttle/time-utils';
 
 describe('Throttle Utility Functions', () => {

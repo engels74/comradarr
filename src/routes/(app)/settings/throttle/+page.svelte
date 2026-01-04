@@ -1,116 +1,114 @@
 <script lang="ts">
-	/**
-	 * Throttle profiles settings page.
-	 */
-	import { enhance } from '$app/forms';
-	import * as Card from '$lib/components/ui/card';
-	import * as Dialog from '$lib/components/ui/dialog';
-	import { Input } from '$lib/components/ui/input';
-	import { Button } from '$lib/components/ui/button';
-	import { Label } from '$lib/components/ui/label';
-	import { Badge } from '$lib/components/ui/badge';
-	import { Checkbox } from '$lib/components/ui/checkbox';
-	import { Separator } from '$lib/components/ui/separator';
-	import { toastStore } from '$lib/components/ui/toast';
-	import {
-		CONSERVATIVE_PRESET,
-		MODERATE_PRESET,
-		AGGRESSIVE_PRESET
-	} from '$lib/config/throttle-presets';
-	import {
-		throttleProfileLabels,
-		throttleProfileDescriptions
-	} from '$lib/schemas/throttle-profile';
-	import type { PageProps } from './$types';
-	import type { ProfileWithUsage } from './+page.server';
-	import GaugeIcon from '@lucide/svelte/icons/gauge';
-	import PlusIcon from '@lucide/svelte/icons/plus';
-	import PencilIcon from '@lucide/svelte/icons/pencil';
-	import Trash2Icon from '@lucide/svelte/icons/trash-2';
-	import StarIcon from '@lucide/svelte/icons/star';
-	import ZapIcon from '@lucide/svelte/icons/zap';
-	import ShieldIcon from '@lucide/svelte/icons/shield';
-	import RocketIcon from '@lucide/svelte/icons/rocket';
+/**
+ * Throttle profiles settings page.
+ */
 
-	let { data, form }: PageProps = $props();
+import GaugeIcon from '@lucide/svelte/icons/gauge';
+import PencilIcon from '@lucide/svelte/icons/pencil';
+import PlusIcon from '@lucide/svelte/icons/plus';
+import RocketIcon from '@lucide/svelte/icons/rocket';
+import ShieldIcon from '@lucide/svelte/icons/shield';
+import StarIcon from '@lucide/svelte/icons/star';
+import Trash2Icon from '@lucide/svelte/icons/trash-2';
+import ZapIcon from '@lucide/svelte/icons/zap';
+import { enhance } from '$app/forms';
+import { Badge } from '$lib/components/ui/badge';
+import { Button } from '$lib/components/ui/button';
+import * as Card from '$lib/components/ui/card';
+import { Checkbox } from '$lib/components/ui/checkbox';
+import * as Dialog from '$lib/components/ui/dialog';
+import { Input } from '$lib/components/ui/input';
+import { Label } from '$lib/components/ui/label';
+import { Separator } from '$lib/components/ui/separator';
+import { toastStore } from '$lib/components/ui/toast';
+import {
+	AGGRESSIVE_PRESET,
+	CONSERVATIVE_PRESET,
+	MODERATE_PRESET
+} from '$lib/config/throttle-presets';
+import { throttleProfileDescriptions, throttleProfileLabels } from '$lib/schemas/throttle-profile';
+import type { ProfileWithUsage } from './+page.server';
+import type { PageProps } from './$types';
 
-	let isSubmitting = $state(false);
-	let createDialogOpen = $state(false);
-	let editDialogOpen = $state(false);
-	let deleteDialogOpen = $state(false);
-	let editingProfile = $state<ProfileWithUsage | null>(null);
-	let deletingProfile = $state<ProfileWithUsage | null>(null);
+let { data, form }: PageProps = $props();
 
-	// Form state for create dialog
-	let createIsDefault = $state(false);
+let isSubmitting = $state(false);
+let createDialogOpen = $state(false);
+let editDialogOpen = $state(false);
+let deleteDialogOpen = $state(false);
+let editingProfile = $state<ProfileWithUsage | null>(null);
+let deletingProfile = $state<ProfileWithUsage | null>(null);
 
-	// Form state for edit dialog
-	let editIsDefault = $state(false);
+// Form state for create dialog
+let createIsDefault = $state(false);
 
-	// Close dialogs on successful submission and show toast
-	$effect(() => {
-		if (form?.success) {
-			createDialogOpen = false;
-			editDialogOpen = false;
-			deleteDialogOpen = false;
-			editingProfile = null;
-			deletingProfile = null;
-			// Reset form states
-			createIsDefault = false;
-			// Show success toast
-			if (form.message) {
-				toastStore.success(form.message);
-			}
+// Form state for edit dialog
+let editIsDefault = $state(false);
+
+// Close dialogs on successful submission and show toast
+$effect(() => {
+	if (form?.success) {
+		createDialogOpen = false;
+		editDialogOpen = false;
+		deleteDialogOpen = false;
+		editingProfile = null;
+		deletingProfile = null;
+		// Reset form states
+		createIsDefault = false;
+		// Show success toast
+		if (form.message) {
+			toastStore.success(form.message);
 		}
-	});
+	}
+});
 
-	// Sync edit form state when editing profile changes
-	$effect(() => {
-		if (editingProfile) {
-			editIsDefault = editingProfile.isDefault;
+// Sync edit form state when editing profile changes
+$effect(() => {
+	if (editingProfile) {
+		editIsDefault = editingProfile.isDefault;
+	}
+});
+
+/**
+ * Format daily budget for display.
+ */
+function formatDailyBudget(budget: number | null): string {
+	return budget === null ? 'Unlimited' : budget.toLocaleString();
+}
+
+/**
+ * Format seconds into a human-readable string.
+ */
+function formatSeconds(seconds: number): string {
+	if (seconds >= 60) {
+		const minutes = Math.floor(seconds / 60);
+		const remaining = seconds % 60;
+		if (remaining === 0) {
+			return `${minutes}m`;
 		}
-	});
-
-	/**
-	 * Format daily budget for display.
-	 */
-	function formatDailyBudget(budget: number | null): string {
-		return budget === null ? 'Unlimited' : budget.toLocaleString();
+		return `${minutes}m ${remaining}s`;
 	}
+	return `${seconds}s`;
+}
 
-	/**
-	 * Format seconds into a human-readable string.
-	 */
-	function formatSeconds(seconds: number): string {
-		if (seconds >= 60) {
-			const minutes = Math.floor(seconds / 60);
-			const remaining = seconds % 60;
-			if (remaining === 0) {
-				return `${minutes}m`;
-			}
-			return `${minutes}m ${remaining}s`;
-		}
-		return `${seconds}s`;
-	}
+/**
+ * Open edit dialog for a profile.
+ */
+function openEditDialog(profile: ProfileWithUsage) {
+	editingProfile = profile;
+	editDialogOpen = true;
+}
 
-	/**
-	 * Open edit dialog for a profile.
-	 */
-	function openEditDialog(profile: ProfileWithUsage) {
-		editingProfile = profile;
-		editDialogOpen = true;
-	}
+/**
+ * Open delete confirmation dialog.
+ */
+function openDeleteDialog(profile: ProfileWithUsage) {
+	deletingProfile = profile;
+	deleteDialogOpen = true;
+}
 
-	/**
-	 * Open delete confirmation dialog.
-	 */
-	function openDeleteDialog(profile: ProfileWithUsage) {
-		deletingProfile = profile;
-		deleteDialogOpen = true;
-	}
-
-	// Common input styling
-	const inputClass = 'w-full';
+// Common input styling
+const inputClass = 'w-full';
 </script>
 
 <svelte:head>

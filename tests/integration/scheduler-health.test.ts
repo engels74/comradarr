@@ -13,15 +13,15 @@
  * Run with: bun test tests/integration/scheduler-health.test.ts
  */
 
-import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'bun:test';
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'bun:test';
+import { eq } from 'drizzle-orm';
 import * as fc from 'fast-check';
 import { db } from '../../src/lib/server/db';
-import { connectors } from '../../src/lib/server/db/schema';
-import { eq } from 'drizzle-orm';
 import {
 	getEnabledConnectors,
 	getHealthyConnectors
 } from '../../src/lib/server/db/queries/connectors';
+import { connectors } from '../../src/lib/server/db/schema';
 
 // Store original SECRET_KEY to restore after tests
 const originalSecretKey = process.env.SECRET_KEY;
@@ -40,7 +40,7 @@ type HealthStatus = (typeof HEALTH_STATUSES)[number];
 const HEALTHY_STATUSES: HealthStatus[] = ['healthy', 'degraded'];
 
 // Health statuses that should be excluded from sweep cycles
-const UNHEALTHY_STATUSES: HealthStatus[] = ['unhealthy', 'offline', 'unknown'];
+const _UNHEALTHY_STATUSES: HealthStatus[] = ['unhealthy', 'offline', 'unknown'];
 
 /**
  * Create a test connector with specific health status

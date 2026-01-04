@@ -11,21 +11,21 @@
  */
 
 import { fail } from '@sveltejs/kit';
-import type { Actions, PageServerLoad } from './$types';
 import {
-	getQueueList,
-	getConnectorsForQueueFilter,
-	getQueueStatusCounts,
+	clearQueueForConnectors,
 	getAllThrottleInfo,
+	getConnectorsForQueueFilter,
+	getQueueList,
 	getQueuePauseStatus,
+	getQueueStatusCounts,
 	getRecentCompletions,
 	parseQueueFilters,
-	updateQueueItemPriority,
-	removeFromQueueByIds,
 	pauseQueueForConnectors,
+	removeFromQueueByIds,
 	resumeQueueForConnectors,
-	clearQueueForConnectors
+	updateQueueItemPriority
 } from '$lib/server/db/queries/queue';
+import type { Actions, PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ url, depends }) => {
 	// Register custom dependency for selective invalidation

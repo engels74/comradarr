@@ -11,7 +11,7 @@
 
 /** AES-256-GCM algorithm configuration */
 const ALGORITHM = 'AES-GCM';
-const KEY_LENGTH = 256;
+const _KEY_LENGTH = 256;
 const IV_LENGTH = 16; // 128 bits
 const AUTH_TAG_LENGTH = 128; // bits
 

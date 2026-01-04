@@ -1,89 +1,87 @@
 <script lang="ts">
-	import { goto } from '$app/navigation';
-	import { page } from '$app/stores';
-	import { Badge } from '$lib/components/ui/badge';
-	import { Checkbox } from '$lib/components/ui/checkbox';
-	import * as Table from '$lib/components/ui/table';
-	import { cn } from '$lib/utils.js';
-	import ContentStatusBadge from './ContentStatusBadge.svelte';
-	import type { ContentItem } from '$lib/server/db/queries/content';
+import { goto } from '$app/navigation';
+import { page } from '$app/stores';
+import { Badge } from '$lib/components/ui/badge';
+import { Checkbox } from '$lib/components/ui/checkbox';
+import * as Table from '$lib/components/ui/table';
+import type { ContentItem } from '$lib/server/db/queries/content';
+import { cn } from '$lib/utils.js';
+import ContentStatusBadge from './ContentStatusBadge.svelte';
 
-	/**
-	 * Content table with sortable columns and selection support.
-	 */
+/**
+ * Content table with sortable columns and selection support.
+ */
 
-	interface Props {
-		items: ContentItem[];
-		selectedKeys?: Set<string> | undefined;
-		onToggleSelection?: ((key: string, shiftKey: boolean) => void) | undefined;
-		onToggleAll?: (() => void) | undefined;
+interface Props {
+	items: ContentItem[];
+	selectedKeys?: Set<string> | undefined;
+	onToggleSelection?: ((key: string, shiftKey: boolean) => void) | undefined;
+	onToggleAll?: (() => void) | undefined;
+}
+
+let { items, selectedKeys, onToggleSelection, onToggleAll }: Props = $props();
+
+// Computed selection states
+const selectionEnabled = $derived(selectedKeys !== undefined && onToggleSelection !== undefined);
+const allSelected = $derived(
+	selectionEnabled && items.length > 0 && items.every((item) => selectedKeys!.has(getItemKey(item)))
+);
+const someSelected = $derived(
+	selectionEnabled && items.some((item) => selectedKeys!.has(getItemKey(item))) && !allSelected
+);
+
+/**
+ * Gets the unique key for an item.
+ */
+function getItemKey(item: ContentItem): string {
+	return `${item.type}-${item.id}`;
+}
+
+/**
+ * Handles checkbox click for row selection.
+ */
+function handleRowCheckboxClick(item: ContentItem, event: MouseEvent) {
+	if (onToggleSelection) {
+		onToggleSelection(getItemKey(item), event.shiftKey);
+	}
+}
+
+// Get current sort state from URL
+const currentSort = $derived($page.url.searchParams.get('sort') ?? 'title');
+const currentOrder = $derived($page.url.searchParams.get('order') ?? 'asc');
+
+/**
+ * Toggles sort on a column.
+ */
+function toggleSort(column: string) {
+	const params = new URLSearchParams($page.url.searchParams);
+
+	if (currentSort === column) {
+		// Toggle direction
+		params.set('order', currentOrder === 'asc' ? 'desc' : 'asc');
+	} else {
+		// New column, default to ascending
+		params.set('sort', column);
+		params.set('order', 'asc');
 	}
 
-	let { items, selectedKeys, onToggleSelection, onToggleAll }: Props = $props();
+	goto(`/content?${params.toString()}`);
+}
 
-	// Computed selection states
-	const selectionEnabled = $derived(selectedKeys !== undefined && onToggleSelection !== undefined);
-	const allSelected = $derived(
-		selectionEnabled &&
-			items.length > 0 &&
-			items.every((item) => selectedKeys!.has(getItemKey(item)))
-	);
-	const someSelected = $derived(
-		selectionEnabled && items.some((item) => selectedKeys!.has(getItemKey(item))) && !allSelected
-	);
+/**
+ * Gets sort indicator for column header.
+ */
+function getSortIndicator(column: string): string {
+	if (currentSort !== column) return '';
+	return currentOrder === 'asc' ? ' \u2191' : ' \u2193';
+}
 
-	/**
-	 * Gets the unique key for an item.
-	 */
-	function getItemKey(item: ContentItem): string {
-		return `${item.type}-${item.id}`;
-	}
-
-	/**
-	 * Handles checkbox click for row selection.
-	 */
-	function handleRowCheckboxClick(item: ContentItem, event: MouseEvent) {
-		if (onToggleSelection) {
-			onToggleSelection(getItemKey(item), event.shiftKey);
-		}
-	}
-
-	// Get current sort state from URL
-	const currentSort = $derived($page.url.searchParams.get('sort') ?? 'title');
-	const currentOrder = $derived($page.url.searchParams.get('order') ?? 'asc');
-
-	/**
-	 * Toggles sort on a column.
-	 */
-	function toggleSort(column: string) {
-		const params = new URLSearchParams($page.url.searchParams);
-
-		if (currentSort === column) {
-			// Toggle direction
-			params.set('order', currentOrder === 'asc' ? 'desc' : 'asc');
-		} else {
-			// New column, default to ascending
-			params.set('sort', column);
-			params.set('order', 'asc');
-		}
-
-		goto(`/content?${params.toString()}`);
-	}
-
-	/**
-	 * Gets sort indicator for column header.
-	 */
-	function getSortIndicator(column: string): string {
-		if (currentSort !== column) return '';
-		return currentOrder === 'asc' ? ' \u2191' : ' \u2193';
-	}
-
-	// Connector type colors (matching existing ConnectorCard pattern)
-	const typeColors: Record<string, string> = {
-		sonarr: 'bg-blue-500/10 text-blue-600 dark:text-blue-400',
-		radarr: 'bg-orange-500/10 text-orange-600 dark:text-orange-400',
-		whisparr: 'bg-purple-500/10 text-purple-600 dark:text-purple-400'
-	};
+// Connector type colors (matching existing ConnectorCard pattern)
+const typeColors: Record<string, string> = {
+	sonarr: 'bg-blue-500/10 text-blue-600 dark:text-blue-400',
+	radarr: 'bg-orange-500/10 text-orange-600 dark:text-orange-400',
+	whisparr: 'bg-purple-500/10 text-purple-600 dark:text-purple-400'
+};
 </script>
 
 <div class="rounded-md border">

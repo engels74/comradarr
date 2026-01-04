@@ -2,13 +2,13 @@
  * Search behavior settings page server load and actions.
  */
 
-import type { PageServerLoad, Actions } from './$types';
-import { getSearchSettings, updateSearchSettings } from '$lib/server/db/queries/settings';
-import { invalidateSearchConfigCache } from '$lib/server/services/queue/config';
 import { fail } from '@sveltejs/kit';
 import * as v from 'valibot';
-import { SearchSettingsSchema, SEARCH_SETTINGS_DEFAULTS } from '$lib/schemas/search-settings';
+import { SEARCH_SETTINGS_DEFAULTS, SearchSettingsSchema } from '$lib/schemas/search-settings';
+import { getSearchSettings, updateSearchSettings } from '$lib/server/db/queries/settings';
 import { createLogger } from '$lib/server/logger';
+import { invalidateSearchConfigCache } from '$lib/server/services/queue/config';
+import type { Actions, PageServerLoad } from './$types';
 
 const logger = createLogger('search-settings');
 

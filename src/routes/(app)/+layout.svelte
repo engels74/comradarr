@@ -1,8 +1,8 @@
 <script lang="ts">
-	import { Sidebar } from '$lib/components/layout';
-	import type { LayoutProps } from './$types';
+import { Sidebar } from '$lib/components/layout';
+import type { LayoutProps } from './$types';
 
-	let { data, children }: LayoutProps = $props();
+let { data, children }: LayoutProps = $props();
 </script>
 
 <div class="min-h-screen">

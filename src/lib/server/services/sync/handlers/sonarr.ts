@@ -8,13 +8,13 @@
 
  */
 
-import { db } from '$lib/server/db';
-import { series, seasons, episodes } from '$lib/server/db/schema';
 import { sql } from 'drizzle-orm';
 import type { SonarrClient } from '$lib/server/connectors/sonarr/client';
-import type { WhisparrClient } from '$lib/server/connectors/whisparr/client';
 import type { SonarrSeries } from '$lib/server/connectors/sonarr/types';
-import { mapSeriesToDb, mapSeasonToDb, mapEpisodeToDb } from '../mappers';
+import type { WhisparrClient } from '$lib/server/connectors/whisparr/client';
+import { db } from '$lib/server/db';
+import { episodes, seasons, series } from '$lib/server/db/schema';
+import { mapEpisodeToDb, mapSeasonToDb, mapSeriesToDb } from '../mappers';
 import type { SyncOptions } from '../types';
 
 /** Default concurrency for parallel episode fetching */

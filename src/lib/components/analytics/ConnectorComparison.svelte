@@ -1,43 +1,43 @@
 <script lang="ts">
-	import * as Card from '$lib/components/ui/card';
-	import * as Table from '$lib/components/ui/table';
-	import { Badge } from '$lib/components/ui/badge';
-	import type { SerializedConnectorStats } from './types';
-	import ServerIcon from '@lucide/svelte/icons/server';
+import ServerIcon from '@lucide/svelte/icons/server';
+import { Badge } from '$lib/components/ui/badge';
+import * as Card from '$lib/components/ui/card';
+import * as Table from '$lib/components/ui/table';
+import type { SerializedConnectorStats } from './types';
 
-	interface Props {
-		stats: SerializedConnectorStats[];
-		class?: string;
-	}
+interface Props {
+	stats: SerializedConnectorStats[];
+	class?: string;
+}
 
-	let { stats, class: className = '' }: Props = $props();
+let { stats, class: className = '' }: Props = $props();
 
-	// Connector type colors
-	const connectorTypeColors: Record<string, string> = {
-		sonarr: 'bg-blue-500/10 text-blue-700 dark:text-blue-400',
-		radarr: 'bg-orange-500/10 text-orange-700 dark:text-orange-400',
-		whisparr: 'bg-purple-500/10 text-purple-700 dark:text-purple-400'
-	};
+// Connector type colors
+const connectorTypeColors: Record<string, string> = {
+	sonarr: 'bg-blue-500/10 text-blue-700 dark:text-blue-400',
+	radarr: 'bg-orange-500/10 text-orange-700 dark:text-orange-400',
+	whisparr: 'bg-purple-500/10 text-purple-700 dark:text-purple-400'
+};
 
-	/**
-	 * Gets success rate color class based on percentage.
-	 */
-	function getSuccessRateColor(rate: number): string {
-		if (rate >= 80) return 'text-green-600 dark:text-green-400';
-		if (rate >= 50) return 'text-yellow-600 dark:text-yellow-400';
-		return 'text-red-600 dark:text-red-400';
-	}
+/**
+ * Gets success rate color class based on percentage.
+ */
+function getSuccessRateColor(rate: number): string {
+	if (rate >= 80) return 'text-green-600 dark:text-green-400';
+	if (rate >= 50) return 'text-yellow-600 dark:text-yellow-400';
+	return 'text-red-600 dark:text-red-400';
+}
 
-	/**
-	 * Formats response time for display.
-	 */
-	function formatResponseTime(ms: number | null): string {
-		if (ms === null) return '-';
-		if (ms < 1000) return `${ms}ms`;
-		return `${(ms / 1000).toFixed(1)}s`;
-	}
+/**
+ * Formats response time for display.
+ */
+function formatResponseTime(ms: number | null): string {
+	if (ms === null) return '-';
+	if (ms < 1000) return `${ms}ms`;
+	return `${(ms / 1000).toFixed(1)}s`;
+}
 
-	const hasData = $derived(stats.length > 0);
+const hasData = $derived(stats.length > 0);
 </script>
 
 <Card.Root class={className}>

@@ -10,30 +10,27 @@
  * Run with: bun test tests/integration/throttle-enforcer.test.ts
  */
 
-import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'bun:test';
-import { db } from '../../src/lib/server/db';
-import { connectors, throttleProfiles, throttleState } from '../../src/lib/server/db/schema';
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'bun:test';
 import { eq } from 'drizzle-orm';
+import { MODERATE_PRESET } from '../../src/lib/config/throttle-presets';
+import { db } from '../../src/lib/server/db';
 import {
-	ThrottleEnforcer,
-	throttleEnforcer
-} from '../../src/lib/server/services/throttle/throttle-enforcer';
-import {
-	getThrottleState,
-	getOrCreateThrottleState,
-	incrementRequestCounters,
-	resetMinuteWindow,
-	resetDayWindow,
-	setPausedUntil,
-	getStartOfDayUTC
-} from '../../src/lib/server/db/queries/throttle-state';
-import {
-	getThrottleProfileForConnector,
-	createThrottleProfile,
 	assignThrottleProfileToConnector,
-	deleteThrottleProfile
+	createThrottleProfile,
+	deleteThrottleProfile,
+	getThrottleProfileForConnector
 } from '../../src/lib/server/db/queries/throttle';
-import { MODERATE_PRESET, CONSERVATIVE_PRESET } from '../../src/lib/config/throttle-presets';
+import {
+	getOrCreateThrottleState,
+	getStartOfDayUTC,
+	getThrottleState,
+	incrementRequestCounters,
+	resetDayWindow,
+	resetMinuteWindow,
+	setPausedUntil
+} from '../../src/lib/server/db/queries/throttle-state';
+import { connectors, throttleState } from '../../src/lib/server/db/schema';
+import { throttleEnforcer } from '../../src/lib/server/services/throttle/throttle-enforcer';
 
 // Store original SECRET_KEY to restore after tests
 const originalSecretKey = process.env.SECRET_KEY;
@@ -293,7 +290,7 @@ describe('ThrottleEnforcer.canDispatch', () => {
 	describe('Per-minute rate limit (Requirement 7.1)', () => {
 		it('should deny dispatch when minute limit exceeded', async () => {
 			// Default profile is Moderate with 5 requests/minute
-			const state = await getOrCreateThrottleState(testConnectorId);
+			const _state = await getOrCreateThrottleState(testConnectorId);
 
 			// Manually set requests to limit
 			await db

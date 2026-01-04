@@ -10,10 +10,10 @@
 
  */
 
-import { db } from '$lib/server/db';
 import { sql } from 'drizzle-orm';
-import type { MaintenanceOptions, MaintenanceResult } from './types';
+import { db } from '$lib/server/db';
 import { createLogger } from '$lib/server/logger';
+import type { MaintenanceOptions, MaintenanceResult } from './types';
 
 const logger = createLogger('maintenance');
 

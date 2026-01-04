@@ -6,7 +6,7 @@
  * - When LOG_LEVEL is set to trace, include full request and response bodies
  */
 
-import { logLevels, type LogLevel } from '$lib/schemas/settings';
+import { type LogLevel, logLevels } from '$lib/schemas/settings';
 import { getCorrelationId } from '$lib/server/context';
 import { addLogEntry, type BufferedLogEntry } from '$lib/server/services/log-buffer';
 

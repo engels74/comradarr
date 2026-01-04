@@ -19,20 +19,19 @@
  */
 
 import type { NotificationChannel } from '$lib/server/db/schema';
+import type { NotificationSender } from '../base-channel';
+import { DEFAULT_SENDER_CONFIG } from '../base-channel';
+import {
+	NotificationConfigurationError,
+	NotificationNetworkError,
+	NotificationTimeoutError
+} from '../errors';
 import type {
 	NotificationPayload,
 	NotificationResult,
 	WebhookConfig,
 	WebhookSensitiveConfig
 } from '../types';
-import type { NotificationSender } from '../base-channel';
-import { DEFAULT_SENDER_CONFIG } from '../base-channel';
-import {
-	NotificationConfigurationError,
-	NotificationServerError,
-	NotificationNetworkError,
-	NotificationTimeoutError
-} from '../errors';
 
 // =============================================================================
 // Constants

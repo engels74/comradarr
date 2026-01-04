@@ -7,23 +7,23 @@
 
  */
 
+import type { Transporter } from 'nodemailer';
+import nodemailer from 'nodemailer';
+import type SMTPTransport from 'nodemailer/lib/smtp-transport';
 import type { NotificationChannel } from '$lib/server/db/schema';
-import type {
-	NotificationPayload,
-	NotificationResult,
-	EmailConfig,
-	EmailSensitiveConfig
-} from '../types';
 import type { NotificationSender } from '../base-channel';
 import { DEFAULT_SENDER_CONFIG, getEventColor } from '../base-channel';
 import {
+	NotificationAuthenticationError,
 	NotificationConfigurationError,
-	NotificationNetworkError,
-	NotificationAuthenticationError
+	NotificationNetworkError
 } from '../errors';
-import nodemailer from 'nodemailer';
-import type { Transporter } from 'nodemailer';
-import type SMTPTransport from 'nodemailer/lib/smtp-transport';
+import type {
+	EmailConfig,
+	EmailSensitiveConfig,
+	NotificationPayload,
+	NotificationResult
+} from '../types';
 
 // =============================================================================
 // Email Sender Implementation

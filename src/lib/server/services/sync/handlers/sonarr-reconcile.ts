@@ -9,13 +9,13 @@
 
  */
 
-import { db } from '$lib/server/db';
-import { series, seasons, episodes } from '$lib/server/db/schema';
-import { and, eq, inArray, notInArray, sql } from 'drizzle-orm';
+import { and, eq, inArray, sql } from 'drizzle-orm';
 import type { SonarrClient } from '$lib/server/connectors/sonarr/client';
-import type { WhisparrClient } from '$lib/server/connectors/whisparr/client';
 import type { SonarrSeries } from '$lib/server/connectors/sonarr/types';
-import { mapSeriesToDb, mapSeasonToDb, mapEpisodeToDb } from '../mappers';
+import type { WhisparrClient } from '$lib/server/connectors/whisparr/client';
+import { db } from '$lib/server/db';
+import { episodes, seasons, series } from '$lib/server/db/schema';
+import { mapEpisodeToDb, mapSeasonToDb, mapSeriesToDb } from '../mappers';
 import { deleteSearchRegistryForEpisodes } from '../search-state-cleanup';
 import type { SyncOptions } from '../types';
 
@@ -317,9 +317,9 @@ async function upsertSeasons(
 async function reconcileEpisodesForSeries(
 	connectorId: number,
 	seriesDbId: number,
-	seriesArrId: number,
+	_seriesArrId: number,
 	apiEpisodes: Awaited<ReturnType<SeriesClient['getEpisodes']>>,
-	seriesIdMap: Map<number, number>,
+	_seriesIdMap: Map<number, number>,
 	seasonIdMap: Map<string, number>
 ): Promise<{ created: number; updated: number; deleted: number; searchStateDeleted: number }> {
 	const result = { created: 0, updated: 0, deleted: 0, searchStateDeleted: 0 };

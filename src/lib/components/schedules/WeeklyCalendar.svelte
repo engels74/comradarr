@@ -1,27 +1,23 @@
 <script lang="ts">
-	/**
-	 * Weekly Calendar - 7-day grid view of scheduled sweeps.
-	 */
-	import { cn } from '$lib/utils.js';
-	import { TimelineEvent } from './index';
-	import {
-		type CalendarDay,
-		type ScheduledRun,
-		getShortDayName,
-		formatCalendarDate
-	} from './types';
-	import CalendarIcon from '@lucide/svelte/icons/calendar';
+/**
+ * Weekly Calendar - 7-day grid view of scheduled sweeps.
+ */
 
-	interface Props {
-		/** Calendar days data from server */
-		calendarDays: CalendarDay[];
-		/** All runs for conflict name lookup */
-		allRuns: ScheduledRun[];
-		/** Additional CSS classes */
-		class?: string;
-	}
+import CalendarIcon from '@lucide/svelte/icons/calendar';
+import { cn } from '$lib/utils.js';
+import { TimelineEvent } from './index';
+import { type CalendarDay, formatCalendarDate, getShortDayName, type ScheduledRun } from './types';
 
-	let { calendarDays, allRuns, class: className = '' }: Props = $props();
+interface Props {
+	/** Calendar days data from server */
+	calendarDays: CalendarDay[];
+	/** All runs for conflict name lookup */
+	allRuns: ScheduledRun[];
+	/** Additional CSS classes */
+	class?: string;
+}
+
+let { calendarDays, allRuns, class: className = '' }: Props = $props();
 </script>
 
 <div class={cn('', className)}>

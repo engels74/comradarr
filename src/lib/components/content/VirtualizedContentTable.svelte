@@ -1,119 +1,117 @@
 <script lang="ts">
-	import { createVirtualizer } from '@tanstack/svelte-virtual';
-	import { goto } from '$app/navigation';
-	import { page } from '$app/stores';
-	import { Badge } from '$lib/components/ui/badge';
-	import { Checkbox } from '$lib/components/ui/checkbox';
-	import { cn } from '$lib/utils.js';
-	import ContentStatusBadge from './ContentStatusBadge.svelte';
-	import type { ContentItem } from '$lib/server/db/queries/content';
+import { createVirtualizer } from '@tanstack/svelte-virtual';
+import { goto } from '$app/navigation';
+import { page } from '$app/stores';
+import { Badge } from '$lib/components/ui/badge';
+import { Checkbox } from '$lib/components/ui/checkbox';
+import type { ContentItem } from '$lib/server/db/queries/content';
+import { cn } from '$lib/utils.js';
+import ContentStatusBadge from './ContentStatusBadge.svelte';
 
-	/**
-	 * Virtualized content table for large datasets.
-	 * Uses TanStack Virtual to only render visible rows.
-	 */
+/**
+ * Virtualized content table for large datasets.
+ * Uses TanStack Virtual to only render visible rows.
+ */
 
-	interface Props {
-		items: ContentItem[];
-		selectedKeys?: Set<string> | undefined;
-		onToggleSelection?: ((key: string, shiftKey: boolean) => void) | undefined;
-		onToggleAll?: (() => void) | undefined;
-		maxHeight?: string;
+interface Props {
+	items: ContentItem[];
+	selectedKeys?: Set<string> | undefined;
+	onToggleSelection?: ((key: string, shiftKey: boolean) => void) | undefined;
+	onToggleAll?: (() => void) | undefined;
+	maxHeight?: string;
+}
+
+let { items, selectedKeys, onToggleSelection, onToggleAll, maxHeight = '70vh' }: Props = $props();
+
+// Scroll container reference
+let scrollContainer: HTMLDivElement | null = $state(null);
+
+// Virtualizer configuration
+const ROW_HEIGHT = 52; // Height of each table row in pixels
+const OVERSCAN = 5; // Number of rows to render outside visible area
+
+// Create virtualizer - returns a Svelte store
+const virtualizerStore = $derived(
+	scrollContainer
+		? createVirtualizer({
+				count: items.length,
+				getScrollElement: () => scrollContainer,
+				estimateSize: () => ROW_HEIGHT,
+				overscan: OVERSCAN
+			})
+		: null
+);
+
+// Subscribe to the virtualizer store to get the current state
+// Use optional chaining as the store value may be null during initialization
+const virtualItems = $derived.by(() => {
+	if (!virtualizerStore) return [];
+	return $virtualizerStore?.getVirtualItems() ?? [];
+});
+const totalHeight = $derived.by(() => {
+	if (!virtualizerStore) return 0;
+	return $virtualizerStore?.getTotalSize() ?? 0;
+});
+
+// Computed selection states
+const selectionEnabled = $derived(selectedKeys !== undefined && onToggleSelection !== undefined);
+const allSelected = $derived(
+	selectionEnabled && items.length > 0 && items.every((item) => selectedKeys!.has(getItemKey(item)))
+);
+const someSelected = $derived(
+	selectionEnabled && items.some((item) => selectedKeys!.has(getItemKey(item))) && !allSelected
+);
+
+/**
+ * Gets the unique key for an item.
+ */
+function getItemKey(item: ContentItem): string {
+	return `${item.type}-${item.id}`;
+}
+
+/**
+ * Handles checkbox click for row selection.
+ */
+function handleRowCheckboxClick(item: ContentItem, event: MouseEvent) {
+	if (onToggleSelection) {
+		onToggleSelection(getItemKey(item), event.shiftKey);
+	}
+}
+
+// Get current sort state from URL
+const currentSort = $derived($page.url.searchParams.get('sort') ?? 'title');
+const currentOrder = $derived($page.url.searchParams.get('order') ?? 'asc');
+
+/**
+ * Toggles sort on a column.
+ */
+function toggleSort(column: string) {
+	const params = new URLSearchParams($page.url.searchParams);
+
+	if (currentSort === column) {
+		params.set('order', currentOrder === 'asc' ? 'desc' : 'asc');
+	} else {
+		params.set('sort', column);
+		params.set('order', 'asc');
 	}
 
-	let { items, selectedKeys, onToggleSelection, onToggleAll, maxHeight = '70vh' }: Props = $props();
+	goto(`/content?${params.toString()}`);
+}
 
-	// Scroll container reference
-	let scrollContainer: HTMLDivElement | null = $state(null);
+/**
+ * Gets sort indicator for column header.
+ */
+function getSortIndicator(column: string): string {
+	if (currentSort !== column) return '';
+	return currentOrder === 'asc' ? ' \u2191' : ' \u2193';
+}
 
-	// Virtualizer configuration
-	const ROW_HEIGHT = 52; // Height of each table row in pixels
-	const OVERSCAN = 5; // Number of rows to render outside visible area
-
-	// Create virtualizer - returns a Svelte store
-	const virtualizerStore = $derived(
-		scrollContainer
-			? createVirtualizer({
-					count: items.length,
-					getScrollElement: () => scrollContainer,
-					estimateSize: () => ROW_HEIGHT,
-					overscan: OVERSCAN
-				})
-			: null
-	);
-
-	// Subscribe to the virtualizer store to get the current state
-	// Use optional chaining as the store value may be null during initialization
-	const virtualItems = $derived.by(() => {
-		if (!virtualizerStore) return [];
-		return $virtualizerStore?.getVirtualItems() ?? [];
-	});
-	const totalHeight = $derived.by(() => {
-		if (!virtualizerStore) return 0;
-		return $virtualizerStore?.getTotalSize() ?? 0;
-	});
-
-	// Computed selection states
-	const selectionEnabled = $derived(selectedKeys !== undefined && onToggleSelection !== undefined);
-	const allSelected = $derived(
-		selectionEnabled &&
-			items.length > 0 &&
-			items.every((item) => selectedKeys!.has(getItemKey(item)))
-	);
-	const someSelected = $derived(
-		selectionEnabled && items.some((item) => selectedKeys!.has(getItemKey(item))) && !allSelected
-	);
-
-	/**
-	 * Gets the unique key for an item.
-	 */
-	function getItemKey(item: ContentItem): string {
-		return `${item.type}-${item.id}`;
-	}
-
-	/**
-	 * Handles checkbox click for row selection.
-	 */
-	function handleRowCheckboxClick(item: ContentItem, event: MouseEvent) {
-		if (onToggleSelection) {
-			onToggleSelection(getItemKey(item), event.shiftKey);
-		}
-	}
-
-	// Get current sort state from URL
-	const currentSort = $derived($page.url.searchParams.get('sort') ?? 'title');
-	const currentOrder = $derived($page.url.searchParams.get('order') ?? 'asc');
-
-	/**
-	 * Toggles sort on a column.
-	 */
-	function toggleSort(column: string) {
-		const params = new URLSearchParams($page.url.searchParams);
-
-		if (currentSort === column) {
-			params.set('order', currentOrder === 'asc' ? 'desc' : 'asc');
-		} else {
-			params.set('sort', column);
-			params.set('order', 'asc');
-		}
-
-		goto(`/content?${params.toString()}`);
-	}
-
-	/**
-	 * Gets sort indicator for column header.
-	 */
-	function getSortIndicator(column: string): string {
-		if (currentSort !== column) return '';
-		return currentOrder === 'asc' ? ' \u2191' : ' \u2193';
-	}
-
-	// Connector type colors (matching existing pattern)
-	const typeColors: Record<string, string> = {
-		sonarr: 'bg-blue-500/10 text-blue-600 dark:text-blue-400',
-		radarr: 'bg-orange-500/10 text-orange-600 dark:text-orange-400',
-		whisparr: 'bg-purple-500/10 text-purple-600 dark:text-purple-400'
-	};
+// Connector type colors (matching existing pattern)
+const typeColors: Record<string, string> = {
+	sonarr: 'bg-blue-500/10 text-blue-600 dark:text-blue-400',
+	radarr: 'bg-orange-500/10 text-orange-600 dark:text-orange-400',
+	whisparr: 'bg-purple-500/10 text-purple-600 dark:text-purple-400'
+};
 </script>
 
 <div class="rounded-md border">

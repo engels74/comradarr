@@ -11,14 +11,14 @@
 
  */
 
-import { describe, it, expect } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import {
-	runWithContext,
+	generateCorrelationId,
 	getContext,
 	getCorrelationId,
 	hasContext,
-	generateCorrelationId,
-	type RequestContext
+	type RequestContext,
+	runWithContext
 } from '../../src/lib/server/context';
 
 describe('Request Context', () => {

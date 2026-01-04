@@ -1,39 +1,39 @@
 <script lang="ts">
-	/**
-	 * New schedule form page.
-	 */
-	import { untrack } from 'svelte';
-	import { enhance } from '$app/forms';
-	import { goto } from '$app/navigation';
-	import * as Card from '$lib/components/ui/card';
-	import { Input } from '$lib/components/ui/input';
-	import { Button } from '$lib/components/ui/button';
-	import { Label } from '$lib/components/ui/label';
-	import { toastStore } from '$lib/components/ui/toast';
-	import { CronBuilder } from '$lib/components/schedules';
-	import { sweepTypes, timezoneOptions } from '$lib/schemas/schedules';
-	import type { ActionData, PageProps } from './$types';
+/**
+ * New schedule form page.
+ */
+import { untrack } from 'svelte';
+import { enhance } from '$app/forms';
+import { goto } from '$app/navigation';
+import { CronBuilder } from '$lib/components/schedules';
+import { Button } from '$lib/components/ui/button';
+import * as Card from '$lib/components/ui/card';
+import { Input } from '$lib/components/ui/input';
+import { Label } from '$lib/components/ui/label';
+import { toastStore } from '$lib/components/ui/toast';
+import { sweepTypes, timezoneOptions } from '$lib/schemas/schedules';
+import type { ActionData, PageProps } from './$types';
 
-	let { data, form }: PageProps & { form: ActionData } = $props();
+let { data, form }: PageProps & { form: ActionData } = $props();
 
-	let isSubmitting = $state(false);
+let isSubmitting = $state(false);
 
-	// Form state - use untrack to explicitly capture initial values without reactive tracking
-	let cronExpression = $state(untrack(() => form?.cronExpression ?? '0 3 * * *'));
-	let timezone = $state(untrack(() => form?.timezone ?? 'UTC'));
+// Form state - use untrack to explicitly capture initial values without reactive tracking
+let cronExpression = $state(untrack(() => form?.cronExpression ?? '0 3 * * *'));
+let timezone = $state(untrack(() => form?.timezone ?? 'UTC'));
 
-	const isLoading = $derived(isSubmitting);
+const isLoading = $derived(isSubmitting);
 
-	// Select styling
-	const selectClass =
-		'flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 md:text-sm';
+// Select styling
+const selectClass =
+	'flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 md:text-sm';
 
-	/**
-	 * Format sweep type for display.
-	 */
-	function formatSweepType(type: string): string {
-		return type === 'incremental' ? 'Incremental Sync' : 'Full Reconciliation';
-	}
+/**
+ * Format sweep type for display.
+ */
+function formatSweepType(type: string): string {
+	return type === 'incremental' ? 'Incremental Sync' : 'Full Reconciliation';
+}
 </script>
 
 <svelte:head>

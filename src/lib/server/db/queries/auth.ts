@@ -2,17 +2,17 @@
  * Database queries for authentication operations.
  */
 
-import { db } from '$lib/server/db';
-import { users, sessions, type User, type NewUser } from '$lib/server/db/schema';
-import { eq, sql, and, ne, desc } from 'drizzle-orm';
+import { and, desc, eq, ne, sql } from 'drizzle-orm';
 import {
-	MAX_FAILED_ATTEMPTS,
-	LOCKOUT_DURATION_MINUTES,
-	isAccountLocked,
-	getRemainingLockoutTime,
 	calculateLockoutExpiry,
+	getRemainingLockoutTime,
+	isAccountLocked,
+	LOCKOUT_DURATION_MINUTES,
+	MAX_FAILED_ATTEMPTS,
 	shouldTriggerLockout
 } from '$lib/server/auth/lockout';
+import { db } from '$lib/server/db';
+import { sessions, type User, users } from '$lib/server/db/schema';
 
 // Re-export lockout utilities for backward compatibility
 export {

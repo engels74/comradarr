@@ -8,18 +8,18 @@
  * - Summary statistics
  */
 
-import type { PageServerLoad } from './$types';
 import {
-	getDiscoveryMetrics,
-	getSearchMetrics,
-	getQueueMetrics,
-	getConnectorComparison,
-	getMostSearchedItems,
-	getHardestToFindItems,
-	getQualityDistribution,
 	getAnalyticsSummary,
+	getConnectorComparison,
+	getDiscoveryMetrics,
+	getHardestToFindItems,
+	getMostSearchedItems,
+	getQualityDistribution,
+	getQueueMetrics,
+	getSearchMetrics,
 	type TimePeriod
 } from '$lib/server/db/queries/analytics';
+import type { PageServerLoad } from './$types';
 
 /**
  * Serializes time series data points (converts Date to ISO string).

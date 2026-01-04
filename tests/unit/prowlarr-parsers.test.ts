@@ -10,10 +10,10 @@
 
  */
 
-import { describe, it, expect } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import {
-	parseProwlarrIndexerStatus,
-	parseProwlarrIndexer
+	parseProwlarrIndexer,
+	parseProwlarrIndexerStatus
 } from '../../src/lib/server/services/prowlarr/parsers';
 
 describe('parseProwlarrIndexerStatus', () => {

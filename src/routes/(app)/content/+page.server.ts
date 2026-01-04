@@ -8,18 +8,18 @@
  */
 
 import { fail } from '@sveltejs/kit';
-import type { PageServerLoad, Actions } from './$types';
 import {
-	getContentList,
-	getConnectorsForFilter,
-	getContentStatusCounts,
-	parseContentFilters,
+	type BulkActionTarget,
+	bulkClearSearchState,
+	bulkMarkExhausted,
 	bulkQueueForSearch,
 	bulkSetPriority,
-	bulkMarkExhausted,
-	bulkClearSearchState,
-	type BulkActionTarget
+	getConnectorsForFilter,
+	getContentList,
+	getContentStatusCounts,
+	parseContentFilters
 } from '$lib/server/db/queries/content';
+import type { Actions, PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ url }) => {
 	// Parse filters from URL params
@@ -111,7 +111,7 @@ export const actions: Actions = {
 		const priorityStr = formData.get('priority');
 		const priority = Number(priorityStr);
 
-		if (isNaN(priority) || priority < 0 || priority > 100) {
+		if (Number.isNaN(priority) || priority < 0 || priority > 100) {
 			return fail(400, { error: 'Invalid priority value (must be 0-100)' });
 		}
 

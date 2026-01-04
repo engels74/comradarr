@@ -1,5 +1,5 @@
 @layer reset, base, components, utilities;
-@import '@unocss/reset/tailwind.css' layer(reset);
+@import "@unocss/reset/tailwind.css" layer(reset);
 
 /*
  * Northern Lights Theme (Tweakcn)

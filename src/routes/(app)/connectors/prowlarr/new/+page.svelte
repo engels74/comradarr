@@ -1,22 +1,22 @@
 <script lang="ts">
-	/**
-	 * Add Prowlarr instance form page.
-	 */
-	import { enhance } from '$app/forms';
-	import { goto } from '$app/navigation';
-	import * as Card from '$lib/components/ui/card';
-	import { Input } from '$lib/components/ui/input';
-	import { Button } from '$lib/components/ui/button';
-	import { Label } from '$lib/components/ui/label';
-	import { toastStore } from '$lib/components/ui/toast';
-	import type { ActionData } from './$types';
+/**
+ * Add Prowlarr instance form page.
+ */
+import { enhance } from '$app/forms';
+import { goto } from '$app/navigation';
+import { Button } from '$lib/components/ui/button';
+import * as Card from '$lib/components/ui/card';
+import { Input } from '$lib/components/ui/input';
+import { Label } from '$lib/components/ui/label';
+import { toastStore } from '$lib/components/ui/toast';
+import type { ActionData } from './$types';
 
-	let { form }: { form: ActionData } = $props();
+let { form }: { form: ActionData } = $props();
 
-	let isSubmitting = $state(false);
-	let isTesting = $state(false);
+let isSubmitting = $state(false);
+let isTesting = $state(false);
 
-	const isLoading = $derived(isSubmitting || isTesting);
+const isLoading = $derived(isSubmitting || isTesting);
 </script>
 
 <svelte:head>

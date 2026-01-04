@@ -2,24 +2,24 @@
  * Schedule list page server load and actions.
  */
 
-import type { PageServerLoad, Actions } from './$types';
-import {
-	getAllSchedules,
-	toggleScheduleEnabled,
-	type ScheduleWithRelations
-} from '$lib/server/db/queries/schedules';
-import { getAllConnectors } from '$lib/server/db/queries/connectors';
 import { fail } from '@sveltejs/kit';
-import { refreshDynamicSchedules } from '$lib/server/scheduler';
 import { Cron } from 'croner';
 import type {
-	TimelineData,
-	ScheduledRun,
 	CalendarDay,
 	DayGroup,
-	SweepType
+	ScheduledRun,
+	SweepType,
+	TimelineData
 } from '$lib/components/schedules/types';
+import { getAllConnectors } from '$lib/server/db/queries/connectors';
+import {
+	getAllSchedules,
+	type ScheduleWithRelations,
+	toggleScheduleEnabled
+} from '$lib/server/db/queries/schedules';
 import { createLogger } from '$lib/server/logger';
+import { refreshDynamicSchedules } from '$lib/server/scheduler';
+import type { Actions, PageServerLoad } from './$types';
 
 const logger = createLogger('schedules');
 
@@ -218,7 +218,7 @@ export const actions: Actions = {
 		const id = Number(data.get('id'));
 		const enabled = data.get('enabled') === 'true';
 
-		if (isNaN(id)) {
+		if (Number.isNaN(id)) {
 			return fail(400, { error: 'Invalid schedule ID' });
 		}
 

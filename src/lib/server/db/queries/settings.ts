@@ -6,9 +6,9 @@
  * when a setting is not explicitly configured.
  */
 
-import { db } from '$lib/server/db';
-import { appSettings, type AppSetting } from '$lib/server/db/schema';
 import { eq, inArray } from 'drizzle-orm';
+import { db } from '$lib/server/db';
+import { type AppSetting, appSettings } from '$lib/server/db/schema';
 
 // =============================================================================
 // Default Values
@@ -223,11 +223,10 @@ export async function getGeneralSettings(): Promise<GeneralSettings> {
 	const settings = await getSettings(keys);
 
 	return {
-		appName: settings['app_name'] ?? SETTINGS_DEFAULTS.app_name,
-		timezone: settings['timezone'] ?? SETTINGS_DEFAULTS.timezone,
-		logLevel: settings['log_level'] ?? SETTINGS_DEFAULTS.log_level,
-		checkForUpdates:
-			(settings['check_for_updates'] ?? SETTINGS_DEFAULTS.check_for_updates) === 'true'
+		appName: settings.app_name ?? SETTINGS_DEFAULTS.app_name,
+		timezone: settings.timezone ?? SETTINGS_DEFAULTS.timezone,
+		logLevel: settings.log_level ?? SETTINGS_DEFAULTS.log_level,
+		checkForUpdates: (settings.check_for_updates ?? SETTINGS_DEFAULTS.check_for_updates) === 'true'
 	};
 }
 
@@ -327,56 +326,55 @@ export async function getSearchSettings(): Promise<SearchSettings> {
 	return {
 		priorityWeights: {
 			contentAge: Number(
-				settings['search_priority_weight_content_age'] ??
+				settings.search_priority_weight_content_age ??
 					SEARCH_SETTINGS_DEFAULTS.search_priority_weight_content_age
 			),
 			missingDuration: Number(
-				settings['search_priority_weight_missing_duration'] ??
+				settings.search_priority_weight_missing_duration ??
 					SEARCH_SETTINGS_DEFAULTS.search_priority_weight_missing_duration
 			),
 			userPriority: Number(
-				settings['search_priority_weight_user_priority'] ??
+				settings.search_priority_weight_user_priority ??
 					SEARCH_SETTINGS_DEFAULTS.search_priority_weight_user_priority
 			),
 			failurePenalty: Number(
-				settings['search_priority_weight_failure_penalty'] ??
+				settings.search_priority_weight_failure_penalty ??
 					SEARCH_SETTINGS_DEFAULTS.search_priority_weight_failure_penalty
 			),
 			gapBonus: Number(
-				settings['search_priority_weight_gap_bonus'] ??
+				settings.search_priority_weight_gap_bonus ??
 					SEARCH_SETTINGS_DEFAULTS.search_priority_weight_gap_bonus
 			)
 		},
 		seasonPackThresholds: {
 			minMissingPercent: Number(
-				settings['search_season_pack_min_missing_percent'] ??
+				settings.search_season_pack_min_missing_percent ??
 					SEARCH_SETTINGS_DEFAULTS.search_season_pack_min_missing_percent
 			),
 			minMissingCount: Number(
-				settings['search_season_pack_min_missing_count'] ??
+				settings.search_season_pack_min_missing_count ??
 					SEARCH_SETTINGS_DEFAULTS.search_season_pack_min_missing_count
 			)
 		},
 		cooldownConfig: {
 			baseDelayHours: Number(
-				settings['search_cooldown_base_delay_hours'] ??
+				settings.search_cooldown_base_delay_hours ??
 					SEARCH_SETTINGS_DEFAULTS.search_cooldown_base_delay_hours
 			),
 			maxDelayHours: Number(
-				settings['search_cooldown_max_delay_hours'] ??
+				settings.search_cooldown_max_delay_hours ??
 					SEARCH_SETTINGS_DEFAULTS.search_cooldown_max_delay_hours
 			),
 			multiplier: Number(
-				settings['search_cooldown_multiplier'] ??
-					SEARCH_SETTINGS_DEFAULTS.search_cooldown_multiplier
+				settings.search_cooldown_multiplier ?? SEARCH_SETTINGS_DEFAULTS.search_cooldown_multiplier
 			),
 			jitter:
-				(settings['search_cooldown_jitter'] ?? SEARCH_SETTINGS_DEFAULTS.search_cooldown_jitter) ===
+				(settings.search_cooldown_jitter ?? SEARCH_SETTINGS_DEFAULTS.search_cooldown_jitter) ===
 				'true'
 		},
 		retryConfig: {
 			maxAttempts: Number(
-				settings['search_max_attempts'] ?? SEARCH_SETTINGS_DEFAULTS.search_max_attempts
+				settings.search_max_attempts ?? SEARCH_SETTINGS_DEFAULTS.search_max_attempts
 			)
 		}
 	};
@@ -527,12 +525,11 @@ export async function getBackupSettings(): Promise<BackupSettings> {
 
 	return {
 		scheduledEnabled:
-			(settings['backup_scheduled_enabled'] ??
-				BACKUP_SETTINGS_DEFAULTS.backup_scheduled_enabled) === 'true',
-		scheduledCron:
-			settings['backup_scheduled_cron'] ?? BACKUP_SETTINGS_DEFAULTS.backup_scheduled_cron,
+			(settings.backup_scheduled_enabled ?? BACKUP_SETTINGS_DEFAULTS.backup_scheduled_enabled) ===
+			'true',
+		scheduledCron: settings.backup_scheduled_cron ?? BACKUP_SETTINGS_DEFAULTS.backup_scheduled_cron,
 		retentionCount: Number(
-			settings['backup_retention_count'] ?? BACKUP_SETTINGS_DEFAULTS.backup_retention_count
+			settings.backup_retention_count ?? BACKUP_SETTINGS_DEFAULTS.backup_retention_count
 		)
 	};
 }

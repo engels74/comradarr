@@ -1,44 +1,44 @@
 <script lang="ts">
-	import { enhance } from '$app/forms';
-	import * as Card from '$lib/components/ui/card';
-	import { Button } from '$lib/components/ui/button';
-	import { StatusBadge } from '$lib/components/shared';
-	import type { Connector } from '$lib/server/db/schema';
-	import type { ConnectorStats } from '$lib/server/db/queries/connectors';
-	import { cn } from '$lib/utils.js';
+import { enhance } from '$app/forms';
+import { StatusBadge } from '$lib/components/shared';
+import { Button } from '$lib/components/ui/button';
+import * as Card from '$lib/components/ui/card';
+import type { ConnectorStats } from '$lib/server/db/queries/connectors';
+import type { Connector } from '$lib/server/db/schema';
+import { cn } from '$lib/utils.js';
 
-	interface Props {
-		connector: Connector;
-		stats: ConnectorStats;
-		class?: string;
-	}
+interface Props {
+	connector: Connector;
+	stats: ConnectorStats;
+	class?: string;
+}
 
-	let { connector, stats, class: className }: Props = $props();
+let { connector, stats, class: className }: Props = $props();
 
-	/**
-	 * Connector type badge colors
-	 */
-	const typeColors: Record<string, string> = {
-		sonarr: 'bg-blue-500/10 text-blue-600 dark:text-blue-400',
-		radarr: 'bg-orange-500/10 text-orange-600 dark:text-orange-400',
-		whisparr: 'bg-purple-500/10 text-purple-600 dark:text-purple-400'
-	};
+/**
+ * Connector type badge colors
+ */
+const typeColors: Record<string, string> = {
+	sonarr: 'bg-blue-500/10 text-blue-600 dark:text-blue-400',
+	radarr: 'bg-orange-500/10 text-orange-600 dark:text-orange-400',
+	whisparr: 'bg-purple-500/10 text-purple-600 dark:text-purple-400'
+};
 
-	const typeColor = $derived(typeColors[connector.type] ?? 'bg-gray-500/10 text-gray-600');
+const typeColor = $derived(typeColors[connector.type] ?? 'bg-gray-500/10 text-gray-600');
 
-	/**
-	 * Format connector type with capitalized first letter
-	 */
-	const formattedType = $derived(connector.type.charAt(0).toUpperCase() + connector.type.slice(1));
+/**
+ * Format connector type with capitalized first letter
+ */
+const formattedType = $derived(connector.type.charAt(0).toUpperCase() + connector.type.slice(1));
 
-	/**
-	 * Truncate URL for display
-	 */
-	const truncatedUrl = $derived(() => {
-		const maxLength = 35;
-		if (connector.url.length <= maxLength) return connector.url;
-		return connector.url.substring(0, maxLength) + '...';
-	});
+/**
+ * Truncate URL for display
+ */
+const truncatedUrl = $derived(() => {
+	const maxLength = 35;
+	if (connector.url.length <= maxLength) return connector.url;
+	return `${connector.url.substring(0, maxLength)}...`;
+});
 </script>
 
 <Card.Root class={cn('relative', className)}>

@@ -5,10 +5,10 @@
  */
 
 import type { Connector } from '$lib/server/db/schema';
+import type { BaseArrClient } from './common/base-client.js';
 import type { BaseClientConfig } from './common/types.js';
-import { BaseArrClient } from './common/base-client.js';
-import { SonarrClient } from './sonarr/client.js';
 import { RadarrClient } from './radarr/client.js';
+import { SonarrClient } from './sonarr/client.js';
 import { WhisparrClient } from './whisparr/client.js';
 
 /**

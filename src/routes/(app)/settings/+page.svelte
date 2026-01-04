@@ -1,47 +1,48 @@
 <script lang="ts">
-	/**
-	 * General settings page.
-	 */
-	import { untrack } from 'svelte';
-	import { enhance } from '$app/forms';
-	import * as Card from '$lib/components/ui/card';
-	import { Input } from '$lib/components/ui/input';
-	import { Button } from '$lib/components/ui/button';
-	import { Label } from '$lib/components/ui/label';
-	import { Checkbox } from '$lib/components/ui/checkbox';
-	import { toastStore } from '$lib/components/ui/toast';
-	import { logLevels, logLevelLabels, logLevelDescriptions } from '$lib/schemas/settings';
-	import type { PageProps } from './$types';
-	import SettingsIcon from '@lucide/svelte/icons/settings';
+/**
+ * General settings page.
+ */
 
-	let { data, form }: PageProps = $props();
+import SettingsIcon from '@lucide/svelte/icons/settings';
+import { untrack } from 'svelte';
+import { enhance } from '$app/forms';
+import { Button } from '$lib/components/ui/button';
+import * as Card from '$lib/components/ui/card';
+import { Checkbox } from '$lib/components/ui/checkbox';
+import { Input } from '$lib/components/ui/input';
+import { Label } from '$lib/components/ui/label';
+import { toastStore } from '$lib/components/ui/toast';
+import { logLevelDescriptions, logLevelLabels, logLevels } from '$lib/schemas/settings';
+import type { PageProps } from './$types';
 
-	let isSubmitting = $state(false);
+let { data, form }: PageProps = $props();
 
-	// Form state with initial values from loaded settings
-	// Use untrack to explicitly capture initial value without reactive tracking
-	let checkForUpdates = $state(untrack(() => data.settings.checkForUpdates));
+let isSubmitting = $state(false);
 
-	// Update checkForUpdates when form is submitted with errors (preserve user's choice)
-	$effect(() => {
-		if (form && 'checkForUpdates' in form) {
-			checkForUpdates = form.checkForUpdates as boolean;
-		}
-	});
+// Form state with initial values from loaded settings
+// Use untrack to explicitly capture initial value without reactive tracking
+let checkForUpdates = $state(untrack(() => data.settings.checkForUpdates));
 
-	// Common select styling
-	const selectClass =
-		'flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 md:text-sm';
-
-	// Get all IANA timezones
-	const timezones = Intl.supportedValuesOf('timeZone');
-
-	/**
-	 * Get form value with fallback to loaded data.
-	 */
-	function getFormValue(formValue: string | undefined, settingsValue: string): string {
-		return formValue ?? settingsValue;
+// Update checkForUpdates when form is submitted with errors (preserve user's choice)
+$effect(() => {
+	if (form && 'checkForUpdates' in form) {
+		checkForUpdates = form.checkForUpdates as boolean;
 	}
+});
+
+// Common select styling
+const selectClass =
+	'flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 md:text-sm';
+
+// Get all IANA timezones
+const timezones = Intl.supportedValuesOf('timeZone');
+
+/**
+ * Get form value with fallback to loaded data.
+ */
+function getFormValue(formValue: string | undefined, settingsValue: string): string {
+	return formValue ?? settingsValue;
+}
 </script>
 
 <svelte:head>

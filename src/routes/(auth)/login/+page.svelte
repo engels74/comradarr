@@ -1,18 +1,18 @@
 <script lang="ts">
-	/**
-	 * Login page component.
-	 */
-	import { enhance } from '$app/forms';
-	import * as Card from '$lib/components/ui/card';
-	import { Input } from '$lib/components/ui/input';
-	import { Button } from '$lib/components/ui/button';
-	import { Label } from '$lib/components/ui/label';
-	import comradarrIcon from '$lib/assets/comradarr-icon.svg';
-	import type { ActionData } from './$types';
+/**
+ * Login page component.
+ */
+import { enhance } from '$app/forms';
+import comradarrIcon from '$lib/assets/comradarr-icon.svg';
+import { Button } from '$lib/components/ui/button';
+import * as Card from '$lib/components/ui/card';
+import { Input } from '$lib/components/ui/input';
+import { Label } from '$lib/components/ui/label';
+import type { ActionData } from './$types';
 
-	let { form }: { form: ActionData } = $props();
+let { form }: { form: ActionData } = $props();
 
-	let isSubmitting = $state(false);
+let isSubmitting = $state(false);
 </script>
 
 <svelte:head>

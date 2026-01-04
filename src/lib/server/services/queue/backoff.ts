@@ -11,7 +11,7 @@
 
 import { calculateBackoffDelay } from '$lib/server/connectors/common/retry.js';
 import type { RetryConfig } from '$lib/server/connectors/common/types.js';
-import { STATE_TRANSITION_CONFIG, getStateTransitionConfig } from './config';
+import { getStateTransitionConfig, STATE_TRANSITION_CONFIG } from './config';
 
 /**
  * Calculate the next eligible time for a retry attempt using exponential backoff.

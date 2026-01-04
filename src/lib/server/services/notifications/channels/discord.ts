@@ -12,21 +12,21 @@
  */
 
 import type { NotificationChannel } from '$lib/server/db/schema';
-import type {
-	NotificationPayload,
-	NotificationResult,
-	DiscordConfig,
-	DiscordSensitiveConfig
-} from '../types';
 import type { NotificationSender } from '../base-channel';
-import { DEFAULT_SENDER_CONFIG, hexColorToInt, getEventColor } from '../base-channel';
+import { DEFAULT_SENDER_CONFIG, getEventColor, hexColorToInt } from '../base-channel';
 import {
 	NotificationConfigurationError,
-	NotificationServerError,
-	NotificationRateLimitError,
 	NotificationNetworkError,
+	NotificationRateLimitError,
+	NotificationServerError,
 	NotificationTimeoutError
 } from '../errors';
+import type {
+	DiscordConfig,
+	DiscordSensitiveConfig,
+	NotificationPayload,
+	NotificationResult
+} from '../types';
 
 // =============================================================================
 // Discord Sender Implementation

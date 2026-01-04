@@ -10,24 +10,24 @@
 
  */
 
-import { describe, it, expect } from 'vitest';
-import {
-	determineHealthStatus,
-	shouldRetrySync,
-	calculateSyncBackoffDelay,
-	determineHealthFromChecks
-} from '../../src/lib/server/services/sync/health-utils';
-import { SYNC_CONFIG } from '../../src/lib/server/services/sync/config';
+import { describe, expect, it } from 'vitest';
 import {
 	AuthenticationError,
 	NetworkError,
-	ServerError,
-	RateLimitError,
-	TimeoutError,
 	NotFoundError,
+	RateLimitError,
+	ServerError,
 	SSLError,
+	TimeoutError,
 	ValidationError
 } from '../../src/lib/server/connectors/common/errors';
+import { SYNC_CONFIG } from '../../src/lib/server/services/sync/config';
+import {
+	calculateSyncBackoffDelay,
+	determineHealthFromChecks,
+	determineHealthStatus,
+	shouldRetrySync
+} from '../../src/lib/server/services/sync/health-utils';
 
 describe('SYNC_CONFIG', () => {
 	it('should have expected default threshold values', () => {

@@ -1,17 +1,18 @@
 <script lang="ts">
-	/**
-	 * Log table with virtualized scrolling for large log sets.
-	 */
-	import { cn } from '$lib/utils.js';
-	import LogEntry from './LogEntry.svelte';
-	import type { BufferedLogEntry } from '$lib/server/services/log-buffer';
+/**
+ * Log table with virtualized scrolling for large log sets.
+ */
 
-	interface Props {
-		entries: BufferedLogEntry[];
-		class?: string | undefined;
-	}
+import type { BufferedLogEntry } from '$lib/server/services/log-buffer';
+import { cn } from '$lib/utils.js';
+import LogEntry from './LogEntry.svelte';
 
-	let { entries, class: className }: Props = $props();
+interface Props {
+	entries: BufferedLogEntry[];
+	class?: string | undefined;
+}
+
+let { entries, class: className }: Props = $props();
 </script>
 
 <div class={cn('space-y-2', className)}>

@@ -2,18 +2,14 @@
  * Backup settings page server load and actions.
  */
 
-import type { PageServerLoad, Actions } from './$types';
-import {
-	getBackupSettings,
-	updateBackupSettings,
-	type BackupSettings
-} from '$lib/server/db/queries/settings';
-import { listBackups, deleteBackup } from '$lib/server/services/backup';
-import { refreshScheduledBackup, getSchedulerStatus } from '$lib/server/scheduler';
 import { fail } from '@sveltejs/kit';
 import * as v from 'valibot';
 import { BackupSettingsSchema } from '$lib/schemas/settings';
+import { getBackupSettings, updateBackupSettings } from '$lib/server/db/queries/settings';
 import { createLogger } from '$lib/server/logger';
+import { getSchedulerStatus, refreshScheduledBackup } from '$lib/server/scheduler';
+import { deleteBackup, listBackups } from '$lib/server/services/backup';
+import type { Actions, PageServerLoad } from './$types';
 
 const logger = createLogger('backup-settings');
 

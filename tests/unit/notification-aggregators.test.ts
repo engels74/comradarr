@@ -11,9 +11,9 @@
 
  */
 
-import { describe, it, expect } from 'vitest';
-import { buildAggregatePayload } from '../../src/lib/server/services/notifications/aggregators';
+import { describe, expect, it } from 'vitest';
 import type { NotificationHistory } from '../../src/lib/server/db/schema';
+import { buildAggregatePayload } from '../../src/lib/server/services/notifications/aggregators';
 
 /**
  * Helper to create a mock NotificationHistory entry.

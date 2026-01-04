@@ -3,31 +3,31 @@
  */
 
 import { error, fail } from '@sveltejs/kit';
-import type { PageServerLoad, Actions } from './$types';
 import {
-	getConnector,
-	getDecryptedApiKey,
-	getSyncState,
-	getConnectorDetailedStats,
-	getSearchStateDistribution,
-	getRecentSearchHistory,
-	clearFailedSearches,
-	updateConnectorHealth,
-	deleteConnector
-} from '$lib/server/db/queries/connectors';
-import {
-	SonarrClient,
-	RadarrClient,
-	WhisparrClient,
 	AuthenticationError,
+	isArrClientError,
 	NetworkError,
-	TimeoutError,
+	RadarrClient,
+	SonarrClient,
 	SSLError,
-	isArrClientError
+	TimeoutError,
+	WhisparrClient
 } from '$lib/server/connectors';
+import {
+	clearFailedSearches,
+	deleteConnector,
+	getConnector,
+	getConnectorDetailedStats,
+	getDecryptedApiKey,
+	getRecentSearchHistory,
+	getSearchStateDistribution,
+	getSyncState,
+	updateConnectorHealth
+} from '$lib/server/db/queries/connectors';
 import type { Connector } from '$lib/server/db/schema';
 import { createLogger } from '$lib/server/logger';
 import { runIncrementalSync } from '$lib/server/services/sync';
+import type { Actions, PageServerLoad } from './$types';
 
 const logger = createLogger('connectors');
 
@@ -89,7 +89,7 @@ function getErrorMessage(err: unknown): string {
 export const load: PageServerLoad = async ({ params }) => {
 	const id = Number(params.id);
 
-	if (isNaN(id)) {
+	if (Number.isNaN(id)) {
 		error(400, 'Invalid connector ID');
 	}
 
@@ -125,7 +125,7 @@ export const actions: Actions = {
 	testConnection: async ({ params }) => {
 		const id = Number(params.id);
 
-		if (isNaN(id)) {
+		if (Number.isNaN(id)) {
 			logger.warn('Connection test failed - invalid ID', { rawId: params.id });
 			return fail(400, { error: 'Invalid connector ID' });
 		}
@@ -205,7 +205,7 @@ export const actions: Actions = {
 	triggerSync: async ({ params }) => {
 		const id = Number(params.id);
 
-		if (isNaN(id)) {
+		if (Number.isNaN(id)) {
 			logger.warn('Sync trigger failed - invalid ID', { rawId: params.id });
 			return fail(400, { error: 'Invalid connector ID' });
 		}
@@ -262,7 +262,7 @@ export const actions: Actions = {
 	clearFailedSearches: async ({ params }) => {
 		const id = Number(params.id);
 
-		if (isNaN(id)) {
+		if (Number.isNaN(id)) {
 			logger.warn('Clear failed searches failed - invalid ID', { rawId: params.id });
 			return fail(400, { error: 'Invalid connector ID' });
 		}
@@ -295,7 +295,7 @@ export const actions: Actions = {
 	delete: async ({ params }) => {
 		const id = Number(params.id);
 
-		if (isNaN(id)) {
+		if (Number.isNaN(id)) {
 			logger.warn('Delete connector failed - invalid ID', { rawId: params.id });
 			return fail(400, { error: 'Invalid connector ID' });
 		}

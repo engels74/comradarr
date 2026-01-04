@@ -16,7 +16,7 @@
 
 import * as v from 'valibot';
 import type { QualityModel } from '$lib/utils/quality';
-import type { PaginatedResponse, CommandResponse, CommandStatus } from './types';
+import type { CommandResponse, CommandStatus, PaginatedResponse } from './types';
 
 /**
  * Result type for parser functions.

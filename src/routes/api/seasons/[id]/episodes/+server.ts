@@ -5,10 +5,10 @@
 
  */
 
-import { json, error } from '@sveltejs/kit';
-import type { RequestHandler } from './$types';
-import { getSeasonEpisodes } from '$lib/server/db/queries/content';
+import { error, json } from '@sveltejs/kit';
 import { requireScope } from '$lib/server/auth';
+import { getSeasonEpisodes } from '$lib/server/db/queries/content';
+import type { RequestHandler } from './$types';
 
 export const GET: RequestHandler = async ({ params, locals }) => {
 	// Require read scope for read operations (Requirement 34.2)
@@ -16,7 +16,7 @@ export const GET: RequestHandler = async ({ params, locals }) => {
 
 	const seasonId = Number(params.id);
 
-	if (isNaN(seasonId) || seasonId <= 0) {
+	if (Number.isNaN(seasonId) || seasonId <= 0) {
 		error(400, 'Invalid season ID');
 	}
 

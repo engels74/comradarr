@@ -16,18 +16,18 @@
  * Bun's native SQL driver (bun:sql).
  */
 
-import { describe, it, expect, beforeAll, afterAll, afterEach } from 'bun:test';
+import { afterAll, afterEach, beforeAll, describe, expect, it } from 'bun:test';
 import * as fc from 'fast-check';
 import {
+	type CreateProwlarrInstanceInput,
 	createProwlarrInstance,
-	getProwlarrInstance,
-	getAllProwlarrInstances,
-	getEnabledProwlarrInstances,
-	getDecryptedApiKey,
-	updateProwlarrInstance,
-	updateProwlarrHealth,
 	deleteProwlarrInstance,
-	type CreateProwlarrInstanceInput
+	getAllProwlarrInstances,
+	getDecryptedApiKey,
+	getEnabledProwlarrInstances,
+	getProwlarrInstance,
+	updateProwlarrHealth,
+	updateProwlarrInstance
 } from '../../src/lib/server/db/queries/prowlarr';
 
 // Store original SECRET_KEY to restore after tests

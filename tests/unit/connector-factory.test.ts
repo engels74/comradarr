@@ -9,10 +9,10 @@
 
  */
 
-import { describe, it, expect } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { createConnectorClient } from '../../src/lib/server/connectors/factory';
-import { SonarrClient } from '../../src/lib/server/connectors/sonarr/client';
 import { RadarrClient } from '../../src/lib/server/connectors/radarr/client';
+import { SonarrClient } from '../../src/lib/server/connectors/sonarr/client';
 import { WhisparrClient } from '../../src/lib/server/connectors/whisparr/client';
 import type { Connector } from '../../src/lib/server/db/schema';
 
@@ -82,7 +82,7 @@ describe('createConnectorClient', () => {
 			const client = createConnectorClient(connector, 'test-api-key');
 
 			// Access the protected timeout via type assertion
-			// eslint-disable-next-line @typescript-eslint/no-explicit-any
+			// biome-ignore lint/suspicious/noExplicitAny: required for accessing protected property in tests
 			expect((client as any).timeout).toBe(15000);
 		});
 
@@ -90,7 +90,7 @@ describe('createConnectorClient', () => {
 			const connector = createMockConnector('sonarr');
 			const client = createConnectorClient(connector, 'test-api-key', 30000);
 
-			// eslint-disable-next-line @typescript-eslint/no-explicit-any
+			// biome-ignore lint/suspicious/noExplicitAny: required for accessing protected property in tests
 			expect((client as any).timeout).toBe(30000);
 		});
 	});
@@ -102,7 +102,7 @@ describe('createConnectorClient', () => {
 			const client = createConnectorClient(connector, 'test-api-key');
 
 			// Access the protected baseUrl via type assertion
-			// eslint-disable-next-line @typescript-eslint/no-explicit-any
+			// biome-ignore lint/suspicious/noExplicitAny: required for accessing protected property in tests
 			expect((client as any).baseUrl).toBe('http://sonarr.local:8989');
 		});
 
@@ -110,7 +110,7 @@ describe('createConnectorClient', () => {
 			const connector = createMockConnector('sonarr');
 			const client = createConnectorClient(connector, 'my-secret-api-key');
 
-			// eslint-disable-next-line @typescript-eslint/no-explicit-any
+			// biome-ignore lint/suspicious/noExplicitAny: required for accessing protected property in tests
 			expect((client as any).apiKey).toBe('my-secret-api-key');
 		});
 	});

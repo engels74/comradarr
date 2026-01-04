@@ -10,13 +10,13 @@
  * Specifically, delay(n+1) >= delay(n) * backoffMultiplier for all attempts n < maxAttempts."
  */
 
-import { describe, it, expect } from 'vitest';
 import * as fc from 'fast-check';
-import type { RetryConfig } from '../../src/lib/server/connectors/common/types';
+import { describe, expect, it } from 'vitest';
 import {
 	calculateBackoffDelay,
 	DEFAULT_RETRY_CONFIG
 } from '../../src/lib/server/connectors/common/retry';
+import type { RetryConfig } from '../../src/lib/server/connectors/common/types';
 
 /**
  * Arbitrary generator for Required<RetryConfig> objects.
@@ -119,7 +119,7 @@ describe('Exponential Backoff Calculation (Requirement 5.5)', () => {
 			fc.assert(
 				fc.property(retryConfigWithJitterArbitrary, attemptArbitrary, (config, attempt) => {
 					// Calculate expected delay without jitter
-					const exponentialDelay = config.baseDelay * Math.pow(config.multiplier, attempt);
+					const exponentialDelay = config.baseDelay * config.multiplier ** attempt;
 					const clampedDelay = Math.min(exponentialDelay, config.maxDelay);
 
 					// Run multiple times to verify jitter range (since jitter is random)

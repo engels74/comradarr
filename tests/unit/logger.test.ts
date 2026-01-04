@@ -15,18 +15,18 @@
 
  */
 
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { type RequestContext, runWithContext } from '../../src/lib/server/context';
 import {
-	Logger,
+	clearLogLevelCache,
 	createLogger,
 	getCurrentLogLevel,
-	setLogLevel,
-	clearLogLevelCache,
-	shouldLog,
 	initializeLogLevel,
-	type LogEntry
+	type LogEntry,
+	Logger,
+	setLogLevel,
+	shouldLog
 } from '../../src/lib/server/logger';
-import { runWithContext, type RequestContext } from '../../src/lib/server/context';
 
 describe('Logger', () => {
 	let consoleSpy: ReturnType<typeof vi.spyOn>;
@@ -415,7 +415,7 @@ describe('HTTP logging methods', () => {
 
 			expect(headers['Content-Type']).toBe('application/json');
 			expect(headers['X-Api-Key']).toBe('[REDACTED]');
-			expect(headers['Authorization']).toBe('[REDACTED]');
+			expect(headers.Authorization).toBe('[REDACTED]');
 		});
 
 		it('should NOT include body at debug level', () => {

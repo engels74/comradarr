@@ -1,31 +1,31 @@
 <script lang="ts">
-	import * as DropdownMenu from '$lib/components/ui/dropdown-menu';
-	import SunIcon from '@lucide/svelte/icons/sun';
-	import MoonIcon from '@lucide/svelte/icons/moon';
-	import MonitorIcon from '@lucide/svelte/icons/monitor';
-	import { themeStore, type Theme } from '$lib/stores/theme.svelte';
-	import type { Component } from 'svelte';
+import MonitorIcon from '@lucide/svelte/icons/monitor';
+import MoonIcon from '@lucide/svelte/icons/moon';
+import SunIcon from '@lucide/svelte/icons/sun';
+import type { Component } from 'svelte';
+import * as DropdownMenu from '$lib/components/ui/dropdown-menu';
+import { type Theme, themeStore } from '$lib/stores/theme.svelte';
 
-	interface ThemeOption {
-		value: Theme;
-		label: string;
-		icon: Component;
-	}
+interface ThemeOption {
+	value: Theme;
+	label: string;
+	icon: Component;
+}
 
-	const themes: ThemeOption[] = [
-		{ value: 'light', label: 'Light', icon: SunIcon },
-		{ value: 'dark', label: 'Dark', icon: MoonIcon },
-		{ value: 'system', label: 'System', icon: MonitorIcon }
-	];
+const themes: ThemeOption[] = [
+	{ value: 'light', label: 'Light', icon: SunIcon },
+	{ value: 'dark', label: 'Dark', icon: MoonIcon },
+	{ value: 'system', label: 'System', icon: MonitorIcon }
+];
 
-	function handleThemeChange(value: string): void {
-		themeStore.setTheme(value as Theme);
-	}
+function handleThemeChange(value: string): void {
+	themeStore.setTheme(value as Theme);
+}
 
-	// Get current icon based on resolved theme for the trigger
-	const getCurrentIcon = () => {
-		return themeStore.resolved === 'dark' ? MoonIcon : SunIcon;
-	};
+// Get current icon based on resolved theme for the trigger
+const getCurrentIcon = () => {
+	return themeStore.resolved === 'dark' ? MoonIcon : SunIcon;
+};
 </script>
 
 <DropdownMenu.Sub>

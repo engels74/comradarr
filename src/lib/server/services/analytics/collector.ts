@@ -8,22 +8,22 @@
 
  */
 
+import { inArray, sql } from 'drizzle-orm';
 import { db } from '$lib/server/db';
 import { analyticsEvents, searchRegistry } from '$lib/server/db/schema';
-import { inArray, sql } from 'drizzle-orm';
+import { createLogger } from '$lib/server/logger';
+import type { GapDiscoveryResult, UpgradeDiscoveryResult } from '$lib/server/services/discovery';
 import type {
-	AnalyticsEventType,
 	AnalyticsEventPayload,
-	RecordEventResult,
+	AnalyticsEventType,
 	GapDiscoveredPayload,
-	UpgradeDiscoveredPayload,
+	QueueDepthSample,
+	QueueDepthSampledPayload,
+	RecordEventResult,
 	SearchDispatchedPayload,
 	SearchFailedPayload,
-	QueueDepthSampledPayload,
-	QueueDepthSample
+	UpgradeDiscoveredPayload
 } from './types';
-import type { GapDiscoveryResult, UpgradeDiscoveryResult } from '$lib/server/services/discovery';
-import { createLogger } from '$lib/server/logger';
 
 const logger = createLogger('analytics');
 

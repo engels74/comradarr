@@ -9,11 +9,11 @@
 
  */
 
-import { describe, it, expect, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import {
-	parseRadarrMovie,
 	parsePaginatedMovies,
 	parsePaginatedMoviesLenient,
+	parseRadarrMovie,
 	RadarrMovieSchema
 } from '../../src/lib/server/connectors/radarr/parsers';
 

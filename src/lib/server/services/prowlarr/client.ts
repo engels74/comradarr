@@ -9,23 +9,23 @@
  */
 
 import {
-	NetworkError,
+	type ArrClientError,
 	AuthenticationError,
+	isArrClientError,
+	NetworkError,
+	NotFoundError,
 	RateLimitError,
 	ServerError,
-	TimeoutError,
-	NotFoundError,
 	SSLError,
-	isArrClientError,
-	type ArrClientError
+	TimeoutError
 } from '$lib/server/connectors/common/errors';
+import { parseProwlarrIndexer, parseProwlarrIndexerStatus } from './parsers.js';
 import type {
+	IndexerHealth,
 	ProwlarrClientConfig,
-	ProwlarrIndexerStatus,
 	ProwlarrIndexer,
-	IndexerHealth
+	ProwlarrIndexerStatus
 } from './types.js';
-import { parseProwlarrIndexerStatus, parseProwlarrIndexer } from './parsers.js';
 
 /** Default request timeout in milliseconds (30 seconds) */
 const DEFAULT_TIMEOUT = 30000;

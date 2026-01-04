@@ -1,100 +1,100 @@
 <script lang="ts">
-	import { enhance } from '$app/forms';
-	import * as Card from '$lib/components/ui/card';
-	import { Button } from '$lib/components/ui/button';
-	import type { ScheduleWithRelations } from '$lib/server/db/queries/schedules';
-	import { cn } from '$lib/utils.js';
-	import ClockIcon from '@lucide/svelte/icons/clock';
-	import CalendarIcon from '@lucide/svelte/icons/calendar';
-	import GlobeIcon from '@lucide/svelte/icons/globe';
+import CalendarIcon from '@lucide/svelte/icons/calendar';
+import ClockIcon from '@lucide/svelte/icons/clock';
+import GlobeIcon from '@lucide/svelte/icons/globe';
+import { enhance } from '$app/forms';
+import { Button } from '$lib/components/ui/button';
+import * as Card from '$lib/components/ui/card';
+import type { ScheduleWithRelations } from '$lib/server/db/queries/schedules';
+import { cn } from '$lib/utils.js';
 
-	interface Props {
-		schedule: ScheduleWithRelations;
-		class?: string;
+interface Props {
+	schedule: ScheduleWithRelations;
+	class?: string;
+}
+
+let { schedule, class: className }: Props = $props();
+
+/**
+ * Sweep type badge colors
+ */
+const typeColors: Record<string, string> = {
+	incremental: 'bg-blue-500/10 text-blue-600 dark:text-blue-400',
+	full_reconciliation: 'bg-purple-500/10 text-purple-600 dark:text-purple-400'
+};
+
+const typeColor = $derived(typeColors[schedule.sweepType] ?? 'bg-gray-500/10 text-gray-600');
+
+/**
+ * Format sweep type for display
+ */
+const formattedType = $derived(
+	schedule.sweepType === 'incremental' ? 'Incremental Sync' : 'Full Reconciliation'
+);
+
+/**
+ * Format cron expression to human-readable (simplified)
+ */
+function getCronDescription(cron: string): string {
+	// Simple patterns - could use a library like cronstrue for full parsing
+	if (cron === '*/15 * * * *') return 'Every 15 minutes';
+	if (cron === '*/5 * * * *') return 'Every 5 minutes';
+	if (cron === '*/30 * * * *') return 'Every 30 minutes';
+	if (cron === '0 * * * *') return 'Every hour';
+	if (cron === '0 */2 * * *') return 'Every 2 hours';
+	if (cron === '0 */4 * * *') return 'Every 4 hours';
+	if (cron === '0 */6 * * *') return 'Every 6 hours';
+	if (cron === '0 */12 * * *') return 'Every 12 hours';
+	if (cron === '0 0 * * *') return 'Daily at midnight';
+	if (cron === '0 3 * * *') return 'Daily at 3:00 AM';
+	if (cron === '0 4 * * *') return 'Daily at 4:00 AM';
+
+	// Parse daily patterns like "0 5 * * *" -> "Daily at 5:00 AM"
+	const dailyMatch = cron.match(/^(\d+) (\d+) \* \* \*$/);
+	if (dailyMatch) {
+		const [, minute, hour] = dailyMatch;
+		const h = parseInt(hour!, 10);
+		const m = parseInt(minute!, 10);
+		const period = h >= 12 ? 'PM' : 'AM';
+		const displayHour = h === 0 ? 12 : h > 12 ? h - 12 : h;
+		const displayMin = m.toString().padStart(2, '0');
+		return `Daily at ${displayHour}:${displayMin} ${period}`;
 	}
 
-	let { schedule, class: className }: Props = $props();
-
-	/**
-	 * Sweep type badge colors
-	 */
-	const typeColors: Record<string, string> = {
-		incremental: 'bg-blue-500/10 text-blue-600 dark:text-blue-400',
-		full_reconciliation: 'bg-purple-500/10 text-purple-600 dark:text-purple-400'
-	};
-
-	const typeColor = $derived(typeColors[schedule.sweepType] ?? 'bg-gray-500/10 text-gray-600');
-
-	/**
-	 * Format sweep type for display
-	 */
-	const formattedType = $derived(
-		schedule.sweepType === 'incremental' ? 'Incremental Sync' : 'Full Reconciliation'
-	);
-
-	/**
-	 * Format cron expression to human-readable (simplified)
-	 */
-	function getCronDescription(cron: string): string {
-		// Simple patterns - could use a library like cronstrue for full parsing
-		if (cron === '*/15 * * * *') return 'Every 15 minutes';
-		if (cron === '*/5 * * * *') return 'Every 5 minutes';
-		if (cron === '*/30 * * * *') return 'Every 30 minutes';
-		if (cron === '0 * * * *') return 'Every hour';
-		if (cron === '0 */2 * * *') return 'Every 2 hours';
-		if (cron === '0 */4 * * *') return 'Every 4 hours';
-		if (cron === '0 */6 * * *') return 'Every 6 hours';
-		if (cron === '0 */12 * * *') return 'Every 12 hours';
-		if (cron === '0 0 * * *') return 'Daily at midnight';
-		if (cron === '0 3 * * *') return 'Daily at 3:00 AM';
-		if (cron === '0 4 * * *') return 'Daily at 4:00 AM';
-
-		// Parse daily patterns like "0 5 * * *" -> "Daily at 5:00 AM"
-		const dailyMatch = cron.match(/^(\d+) (\d+) \* \* \*$/);
-		if (dailyMatch) {
-			const [, minute, hour] = dailyMatch;
-			const h = parseInt(hour!, 10);
-			const m = parseInt(minute!, 10);
-			const period = h >= 12 ? 'PM' : 'AM';
-			const displayHour = h === 0 ? 12 : h > 12 ? h - 12 : h;
-			const displayMin = m.toString().padStart(2, '0');
-			return `Daily at ${displayHour}:${displayMin} ${period}`;
-		}
-
-		// Parse every N minutes patterns like "*/10 * * * *" -> "Every 10 minutes"
-		const minuteMatch = cron.match(/^\*\/(\d+) \* \* \* \*$/);
-		if (minuteMatch) {
-			return `Every ${minuteMatch[1]} minutes`;
-		}
-
-		return cron; // Fallback to raw expression
+	// Parse every N minutes patterns like "*/10 * * * *" -> "Every 10 minutes"
+	const minuteMatch = cron.match(/^\*\/(\d+) \* \* \* \*$/);
+	if (minuteMatch) {
+		return `Every ${minuteMatch[1]} minutes`;
 	}
 
-	const cronDescription = $derived(getCronDescription(schedule.cronExpression));
+	return cron; // Fallback to raw expression
+}
 
-	/**
-	 * Format next run time as relative
-	 */
-	function getNextRunFormatted(): string {
-		if (!schedule.nextRunAt) return 'Not scheduled';
-		const date = new Date(schedule.nextRunAt);
-		const now = new Date();
-		const diffMs = date.getTime() - now.getTime();
+const cronDescription = $derived(getCronDescription(schedule.cronExpression));
 
-		if (diffMs < 0) return 'Overdue';
+/**
+ * Format next run time as relative
+ */
+function getNextRunFormatted(): string {
+	if (!schedule.nextRunAt) return 'Not scheduled';
+	const date = new Date(schedule.nextRunAt);
+	const now = new Date();
+	const diffMs = date.getTime() - now.getTime();
 
-		const diffMins = Math.floor(diffMs / 60000);
-		if (diffMins < 1) return 'in < 1 min';
-		if (diffMins < 60) return `in ${diffMins} min`;
+	if (diffMs < 0) return 'Overdue';
 
-		const diffHours = Math.floor(diffMins / 60);
-		if (diffHours < 24) return `in ${diffHours} hr`;
+	const diffMins = Math.floor(diffMs / 60000);
+	if (diffMins < 1) return 'in < 1 min';
+	if (diffMins < 60) return `in ${diffMins} min`;
 
-		const diffDays = Math.floor(diffHours / 24);
-		return `in ${diffDays} day${diffDays > 1 ? 's' : ''}`;
-	}
+	const diffHours = Math.floor(diffMins / 60);
+	if (diffHours < 24) return `in ${diffHours} hr`;
 
-	const nextRunFormatted = $derived(getNextRunFormatted());
+	const diffDays = Math.floor(diffHours / 24);
+	return `in ${diffDays} day${diffDays > 1 ? 's' : ''}`;
+}
+
+const nextRunFormatted = $derived(getNextRunFormatted());
 </script>
 
 <Card.Root class={cn('relative', className)}>

@@ -2,26 +2,26 @@
   Edit Prowlarr instance form page.
 -->
 <script lang="ts">
-	import { enhance } from '$app/forms';
-	import { goto } from '$app/navigation';
-	import * as Card from '$lib/components/ui/card';
-	import { Input } from '$lib/components/ui/input';
-	import { Button } from '$lib/components/ui/button';
-	import { Label } from '$lib/components/ui/label';
-	import { toastStore } from '$lib/components/ui/toast';
-	import type { PageProps, ActionData } from './$types';
+import { enhance } from '$app/forms';
+import { goto } from '$app/navigation';
+import { Button } from '$lib/components/ui/button';
+import * as Card from '$lib/components/ui/card';
+import { Input } from '$lib/components/ui/input';
+import { Label } from '$lib/components/ui/label';
+import { toastStore } from '$lib/components/ui/toast';
+import type { ActionData, PageProps } from './$types';
 
-	let { data, form }: { data: PageProps['data']; form: ActionData } = $props();
+let { data, form }: { data: PageProps['data']; form: ActionData } = $props();
 
-	let isSubmitting = $state(false);
-	let isTesting = $state(false);
+let isSubmitting = $state(false);
+let isTesting = $state(false);
 
-	const isLoading = $derived(isSubmitting || isTesting);
+const isLoading = $derived(isSubmitting || isTesting);
 
-	// Use form values if available (on error), otherwise use instance data
-	const name = $derived(form?.name ?? data.instance.name);
-	const url = $derived(form?.url ?? data.instance.url);
-	const enabled = $derived(form?.enabled ?? data.instance.enabled);
+// Use form values if available (on error), otherwise use instance data
+const name = $derived(form?.name ?? data.instance.name);
+const url = $derived(form?.url ?? data.instance.url);
+const enabled = $derived(form?.enabled ?? data.instance.enabled);
 </script>
 
 <svelte:head>

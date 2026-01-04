@@ -1,11 +1,11 @@
-import { getAllConnectors, getAllConnectorStats } from '$lib/server/db/queries/connectors';
-import type { ConnectorStats } from '$lib/server/db/queries/connectors';
-import { getContentStatusCounts } from '$lib/server/db/queries/content';
-import { getTodaySearchStats } from '$lib/server/db/queries/queue';
+import type { SerializedScheduledJob } from '$lib/components/dashboard/types';
 import { getRecentActivity } from '$lib/server/db/queries/activity';
 import { getAllConnectorCompletionWithTrends } from '$lib/server/db/queries/completion';
+import type { ConnectorStats } from '$lib/server/db/queries/connectors';
+import { getAllConnectorStats, getAllConnectors } from '$lib/server/db/queries/connectors';
+import { getContentStatusCounts } from '$lib/server/db/queries/content';
+import { getTodaySearchStats } from '$lib/server/db/queries/queue';
 import { getSchedulerStatus } from '$lib/server/scheduler';
-import type { SerializedScheduledJob } from '$lib/components/dashboard/types';
 import type { PageServerLoad } from './$types';
 
 /**

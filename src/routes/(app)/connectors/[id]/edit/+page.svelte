@@ -2,30 +2,30 @@
   Edit connector form page.
 -->
 <script lang="ts">
-	import { enhance } from '$app/forms';
-	import { goto } from '$app/navigation';
-	import * as Card from '$lib/components/ui/card';
-	import { Input } from '$lib/components/ui/input';
-	import { Button } from '$lib/components/ui/button';
-	import { Label } from '$lib/components/ui/label';
-	import { toastStore } from '$lib/components/ui/toast';
-	import type { PageProps, ActionData } from './$types';
-	import { connectorTypes } from '$lib/schemas/connectors';
+import { enhance } from '$app/forms';
+import { goto } from '$app/navigation';
+import { Button } from '$lib/components/ui/button';
+import * as Card from '$lib/components/ui/card';
+import { Input } from '$lib/components/ui/input';
+import { Label } from '$lib/components/ui/label';
+import { toastStore } from '$lib/components/ui/toast';
+import { connectorTypes } from '$lib/schemas/connectors';
+import type { ActionData, PageProps } from './$types';
 
-	let { data, form }: { data: PageProps['data']; form: ActionData } = $props();
+let { data, form }: { data: PageProps['data']; form: ActionData } = $props();
 
-	let isSubmitting = $state(false);
-	let isTesting = $state(false);
+let isSubmitting = $state(false);
+let isTesting = $state(false);
 
-	const isLoading = $derived(isSubmitting || isTesting);
+const isLoading = $derived(isSubmitting || isTesting);
 
-	// Use form values if available (on error), otherwise use connector data
-	const name = $derived(form?.name ?? data.connector.name);
-	const type = $derived(form?.type ?? data.connector.type);
-	const url = $derived(form?.url ?? data.connector.url);
-	const enabled = $derived(form?.enabled ?? data.connector.enabled);
+// Use form values if available (on error), otherwise use connector data
+const name = $derived(form?.name ?? data.connector.name);
+const type = $derived(form?.type ?? data.connector.type);
+const url = $derived(form?.url ?? data.connector.url);
+const enabled = $derived(form?.enabled ?? data.connector.enabled);
 
-	const formattedType = $derived(type.charAt(0).toUpperCase() + type.slice(1));
+const formattedType = $derived(type.charAt(0).toUpperCase() + type.slice(1));
 </script>
 
 <svelte:head>

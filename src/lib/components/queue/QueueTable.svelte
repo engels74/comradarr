@@ -1,230 +1,230 @@
 <script lang="ts">
-	import { createVirtualizer } from '@tanstack/svelte-virtual';
-	import { Badge } from '$lib/components/ui/badge';
-	import { Checkbox } from '$lib/components/ui/checkbox';
-	import { cn } from '$lib/utils.js';
-	import QueueStateBadge from './QueueStateBadge.svelte';
-	import type { SerializedQueueItem, SerializedThrottleInfo } from './types';
+import { createVirtualizer } from '@tanstack/svelte-virtual';
+import { Badge } from '$lib/components/ui/badge';
+import { Checkbox } from '$lib/components/ui/checkbox';
+import { cn } from '$lib/utils.js';
+import QueueStateBadge from './QueueStateBadge.svelte';
+import type { SerializedQueueItem, SerializedThrottleInfo } from './types';
 
-	/**
-	 * Virtualized queue table for large datasets.
-	 * Uses TanStack Virtual to only render visible rows.
-	 */
+/**
+ * Virtualized queue table for large datasets.
+ * Uses TanStack Virtual to only render visible rows.
+ */
 
-	interface Props {
-		items: SerializedQueueItem[];
-		throttleInfo: Record<number, SerializedThrottleInfo>;
-		maxHeight?: string | undefined;
-		selectedIds?: Set<number> | undefined;
-		onSelectionChange?: ((ids: Set<number>) => void) | undefined;
+interface Props {
+	items: SerializedQueueItem[];
+	throttleInfo: Record<number, SerializedThrottleInfo>;
+	maxHeight?: string | undefined;
+	selectedIds?: Set<number> | undefined;
+	onSelectionChange?: ((ids: Set<number>) => void) | undefined;
+}
+
+let {
+	items,
+	throttleInfo,
+	maxHeight = '70vh',
+	selectedIds = new Set(),
+	onSelectionChange
+}: Props = $props();
+
+// Selection state
+const isAllSelected = $derived(
+	items.length > 0 && items.every((item) => selectedIds.has(item.searchRegistryId))
+);
+const isSomeSelected = $derived(items.some((item) => selectedIds.has(item.searchRegistryId)));
+const isIndeterminate = $derived(isSomeSelected && !isAllSelected);
+
+/**
+ * Toggle selection for a single item.
+ */
+function toggleSelection(registryId: number) {
+	const newSet = new Set(selectedIds);
+	if (newSet.has(registryId)) {
+		newSet.delete(registryId);
+	} else {
+		newSet.add(registryId);
 	}
+	onSelectionChange?.(newSet);
+}
 
-	let {
-		items,
-		throttleInfo,
-		maxHeight = '70vh',
-		selectedIds = new Set(),
-		onSelectionChange
-	}: Props = $props();
-
-	// Selection state
-	const isAllSelected = $derived(
-		items.length > 0 && items.every((item) => selectedIds.has(item.searchRegistryId))
-	);
-	const isSomeSelected = $derived(items.some((item) => selectedIds.has(item.searchRegistryId)));
-	const isIndeterminate = $derived(isSomeSelected && !isAllSelected);
-
-	/**
-	 * Toggle selection for a single item.
-	 */
-	function toggleSelection(registryId: number) {
+/**
+ * Toggle all items selection.
+ */
+function toggleAll() {
+	if (isAllSelected) {
+		// Deselect all visible items
 		const newSet = new Set(selectedIds);
-		if (newSet.has(registryId)) {
-			newSet.delete(registryId);
-		} else {
-			newSet.add(registryId);
+		for (const item of items) {
+			newSet.delete(item.searchRegistryId);
+		}
+		onSelectionChange?.(newSet);
+	} else {
+		// Select all visible items
+		const newSet = new Set(selectedIds);
+		for (const item of items) {
+			newSet.add(item.searchRegistryId);
 		}
 		onSelectionChange?.(newSet);
 	}
+}
 
-	/**
-	 * Toggle all items selection.
-	 */
-	function toggleAll() {
-		if (isAllSelected) {
-			// Deselect all visible items
-			const newSet = new Set(selectedIds);
-			for (const item of items) {
-				newSet.delete(item.searchRegistryId);
-			}
-			onSelectionChange?.(newSet);
-		} else {
-			// Select all visible items
-			const newSet = new Set(selectedIds);
-			for (const item of items) {
-				newSet.add(item.searchRegistryId);
-			}
-			onSelectionChange?.(newSet);
-		}
+/**
+ * Handle row click for selection (only if not clicking a link).
+ */
+function handleRowClick(e: MouseEvent, registryId: number) {
+	// Don't toggle if clicking on a link or checkbox
+	const target = e.target as HTMLElement;
+	if (
+		target.tagName === 'A' ||
+		target.closest('a') ||
+		target.tagName === 'BUTTON' ||
+		target.closest('button')
+	) {
+		return;
+	}
+	toggleSelection(registryId);
+}
+
+// Scroll container reference
+let scrollContainer: HTMLDivElement | null = $state(null);
+
+// Virtualizer configuration
+const ROW_HEIGHT = 60;
+const OVERSCAN = 5;
+
+// Create virtualizer
+const virtualizerStore = $derived(
+	scrollContainer
+		? createVirtualizer({
+				count: items.length,
+				getScrollElement: () => scrollContainer,
+				estimateSize: () => ROW_HEIGHT,
+				overscan: OVERSCAN
+			})
+		: null
+);
+
+const virtualItems = $derived.by(() => {
+	if (!virtualizerStore) return [];
+	return $virtualizerStore?.getVirtualItems() ?? [];
+});
+
+const totalHeight = $derived.by(() => {
+	if (!virtualizerStore) return 0;
+	return $virtualizerStore?.getTotalSize() ?? 0;
+});
+
+// Connector type colors
+const typeColors: Record<string, string> = {
+	sonarr: 'bg-blue-500/10 text-blue-600 dark:text-blue-400',
+	radarr: 'bg-orange-500/10 text-orange-600 dark:text-orange-400',
+	whisparr: 'bg-purple-500/10 text-purple-600 dark:text-purple-400'
+};
+
+/**
+ * Formats the display title for an item.
+ */
+function formatTitle(item: SerializedQueueItem): string {
+	if (item.contentType === 'episode' && item.seriesTitle) {
+		const episodeCode = `S${String(item.seasonNumber ?? 0).padStart(2, '0')}E${String(item.episodeNumber ?? 0).padStart(2, '0')}`;
+		return `${item.seriesTitle} - ${episodeCode} - ${item.title}`;
+	}
+	if (item.contentType === 'movie' && item.year) {
+		return `${item.title} (${item.year})`;
+	}
+	return item.title;
+}
+
+/**
+ * Gets the link to the content detail page.
+ */
+function getContentLink(item: SerializedQueueItem): string {
+	if (item.contentType === 'episode') {
+		// For episodes, we link to the series page
+		// Note: We'd need series ID, but for now link to content browser
+		return `/content?search=${encodeURIComponent(item.seriesTitle ?? item.title)}`;
+	}
+	return `/content/movie/${item.contentId}`;
+}
+
+/**
+ * Estimates dispatch time based on queue position and throttle info.
+ */
+function estimateDispatchTime(item: SerializedQueueItem, index: number): string {
+	const info = throttleInfo[item.connectorId];
+
+	// If searching, it's in progress
+	if (item.state === 'searching') {
+		return 'In progress';
 	}
 
-	/**
-	 * Handle row click for selection (only if not clicking a link).
-	 */
-	function handleRowClick(e: MouseEvent, registryId: number) {
-		// Don't toggle if clicking on a link or checkbox
-		const target = e.target as HTMLElement;
-		if (
-			target.tagName === 'A' ||
-			target.closest('a') ||
-			target.tagName === 'BUTTON' ||
-			target.closest('button')
-		) {
-			return;
-		}
-		toggleSelection(registryId);
+	// If not queued, no dispatch time
+	if (item.state !== 'queued') {
+		return '-';
 	}
 
-	// Scroll container reference
-	let scrollContainer: HTMLDivElement | null = $state(null);
-
-	// Virtualizer configuration
-	const ROW_HEIGHT = 60;
-	const OVERSCAN = 5;
-
-	// Create virtualizer
-	const virtualizerStore = $derived(
-		scrollContainer
-			? createVirtualizer({
-					count: items.length,
-					getScrollElement: () => scrollContainer,
-					estimateSize: () => ROW_HEIGHT,
-					overscan: OVERSCAN
-				})
-			: null
-	);
-
-	const virtualItems = $derived.by(() => {
-		if (!virtualizerStore) return [];
-		return $virtualizerStore?.getVirtualItems() ?? [];
-	});
-
-	const totalHeight = $derived.by(() => {
-		if (!virtualizerStore) return 0;
-		return $virtualizerStore?.getTotalSize() ?? 0;
-	});
-
-	// Connector type colors
-	const typeColors: Record<string, string> = {
-		sonarr: 'bg-blue-500/10 text-blue-600 dark:text-blue-400',
-		radarr: 'bg-orange-500/10 text-orange-600 dark:text-orange-400',
-		whisparr: 'bg-purple-500/10 text-purple-600 dark:text-purple-400'
-	};
-
-	/**
-	 * Formats the display title for an item.
-	 */
-	function formatTitle(item: SerializedQueueItem): string {
-		if (item.contentType === 'episode' && item.seriesTitle) {
-			const episodeCode = `S${String(item.seasonNumber ?? 0).padStart(2, '0')}E${String(item.episodeNumber ?? 0).padStart(2, '0')}`;
-			return `${item.seriesTitle} - ${episodeCode} - ${item.title}`;
-		}
-		if (item.contentType === 'movie' && item.year) {
-			return `${item.title} (${item.year})`;
-		}
-		return item.title;
+	// If no throttle info, use scheduled time
+	if (!info) {
+		if (!item.scheduledAt) return 'Unknown';
+		return formatRelativeTime(new Date(item.scheduledAt));
 	}
 
-	/**
-	 * Gets the link to the content detail page.
-	 */
-	function getContentLink(item: SerializedQueueItem): string {
-		if (item.contentType === 'episode') {
-			// For episodes, we link to the series page
-			// Note: We'd need series ID, but for now link to content browser
-			return `/content?search=${encodeURIComponent(item.seriesTitle ?? item.title)}`;
+	// If paused, show paused state
+	if (info.isPaused) {
+		if (info.pausedUntil) {
+			return `Paused until ${formatTime(new Date(info.pausedUntil))}`;
 		}
-		return `/content/movie/${item.contentId}`;
+		return 'Paused';
 	}
 
-	/**
-	 * Estimates dispatch time based on queue position and throttle info.
-	 */
-	function estimateDispatchTime(item: SerializedQueueItem, index: number): string {
-		const info = throttleInfo[item.connectorId];
+	// Calculate estimated dispatch based on position and rate
+	const requestsPerMinute = info.requestsPerMinute || 5;
+	const minutesAhead = Math.ceil((index + 1) / requestsPerMinute);
 
-		// If searching, it's in progress
-		if (item.state === 'searching') {
-			return 'In progress';
-		}
-
-		// If not queued, no dispatch time
-		if (item.state !== 'queued') {
-			return '-';
-		}
-
-		// If no throttle info, use scheduled time
-		if (!info) {
-			if (!item.scheduledAt) return 'Unknown';
-			return formatRelativeTime(new Date(item.scheduledAt));
-		}
-
-		// If paused, show paused state
-		if (info.isPaused) {
-			if (info.pausedUntil) {
-				return `Paused until ${formatTime(new Date(info.pausedUntil))}`;
-			}
-			return 'Paused';
-		}
-
-		// Calculate estimated dispatch based on position and rate
-		const requestsPerMinute = info.requestsPerMinute || 5;
-		const minutesAhead = Math.ceil((index + 1) / requestsPerMinute);
-
-		if (minutesAhead <= 1) {
-			return 'Next';
-		}
-
-		const dispatchTime = new Date(Date.now() + minutesAhead * 60000);
-		return formatRelativeTime(dispatchTime);
+	if (minutesAhead <= 1) {
+		return 'Next';
 	}
 
-	/**
-	 * Formats a relative time string.
-	 */
-	function formatRelativeTime(date: Date): string {
-		const now = Date.now();
-		const diff = date.getTime() - now;
+	const dispatchTime = new Date(Date.now() + minutesAhead * 60000);
+	return formatRelativeTime(dispatchTime);
+}
 
-		if (diff <= 0) {
-			return 'Now';
-		}
+/**
+ * Formats a relative time string.
+ */
+function formatRelativeTime(date: Date): string {
+	const now = Date.now();
+	const diff = date.getTime() - now;
 
-		const minutes = Math.floor(diff / 60000);
-		if (minutes < 60) {
-			return minutes === 1 ? 'in 1 min' : `in ${minutes} mins`;
-		}
-
-		const hours = Math.floor(minutes / 60);
-		if (hours < 24) {
-			return hours === 1 ? 'in 1 hour' : `in ${hours} hours`;
-		}
-
-		const days = Math.floor(hours / 24);
-		return days === 1 ? 'in 1 day' : `in ${days} days`;
+	if (diff <= 0) {
+		return 'Now';
 	}
 
-	/**
-	 * Formats a time for display.
-	 */
-	function formatTime(date: Date): string {
-		return date.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+	const minutes = Math.floor(diff / 60000);
+	if (minutes < 60) {
+		return minutes === 1 ? 'in 1 min' : `in ${minutes} mins`;
 	}
 
-	/**
-	 * Max attempts for exhausted calculation display.
-	 */
-	const MAX_ATTEMPTS = 5;
+	const hours = Math.floor(minutes / 60);
+	if (hours < 24) {
+		return hours === 1 ? 'in 1 hour' : `in ${hours} hours`;
+	}
+
+	const days = Math.floor(hours / 24);
+	return days === 1 ? 'in 1 day' : `in ${days} days`;
+}
+
+/**
+ * Formats a time for display.
+ */
+function formatTime(date: Date): string {
+	return date.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+}
+
+/**
+ * Max attempts for exhausted calculation display.
+ */
+const MAX_ATTEMPTS = 5;
 </script>
 
 <div class="rounded-md border">

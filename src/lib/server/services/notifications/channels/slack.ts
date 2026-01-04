@@ -13,21 +13,21 @@
  */
 
 import type { NotificationChannel } from '$lib/server/db/schema';
+import type { NotificationSender } from '../base-channel';
+import { DEFAULT_SENDER_CONFIG } from '../base-channel';
+import {
+	NotificationConfigurationError,
+	NotificationNetworkError,
+	NotificationRateLimitError,
+	NotificationServerError,
+	NotificationTimeoutError
+} from '../errors';
 import type {
 	NotificationPayload,
 	NotificationResult,
 	SlackConfig,
 	SlackSensitiveConfig
 } from '../types';
-import type { NotificationSender } from '../base-channel';
-import { DEFAULT_SENDER_CONFIG } from '../base-channel';
-import {
-	NotificationConfigurationError,
-	NotificationServerError,
-	NotificationRateLimitError,
-	NotificationNetworkError,
-	NotificationTimeoutError
-} from '../errors';
 
 // =============================================================================
 // Slack Sender Implementation
@@ -229,7 +229,7 @@ export class SlackSender implements NotificationSender {
 		// Slack webhook returns 'invalid_payload' etc as plain text
 		if (responseText === 'invalid_payload' || responseText === 'invalid_token') {
 			return new NotificationConfigurationError(
-				'Invalid Slack webhook configuration: ' + responseText
+				`Invalid Slack webhook configuration: ${responseText}`
 			);
 		}
 

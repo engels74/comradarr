@@ -7,18 +7,16 @@
  * @module connectors/radarr
  */
 
+export type { ApiVersionInfo } from './client.js';
 // Client
 export { RadarrClient } from './client.js';
-export type { ApiVersionInfo } from './client.js';
-
-// Types
-export type { RadarrMovie, RadarrMovieFile } from './types.js';
-
 // Parsers
 export {
-	parseRadarrMovie,
 	parsePaginatedMovies,
 	parsePaginatedMoviesLenient,
-	RadarrMovieSchema,
-	RadarrMovieFileSchema
+	parseRadarrMovie,
+	RadarrMovieFileSchema,
+	RadarrMovieSchema
 } from './parsers.js';
+// Types
+export type { RadarrMovie, RadarrMovieFile } from './types.js';

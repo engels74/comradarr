@@ -13,24 +13,22 @@ export { ProwlarrClient } from './client.js';
 
 // Health Monitor
 export { ProwlarrHealthMonitor, prowlarrHealthMonitor } from './health-monitor.js';
-
-// Types
-export type {
-	ProwlarrClientConfig,
-	ProwlarrIndexerStatus,
-	ProwlarrIndexer,
-	IndexerHealth,
-	ProwlarrHealthStatus,
-	HealthCheckResult,
-	CachedIndexerHealth,
-	HealthSummary,
-	HealthMonitorConfig
-} from './types.js';
-
 // Parsers
 export {
-	parseProwlarrIndexerStatus,
-	parseProwlarrIndexer,
+	ProwlarrIndexerSchema,
 	ProwlarrIndexerStatusSchema,
-	ProwlarrIndexerSchema
+	parseProwlarrIndexer,
+	parseProwlarrIndexerStatus
 } from './parsers.js';
+// Types
+export type {
+	CachedIndexerHealth,
+	HealthCheckResult,
+	HealthMonitorConfig,
+	HealthSummary,
+	IndexerHealth,
+	ProwlarrClientConfig,
+	ProwlarrHealthStatus,
+	ProwlarrIndexer,
+	ProwlarrIndexerStatus
+} from './types.js';

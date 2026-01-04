@@ -12,8 +12,8 @@
 
  */
 
-import type { RetryConfig } from './types.js';
 import { isRetryableError, RateLimitError } from './errors.js';
+import type { RetryConfig } from './types.js';
 
 /**
  * Default retry configuration values
@@ -45,7 +45,7 @@ export const DEFAULT_RETRY_CONFIG: Required<RetryConfig> = {
  * ```
  */
 export function calculateBackoffDelay(attempt: number, config: Required<RetryConfig>): number {
-	const exponentialDelay = config.baseDelay * Math.pow(config.multiplier, attempt);
+	const exponentialDelay = config.baseDelay * config.multiplier ** attempt;
 	const clampedDelay = Math.min(exponentialDelay, config.maxDelay);
 
 	if (config.jitter) {

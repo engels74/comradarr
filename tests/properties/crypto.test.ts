@@ -12,14 +12,14 @@
  * - Format validation: invalid formats throw appropriate errors
  */
 
-import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import * as fc from 'fast-check';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import {
-	encrypt,
-	decrypt,
 	DecryptionError,
-	SecretKeyError,
-	getSecretKey
+	decrypt,
+	encrypt,
+	getSecretKey,
+	SecretKeyError
 } from '../../src/lib/server/crypto';
 
 // Store original SECRET_KEY to restore after tests

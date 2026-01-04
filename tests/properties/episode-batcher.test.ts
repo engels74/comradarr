@@ -16,23 +16,23 @@
 
  */
 
-import { describe, it, expect } from 'vitest';
 import * as fc from 'fast-check';
+import { describe, expect, it } from 'vitest';
+import { BATCHING_CONFIG } from '$lib/server/services/queue/config';
 import {
-	determineBatchingDecision,
-	determineBatchingDecisionWithFallback,
-	calculateMissingPercent,
+	type BatchingConfig,
 	calculateMissingCount,
-	isSeasonFullyAired,
-	groupEpisodesBySeries,
+	calculateMissingPercent,
 	createEpisodeBatches,
 	createMovieBatches,
-	type SeasonStatistics,
-	type BatchingConfig,
+	determineBatchingDecision,
+	determineBatchingDecisionWithFallback,
 	type EpisodeForGrouping,
-	type MovieForBatching
+	groupEpisodesBySeries,
+	isSeasonFullyAired,
+	type MovieForBatching,
+	type SeasonStatistics
 } from '$lib/server/services/queue/episode-batcher';
-import { BATCHING_CONFIG } from '$lib/server/services/queue/config';
 
 // =============================================================================
 // Test Configuration
@@ -266,14 +266,16 @@ describe('Property 9: Episode Batching Decision (Requirements 6.1, 6.2, 6.3)', (
 			fc.assert(
 				fc.property(
 					// Generate seasons with at least 1 missing episode
-					fc.integer({ min: 2, max: 100 }).chain((total) =>
-						fc.record({
-							totalEpisodes: fc.constant(total),
-							// Downloaded must be less than total (at least 1 missing)
-							downloadedEpisodes: fc.integer({ min: 0, max: total - 1 }),
-							nextAiring: futureDateArbitrary // Always a date, never null
-						})
-					),
+					fc
+						.integer({ min: 2, max: 100 })
+						.chain((total) =>
+							fc.record({
+								totalEpisodes: fc.constant(total),
+								// Downloaded must be less than total (at least 1 missing)
+								downloadedEpisodes: fc.integer({ min: 0, max: total - 1 }),
+								nextAiring: futureDateArbitrary // Always a date, never null
+							})
+						),
 					(stats) => {
 						const result = determineBatchingDecision(stats);
 						expect(result.command).toBe('EpisodeSearch');

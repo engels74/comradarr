@@ -5,9 +5,9 @@
  * Session IDs are 64-character hex strings (256 bits of entropy).
  */
 
+import { eq, lt } from 'drizzle-orm';
 import { db } from '$lib/server/db';
 import { sessions, users } from '$lib/server/db/schema';
-import { eq, lt } from 'drizzle-orm';
 
 /** Session duration in milliseconds (default: 7 days per tech.md) */
 const SESSION_DURATION_MS = 7 * 24 * 60 * 60 * 1000;

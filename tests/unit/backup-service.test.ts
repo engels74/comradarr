@@ -14,12 +14,12 @@
 
  */
 
-import { describe, it, expect } from 'vitest';
+import { describe, expect, it } from 'vitest';
 // Import only from types.ts to avoid database dependencies
 import {
-	TABLE_EXPORT_ORDER,
+	BackupError,
 	SECRET_KEY_VERIFIER_PLAINTEXT,
-	BackupError
+	TABLE_EXPORT_ORDER
 } from '../../src/lib/server/services/backup/types';
 
 describe('TABLE_EXPORT_ORDER', () => {

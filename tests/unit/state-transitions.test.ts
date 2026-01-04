@@ -13,7 +13,7 @@
 
  */
 
-import { describe, it, expect } from 'vitest';
+import { describe, expect, it } from 'vitest';
 // Import directly from specific files to avoid loading database-dependent modules
 import {
 	calculateNextEligibleTime,
@@ -156,9 +156,9 @@ describe('calculateNextEligibleTime', () => {
 			const expectedDelays = [
 				baseDelay, // attempt 1 → backoff 0
 				baseDelay * multiplier, // attempt 2 → backoff 1
-				baseDelay * Math.pow(multiplier, 2), // attempt 3 → backoff 2
-				Math.min(baseDelay * Math.pow(multiplier, 3), maxDelay), // attempt 4 → backoff 3
-				Math.min(baseDelay * Math.pow(multiplier, 4), maxDelay) // attempt 5 → backoff 4, capped
+				baseDelay * multiplier ** 2, // attempt 3 → backoff 2
+				Math.min(baseDelay * multiplier ** 3, maxDelay), // attempt 4 → backoff 3
+				Math.min(baseDelay * multiplier ** 4, maxDelay) // attempt 5 → backoff 4, capped
 			];
 
 			// With default config: 1h, 2h, 4h, 8h, 16h (capped at 24h)
