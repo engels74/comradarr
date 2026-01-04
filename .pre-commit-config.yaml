@@ -1,0 +1,52 @@
+repos:
+  # Standard pre-commit hooks
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: trailing-whitespace
+        exclude: ^drizzle/
+      - id: end-of-file-fixer
+        exclude: ^drizzle/
+      - id: check-yaml
+      - id: check-json
+        exclude: tsconfig\.json
+      - id: check-toml
+      - id: check-merge-conflict
+      - id: detect-private-key
+      - id: no-commit-to-branch
+        args: ['--branch', 'main']
+      - id: check-added-large-files
+        args: ['--maxkb=500']
+
+  # Local hooks
+  - repo: local
+    hooks:
+      # Prettier formatting on commit
+      - id: prettier
+        name: Prettier
+        entry: bunx prettier --write --ignore-unknown
+        language: system
+        types_or:
+          - javascript
+          - ts
+          - svelte
+          - json
+          - markdown
+          - css
+          - yaml
+
+      # Full TypeScript checking on push (includes tsc --noEmit)
+      - id: typecheck
+        name: TypeScript Check
+        entry: bun run typecheck
+        language: system
+        pass_filenames: false
+        stages: [pre-push]
+
+      # Full test suite on push (auto-manages test database)
+      - id: tests
+        name: Full Test Suite
+        entry: bun run test
+        language: system
+        pass_filenames: false
+        stages: [pre-push]
