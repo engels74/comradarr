@@ -436,7 +436,7 @@ cd "$PROJECT_ROOT"
 # =============================================================================
 if [ "$RUN_UNIT" = true ]; then
     log_header "Running Unit Tests (vitest)"
-    
+
     if bun run vitest run; then
         log_success "Unit tests passed"
     else
@@ -525,4 +525,3 @@ else
     log_success "All tests passed!"
     exit 0
 fi
-
