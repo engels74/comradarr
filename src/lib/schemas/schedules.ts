@@ -53,10 +53,17 @@ export const ScheduleSchema = v.object({
 		v.minLength(1, 'Cron expression is required'),
 		v.maxLength(100, 'Cron expression must be 100 characters or less')
 	),
-	timezone: v.pipe(v.string('Timezone is required'), v.trim(), v.minLength(1, 'Timezone is required')),
+	timezone: v.pipe(
+		v.string('Timezone is required'),
+		v.trim(),
+		v.minLength(1, 'Timezone is required')
+	),
 	connectorId: v.optional(
 		v.nullable(
-			v.pipe(v.number('Connector ID must be a number'), v.integer('Connector ID must be an integer'))
+			v.pipe(
+				v.number('Connector ID must be a number'),
+				v.integer('Connector ID must be an integer')
+			)
 		)
 	),
 	throttleProfileId: v.optional(

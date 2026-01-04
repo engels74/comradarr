@@ -29,7 +29,12 @@
 		class?: string;
 	}
 
-	let { value = $bindable('0 3 * * *'), timezone = 'UTC', disabled = false, class: className }: Props = $props();
+	let {
+		value = $bindable('0 3 * * *'),
+		timezone = 'UTC',
+		disabled = false,
+		class: className
+	}: Props = $props();
 
 	// Internal state
 	let frequency = $state<FrequencyMode>('daily');
@@ -82,11 +87,15 @@
 			case 'daily':
 				return `${atMinute} ${atHour} * * *`;
 			case 'weekly': {
-				const days = selectedDaysOfWeek.length > 0 ? selectedDaysOfWeek.sort((a, b) => a - b).join(',') : '*';
+				const days =
+					selectedDaysOfWeek.length > 0 ? selectedDaysOfWeek.sort((a, b) => a - b).join(',') : '*';
 				return `${atMinute} ${atHour} * * ${days}`;
 			}
 			case 'monthly': {
-				const days = selectedDaysOfMonth.length > 0 ? selectedDaysOfMonth.sort((a, b) => a - b).join(',') : '*';
+				const days =
+					selectedDaysOfMonth.length > 0
+						? selectedDaysOfMonth.sort((a, b) => a - b).join(',')
+						: '*';
 				return `${atMinute} ${atHour} ${days} * *`;
 			}
 			case 'custom':
@@ -110,7 +119,13 @@
 			return;
 		}
 
-		const [minute, hour, dayOfMonth, month, dayOfWeek] = parts as [string, string, string, string, string];
+		const [minute, hour, dayOfMonth, month, dayOfWeek] = parts as [
+			string,
+			string,
+			string,
+			string,
+			string
+		];
 
 		// Try to detect pattern
 		// Every N minutes: */N * * * *
@@ -122,14 +137,26 @@
 		}
 
 		// Hourly: N * * * *
-		if (/^\d+$/.test(minute) && hour === '*' && dayOfMonth === '*' && month === '*' && dayOfWeek === '*') {
+		if (
+			/^\d+$/.test(minute) &&
+			hour === '*' &&
+			dayOfMonth === '*' &&
+			month === '*' &&
+			dayOfWeek === '*'
+		) {
 			frequency = 'hourly';
 			atMinute = parseInt(minute, 10);
 			return;
 		}
 
 		// Daily: N N * * *
-		if (/^\d+$/.test(minute) && /^\d+$/.test(hour) && dayOfMonth === '*' && month === '*' && dayOfWeek === '*') {
+		if (
+			/^\d+$/.test(minute) &&
+			/^\d+$/.test(hour) &&
+			dayOfMonth === '*' &&
+			month === '*' &&
+			dayOfWeek === '*'
+		) {
 			frequency = 'daily';
 			atMinute = parseInt(minute, 10);
 			atHour = parseInt(hour, 10);
@@ -137,20 +164,38 @@
 		}
 
 		// Weekly: N N * * days
-		if (/^\d+$/.test(minute) && /^\d+$/.test(hour) && dayOfMonth === '*' && month === '*' && dayOfWeek !== '*') {
+		if (
+			/^\d+$/.test(minute) &&
+			/^\d+$/.test(hour) &&
+			dayOfMonth === '*' &&
+			month === '*' &&
+			dayOfWeek !== '*'
+		) {
 			frequency = 'weekly';
 			atMinute = parseInt(minute, 10);
 			atHour = parseInt(hour, 10);
-			selectedDaysOfWeek = dayOfWeek.split(',').map((d) => parseInt(d, 10)).filter((d) => !isNaN(d));
+			selectedDaysOfWeek = dayOfWeek
+				.split(',')
+				.map((d) => parseInt(d, 10))
+				.filter((d) => !isNaN(d));
 			return;
 		}
 
 		// Monthly: N N days * *
-		if (/^\d+$/.test(minute) && /^\d+$/.test(hour) && dayOfMonth !== '*' && month === '*' && dayOfWeek === '*') {
+		if (
+			/^\d+$/.test(minute) &&
+			/^\d+$/.test(hour) &&
+			dayOfMonth !== '*' &&
+			month === '*' &&
+			dayOfWeek === '*'
+		) {
 			frequency = 'monthly';
 			atMinute = parseInt(minute, 10);
 			atHour = parseInt(hour, 10);
-			selectedDaysOfMonth = dayOfMonth.split(',').map((d) => parseInt(d, 10)).filter((d) => !isNaN(d));
+			selectedDaysOfMonth = dayOfMonth
+				.split(',')
+				.map((d) => parseInt(d, 10))
+				.filter((d) => !isNaN(d));
 			return;
 		}
 
@@ -184,7 +229,11 @@
 			}
 			return { valid: true, nextRuns, error: null };
 		} catch (err) {
-			return { valid: false, nextRuns: [], error: err instanceof Error ? err.message : 'Invalid expression' };
+			return {
+				valid: false,
+				nextRuns: [],
+				error: err instanceof Error ? err.message : 'Invalid expression'
+			};
 		}
 	});
 
@@ -216,9 +265,10 @@
 				const period = atHour >= 12 ? 'PM' : 'AM';
 				const displayHour = atHour === 0 ? 12 : atHour > 12 ? atHour - 12 : atHour;
 				const minStr = atMinute.toString().padStart(2, '0');
-				const dayStr = selectedDaysOfMonth.length > 0
-					? selectedDaysOfMonth.map((d) => getOrdinal(d)).join(', ')
-					: 'every day';
+				const dayStr =
+					selectedDaysOfMonth.length > 0
+						? selectedDaysOfMonth.map((d) => getOrdinal(d)).join(', ')
+						: 'every day';
 				return `On the ${dayStr} of each month at ${displayHour}:${minStr} ${period}`;
 			}
 			case 'custom':
@@ -326,12 +376,7 @@
 	<!-- Frequency Mode Selection -->
 	<div class="grid gap-2">
 		<Label for="frequency">Frequency</Label>
-		<select
-			id="frequency"
-			bind:value={frequency}
-			{disabled}
-			class={selectClass}
-		>
+		<select id="frequency" bind:value={frequency} {disabled} class={selectClass}>
 			<option value="minutes">Every N Minutes</option>
 			<option value="hourly">Hourly</option>
 			<option value="daily">Daily</option>
@@ -345,12 +390,7 @@
 	{#if frequency === 'minutes'}
 		<div class="grid gap-2">
 			<Label for="minuteInterval">Run every</Label>
-			<select
-				id="minuteInterval"
-				bind:value={minuteInterval}
-				{disabled}
-				class={selectClass}
-			>
+			<select id="minuteInterval" bind:value={minuteInterval} {disabled} class={selectClass}>
 				{#each minuteIntervals as interval}
 					<option value={interval}>{interval} minutes</option>
 				{/each}
@@ -359,12 +399,7 @@
 	{:else if frequency === 'hourly'}
 		<div class="grid gap-2">
 			<Label for="atMinute">At minute</Label>
-			<select
-				id="atMinute"
-				bind:value={atMinute}
-				{disabled}
-				class={selectClass}
-			>
+			<select id="atMinute" bind:value={atMinute} {disabled} class={selectClass}>
 				{#each minuteOptions as opt}
 					<option value={opt.value}>:{opt.label}</option>
 				{/each}
@@ -374,12 +409,7 @@
 		<div class="grid grid-cols-2 gap-4">
 			<div class="grid gap-2">
 				<Label for="atHour">Hour</Label>
-				<select
-					id="atHour"
-					bind:value={atHour}
-					{disabled}
-					class={selectClass}
-				>
+				<select id="atHour" bind:value={atHour} {disabled} class={selectClass}>
 					{#each hourOptions as opt}
 						<option value={opt.value}>{opt.label}</option>
 					{/each}
@@ -387,12 +417,7 @@
 			</div>
 			<div class="grid gap-2">
 				<Label for="atMinuteDaily">Minute</Label>
-				<select
-					id="atMinuteDaily"
-					bind:value={atMinute}
-					{disabled}
-					class={selectClass}
-				>
+				<select id="atMinuteDaily" bind:value={atMinute} {disabled} class={selectClass}>
 					{#each minuteOptions as opt}
 						<option value={opt.value}>:{opt.label}</option>
 					{/each}
@@ -425,12 +450,7 @@
 			<div class="grid grid-cols-2 gap-4">
 				<div class="grid gap-2">
 					<Label for="atHourWeekly">Hour</Label>
-					<select
-						id="atHourWeekly"
-						bind:value={atHour}
-						{disabled}
-						class={selectClass}
-					>
+					<select id="atHourWeekly" bind:value={atHour} {disabled} class={selectClass}>
 						{#each hourOptions as opt}
 							<option value={opt.value}>{opt.label}</option>
 						{/each}
@@ -438,12 +458,7 @@
 				</div>
 				<div class="grid gap-2">
 					<Label for="atMinuteWeekly">Minute</Label>
-					<select
-						id="atMinuteWeekly"
-						bind:value={atMinute}
-						{disabled}
-						class={selectClass}
-					>
+					<select id="atMinuteWeekly" bind:value={atMinute} {disabled} class={selectClass}>
 						{#each minuteOptions as opt}
 							<option value={opt.value}>:{opt.label}</option>
 						{/each}
@@ -477,12 +492,7 @@
 			<div class="grid grid-cols-2 gap-4">
 				<div class="grid gap-2">
 					<Label for="atHourMonthly">Hour</Label>
-					<select
-						id="atHourMonthly"
-						bind:value={atHour}
-						{disabled}
-						class={selectClass}
-					>
+					<select id="atHourMonthly" bind:value={atHour} {disabled} class={selectClass}>
 						{#each hourOptions as opt}
 							<option value={opt.value}>{opt.label}</option>
 						{/each}
@@ -490,12 +500,7 @@
 				</div>
 				<div class="grid gap-2">
 					<Label for="atMinuteMonthly">Minute</Label>
-					<select
-						id="atMinuteMonthly"
-						bind:value={atMinute}
-						{disabled}
-						class={selectClass}
-					>
+					<select id="atMinuteMonthly" bind:value={atMinute} {disabled} class={selectClass}>
 						{#each minuteOptions as opt}
 							<option value={opt.value}>:{opt.label}</option>
 						{/each}

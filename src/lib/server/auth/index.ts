@@ -22,10 +22,4 @@ export {
 export { isLocalNetworkIP, getClientIP } from './network';
 
 // API key authentication and scope enforcement
-export {
-	requireAuth,
-	requireScope,
-	canWrite,
-	canRead,
-	type ApiKeyScope
-} from './api-auth';
+export { requireAuth, requireScope, canWrite, canRead, type ApiKeyScope } from './api-auth';

@@ -387,9 +387,7 @@ describe('SonarrClient.getSeries()', () => {
 				status: 'ended',
 				monitored: true,
 				qualityProfileId: 2,
-				seasons: [
-					{ seasonNumber: 1, monitored: true }
-				]
+				seasons: [{ seasonNumber: 1, monitored: true }]
 			}
 		];
 
@@ -881,8 +879,24 @@ describe('SonarrClient.getWantedMissing()', () => {
 			sortDirection: 'descending',
 			totalRecords: 5,
 			records: [
-				{ id: 1, seriesId: 1, seasonNumber: 1, episodeNumber: 1, hasFile: false, monitored: true, qualityCutoffNotMet: false },
-				{ id: 2, seriesId: 1, seasonNumber: 1, episodeNumber: 2, hasFile: false, monitored: true, qualityCutoffNotMet: false }
+				{
+					id: 1,
+					seriesId: 1,
+					seasonNumber: 1,
+					episodeNumber: 1,
+					hasFile: false,
+					monitored: true,
+					qualityCutoffNotMet: false
+				},
+				{
+					id: 2,
+					seriesId: 1,
+					seasonNumber: 1,
+					episodeNumber: 2,
+					hasFile: false,
+					monitored: true,
+					qualityCutoffNotMet: false
+				}
 			]
 		};
 
@@ -893,8 +907,24 @@ describe('SonarrClient.getWantedMissing()', () => {
 			sortDirection: 'descending',
 			totalRecords: 5,
 			records: [
-				{ id: 3, seriesId: 1, seasonNumber: 1, episodeNumber: 3, hasFile: false, monitored: true, qualityCutoffNotMet: false },
-				{ id: 4, seriesId: 1, seasonNumber: 1, episodeNumber: 4, hasFile: false, monitored: true, qualityCutoffNotMet: false }
+				{
+					id: 3,
+					seriesId: 1,
+					seasonNumber: 1,
+					episodeNumber: 3,
+					hasFile: false,
+					monitored: true,
+					qualityCutoffNotMet: false
+				},
+				{
+					id: 4,
+					seriesId: 1,
+					seasonNumber: 1,
+					episodeNumber: 4,
+					hasFile: false,
+					monitored: true,
+					qualityCutoffNotMet: false
+				}
 			]
 		};
 
@@ -905,7 +935,15 @@ describe('SonarrClient.getWantedMissing()', () => {
 			sortDirection: 'descending',
 			totalRecords: 5,
 			records: [
-				{ id: 5, seriesId: 1, seasonNumber: 1, episodeNumber: 5, hasFile: false, monitored: true, qualityCutoffNotMet: false }
+				{
+					id: 5,
+					seriesId: 1,
+					seasonNumber: 1,
+					episodeNumber: 5,
+					hasFile: false,
+					monitored: true,
+					qualityCutoffNotMet: false
+				}
 			]
 		};
 
@@ -941,9 +979,25 @@ describe('SonarrClient.getWantedMissing()', () => {
 			sortDirection: 'descending',
 			totalRecords: 3,
 			records: [
-				{ id: 1, seriesId: 1, seasonNumber: 1, episodeNumber: 1, hasFile: false, monitored: true, qualityCutoffNotMet: false },
+				{
+					id: 1,
+					seriesId: 1,
+					seasonNumber: 1,
+					episodeNumber: 1,
+					hasFile: false,
+					monitored: true,
+					qualityCutoffNotMet: false
+				},
 				{ id: 2, seriesId: 1 }, // Invalid: missing required fields
-				{ id: 3, seriesId: 1, seasonNumber: 1, episodeNumber: 3, hasFile: false, monitored: true, qualityCutoffNotMet: false }
+				{
+					id: 3,
+					seriesId: 1,
+					seasonNumber: 1,
+					episodeNumber: 3,
+					hasFile: false,
+					monitored: true,
+					qualityCutoffNotMet: false
+				}
 			]
 		};
 
@@ -1162,8 +1216,24 @@ describe('SonarrClient.getWantedCutoff()', () => {
 			sortDirection: 'descending',
 			totalRecords: 3,
 			records: [
-				{ id: 1, seriesId: 1, seasonNumber: 1, episodeNumber: 1, hasFile: true, monitored: true, qualityCutoffNotMet: true },
-				{ id: 2, seriesId: 1, seasonNumber: 1, episodeNumber: 2, hasFile: true, monitored: true, qualityCutoffNotMet: true }
+				{
+					id: 1,
+					seriesId: 1,
+					seasonNumber: 1,
+					episodeNumber: 1,
+					hasFile: true,
+					monitored: true,
+					qualityCutoffNotMet: true
+				},
+				{
+					id: 2,
+					seriesId: 1,
+					seasonNumber: 1,
+					episodeNumber: 2,
+					hasFile: true,
+					monitored: true,
+					qualityCutoffNotMet: true
+				}
 			]
 		};
 
@@ -1174,7 +1244,15 @@ describe('SonarrClient.getWantedCutoff()', () => {
 			sortDirection: 'descending',
 			totalRecords: 3,
 			records: [
-				{ id: 3, seriesId: 1, seasonNumber: 1, episodeNumber: 3, hasFile: true, monitored: true, qualityCutoffNotMet: true }
+				{
+					id: 3,
+					seriesId: 1,
+					seasonNumber: 1,
+					episodeNumber: 3,
+					hasFile: true,
+					monitored: true,
+					qualityCutoffNotMet: true
+				}
 			]
 		};
 
@@ -1207,9 +1285,25 @@ describe('SonarrClient.getWantedCutoff()', () => {
 			sortDirection: 'descending',
 			totalRecords: 3,
 			records: [
-				{ id: 1, seriesId: 1, seasonNumber: 1, episodeNumber: 1, hasFile: true, monitored: true, qualityCutoffNotMet: true },
+				{
+					id: 1,
+					seriesId: 1,
+					seasonNumber: 1,
+					episodeNumber: 1,
+					hasFile: true,
+					monitored: true,
+					qualityCutoffNotMet: true
+				},
 				{ id: 2, badRecord: true }, // Invalid: missing required fields
-				{ id: 3, seriesId: 1, seasonNumber: 1, episodeNumber: 3, hasFile: true, monitored: true, qualityCutoffNotMet: true }
+				{
+					id: 3,
+					seriesId: 1,
+					seasonNumber: 1,
+					episodeNumber: 3,
+					hasFile: true,
+					monitored: true,
+					qualityCutoffNotMet: true
+				}
 			]
 		};
 

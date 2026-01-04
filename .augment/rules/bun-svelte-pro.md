@@ -1,6 +1,6 @@
 ---
-type: "agent_requested"
-description: "Bun + Svelte 5 + SvelteKit Coding Guidelines"
+type: 'agent_requested'
+description: 'Bun + Svelte 5 + SvelteKit Coding Guidelines'
 ---
 
 # Modern Bun + Svelte 5 + SvelteKit Best Practices for 2025
@@ -22,20 +22,20 @@ This guide covers **10 critical areas** for greenfield full-stack development: c
 ```json
 // tsconfig.json
 {
-  "extends": "./.svelte-kit/tsconfig.json",
-  "compilerOptions": {
-    "strict": true,
-    "noUncheckedIndexedAccess": true,
-    "exactOptionalPropertyTypes": true,
-    "noImplicitOverride": true,
-    "verbatimModuleSyntax": true
-  }
+	"extends": "./.svelte-kit/tsconfig.json",
+	"compilerOptions": {
+		"strict": true,
+		"noUncheckedIndexedAccess": true,
+		"exactOptionalPropertyTypes": true,
+		"noImplicitOverride": true,
+		"verbatimModuleSyntax": true
+	}
 }
 ```
 
 **When to deviate:** Disable `exactOptionalPropertyTypes` when integrating with libraries that don't distinguish between `undefined` and missing properties.
 
-*Source: Svelte TypeScript Docs (svelte.dev/docs/typescript), TypeScript 5.x Release Notes*
+_Source: Svelte TypeScript Docs (svelte.dev/docs/typescript), TypeScript 5.x Release Notes_
 
 ### Use $props() for component properties with explicit destructuring
 
@@ -45,26 +45,27 @@ This guide covers **10 critical areas** for greenfield full-stack development: c
 
 ```svelte
 <script lang="ts">
-  let { 
-    required,
-    optional = 'default',
-    class: className,  // Rename reserved words
-    value = $bindable(),  // Explicit two-way binding
-    ...rest 
-  } = $props();
+	let {
+		required,
+		optional = 'default',
+		class: className, // Rename reserved words
+		value = $bindable(), // Explicit two-way binding
+		...rest
+	} = $props();
 </script>
 ```
 
 **Anti-pattern (Svelte 4):**
+
 ```svelte
 <!-- DON'T: Legacy pattern -->
 <script>
-  export let required;
-  export let optional = 'default';
+	export let required;
+	export let optional = 'default';
 </script>
 ```
 
-*Source: Svelte 5 Docs (svelte.dev/docs/svelte/$props), Migration Guide*
+_Source: Svelte 5 Docs (svelte.dev/docs/svelte/$props), Migration Guide_
 
 ### Structure SvelteKit projects with clear separation of concerns
 
@@ -88,7 +89,7 @@ src/
 └── hooks.server.ts
 ```
 
-*Source: SvelteKit Docs (svelte.dev/docs/kit/project-structure)*
+_Source: SvelteKit Docs (svelte.dev/docs/kit/project-structure)_
 
 ### Use snippets instead of slots for component composition
 
@@ -99,37 +100,37 @@ src/
 ```svelte
 <!-- List.svelte -->
 <script lang="ts">
-  import type { Snippet } from 'svelte';
-  
-  interface Props<T> {
-    items: T[];
-    item: Snippet<[T]>;
-    empty?: Snippet;
-  }
-  
-  let { items, item, empty }: Props<T> = $props();
+	import type { Snippet } from 'svelte';
+
+	interface Props<T> {
+		items: T[];
+		item: Snippet<[T]>;
+		empty?: Snippet;
+	}
+
+	let { items, item, empty }: Props<T> = $props();
 </script>
 
 {#if items.length}
-  {#each items as entry}
-    {@render item(entry)}
-  {/each}
+	{#each items as entry}
+		{@render item(entry)}
+	{/each}
 {:else}
-  {@render empty?.()}
+	{@render empty?.()}
 {/if}
 
 <!-- Usage -->
 <List {items}>
-  {#snippet item(entry)}
-    <li>{entry.name}</li>
-  {/snippet}
-  {#snippet empty()}
-    <p>No items found</p>
-  {/snippet}
+	{#snippet item(entry)}
+		<li>{entry.name}</li>
+	{/snippet}
+	{#snippet empty()}
+		<p>No items found</p>
+	{/snippet}
 </List>
 ```
 
-*Source: Svelte 5 Docs (svelte.dev/docs/svelte/snippet)*
+_Source: Svelte 5 Docs (svelte.dev/docs/svelte/snippet)_
 
 ---
 
@@ -143,37 +144,38 @@ src/
 
 ```svelte
 <script lang="ts">
-  // State - mutable
-  let count = $state(0);
-  let items = $state<string[]>([]);
-  
-  // Derived - computed, memoized
-  const doubled = $derived(count * 2);
-  const total = $derived.by(() => items.reduce((sum, i) => sum + i.length, 0));
-  
-  // Effect - side effects only
-  $effect(() => {
-    console.log(`Count changed to ${count}`);
-    // Cleanup function (optional)
-    return () => console.log('Cleanup');
-  });
+	// State - mutable
+	let count = $state(0);
+	let items = $state<string[]>([]);
+
+	// Derived - computed, memoized
+	const doubled = $derived(count * 2);
+	const total = $derived.by(() => items.reduce((sum, i) => sum + i.length, 0));
+
+	// Effect - side effects only
+	$effect(() => {
+		console.log(`Count changed to ${count}`);
+		// Cleanup function (optional)
+		return () => console.log('Cleanup');
+	});
 </script>
 ```
 
 **Anti-pattern (setting state in $effect):**
+
 ```svelte
 <!-- DON'T: Use $derived instead -->
 <script>
-  let count = $state(0);
-  let doubled = $state(0);
-  
-  $effect(() => {
-    doubled = count * 2; // ❌ Wrong - creates reactive loop
-  });
+	let count = $state(0);
+	let doubled = $state(0);
+
+	$effect(() => {
+		doubled = count * 2; // ❌ Wrong - creates reactive loop
+	});
 </script>
 ```
 
-*Source: Svelte 5 Docs (svelte.dev/docs/svelte/runes), Svelte Blog "Introducing Runes"*
+_Source: Svelte 5 Docs (svelte.dev/docs/svelte/runes), Svelte Blog "Introducing Runes"_
 
 ### Choose $state.raw for immutable patterns or large data
 
@@ -184,20 +186,20 @@ src/
 ```typescript
 // Deep reactivity (default) - mutations trigger updates
 let editor = $state({ theme: 'dark', content: '' });
-editor.theme = 'light';  // ✅ Triggers update
+editor.theme = 'light'; // ✅ Triggers update
 
 // Shallow reactivity - only reassignment triggers updates
 let logs = $state.raw<LogEntry[]>([]);
-logs.push(newLog);  // ❌ No update
-logs = [...logs, newLog];  // ✅ Triggers update
+logs.push(newLog); // ❌ No update
+logs = [...logs, newLog]; // ✅ Triggers update
 
 // Use $state.snapshot() to get plain object from proxy
-console.log($state.snapshot(editor));  // { theme: 'light', content: '' }
+console.log($state.snapshot(editor)); // { theme: 'light', content: '' }
 ```
 
 **When to deviate:** Stick with `$state()` for small objects where mutation convenience outweighs proxy overhead.
 
-*Source: Svelte 5 Docs ($state.raw)*
+_Source: Svelte 5 Docs ($state.raw)_
 
 ### Migrate stores to class-based or exported object patterns
 
@@ -208,31 +210,32 @@ console.log($state.snapshot(editor));  // { theme: 'light', content: '' }
 ```typescript
 // store.svelte.ts (Svelte 5)
 export class AppState {
-  user = $state<User | null>(null);
-  isLoading = $state(false);
-  
-  // Derived values as getters
-  isAuthenticated = $derived(this.user !== null);
-  
-  async login(credentials: Credentials) {
-    this.isLoading = true;
-    this.user = await authenticate(credentials);
-    this.isLoading = false;
-  }
+	user = $state<User | null>(null);
+	isLoading = $state(false);
+
+	// Derived values as getters
+	isAuthenticated = $derived(this.user !== null);
+
+	async login(credentials: Credentials) {
+		this.isLoading = true;
+		this.user = await authenticate(credentials);
+		this.isLoading = false;
+	}
 }
 
 export const appState = new AppState();
 ```
 
 **Svelte 4 equivalent (avoid for new code):**
+
 ```typescript
 // DON'T: Legacy store pattern
 import { writable, derived } from 'svelte/store';
 export const user = writable<User | null>(null);
-export const isAuthenticated = derived(user, $user => $user !== null);
+export const isAuthenticated = derived(user, ($user) => $user !== null);
 ```
 
-*Source: Joy of Code "Different Ways To Share State In Svelte 5" (Nov 2024)*
+_Source: Joy of Code "Different Ways To Share State In Svelte 5" (Nov 2024)_
 
 ### Use context API for component-tree scoped state
 
@@ -244,7 +247,7 @@ export const isAuthenticated = derived(user, $user => $user !== null);
 <!-- Parent.svelte -->
 <script lang="ts">
   import { setContext } from 'svelte';
-  
+
   const counter = $state({ value: 0 });
   setContext('counter', counter);
 </script>
@@ -252,7 +255,7 @@ export const isAuthenticated = derived(user, $user => $user !== null);
 <!-- Deeply nested Child.svelte -->
 <script lang="ts">
   import { getContext } from 'svelte';
-  
+
   const counter = getContext<{ value: number }>('counter');
 </script>
 
@@ -262,12 +265,13 @@ export const isAuthenticated = derived(user, $user => $user !== null);
 ```
 
 **Anti-pattern (global state in server context):**
+
 ```typescript
 // DON'T: Shared between all requests on server
 export const globalState = $state({ user: null });
 ```
 
-*Source: Svelte 5 Docs (Context), SvelteKit Auth Patterns*
+_Source: Svelte 5 Docs (Context), SvelteKit Auth Patterns_
 
 ---
 
@@ -285,24 +289,24 @@ import type { PageServerLoad } from './$types';
 import { db } from '$lib/server/database';
 
 export const load: PageServerLoad = async ({ params, cookies }) => {
-  const sessionId = cookies.get('session');
-  return {
-    post: await db.query.posts.findFirst({ where: eq(posts.slug, params.slug) }),
-    isOwner: await checkOwnership(sessionId, params.slug)
-  };
+	const sessionId = cookies.get('session');
+	return {
+		post: await db.query.posts.findFirst({ where: eq(posts.slug, params.slug) }),
+		isOwner: await checkOwnership(sessionId, params.slug)
+	};
 };
 
 // +page.ts - Universal (server + client)
 import type { PageLoad } from './$types';
 
 export const load: PageLoad = async ({ fetch, data }) => {
-  // data contains server load result
-  const comments = await fetch(`/api/comments/${data.post.id}`).then(r => r.json());
-  return { ...data, comments };
+	// data contains server load result
+	const comments = await fetch(`/api/comments/${data.post.id}`).then((r) => r.json());
+	return { ...data, comments };
 };
 ```
 
-*Source: SvelteKit Docs (svelte.dev/docs/kit/load)*
+_Source: SvelteKit Docs (svelte.dev/docs/kit/load)_
 
 ### Implement form actions with progressive enhancement
 
@@ -316,37 +320,37 @@ import { fail, redirect } from '@sveltejs/kit';
 import type { Actions } from './$types';
 
 export const actions: Actions = {
-  create: async ({ request, locals }) => {
-    const data = await request.formData();
-    const title = data.get('title');
-    
-    if (!title || typeof title !== 'string') {
-      return fail(400, { title, error: 'Title required' });
-    }
-    
-    await db.insert(posts).values({ title, authorId: locals.user.id });
-    redirect(303, '/posts');
-  }
+	create: async ({ request, locals }) => {
+		const data = await request.formData();
+		const title = data.get('title');
+
+		if (!title || typeof title !== 'string') {
+			return fail(400, { title, error: 'Title required' });
+		}
+
+		await db.insert(posts).values({ title, authorId: locals.user.id });
+		redirect(303, '/posts');
+	}
 };
 ```
 
 ```svelte
 <!-- +page.svelte -->
 <script lang="ts">
-  import { enhance } from '$app/forms';
-  import type { PageProps } from './$types';
-  
-  let { form }: PageProps = $props();
+	import { enhance } from '$app/forms';
+	import type { PageProps } from './$types';
+
+	let { form }: PageProps = $props();
 </script>
 
 <form method="POST" action="?/create" use:enhance>
-  {#if form?.error}<p class="error">{form.error}</p>{/if}
-  <input name="title" value={form?.title ?? ''} />
-  <button>Create</button>
+	{#if form?.error}<p class="error">{form.error}</p>{/if}
+	<input name="title" value={form?.title ?? ''} />
+	<button>Create</button>
 </form>
 ```
 
-*Source: SvelteKit Docs (svelte.dev/docs/kit/form-actions)*
+_Source: SvelteKit Docs (svelte.dev/docs/kit/form-actions)_
 
 ### Stream non-essential data with nested promises
 
@@ -357,14 +361,14 @@ export const actions: Actions = {
 ```typescript
 // +page.server.ts
 export const load: PageServerLoad = async ({ params }) => {
-  return {
-    // Essential - awaited, blocks render
-    post: await db.query.posts.findFirst({ where: eq(posts.slug, params.slug) }),
-    
-    // Streamed - promise, renders loading state first
-    comments: loadComments(params.slug),  // NOT awaited
-    relatedPosts: loadRelatedPosts(params.slug)  // NOT awaited
-  };
+	return {
+		// Essential - awaited, blocks render
+		post: await db.query.posts.findFirst({ where: eq(posts.slug, params.slug) }),
+
+		// Streamed - promise, renders loading state first
+		comments: loadComments(params.slug), // NOT awaited
+		relatedPosts: loadRelatedPosts(params.slug) // NOT awaited
+	};
 };
 ```
 
@@ -373,17 +377,17 @@ export const load: PageServerLoad = async ({ params }) => {
 <article>{data.post.content}</article>
 
 {#await data.comments}
-  <p>Loading comments...</p>
+	<p>Loading comments...</p>
 {:then comments}
-  {#each comments as comment}<Comment {comment} />{/each}
+	{#each comments as comment}<Comment {comment} />{/each}
 {:catch}
-  <p>Failed to load comments</p>
+	<p>Failed to load comments</p>
 {/await}
 ```
 
 **When to deviate:** Streaming requires JavaScript—await all data for critical SEO content or no-JS scenarios.
 
-*Source: Svelte Blog "Streaming, snapshots, and other new features" (2023)*
+_Source: Svelte Blog "Streaming, snapshots, and other new features" (2023)_
 
 ### Invalidate data with depends() and invalidate()
 
@@ -394,19 +398,19 @@ export const load: PageServerLoad = async ({ params }) => {
 ```typescript
 // +page.server.ts
 export const load: PageServerLoad = async ({ depends }) => {
-  depends('app:todos');  // Custom dependency
-  return { todos: await db.query.todos.findMany() };
+	depends('app:todos'); // Custom dependency
+	return { todos: await db.query.todos.findMany() };
 };
 
 // Component
 import { invalidate } from '$app/navigation';
 
 async function refresh() {
-  await invalidate('app:todos');  // Reruns load function
+	await invalidate('app:todos'); // Reruns load function
 }
 ```
 
-*Source: SvelteKit Docs ($app/navigation)*
+_Source: SvelteKit Docs ($app/navigation)_
 
 ---
 
@@ -425,17 +429,17 @@ import { drizzle } from 'drizzle-orm/bun-sql';
 import * as schema from './schema';
 
 const client = new SQL({
-  url: process.env.DATABASE_URL!,
-  max: 20,                    // Pool size
-  idleTimeout: 30,            // Close idle after 30s
-  maxLifetime: 60 * 30,       // Recycle connections after 30min
-  connectionTimeout: 30,       // Acquisition timeout
+	url: process.env.DATABASE_URL!,
+	max: 20, // Pool size
+	idleTimeout: 30, // Close idle after 30s
+	maxLifetime: 60 * 30, // Recycle connections after 30min
+	connectionTimeout: 30 // Acquisition timeout
 });
 
 export const db = drizzle({ client, schema });
 ```
 
-*Source: Bun Docs (bun.com/docs/runtime/sql), Drizzle Docs (orm.drizzle.team)*
+_Source: Bun Docs (bun.com/docs/runtime/sql), Drizzle Docs (orm.drizzle.team)_
 
 ### Use Drizzle prepared statements for repeated queries
 
@@ -448,16 +452,16 @@ import { sql } from 'drizzle-orm';
 
 // Prepare once at module level
 const getUserById = db
-  .select()
-  .from(users)
-  .where(eq(users.id, sql.placeholder('id')))
-  .prepare('get_user_by_id');
+	.select()
+	.from(users)
+	.where(eq(users.id, sql.placeholder('id')))
+	.prepare('get_user_by_id');
 
 // Execute many times with different values
 const user = await getUserById.execute({ id: userId });
 ```
 
-*Source: Drizzle Docs (orm.drizzle.team/docs/perf-queries)*
+_Source: Drizzle Docs (orm.drizzle.team/docs/perf-queries)_
 
 ### Configure UnoCSS with attributify mode and shortcuts
 
@@ -470,31 +474,21 @@ const user = await getUserById.execute({ id: userId });
 import { defineConfig, presetUno, presetAttributify } from 'unocss';
 
 export default defineConfig({
-  presets: [
-    presetUno(),
-    presetAttributify({ prefix: 'un-' })
-  ],
-  shortcuts: {
-    'btn': 'py-2 px-4 font-semibold rounded-lg shadow-md transition-colors',
-    'btn-primary': 'btn bg-primary text-primary-foreground hover:bg-primary/90',
-    'input-base': 'border rounded px-3 py-2 focus:outline-none focus:ring-2'
-  }
+	presets: [presetUno(), presetAttributify({ prefix: 'un-' })],
+	shortcuts: {
+		btn: 'py-2 px-4 font-semibold rounded-lg shadow-md transition-colors',
+		'btn-primary': 'btn bg-primary text-primary-foreground hover:bg-primary/90',
+		'input-base': 'border rounded px-3 py-2 focus:outline-none focus:ring-2'
+	}
 });
 ```
 
 ```svelte
 <!-- Attributify mode -->
-<button 
-  bg="blue-500 hover:blue-700"
-  text="white sm"
-  p="y-2 x-4"
-  rounded
->
-  Button
-</button>
+<button bg="blue-500 hover:blue-700" text="white sm" p="y-2 x-4" rounded> Button </button>
 ```
 
-*Source: UnoCSS Docs (unocss.dev/presets/attributify)*
+_Source: UnoCSS Docs (unocss.dev/presets/attributify)_
 
 ### Optimize Lucide icons with direct imports
 
@@ -504,16 +498,16 @@ export default defineConfig({
 
 ```svelte
 <script>
-  // ✅ Direct import - tree-shakeable
-  import CircleAlert from '@lucide/svelte/icons/circle-alert';
-  import User from '@lucide/svelte/icons/user';
-  
-  // ❌ Barrel import - may include all icons
-  // import { CircleAlert, User } from 'lucide-svelte';
+	// ✅ Direct import - tree-shakeable
+	import CircleAlert from '@lucide/svelte/icons/circle-alert';
+	import User from '@lucide/svelte/icons/user';
+
+	// ❌ Barrel import - may include all icons
+	// import { CircleAlert, User } from 'lucide-svelte';
 </script>
 ```
 
-*Source: Lucide Docs (lucide.dev/guide/packages/lucide-svelte)*
+_Source: Lucide Docs (lucide.dev/guide/packages/lucide-svelte)_
 
 ---
 
@@ -533,33 +527,33 @@ import { playwright } from '@vitest/browser-playwright';
 import { defineConfig } from 'vite';
 
 export default defineConfig({
-  plugins: [sveltekit(), svelteTesting()],
-  test: {
-    projects: [
-      {
-        test: {
-          name: 'client',
-          browser: {
-            enabled: true,
-            provider: playwright,
-            instances: [{ browser: 'chromium' }]
-          },
-          include: ['src/**/*.svelte.test.ts']
-        }
-      },
-      {
-        test: {
-          name: 'server',
-          environment: 'node',
-          include: ['src/**/*.server.test.ts']
-        }
-      }
-    ]
-  }
+	plugins: [sveltekit(), svelteTesting()],
+	test: {
+		projects: [
+			{
+				test: {
+					name: 'client',
+					browser: {
+						enabled: true,
+						provider: playwright,
+						instances: [{ browser: 'chromium' }]
+					},
+					include: ['src/**/*.svelte.test.ts']
+				}
+			},
+			{
+				test: {
+					name: 'server',
+					environment: 'node',
+					include: ['src/**/*.server.test.ts']
+				}
+			}
+		]
+	}
 });
 ```
 
-*Source: Vitest Docs (vitest.dev), Testing Library Svelte Setup*
+_Source: Vitest Docs (vitest.dev), Testing Library Svelte Setup_
 
 ### Configure Playwright for E2E with SvelteKit's preview server
 
@@ -572,19 +566,19 @@ export default defineConfig({
 import type { PlaywrightTestConfig } from '@playwright/test';
 
 const config: PlaywrightTestConfig = {
-  webServer: {
-    command: 'bun run build && bun run preview',
-    port: 4173,
-    reuseExistingServer: !process.env.CI
-  },
-  testDir: 'tests',
-  use: { baseURL: 'http://localhost:4173' }
+	webServer: {
+		command: 'bun run build && bun run preview',
+		port: 4173,
+		reuseExistingServer: !process.env.CI
+	},
+	testDir: 'tests',
+	use: { baseURL: 'http://localhost:4173' }
 };
 
 export default config;
 ```
 
-*Source: Svelte Docs (svelte.dev/docs/svelte/testing), Playwright Docs*
+_Source: Svelte Docs (svelte.dev/docs/svelte/testing), Playwright Docs_
 
 ### Choose Valibot over Zod for client-side validation
 
@@ -597,8 +591,8 @@ export default config;
 import * as v from 'valibot';
 
 const UserSchema = v.object({
-  email: v.pipe(v.string(), v.email()),
-  age: v.pipe(v.number(), v.minValue(18))
+	email: v.pipe(v.string(), v.email()),
+	age: v.pipe(v.number(), v.minValue(18))
 });
 
 type User = v.InferOutput<typeof UserSchema>;
@@ -607,12 +601,12 @@ type User = v.InferOutput<typeof UserSchema>;
 import { z } from 'zod';
 
 const UserSchemaZod = z.object({
-  email: z.string().email(),
-  age: z.number().min(18)
+	email: z.string().email(),
+	age: z.number().min(18)
 });
 ```
 
-*Source: Valibot Docs (valibot.dev/guides/comparison/), Builder.io Introduction*
+_Source: Valibot Docs (valibot.dev/guides/comparison/), Builder.io Introduction_
 
 ### Run svelte-check in CI pipelines
 
@@ -623,14 +617,14 @@ const UserSchemaZod = z.object({
 ```json
 // package.json
 {
-  "scripts": {
-    "check": "svelte-check --tsconfig ./tsconfig.json",
-    "check:watch": "svelte-check --watch"
-  }
+	"scripts": {
+		"check": "svelte-check --tsconfig ./tsconfig.json",
+		"check:watch": "svelte-check --watch"
+	}
 }
 ```
 
-*Source: Svelte CLI Docs (svelte.dev/docs/cli/sv-check)*
+_Source: Svelte CLI Docs (svelte.dev/docs/cli/sv-check)_
 
 ---
 
@@ -645,18 +639,18 @@ const UserSchemaZod = z.object({
 ```typescript
 // schema.ts
 export const users = pgTable('users', {
-  id: integer('id').primaryKey().generatedAlwaysAsIdentity(),
-  email: varchar('email', { length: 320 }).notNull().unique(),
-  name: varchar('name', { length: 100 }).notNull(),
-  createdAt: timestamp('created_at').defaultNow().notNull()
+	id: integer('id').primaryKey().generatedAlwaysAsIdentity(),
+	email: varchar('email', { length: 320 }).notNull().unique(),
+	name: varchar('name', { length: 100 }).notNull(),
+	createdAt: timestamp('created_at').defaultNow().notNull()
 });
 
 // Inferred types
-type User = typeof users.$inferSelect;      // { id: number; email: string; ... }
-type NewUser = typeof users.$inferInsert;   // { email: string; name: string; ... }
+type User = typeof users.$inferSelect; // { id: number; email: string; ... }
+type NewUser = typeof users.$inferInsert; // { email: string; name: string; ... }
 ```
 
-*Source: Drizzle Docs (orm.drizzle.team/docs/sql-schema-declaration)*
+_Source: Drizzle Docs (orm.drizzle.team/docs/sql-schema-declaration)_
 
 ### Use PageProps from ./$types for Svelte 5 components
 
@@ -666,15 +660,15 @@ type NewUser = typeof users.$inferInsert;   // { email: string; name: string; ..
 
 ```svelte
 <script lang="ts">
-  import type { PageProps } from './$types';
-  
-  let { data, form }: PageProps = $props();
-  // data is typed from load function return
-  // form is typed from actions return
+	import type { PageProps } from './$types';
+
+	let { data, form }: PageProps = $props();
+	// data is typed from load function return
+	// form is typed from actions return
 </script>
 ```
 
-*Source: SvelteKit Docs (svelte.dev/docs/kit/types)*
+_Source: SvelteKit Docs (svelte.dev/docs/kit/types)_
 
 ### Apply satisfies for configuration objects
 
@@ -687,15 +681,15 @@ type Route = { path: string; prerender?: boolean };
 
 // satisfies validates AND preserves literal types
 const routes = {
-  home: { path: '/', prerender: true },
-  about: { path: '/about' }
+	home: { path: '/', prerender: true },
+	about: { path: '/about' }
 } satisfies Record<string, Route>;
 
-type RouteKey = keyof typeof routes;  // "home" | "about" (not string)
-routes.home.path;  // TypeScript knows this is "/"
+type RouteKey = keyof typeof routes; // "home" | "about" (not string)
+routes.home.path; // TypeScript knows this is "/"
 ```
 
-*Source: TypeScript 4.9 Release Notes*
+_Source: TypeScript 4.9 Release Notes_
 
 ---
 
@@ -720,7 +714,7 @@ await db.select().from(users).where(eq(users.email, userInput));
 await db.execute(sql.raw(`SELECT * FROM users WHERE id = ${userInput}`));
 ```
 
-*Source: Drizzle Docs (orm.drizzle.team/docs/sql)*
+_Source: Drizzle Docs (orm.drizzle.team/docs/sql)_
 
 ### Implement authentication in hooks.server.ts
 
@@ -734,33 +728,33 @@ import type { Handle } from '@sveltejs/kit';
 import { redirect } from '@sveltejs/kit';
 
 export const handle: Handle = async ({ event, resolve }) => {
-  const sessionId = event.cookies.get('session');
-  
-  if (sessionId) {
-    event.locals.user = await validateSession(sessionId);
-  }
-  
-  // Protect routes
-  if (event.url.pathname.startsWith('/app') && !event.locals.user) {
-    redirect(303, '/login');
-  }
-  
-  return resolve(event);
+	const sessionId = event.cookies.get('session');
+
+	if (sessionId) {
+		event.locals.user = await validateSession(sessionId);
+	}
+
+	// Protect routes
+	if (event.url.pathname.startsWith('/app') && !event.locals.user) {
+		redirect(303, '/login');
+	}
+
+	return resolve(event);
 };
 ```
 
 ```typescript
 // app.d.ts
 declare global {
-  namespace App {
-    interface Locals {
-      user: { id: string; name: string } | null;
-    }
-  }
+	namespace App {
+		interface Locals {
+			user: { id: string; name: string } | null;
+		}
+	}
 }
 ```
 
-*Source: SvelteKit Docs (svelte.dev/docs/kit/hooks)*
+_Source: SvelteKit Docs (svelte.dev/docs/kit/hooks)_
 
 ### Configure security headers via hooks
 
@@ -771,22 +765,21 @@ declare global {
 ```typescript
 // hooks.server.ts
 export const handle: Handle = async ({ event, resolve }) => {
-  const response = await resolve(event);
-  
-  response.headers.set('X-Frame-Options', 'SAMEORIGIN');
-  response.headers.set('X-Content-Type-Options', 'nosniff');
-  response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
-  
-  if (process.env.NODE_ENV === 'production') {
-    response.headers.set('Strict-Transport-Security', 
-      'max-age=31536000; includeSubDomains');
-  }
-  
-  return response;
+	const response = await resolve(event);
+
+	response.headers.set('X-Frame-Options', 'SAMEORIGIN');
+	response.headers.set('X-Content-Type-Options', 'nosniff');
+	response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
+
+	if (process.env.NODE_ENV === 'production') {
+		response.headers.set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+	}
+
+	return response;
 };
 ```
 
-*Source: SvelteKit Docs (Configuration CSP), Nosecone Library Docs*
+_Source: SvelteKit Docs (Configuration CSP), Nosecone Library Docs_
 
 ---
 
@@ -806,17 +799,13 @@ import presetAnimations from 'unocss-preset-animations';
 import { presetShadcn } from 'unocss-preset-shadcn';
 
 export default defineConfig({
-  presets: [
-    presetWind(),
-    presetAnimations(),
-    presetShadcn({ color: 'slate' })
-  ]
+	presets: [presetWind(), presetAnimations(), presetShadcn({ color: 'slate' })]
 });
 ```
 
 **Note:** Keep an empty `tailwind.config.js` for shadcn CLI compatibility.
 
-*Source: unocss-preset-shadcn GitHub*
+_Source: unocss-preset-shadcn GitHub_
 
 ### Use superforms with shadcn-svelte Form components
 
@@ -826,83 +815,83 @@ export default defineConfig({
 
 ```svelte
 <script lang="ts">
-  import * as Form from '$lib/components/ui/form';
-  import { Input } from '$lib/components/ui/input';
-  import { superForm } from 'sveltekit-superforms';
-  import { valibot } from 'sveltekit-superforms/adapters';
+	import * as Form from '$lib/components/ui/form';
+	import { Input } from '$lib/components/ui/input';
+	import { superForm } from 'sveltekit-superforms';
+	import { valibot } from 'sveltekit-superforms/adapters';
 
-  let { data } = $props();
-  
-  const form = superForm(data.form, {
-    validators: valibot(schema)
-  });
-  const { form: formData, enhance } = form;
+	let { data } = $props();
+
+	const form = superForm(data.form, {
+		validators: valibot(schema)
+	});
+	const { form: formData, enhance } = form;
 </script>
 
 <form method="POST" use:enhance>
-  <Form.Field {form} name="email">
-    <Form.Control>
-      {#snippet children({ props })}
-        <Form.Label>Email</Form.Label>
-        <Input {...props} bind:value={$formData.email} />
-      {/snippet}
-    </Form.Control>
-    <Form.Description>Your work email</Form.Description>
-    <Form.FieldErrors />
-  </Form.Field>
-  <Form.Button>Submit</Form.Button>
+	<Form.Field {form} name="email">
+		<Form.Control>
+			{#snippet children({ props })}
+				<Form.Label>Email</Form.Label>
+				<Input {...props} bind:value={$formData.email} />
+			{/snippet}
+		</Form.Control>
+		<Form.Description>Your work email</Form.Description>
+		<Form.FieldErrors />
+	</Form.Field>
+	<Form.Button>Submit</Form.Button>
 </form>
 ```
 
-*Source: superforms.rocks, shadcn-svelte.com*
+_Source: superforms.rocks, shadcn-svelte.com_
 
 ---
 
-## 9. Backend patterns: *arr APIs, Croner scheduling, webhooks
+## 9. Backend patterns: \*arr APIs, Croner scheduling, webhooks
 
-### Authenticate *arr API calls with X-Api-Key header
+### Authenticate \*arr API calls with X-Api-Key header
 
 **Rule:** Use the `X-Api-Key` header for Radarr/Sonarr authentication. Wrap API calls in a typed client with error handling.
 
-**Rationale:** *arr applications use API key authentication (not OAuth). A typed client ensures consistent error handling and timeout configuration.
+**Rationale:** \*arr applications use API key authentication (not OAuth). A typed client ensures consistent error handling and timeout configuration.
 
 ```typescript
 // src/lib/server/arr-client.ts
 interface ArrConfig {
-  baseUrl: string;
-  apiKey: string;
+	baseUrl: string;
+	apiKey: string;
 }
 
 export async function arrFetch<T>(
-  config: ArrConfig,
-  endpoint: string,
-  options: RequestInit = {}
+	config: ArrConfig,
+	endpoint: string,
+	options: RequestInit = {}
 ): Promise<T> {
-  const response = await fetch(`${config.baseUrl}/api/v3/${endpoint}`, {
-    ...options,
-    headers: {
-      'X-Api-Key': config.apiKey,
-      'Content-Type': 'application/json',
-      ...options.headers
-    },
-    signal: AbortSignal.timeout(30000)
-  });
+	const response = await fetch(`${config.baseUrl}/api/v3/${endpoint}`, {
+		...options,
+		headers: {
+			'X-Api-Key': config.apiKey,
+			'Content-Type': 'application/json',
+			...options.headers
+		},
+		signal: AbortSignal.timeout(30000)
+	});
 
-  if (!response.ok) {
-    throw new Error(`arr API error: ${response.status}`);
-  }
+	if (!response.ok) {
+		throw new Error(`arr API error: ${response.status}`);
+	}
 
-  return response.json();
+	return response.json();
 }
 
 // Usage
 const movies = await arrFetch<Movie[]>(
-  { baseUrl: process.env.RADARR_URL!, apiKey: process.env.RADARR_API_KEY! },
-  'movie'
+	{ baseUrl: process.env.RADARR_URL!, apiKey: process.env.RADARR_API_KEY! },
+	'movie'
 );
 ```
 
-*Source: Radarr API Docs (radarr.video/docs/api/)*
+_Source: Radarr API Docs (radarr.video/docs/api/)_
 
 ### Schedule background tasks with Croner
 
@@ -916,24 +905,32 @@ import { Cron } from 'croner';
 
 // Initialize in hooks.server.ts (runs once on startup)
 export function initializeJobs() {
-  // Sync every 15 minutes with overrun protection
-  new Cron('*/15 * * * *', {
-    name: 'radarr-sync',
-    protect: true,
-    catch: (err) => console.error('Sync failed:', err)
-  }, async () => {
-    await syncRadarrLibrary();
-  });
-  
-  // Cleanup at 2 AM daily
-  new Cron('0 2 * * *', {
-    name: 'cleanup',
-    timezone: 'America/New_York'
-  }, cleanupOldData);
+	// Sync every 15 minutes with overrun protection
+	new Cron(
+		'*/15 * * * *',
+		{
+			name: 'radarr-sync',
+			protect: true,
+			catch: (err) => console.error('Sync failed:', err)
+		},
+		async () => {
+			await syncRadarrLibrary();
+		}
+	);
+
+	// Cleanup at 2 AM daily
+	new Cron(
+		'0 2 * * *',
+		{
+			name: 'cleanup',
+			timezone: 'America/New_York'
+		},
+		cleanupOldData
+	);
 }
 ```
 
-*Source: Croner GitHub (github.com/Hexagon/croner)*
+_Source: Croner GitHub (github.com/Hexagon/croner)_
 
 ### Handle webhooks with raw body access for signature verification
 
@@ -946,21 +943,17 @@ export function initializeJobs() {
 import type { RequestHandler } from './$types';
 
 export const POST: RequestHandler = async ({ request }) => {
-  const body = await request.text();  // Raw body for signature
-  const signature = request.headers.get('stripe-signature')!;
-  
-  const event = stripe.webhooks.constructEvent(
-    body,
-    signature,
-    WEBHOOK_SECRET
-  );
-  
-  // Process event...
-  return new Response('OK');
+	const body = await request.text(); // Raw body for signature
+	const signature = request.headers.get('stripe-signature')!;
+
+	const event = stripe.webhooks.constructEvent(body, signature, WEBHOOK_SECRET);
+
+	// Process event...
+	return new Response('OK');
 };
 ```
 
-*Source: SvelteKit Docs (svelte.dev/docs/kit/routing)*
+_Source: SvelteKit Docs (svelte.dev/docs/kit/routing)_
 
 ---
 
@@ -977,19 +970,19 @@ export const POST: RequestHandler = async ({ request }) => {
 import adapter from 'svelte-adapter-bun';
 
 export default {
-  kit: {
-    adapter: adapter({
-      out: 'build',
-      precompress: true,
-      envPrefix: ''
-    })
-  }
+	kit: {
+		adapter: adapter({
+			out: 'build',
+			precompress: true,
+			envPrefix: ''
+		})
+	}
 };
 ```
 
 **Known limitation:** `bun build --compile` (single executable) doesn't work with SvelteKit yet.
 
-*Source: svelte-adapter-bun GitHub, Bun Ecosystem Docs*
+_Source: svelte-adapter-bun GitHub, Bun Ecosystem Docs_
 
 ### Build multi-stage Dockerfiles with BuildKit cache mounts
 
@@ -1025,7 +1018,7 @@ EXPOSE 3000
 CMD ["bun", "./build/index.js"]
 ```
 
-*Source: Bun Docker Docs (bun.com/docs/guides/ecosystem/docker)*
+_Source: Bun Docker Docs (bun.com/docs/guides/ecosystem/docker)_
 
 ### Configure PostgreSQL with health checks and proper secrets
 
@@ -1043,7 +1036,7 @@ services:
         condition: service_healthy
     environment:
       DATABASE_URL: postgres://user:${DB_PASSWORD}@db:5432/app
-    
+
   db:
     image: postgres:16-alpine
     environment:
@@ -1053,7 +1046,7 @@ services:
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      test: ['CMD-SHELL', 'pg_isready -U postgres']
       interval: 10s
       timeout: 5s
       retries: 5
@@ -1066,7 +1059,7 @@ secrets:
     file: ./secrets/db_password.txt
 ```
 
-*Source: Docker Postgres Official Image Docs, Sliplane Best Practices*
+_Source: Docker Postgres Official Image Docs, Sliplane Best Practices_
 
 ---
 
@@ -1078,43 +1071,44 @@ import 'dotenv/config';
 import { defineConfig } from 'drizzle-kit';
 
 export default defineConfig({
-  out: './drizzle',
-  schema: './src/lib/server/db/schema.ts',
-  dialect: 'postgresql',
-  dbCredentials: {
-    url: process.env.DATABASE_URL!
-  },
-  migrations: {
-    prefix: 'timestamp',
-    table: '__drizzle_migrations__'
-  },
-  strict: true,
-  verbose: true
+	out: './drizzle',
+	schema: './src/lib/server/db/schema.ts',
+	dialect: 'postgresql',
+	dbCredentials: {
+		url: process.env.DATABASE_URL!
+	},
+	migrations: {
+		prefix: 'timestamp',
+		table: '__drizzle_migrations__'
+	},
+	strict: true,
+	verbose: true
 });
 ```
 
 **Commands:**
+
 - `bunx drizzle-kit generate` — Generate migrations from schema changes
 - `bunx drizzle-kit migrate` — Apply pending migrations
 - `bunx drizzle-kit push` — Push schema directly (dev only)
 - `bunx drizzle-kit studio` — Open database GUI
 
-*Source: Drizzle Kit Docs (orm.drizzle.team/docs/drizzle-config-file)*
+_Source: Drizzle Kit Docs (orm.drizzle.team/docs/drizzle-config-file)_
 
 ---
 
 ## Migration checklist: Svelte 4 → Svelte 5
 
-| Svelte 4 Pattern | Svelte 5 Replacement | Notes |
-|-----------------|---------------------|-------|
-| `export let prop` | `let { prop } = $props()` | Use `$bindable()` for two-way binding |
-| `$: derived = x * 2` | `const derived = $derived(x * 2)` | Use `$derived.by()` for complex logic |
-| `$: { sideEffect() }` | `$effect(() => { sideEffect() })` | Runs after DOM updates |
-| `<slot>` | `{#snippet}` + `{@render}` | Snippets are typed functions |
-| `createEventDispatcher` | Callback props | `let { onEvent } = $props()` |
-| `writable/readable` stores | `$state` in `.svelte.ts` | Same API everywhere |
-| `use:action` | `use:action` | Unchanged |
+| Svelte 4 Pattern           | Svelte 5 Replacement              | Notes                                 |
+| -------------------------- | --------------------------------- | ------------------------------------- |
+| `export let prop`          | `let { prop } = $props()`         | Use `$bindable()` for two-way binding |
+| `$: derived = x * 2`       | `const derived = $derived(x * 2)` | Use `$derived.by()` for complex logic |
+| `$: { sideEffect() }`      | `$effect(() => { sideEffect() })` | Runs after DOM updates                |
+| `<slot>`                   | `{#snippet}` + `{@render}`        | Snippets are typed functions          |
+| `createEventDispatcher`    | Callback props                    | `let { onEvent } = $props()`          |
+| `writable/readable` stores | `$state` in `.svelte.ts`          | Same API everywhere                   |
+| `use:action`               | `use:action`                      | Unchanged                             |
 
 **CLI migration:** `npx sv migrate svelte-5`
 
-*Source: Svelte 5 Migration Guide (svelte.dev/docs/svelte/v5-migration-guide)*
+_Source: Svelte 5 Migration Guide (svelte.dev/docs/svelte/v5-migration-guide)_

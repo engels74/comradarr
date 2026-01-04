@@ -13,7 +13,10 @@
 
 	let { state, class: className }: Props = $props();
 
-	const stateConfig: Record<NonNullable<SearchState>, { bg: string; text: string; label: string }> = {
+	const stateConfig: Record<
+		NonNullable<SearchState>,
+		{ bg: string; text: string; label: string }
+	> = {
 		pending: { bg: 'bg-gray-400', text: 'text-white', label: 'Pending' },
 		queued: { bg: 'bg-blue-500', text: 'text-white', label: 'Queued' },
 		searching: { bg: 'bg-yellow-500', text: 'text-black', label: 'Searching' },
@@ -22,9 +25,7 @@
 	};
 
 	const config = $derived(
-		state && state in stateConfig
-			? stateConfig[state as NonNullable<SearchState>]
-			: null
+		state && state in stateConfig ? stateConfig[state as NonNullable<SearchState>] : null
 	);
 </script>
 

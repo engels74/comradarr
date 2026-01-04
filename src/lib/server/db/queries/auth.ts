@@ -238,7 +238,10 @@ export interface UserSession {
  * @param currentSessionId - Optional current session ID to mark as current
  * @returns Array of user sessions, sorted by last accessed (most recent first)
  */
-export async function getUserSessions(userId: number, currentSessionId?: string): Promise<UserSession[]> {
+export async function getUserSessions(
+	userId: number,
+	currentSessionId?: string
+): Promise<UserSession[]> {
 	const now = new Date();
 
 	const result = await db
@@ -283,7 +286,10 @@ export async function deleteUserSession(userId: number, sessionId: string): Prom
  * @param currentSessionId - The current session ID to keep
  * @returns Number of sessions deleted
  */
-export async function deleteOtherUserSessions(userId: number, currentSessionId: string): Promise<number> {
+export async function deleteOtherUserSessions(
+	userId: number,
+	currentSessionId: string
+): Promise<number> {
 	const result = await db
 		.delete(sessions)
 		.where(and(eq(sessions.userId, userId), ne(sessions.id, currentSessionId)))

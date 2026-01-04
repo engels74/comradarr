@@ -11,10 +11,7 @@
 import { db } from '$lib/server/db';
 import { syncState, type Connector } from '$lib/server/db/schema';
 import { sql } from 'drizzle-orm';
-import {
-	getDecryptedApiKey,
-	updateConnectorLastSync
-} from '$lib/server/db/queries/connectors';
+import { getDecryptedApiKey, updateConnectorLastSync } from '$lib/server/db/queries/connectors';
 import { SonarrClient } from '$lib/server/connectors/sonarr/client';
 import { RadarrClient } from '$lib/server/connectors/radarr/client';
 import { WhisparrClient } from '$lib/server/connectors/whisparr/client';
@@ -96,9 +93,8 @@ export async function runIncrementalSync(
 	}
 
 	// Use retry wrapper for normal execution
-	const retryResult = await withSyncRetry(
-		connector.id,
-		() => executeIncrementalSync(connector, options, startTime)
+	const retryResult = await withSyncRetry(connector.id, () =>
+		executeIncrementalSync(connector, options, startTime)
 	);
 
 	if (retryResult.success && retryResult.data !== undefined) {

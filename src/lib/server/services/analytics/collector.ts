@@ -287,7 +287,9 @@ class AnalyticsCollector {
 				samples.push(sample);
 			}
 		} catch (error) {
-			logger.error('Failed to sample queue depth', { error: error instanceof Error ? error.message : String(error) });
+			logger.error('Failed to sample queue depth', {
+				error: error instanceof Error ? error.message : String(error)
+			});
 		}
 
 		return samples;

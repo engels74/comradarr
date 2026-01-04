@@ -134,9 +134,7 @@ export function parseRadarrMovie(data: unknown): ParseResult<RadarrMovie> {
  * }
  * ```
  */
-export function parsePaginatedMovies(
-	data: unknown
-): ParseResult<PaginatedResponse<RadarrMovie>> {
+export function parsePaginatedMovies(data: unknown): ParseResult<PaginatedResponse<RadarrMovie>> {
 	const schema = createPaginatedResponseSchema(RadarrMovieSchema);
 	const result = v.safeParse(schema, data);
 

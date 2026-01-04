@@ -112,9 +112,7 @@ describe('calculateNextEligibleTime', () => {
 			// Zero attempts means base delay (or slightly less due to -1 in calculation)
 			// Should still be a valid positive delay
 			expect(delay).toBeGreaterThan(0);
-			expect(delay).toBeLessThanOrEqual(
-				STATE_TRANSITION_CONFIG.COOLDOWN_BASE_DELAY * 1.25
-			);
+			expect(delay).toBeLessThanOrEqual(STATE_TRANSITION_CONFIG.COOLDOWN_BASE_DELAY * 1.25);
 		});
 
 		it('should handle negative attempt count gracefully', () => {

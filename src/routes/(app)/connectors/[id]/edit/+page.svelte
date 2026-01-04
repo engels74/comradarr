@@ -96,9 +96,7 @@
 							disabled={isLoading}
 							value={name}
 						/>
-						<p class="text-xs text-muted-foreground">
-							A friendly name to identify this connector.
-						</p>
+						<p class="text-xs text-muted-foreground">A friendly name to identify this connector.</p>
 					</div>
 
 					<div class="grid gap-2">
@@ -161,9 +159,7 @@
 							disabled={isLoading}
 							class="h-4 w-4 rounded border-input text-primary focus:ring-ring"
 						/>
-						<Label for="enabled" class="text-sm font-normal cursor-pointer">
-							Enable connector
-						</Label>
+						<Label for="enabled" class="text-sm font-normal cursor-pointer">Enable connector</Label>
 					</div>
 
 					<div class="flex gap-3 pt-2">

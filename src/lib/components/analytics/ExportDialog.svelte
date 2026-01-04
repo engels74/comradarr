@@ -138,23 +138,13 @@
 				<!-- Start Date -->
 				<div class="grid gap-2">
 					<Label for="start-date">Start Date</Label>
-					<Input
-						id="start-date"
-						type="date"
-						bind:value={startDate}
-						disabled={isExporting}
-					/>
+					<Input id="start-date" type="date" bind:value={startDate} disabled={isExporting} />
 				</div>
 
 				<!-- End Date -->
 				<div class="grid gap-2">
 					<Label for="end-date">End Date</Label>
-					<Input
-						id="end-date"
-						type="date"
-						bind:value={endDate}
-						disabled={isExporting}
-					/>
+					<Input id="end-date" type="date" bind:value={endDate} disabled={isExporting} />
 				</div>
 
 				<!-- Error message -->
@@ -164,24 +154,33 @@
 
 				<!-- Info text -->
 				<p class="text-xs text-muted-foreground">
-					The exported CSV will include daily statistics for all connectors within the selected date range.
-					Maximum date range is 1 year.
+					The exported CSV will include daily statistics for all connectors within the selected date
+					range. Maximum date range is 1 year.
 				</p>
 			</div>
 
 			<Dialog.Footer>
 				<Dialog.Close>
 					{#snippet child({ props })}
-						<Button {...props} variant="outline" disabled={isExporting}>
-							Cancel
-						</Button>
+						<Button {...props} variant="outline" disabled={isExporting}>Cancel</Button>
 					{/snippet}
 				</Dialog.Close>
 				<Button onclick={handleExport} disabled={isExporting || !isValidRange()}>
 					{#if isExporting}
 						<svg class="size-4 mr-1.5 animate-spin" fill="none" viewBox="0 0 24 24">
-							<circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-							<path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+							<circle
+								class="opacity-25"
+								cx="12"
+								cy="12"
+								r="10"
+								stroke="currentColor"
+								stroke-width="4"
+							></circle>
+							<path
+								class="opacity-75"
+								fill="currentColor"
+								d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+							></path>
 						</svg>
 						Exporting...
 					{:else}

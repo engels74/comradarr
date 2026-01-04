@@ -186,9 +186,14 @@ export async function getDiscoveryMetrics(period: TimePeriod): Promise<Discovery
 /**
  * Helper to group time series data by connector.
  */
-function groupByConnector<T extends { connectorId: number; connectorName: string; connectorType: string }>(
+function groupByConnector<
+	T extends { connectorId: number; connectorName: string; connectorType: string }
+>(
 	rows: T[],
-	extractPoints: (row: T) => { gapsDiscovered: TimeSeriesDataPoint; upgradesDiscovered: TimeSeriesDataPoint }
+	extractPoints: (row: T) => {
+		gapsDiscovered: TimeSeriesDataPoint;
+		upgradesDiscovered: TimeSeriesDataPoint;
+	}
 ): DiscoveryMetrics[] {
 	const map = new Map<number, DiscoveryMetrics>();
 
@@ -442,8 +447,10 @@ function calculateRates(row: {
 	maxResponseTimeMs: number | null;
 	errorCount: number;
 }): ConnectorStats {
-	const successRate = row.totalSearches > 0 ? Math.round((row.successfulSearches / row.totalSearches) * 100) : 0;
-	const errorRate = row.totalSearches > 0 ? Math.round((row.errorCount / row.totalSearches) * 100) : 0;
+	const successRate =
+		row.totalSearches > 0 ? Math.round((row.successfulSearches / row.totalSearches) * 100) : 0;
+	const errorRate =
+		row.totalSearches > 0 ? Math.round((row.errorCount / row.totalSearches) * 100) : 0;
 
 	return {
 		connectorId: row.connectorId,
@@ -474,9 +481,10 @@ export async function getMostSearchedItems(limit: number = 10): Promise<MostSear
 		.select({
 			contentType: sql<'episode'>`'episode'::text`.as('content_type'),
 			contentId: searchHistory.contentId,
-			title: sql<string>`COALESCE(${episodes.title}, 'Episode ' || ${episodes.seasonNumber} || 'x' || LPAD(${episodes.episodeNumber}::text, 2, '0'))`.as(
-				'title'
-			),
+			title:
+				sql<string>`COALESCE(${episodes.title}, 'Episode ' || ${episodes.seasonNumber} || 'x' || LPAD(${episodes.episodeNumber}::text, 2, '0'))`.as(
+					'title'
+				),
 			seriesTitle: series.title,
 			seasonNumber: episodes.seasonNumber,
 			episodeNumber: episodes.episodeNumber,
@@ -552,9 +560,10 @@ export async function getHardestToFindItems(limit: number = 10): Promise<Hardest
 		.select({
 			contentType: sql<'episode'>`'episode'::text`.as('content_type'),
 			contentId: searchRegistry.contentId,
-			title: sql<string>`COALESCE(${episodes.title}, 'Episode ' || ${episodes.seasonNumber} || 'x' || LPAD(${episodes.episodeNumber}::text, 2, '0'))`.as(
-				'title'
-			),
+			title:
+				sql<string>`COALESCE(${episodes.title}, 'Episode ' || ${episodes.seasonNumber} || 'x' || LPAD(${episodes.episodeNumber}::text, 2, '0'))`.as(
+					'title'
+				),
 			seriesTitle: series.title,
 			seasonNumber: episodes.seasonNumber,
 			episodeNumber: episodes.episodeNumber,
@@ -678,9 +687,7 @@ export async function getQualityDistribution(): Promise<QualityDistribution[]> {
 /**
  * Gets summary statistics for the analytics dashboard.
  */
-export async function getAnalyticsSummary(
-	period: TimePeriod
-): Promise<{
+export async function getAnalyticsSummary(period: TimePeriod): Promise<{
 	totalSearches: number;
 	successfulSearches: number;
 	successRate: number;
@@ -713,7 +720,10 @@ export async function getAnalyticsSummary(
 					: 0,
 			gapsDiscovered: row?.gapsDiscovered ?? 0,
 			upgradesDiscovered: row?.upgradesDiscovered ?? 0,
-			avgResponseTimeMs: avgResponseTime !== null && avgResponseTime !== undefined ? Math.round(avgResponseTime) : null
+			avgResponseTimeMs:
+				avgResponseTime !== null && avgResponseTime !== undefined
+					? Math.round(avgResponseTime)
+					: null
 		};
 	} else {
 		const result = await db
@@ -738,7 +748,10 @@ export async function getAnalyticsSummary(
 					: 0,
 			gapsDiscovered: row?.gapsDiscovered ?? 0,
 			upgradesDiscovered: row?.upgradesDiscovered ?? 0,
-			avgResponseTimeMs: avgResponseTime !== null && avgResponseTime !== undefined ? Math.round(avgResponseTime) : null
+			avgResponseTimeMs:
+				avgResponseTime !== null && avgResponseTime !== undefined
+					? Math.round(avgResponseTime)
+					: null
 		};
 	}
 }
@@ -794,7 +807,12 @@ export async function getDailyStatsForExport(startDate: Date, endDate: Date): Pr
 		})
 		.from(analyticsDailyStats)
 		.innerJoin(connectors, eq(analyticsDailyStats.connectorId, connectors.id))
-		.where(and(gte(analyticsDailyStats.dateBucket, startDate), lte(analyticsDailyStats.dateBucket, endDate)))
+		.where(
+			and(
+				gte(analyticsDailyStats.dateBucket, startDate),
+				lte(analyticsDailyStats.dateBucket, endDate)
+			)
+		)
 		.orderBy(analyticsDailyStats.dateBucket, connectors.name);
 
 	return results.map((row) => {

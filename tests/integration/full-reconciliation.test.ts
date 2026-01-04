@@ -101,10 +101,7 @@ async function insertTestSeries(
 /**
  * Insert test season into database
  */
-async function insertTestSeason(
-	seriesId: number,
-	seasonNumber: number
-): Promise<number> {
+async function insertTestSeason(seriesId: number, seasonNumber: number): Promise<number> {
 	const result = await db
 		.insert(seasons)
 		.values({
@@ -150,11 +147,7 @@ async function insertTestEpisode(
 /**
  * Insert test movie into database
  */
-async function insertTestMovie(
-	connectorId: number,
-	arrId: number,
-	title: string
-): Promise<number> {
+async function insertTestMovie(connectorId: number, arrId: number, title: string): Promise<number> {
 	const result = await db
 		.insert(movies)
 		.values({
@@ -273,11 +266,10 @@ describe('Search State Cleanup (Requirement 2.2)', () => {
 			expect(await countSearchRegistry(testRadarrConnectorId)).toBe(3);
 
 			// Delete search registry for movie1 and movie2
-			const deleted = await deleteSearchRegistryForContent(
-				testRadarrConnectorId,
-				'movie',
-				[movie1Id, movie2Id]
-			);
+			const deleted = await deleteSearchRegistryForContent(testRadarrConnectorId, 'movie', [
+				movie1Id,
+				movie2Id
+			]);
 
 			// Verify results
 			expect(deleted).toBe(2);
@@ -387,9 +379,9 @@ describe('Property 18: Sync Reconciliation Correctness', () => {
 
 			// Simulate reconciliation: delete movie1 and its search state
 			await deleteSearchRegistryForMovies(testRadarrConnectorId, [movie1Id]);
-			await db.delete(movies).where(
-				and(eq(movies.connectorId, testRadarrConnectorId), eq(movies.id, movie1Id))
-			);
+			await db
+				.delete(movies)
+				.where(and(eq(movies.connectorId, testRadarrConnectorId), eq(movies.id, movie1Id)));
 
 			// Verify: movie1 deleted, movie2 and its search state remain
 			expect(await countMovies(testRadarrConnectorId)).toBe(1);
@@ -421,9 +413,9 @@ describe('Property 18: Sync Reconciliation Correctness', () => {
 
 			// Simulate reconciliation: delete ep1 and its search state
 			await deleteSearchRegistryForEpisodes(testSonarrConnectorId, [ep1Id]);
-			await db.delete(episodes).where(
-				and(eq(episodes.connectorId, testSonarrConnectorId), eq(episodes.id, ep1Id))
-			);
+			await db
+				.delete(episodes)
+				.where(and(eq(episodes.connectorId, testSonarrConnectorId), eq(episodes.id, ep1Id)));
 
 			// Verify
 			expect(await countEpisodes(testSonarrConnectorId)).toBe(1);
@@ -444,9 +436,9 @@ describe('Property 18: Sync Reconciliation Correctness', () => {
 			expect(deleted).toBe(0);
 
 			// Can still delete the movie
-			await db.delete(movies).where(
-				and(eq(movies.connectorId, testRadarrConnectorId), eq(movies.id, movieId))
-			);
+			await db
+				.delete(movies)
+				.where(and(eq(movies.connectorId, testRadarrConnectorId), eq(movies.id, movieId)));
 
 			expect(await countMovies(testRadarrConnectorId)).toBe(0);
 		});
@@ -470,16 +462,21 @@ describe('Property 18: Sync Reconciliation Correctness', () => {
 			const idsToDelete = [movieIds[0]!, movieIds[2]!, movieIds[4]!];
 
 			// Clean up search state first
-			const registryDeleted = await deleteSearchRegistryForMovies(testRadarrConnectorId, idsToDelete);
+			const registryDeleted = await deleteSearchRegistryForMovies(
+				testRadarrConnectorId,
+				idsToDelete
+			);
 			expect(registryDeleted).toBe(3);
 
 			// Then delete movies
-			await db.delete(movies).where(
-				and(
-					eq(movies.connectorId, testRadarrConnectorId),
-					sql`${movies.id} = ANY(ARRAY[${idsToDelete[0]}, ${idsToDelete[1]}, ${idsToDelete[2]}]::int[])`
-				)
-			);
+			await db
+				.delete(movies)
+				.where(
+					and(
+						eq(movies.connectorId, testRadarrConnectorId),
+						sql`${movies.id} = ANY(ARRAY[${idsToDelete[0]}, ${idsToDelete[1]}, ${idsToDelete[2]}]::int[])`
+					)
+				);
 
 			// Verify: 2 movies remain, 2 search registry entries remain
 			expect(await countMovies(testRadarrConnectorId)).toBe(2);
@@ -649,9 +646,9 @@ async function simulateReconciliationDelete(
 		await deleteSearchRegistryForMovies(connectorId, toDeleteDbIds);
 
 		// Delete the movies using inArray for proper array handling
-		await db.delete(movies).where(
-			and(eq(movies.connectorId, connectorId), inArray(movies.id, toDeleteDbIds))
-		);
+		await db
+			.delete(movies)
+			.where(and(eq(movies.connectorId, connectorId), inArray(movies.id, toDeleteDbIds)));
 	}
 
 	return toDeleteDbIds;
@@ -817,10 +814,7 @@ describe('Property 18: Sync Reconciliation - Property-Based Tests (Requirement 2
 						if (existingItems.length < 2) return;
 
 						// Setup: Insert existing items with search registry entries
-						const arrIdToDbId = await insertMoviesFromData(
-							propertyTestConnectorId,
-							existingItems
-						);
+						const arrIdToDbId = await insertMoviesFromData(propertyTestConnectorId, existingItems);
 
 						// Create search registry entries for all movies
 						for (const [, dbId] of arrIdToDbId) {
@@ -875,10 +869,7 @@ describe('Property 18: Sync Reconciliation - Property-Based Tests (Requirement 2
 						await cleanupConnectorData(propertyTestConnectorId);
 
 						// Setup: Insert existing items with search registry
-						const arrIdToDbId = await insertMoviesFromData(
-							propertyTestConnectorId,
-							existingItems
-						);
+						const arrIdToDbId = await insertMoviesFromData(propertyTestConnectorId, existingItems);
 
 						for (const [, dbId] of arrIdToDbId) {
 							await insertTestSearchRegistry(propertyTestConnectorId, 'movie', dbId, 'gap');

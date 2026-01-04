@@ -143,7 +143,8 @@ export class TelegramSender implements NotificationSender {
 		return this.send(channel, sensitiveConfig, {
 			eventType: 'app_started',
 			title: 'Comradarr Test Notification',
-			message: 'This is a test notification from Comradarr. If you can see this, your Telegram bot is configured correctly!',
+			message:
+				'This is a test notification from Comradarr. If you can see this, your Telegram bot is configured correctly!',
 			timestamp: new Date(),
 			fields: [
 				{ name: 'Channel', value: channel.name, inline: true },
@@ -240,7 +241,26 @@ export class TelegramSender implements NotificationSender {
 	 */
 	private escapeMarkdownV2(text: string): string {
 		// Characters that need escaping in MarkdownV2
-		const specialChars = ['_', '*', '[', ']', '(', ')', '~', '`', '>', '#', '+', '-', '=', '|', '{', '}', '.', '!'];
+		const specialChars = [
+			'_',
+			'*',
+			'[',
+			']',
+			'(',
+			')',
+			'~',
+			'`',
+			'>',
+			'#',
+			'+',
+			'-',
+			'=',
+			'|',
+			'{',
+			'}',
+			'.',
+			'!'
+		];
 		let escaped = text;
 		for (const char of specialChars) {
 			escaped = escaped.split(char).join(`\\${char}`);
@@ -290,7 +310,8 @@ export class TelegramSender implements NotificationSender {
 			}
 
 			if (error.message.includes('fetch failed') || error.message.includes('ECONNREFUSED')) {
-				return new NotificationNetworkError('Failed to connect to Telegram API', error.message).message;
+				return new NotificationNetworkError('Failed to connect to Telegram API', error.message)
+					.message;
 			}
 
 			return error.message;

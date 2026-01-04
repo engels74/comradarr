@@ -312,7 +312,10 @@ export function determineBatchingDecision(
 
 	// Decision 3 & 4: Below threshold (Requirement 6.3)
 	// Check both missing count and missing percentage
-	if (missingCount < seasonSearchMinMissingCount || missingPercent < seasonSearchMinMissingPercent) {
+	if (
+		missingCount < seasonSearchMinMissingCount ||
+		missingPercent < seasonSearchMinMissingPercent
+	) {
 		return {
 			command: 'EpisodeSearch',
 			reason: 'below_missing_threshold'

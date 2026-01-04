@@ -248,9 +248,7 @@ export function parseSonarrEpisode(data: unknown): ParseResult<SonarrEpisode> {
  * }
  * ```
  */
-export function parsePaginatedSeries(
-	data: unknown
-): ParseResult<PaginatedResponse<SonarrSeries>> {
+export function parsePaginatedSeries(data: unknown): ParseResult<PaginatedResponse<SonarrSeries>> {
 	const schema = createPaginatedResponseSchema(SonarrSeriesSchema);
 	const result = v.safeParse(schema, data);
 

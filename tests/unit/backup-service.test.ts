@@ -187,7 +187,8 @@ describe('Checksum format', () => {
 		const validChecksumPattern = /^sha256:[a-f0-9]{64}$/;
 
 		// Example valid checksum
-		const exampleChecksum = 'sha256:a3f2b8c9d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1';
+		const exampleChecksum =
+			'sha256:a3f2b8c9d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1';
 		expect(exampleChecksum).toMatch(validChecksumPattern);
 
 		// Example invalid checksums

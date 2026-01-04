@@ -14,7 +14,13 @@
 
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import * as fc from 'fast-check';
-import { encrypt, decrypt, DecryptionError, SecretKeyError, getSecretKey } from '../../src/lib/server/crypto';
+import {
+	encrypt,
+	decrypt,
+	DecryptionError,
+	SecretKeyError,
+	getSecretKey
+} from '../../src/lib/server/crypto';
 
 // Store original SECRET_KEY to restore after tests
 const originalSecretKey = process.env.SECRET_KEY;
@@ -150,8 +156,7 @@ describe('API Key Encryption (Requirements 1.1, 36.1)', () => {
 			const parts = encrypted.split(':');
 
 			// Flip a bit in the ciphertext
-			const modifiedCiphertext =
-				parts[2]!.slice(0, -1) + (parts[2]!.slice(-1) === '0' ? '1' : '0');
+			const modifiedCiphertext = parts[2]!.slice(0, -1) + (parts[2]!.slice(-1) === '0' ? '1' : '0');
 			const tampered = `${parts[0]}:${parts[1]}:${modifiedCiphertext}`;
 
 			await expect(decrypt(tampered)).rejects.toThrow(DecryptionError);
@@ -231,7 +236,7 @@ describe('API Key Encryption (Requirements 1.1, 36.1)', () => {
 				'null\0byte',
 				'<script>alert("xss")</script>',
 				'{"json": "data"}',
-				"quotes'and\"double"
+				'quotes\'and"double'
 			];
 
 			for (const str of specialStrings) {

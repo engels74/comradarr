@@ -56,7 +56,9 @@
 	// Computed selection states
 	const selectionEnabled = $derived(selectedKeys !== undefined && onToggleSelection !== undefined);
 	const allSelected = $derived(
-		selectionEnabled && items.length > 0 && items.every((item) => selectedKeys!.has(getItemKey(item)))
+		selectionEnabled &&
+			items.length > 0 &&
+			items.every((item) => selectedKeys!.has(getItemKey(item)))
 	);
 	const someSelected = $derived(
 		selectionEnabled && items.some((item) => selectedKeys!.has(getItemKey(item))) && !allSelected
@@ -153,11 +155,7 @@
 	</div>
 
 	<!-- Virtualized scroll container -->
-	<div
-		bind:this={scrollContainer}
-		class="overflow-auto"
-		style="max-height: {maxHeight};"
-	>
+	<div bind:this={scrollContainer} class="overflow-auto" style="max-height: {maxHeight};">
 		<!-- Content area with total height for scroll -->
 		<div style="height: {totalHeight}px; position: relative;">
 			{#if items.length === 0}
@@ -178,59 +176,59 @@
 							style="height: {ROW_HEIGHT}px; top: {virtualItem.start}px;"
 							data-state={isSelected ? 'selected' : undefined}
 						>
-						{#if selectionEnabled}
-							<div class="w-8 flex-shrink-0">
-								<Checkbox
-									checked={isSelected}
-									onclick={(e: MouseEvent) => handleRowCheckboxClick(item, e)}
-									aria-label={`Select ${item.title}`}
-								/>
+							{#if selectionEnabled}
+								<div class="w-8 flex-shrink-0">
+									<Checkbox
+										checked={isSelected}
+										onclick={(e: MouseEvent) => handleRowCheckboxClick(item, e)}
+										aria-label={`Select ${item.title}`}
+									/>
+								</div>
+							{/if}
+							<div class="flex-1 min-w-0">
+								<a
+									href="/content/{item.type}/{item.id}"
+									class="font-medium hover:underline hover:text-primary truncate block"
+								>
+									{item.title}
+									{#if item.year}
+										<span class="text-muted-foreground ml-1">({item.year})</span>
+									{/if}
+								</a>
 							</div>
-						{/if}
-						<div class="flex-1 min-w-0">
-							<a
-								href="/content/{item.type}/{item.id}"
-								class="font-medium hover:underline hover:text-primary truncate block"
-							>
-								{item.title}
-								{#if item.year}
-									<span class="text-muted-foreground ml-1">({item.year})</span>
-								{/if}
-							</a>
-						</div>
-						<div class="w-20 flex-shrink-0">
-							<span class="capitalize text-sm">{item.type}</span>
-						</div>
-						<div class="w-32 flex-shrink-0">
-							<span
-								class={cn(
-									'rounded-md px-2 py-1 text-xs font-medium truncate inline-block max-w-full',
-									typeColors[item.connectorType] ?? 'bg-gray-500/10 text-gray-600'
-								)}
-							>
-								{item.connectorName}
-							</span>
-						</div>
-						<div class="w-40 flex-shrink-0">
-							<div class="flex gap-1 flex-wrap">
-								{#if item.missingCount > 0}
-									<Badge variant="destructive" class="text-xs">
-										{item.missingCount} missing
-									</Badge>
-								{/if}
-								{#if item.upgradeCount > 0}
-									<Badge variant="secondary" class="text-xs">
-										{item.upgradeCount} upgrade{item.upgradeCount > 1 ? 's' : ''}
-									</Badge>
-								{/if}
-								{#if item.missingCount === 0 && item.upgradeCount === 0}
-									<Badge variant="outline" class="text-xs">Complete</Badge>
-								{/if}
+							<div class="w-20 flex-shrink-0">
+								<span class="capitalize text-sm">{item.type}</span>
 							</div>
-						</div>
-						<div class="w-24 flex-shrink-0">
-							<ContentStatusBadge state={item.searchState} />
-						</div>
+							<div class="w-32 flex-shrink-0">
+								<span
+									class={cn(
+										'rounded-md px-2 py-1 text-xs font-medium truncate inline-block max-w-full',
+										typeColors[item.connectorType] ?? 'bg-gray-500/10 text-gray-600'
+									)}
+								>
+									{item.connectorName}
+								</span>
+							</div>
+							<div class="w-40 flex-shrink-0">
+								<div class="flex gap-1 flex-wrap">
+									{#if item.missingCount > 0}
+										<Badge variant="destructive" class="text-xs">
+											{item.missingCount} missing
+										</Badge>
+									{/if}
+									{#if item.upgradeCount > 0}
+										<Badge variant="secondary" class="text-xs">
+											{item.upgradeCount} upgrade{item.upgradeCount > 1 ? 's' : ''}
+										</Badge>
+									{/if}
+									{#if item.missingCount === 0 && item.upgradeCount === 0}
+										<Badge variant="outline" class="text-xs">Complete</Badge>
+									{/if}
+								</div>
+							</div>
+							<div class="w-24 flex-shrink-0">
+								<ContentStatusBadge state={item.searchState} />
+							</div>
 						</div>
 					{/if}
 				{/each}

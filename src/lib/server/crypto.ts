@@ -52,8 +52,7 @@ export function getSecretKey(): string {
 
 	if (!key) {
 		throw new SecretKeyError(
-			'SECRET_KEY environment variable is required. ' +
-				'Generate one with: openssl rand -hex 32'
+			'SECRET_KEY environment variable is required. ' + 'Generate one with: openssl rand -hex 32'
 		);
 	}
 
@@ -218,6 +217,8 @@ export async function decrypt(encrypted: string): Promise<string> {
 		return decoder.decode(decrypted);
 	} catch {
 		// Crypto errors indicate tampering, wrong key, or corrupted data
-		throw new DecryptionError('Decryption failed: data may be tampered or encrypted with a different key');
+		throw new DecryptionError(
+			'Decryption failed: data may be tampered or encrypted with a different key'
+		);
 	}
 }

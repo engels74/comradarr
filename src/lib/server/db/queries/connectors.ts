@@ -122,10 +122,7 @@ export async function getHealthyConnectors(): Promise<Connector[]> {
 		.select()
 		.from(connectors)
 		.where(
-			and(
-				eq(connectors.enabled, true),
-				inArray(connectors.healthStatus, ['healthy', 'degraded'])
-			)
+			and(eq(connectors.enabled, true), inArray(connectors.healthStatus, ['healthy', 'degraded']))
 		)
 		.orderBy(connectors.name);
 }
@@ -181,7 +178,11 @@ export async function updateConnector(
 		updateData.healthStatus = input.healthStatus;
 	}
 
-	const result = await db.update(connectors).set(updateData).where(eq(connectors.id, id)).returning();
+	const result = await db
+		.update(connectors)
+		.set(updateData)
+		.where(eq(connectors.id, id))
+		.returning();
 
 	return result[0] ?? null;
 }
@@ -228,7 +229,10 @@ export async function updateConnectorLastSync(id: number): Promise<void> {
  * @returns true if deleted, false if not found
  */
 export async function deleteConnector(id: number): Promise<boolean> {
-	const result = await db.delete(connectors).where(eq(connectors.id, id)).returning({ id: connectors.id });
+	const result = await db
+		.delete(connectors)
+		.where(eq(connectors.id, id))
+		.returning({ id: connectors.id });
 
 	return result.length > 0;
 }
@@ -285,13 +289,25 @@ export async function getConnectorStats(connectorId: number): Promise<ConnectorS
 	const episodeGapsResult = await db
 		.select({ count: count() })
 		.from(episodes)
-		.where(and(eq(episodes.connectorId, connectorId), eq(episodes.hasFile, false), eq(episodes.monitored, true)));
+		.where(
+			and(
+				eq(episodes.connectorId, connectorId),
+				eq(episodes.hasFile, false),
+				eq(episodes.monitored, true)
+			)
+		);
 
 	// Count movie gaps (hasFile=false, monitored=true)
 	const movieGapsResult = await db
 		.select({ count: count() })
 		.from(movies)
-		.where(and(eq(movies.connectorId, connectorId), eq(movies.hasFile, false), eq(movies.monitored, true)));
+		.where(
+			and(
+				eq(movies.connectorId, connectorId),
+				eq(movies.hasFile, false),
+				eq(movies.monitored, true)
+			)
+		);
 
 	// Count queue depth
 	const queueResult = await db
@@ -420,7 +436,9 @@ export interface ConnectorDetailedStats {
  * @param connectorId - Connector ID
  * @returns Detailed statistics
  */
-export async function getConnectorDetailedStats(connectorId: number): Promise<ConnectorDetailedStats> {
+export async function getConnectorDetailedStats(
+	connectorId: number
+): Promise<ConnectorDetailedStats> {
 	// Run all queries in parallel for efficiency
 	const [
 		episodeGapsResult,
@@ -436,7 +454,11 @@ export async function getConnectorDetailedStats(connectorId: number): Promise<Co
 			.select({ count: count() })
 			.from(episodes)
 			.where(
-				and(eq(episodes.connectorId, connectorId), eq(episodes.hasFile, false), eq(episodes.monitored, true))
+				and(
+					eq(episodes.connectorId, connectorId),
+					eq(episodes.hasFile, false),
+					eq(episodes.monitored, true)
+				)
 			),
 		// Episode upgrades (qualityCutoffNotMet=true, monitored=true, hasFile=true)
 		db
@@ -454,7 +476,13 @@ export async function getConnectorDetailedStats(connectorId: number): Promise<Co
 		db
 			.select({ count: count() })
 			.from(movies)
-			.where(and(eq(movies.connectorId, connectorId), eq(movies.hasFile, false), eq(movies.monitored, true))),
+			.where(
+				and(
+					eq(movies.connectorId, connectorId),
+					eq(movies.hasFile, false),
+					eq(movies.monitored, true)
+				)
+			),
 		// Movie upgrades (qualityCutoffNotMet=true, monitored=true, hasFile=true)
 		db
 			.select({ count: count() })
@@ -472,7 +500,10 @@ export async function getConnectorDetailedStats(connectorId: number): Promise<Co
 		// Total movies for connector
 		db.select({ count: count() }).from(movies).where(eq(movies.connectorId, connectorId)),
 		// Queue depth
-		db.select({ count: count() }).from(requestQueue).where(eq(requestQueue.connectorId, connectorId))
+		db
+			.select({ count: count() })
+			.from(requestQueue)
+			.where(eq(requestQueue.connectorId, connectorId))
 	]);
 
 	return {
@@ -504,7 +535,9 @@ export interface SearchStateDistribution {
  * @param connectorId - Connector ID
  * @returns Distribution of search states
  */
-export async function getSearchStateDistribution(connectorId: number): Promise<SearchStateDistribution> {
+export async function getSearchStateDistribution(
+	connectorId: number
+): Promise<SearchStateDistribution> {
 	const result = await db
 		.select({
 			state: searchRegistry.state,

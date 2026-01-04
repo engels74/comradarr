@@ -485,12 +485,7 @@ describe('API Response Parsers - Property Tests', () => {
 					fc.array(simpleRecordArbitrary, { minLength: 1, maxLength: 10 }),
 					(validRecords) => {
 						// Add some invalid records
-						const mixedRecords = [
-							...validRecords,
-							null,
-							{ wrong: 'type' },
-							'string'
-						];
+						const mixedRecords = [...validRecords, null, { wrong: 'type' }, 'string'];
 
 						const input = {
 							page: 1,
@@ -531,13 +526,9 @@ describe('API Response Parsers - Property Tests', () => {
 						};
 
 						let callbackCount = 0;
-						const result = parsePaginatedResponseLenient(
-							input,
-							SimpleRecordSchema,
-							() => {
-								callbackCount++;
-							}
-						);
+						const result = parsePaginatedResponseLenient(input, SimpleRecordSchema, () => {
+							callbackCount++;
+						});
 
 						expect(result.success).toBe(true);
 						// Callback should be invoked for each invalid record
@@ -552,9 +543,7 @@ describe('API Response Parsers - Property Tests', () => {
 			fc.assert(
 				fc.property(fc.anything(), (input) => {
 					// Should never throw, even for completely invalid input
-					expect(() =>
-						parsePaginatedResponseLenient(input, SimpleRecordSchema)
-					).not.toThrow();
+					expect(() => parsePaginatedResponseLenient(input, SimpleRecordSchema)).not.toThrow();
 				}),
 				{ numRuns: 100 }
 			);
@@ -562,18 +551,12 @@ describe('API Response Parsers - Property Tests', () => {
 
 		it('parsePaginatedResponseLenient returns success for valid pagination structure regardless of record validity', () => {
 			fc.assert(
-				fc.property(
-					paginatedResponseArbitrary(fc.anything()),
-					(paginatedResponse) => {
-						const result = parsePaginatedResponseLenient(
-							paginatedResponse,
-							SimpleRecordSchema
-						);
+				fc.property(paginatedResponseArbitrary(fc.anything()), (paginatedResponse) => {
+					const result = parsePaginatedResponseLenient(paginatedResponse, SimpleRecordSchema);
 
-						// Should succeed as long as pagination structure is valid
-						expect(result.success).toBe(true);
-					}
-				),
+					// Should succeed as long as pagination structure is valid
+					expect(result.success).toBe(true);
+				}),
 				{ numRuns: 100 }
 			);
 		});

@@ -203,7 +203,8 @@ export class WebhookSender implements NotificationSender {
 		return this.send(channel, sensitiveConfig, {
 			eventType: 'app_started',
 			title: 'Comradarr Test Notification',
-			message: 'This is a test notification from Comradarr. If you receive this, your webhook is configured correctly!',
+			message:
+				'This is a test notification from Comradarr. If you receive this, your webhook is configured correctly!',
 			timestamp: new Date(),
 			fields: [
 				{ name: 'Channel', value: channel.name, inline: true },

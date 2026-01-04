@@ -56,7 +56,7 @@ const APP_VERSION = '0.0.1';
  * Maps table names to Drizzle schema table objects.
  * Uses snake_case table names as stored in the database.
  */
-const tableNameToSchema: Record<string, typeof schema[keyof typeof schema]> = {
+const tableNameToSchema: Record<string, (typeof schema)[keyof typeof schema]> = {
 	throttle_profiles: schema.throttleProfiles,
 	app_settings: schema.appSettings,
 	users: schema.users,
@@ -119,11 +119,7 @@ async function exportTable(tableName: string): Promise<TableExport> {
 	const schemaTable = tableNameToSchema[tableName];
 
 	if (!schemaTable) {
-		throw new BackupError(
-			`Unknown table: ${tableName}`,
-			'EXPORT_FAILED',
-			false
-		);
+		throw new BackupError(`Unknown table: ${tableName}`, 'EXPORT_FAILED', false);
 	}
 
 	// Export all rows from the table
@@ -369,8 +365,8 @@ export async function listBackups(): Promise<BackupInfo[]> {
 		}
 
 		// Sort by creation date (newest first)
-		backups.sort((a, b) =>
-			new Date(b.metadata.createdAt).getTime() - new Date(a.metadata.createdAt).getTime()
+		backups.sort(
+			(a, b) => new Date(b.metadata.createdAt).getTime() - new Date(a.metadata.createdAt).getTime()
 		);
 
 		return backups;
@@ -502,9 +498,7 @@ export async function cleanupOldScheduledBackups(retentionCount: number): Promis
 		const allBackups = await listBackups();
 
 		// Filter to only scheduled backups
-		const scheduledBackups = allBackups.filter(
-			(backup) => backup.metadata.type === 'scheduled'
-		);
+		const scheduledBackups = allBackups.filter((backup) => backup.metadata.type === 'scheduled');
 
 		// If we have fewer or equal to retention count, nothing to delete
 		if (scheduledBackups.length <= retentionCount) {

@@ -111,9 +111,7 @@
 	<Card.Root class="mb-6">
 		<Card.Header>
 			<Card.Title class="text-xl">Scheduled Backups</Card.Title>
-			<Card.Description>
-				Configure automatic backups to run at regular intervals.
-			</Card.Description>
+			<Card.Description>Configure automatic backups to run at regular intervals.</Card.Description>
 		</Card.Header>
 		<Card.Content>
 			<form
@@ -125,7 +123,9 @@
 						await update();
 						isSubmitting = false;
 						if (result.type === 'success' && result.data?.success) {
-							toastStore.success((result.data.message as string) || 'Backup settings saved successfully');
+							toastStore.success(
+								(result.data.message as string) || 'Backup settings saved successfully'
+							);
 						}
 					};
 				}}
@@ -202,8 +202,8 @@
 							value={getNumericFormValue(form?.retentionCount, data.settings.retentionCount)}
 						/>
 						<p class="text-xs text-muted-foreground">
-							Number of scheduled backups to keep. Older scheduled backups will be automatically deleted.
-							Manual backups are not affected by this setting.
+							Number of scheduled backups to keep. Older scheduled backups will be automatically
+							deleted. Manual backups are not affected by this setting.
 						</p>
 					</div>
 

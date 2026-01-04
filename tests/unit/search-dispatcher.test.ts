@@ -86,7 +86,10 @@ vi.mock('$lib/server/services/prowlarr', () => ({
 }));
 
 // Now import the module and mocks
-import { dispatchSearch, dispatchBatch } from '../../src/lib/server/services/queue/search-dispatcher';
+import {
+	dispatchSearch,
+	dispatchBatch
+} from '../../src/lib/server/services/queue/search-dispatcher';
 import { getConnector, getDecryptedApiKey } from '$lib/server/db/queries/connectors';
 import { throttleEnforcer } from '$lib/server/services/throttle';
 import { prowlarrHealthMonitor } from '$lib/server/services/prowlarr';
@@ -278,7 +281,9 @@ describe('dispatchSearch', () => {
 		});
 
 		it('should handle server errors gracefully', async () => {
-			mockSonarrClient.sendEpisodeSearch.mockRejectedValue(new ServerError(503, 'Service Unavailable'));
+			mockSonarrClient.sendEpisodeSearch.mockRejectedValue(
+				new ServerError(503, 'Service Unavailable')
+			);
 
 			const result = await dispatchSearch(1, 100, 'episode', 'gap', {
 				episodeIds: [456]
@@ -292,9 +297,9 @@ describe('dispatchSearch', () => {
 		it('should re-throw unknown errors', async () => {
 			mockSonarrClient.sendEpisodeSearch.mockRejectedValue(new Error('Unknown error'));
 
-			await expect(
-				dispatchSearch(1, 100, 'episode', 'gap', { episodeIds: [456] })
-			).rejects.toThrow('Unknown error');
+			await expect(dispatchSearch(1, 100, 'episode', 'gap', { episodeIds: [456] })).rejects.toThrow(
+				'Unknown error'
+			);
 		});
 	});
 
@@ -533,9 +538,27 @@ describe('dispatchBatch', () => {
 			.mockResolvedValueOnce({ id: 3, status: 'queued' });
 
 		const dispatches = [
-			{ connectorId: 1, searchRegistryId: 100, contentType: 'episode' as const, searchType: 'gap' as const, options: { episodeIds: [1] } },
-			{ connectorId: 1, searchRegistryId: 101, contentType: 'episode' as const, searchType: 'gap' as const, options: { episodeIds: [2] } },
-			{ connectorId: 1, searchRegistryId: 102, contentType: 'episode' as const, searchType: 'gap' as const, options: { episodeIds: [3] } }
+			{
+				connectorId: 1,
+				searchRegistryId: 100,
+				contentType: 'episode' as const,
+				searchType: 'gap' as const,
+				options: { episodeIds: [1] }
+			},
+			{
+				connectorId: 1,
+				searchRegistryId: 101,
+				contentType: 'episode' as const,
+				searchType: 'gap' as const,
+				options: { episodeIds: [2] }
+			},
+			{
+				connectorId: 1,
+				searchRegistryId: 102,
+				contentType: 'episode' as const,
+				searchType: 'gap' as const,
+				options: { episodeIds: [3] }
+			}
 		];
 
 		const results = await dispatchBatch(dispatches);
@@ -551,9 +574,27 @@ describe('dispatchBatch', () => {
 		// Third never called
 
 		const dispatches = [
-			{ connectorId: 1, searchRegistryId: 100, contentType: 'episode' as const, searchType: 'gap' as const, options: { episodeIds: [1] } },
-			{ connectorId: 1, searchRegistryId: 101, contentType: 'episode' as const, searchType: 'gap' as const, options: { episodeIds: [2] } },
-			{ connectorId: 1, searchRegistryId: 102, contentType: 'episode' as const, searchType: 'gap' as const, options: { episodeIds: [3] } }
+			{
+				connectorId: 1,
+				searchRegistryId: 100,
+				contentType: 'episode' as const,
+				searchType: 'gap' as const,
+				options: { episodeIds: [1] }
+			},
+			{
+				connectorId: 1,
+				searchRegistryId: 101,
+				contentType: 'episode' as const,
+				searchType: 'gap' as const,
+				options: { episodeIds: [2] }
+			},
+			{
+				connectorId: 1,
+				searchRegistryId: 102,
+				contentType: 'episode' as const,
+				searchType: 'gap' as const,
+				options: { episodeIds: [3] }
+			}
 		];
 
 		const results = await dispatchBatch(dispatches);
@@ -586,9 +627,27 @@ describe('dispatchBatch', () => {
 			.mockResolvedValueOnce({ id: 3, status: 'queued' }); // Third succeeds
 
 		const dispatches = [
-			{ connectorId: 1, searchRegistryId: 100, contentType: 'episode' as const, searchType: 'gap' as const, options: { episodeIds: [1] } },
-			{ connectorId: 1, searchRegistryId: 101, contentType: 'episode' as const, searchType: 'gap' as const, options: { episodeIds: [2] } },
-			{ connectorId: 1, searchRegistryId: 102, contentType: 'episode' as const, searchType: 'gap' as const, options: { episodeIds: [3] } }
+			{
+				connectorId: 1,
+				searchRegistryId: 100,
+				contentType: 'episode' as const,
+				searchType: 'gap' as const,
+				options: { episodeIds: [1] }
+			},
+			{
+				connectorId: 1,
+				searchRegistryId: 101,
+				contentType: 'episode' as const,
+				searchType: 'gap' as const,
+				options: { episodeIds: [2] }
+			},
+			{
+				connectorId: 1,
+				searchRegistryId: 102,
+				contentType: 'episode' as const,
+				searchType: 'gap' as const,
+				options: { episodeIds: [3] }
+			}
 		];
 
 		const results = await dispatchBatch(dispatches);

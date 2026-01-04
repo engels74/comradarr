@@ -259,7 +259,14 @@ export class Logger {
 
 		// Add to in-memory buffer for log viewer
 		// Extract non-standard fields as context
-		const { timestamp: _ts, level: _lvl, module: _mod, message: _msg, correlationId: _cid, ...restContext } = entry;
+		const {
+			timestamp: _ts,
+			level: _lvl,
+			module: _mod,
+			message: _msg,
+			correlationId: _cid,
+			...restContext
+		} = entry;
 		const bufferEntry: Omit<BufferedLogEntry, 'id'> = {
 			timestamp,
 			level,

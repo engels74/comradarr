@@ -77,9 +77,7 @@ export async function reconcileRadarrMovies(
 		// Delete the movies
 		await db
 			.delete(movies)
-			.where(
-				and(eq(movies.connectorId, connectorId), inArray(movies.arrId, movieArrIdsToDelete))
-			);
+			.where(and(eq(movies.connectorId, connectorId), inArray(movies.arrId, movieArrIdsToDelete)));
 
 		result.moviesDeleted = moviesToDelete.length;
 	}

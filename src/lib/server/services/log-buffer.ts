@@ -246,10 +246,7 @@ function applyFilters(entries: BufferedLogEntry[], filter: LogFilter): BufferedL
  * @param pagination - Optional pagination settings
  * @returns Query result with entries and pagination info
  */
-export function queryLogs(
-	filter?: LogFilter,
-	pagination?: LogPagination
-): LogQueryResult {
+export function queryLogs(filter?: LogFilter, pagination?: LogPagination): LogQueryResult {
 	// Get all entries in chronological order
 	let entries = getAllEntriesOrdered();
 

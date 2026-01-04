@@ -23,7 +23,9 @@
 		whisparr: 'bg-purple-500/10 text-purple-600 dark:text-purple-400'
 	};
 
-	const typeColor = $derived(typeColors[data.movie.connectorType] ?? 'bg-gray-500/10 text-gray-600');
+	const typeColor = $derived(
+		typeColors[data.movie.connectorType] ?? 'bg-gray-500/10 text-gray-600'
+	);
 
 	// Format movie year for display
 	const yearDisplay = $derived(data.movie.year ? `(${data.movie.year})` : '');

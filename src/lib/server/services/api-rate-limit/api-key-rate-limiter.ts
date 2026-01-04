@@ -163,9 +163,7 @@ export class ApiKeyRateLimiter {
 				resetInSeconds = 60;
 			} else {
 				requestsThisMinute = state.requestsThisMinute;
-				resetInSeconds = Math.ceil(
-					msUntilMinuteWindowExpires(state.minuteWindowStart, now) / 1000
-				);
+				resetInSeconds = Math.ceil(msUntilMinuteWindowExpires(state.minuteWindowStart, now) / 1000);
 			}
 		}
 

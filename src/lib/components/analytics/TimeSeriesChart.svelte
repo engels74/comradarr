@@ -37,11 +37,23 @@
 	const timeConfig = $derived(() => {
 		switch (period) {
 			case '24h':
-				return { unit: 'hour' as const, displayFormats: { hour: 'HH:mm' }, tooltipFormat: 'MMM d, HH:mm' };
+				return {
+					unit: 'hour' as const,
+					displayFormats: { hour: 'HH:mm' },
+					tooltipFormat: 'MMM d, HH:mm'
+				};
 			case '7d':
-				return { unit: 'day' as const, displayFormats: { day: 'MMM d' }, tooltipFormat: 'MMM d, yyyy HH:mm' };
+				return {
+					unit: 'day' as const,
+					displayFormats: { day: 'MMM d' },
+					tooltipFormat: 'MMM d, yyyy HH:mm'
+				};
 			case '30d':
-				return { unit: 'day' as const, displayFormats: { day: 'MMM d' }, tooltipFormat: 'MMM d, yyyy' };
+				return {
+					unit: 'day' as const,
+					displayFormats: { day: 'MMM d' },
+					tooltipFormat: 'MMM d, yyyy'
+				};
 		}
 	});
 
@@ -169,7 +181,11 @@
 			const config = timeConfig();
 			chart.data = chartData();
 			if (chart.options.scales?.x && 'time' in chart.options.scales.x) {
-				(chart.options.scales.x as { time: { unit: string; displayFormats: object; tooltipFormat: string } }).time = {
+				(
+					chart.options.scales.x as {
+						time: { unit: string; displayFormats: object; tooltipFormat: string };
+					}
+				).time = {
 					unit: config.unit,
 					displayFormats: config.displayFormats,
 					tooltipFormat: config.tooltipFormat

@@ -142,7 +142,9 @@ export function parseQueueFilters(searchParams: URLSearchParams): QueueFilters {
 		searchType: (searchParams.get('searchType') as QueueSearchType) ?? 'all',
 		search: searchParams.get('search') ?? undefined,
 		limit: limitParam ? Math.min(100, Math.max(10, Number(limitParam))) : 50,
-		offset: pageParam ? (Math.max(1, Number(pageParam)) - 1) * (limitParam ? Number(limitParam) : 50) : 0
+		offset: pageParam
+			? (Math.max(1, Number(pageParam)) - 1) * (limitParam ? Number(limitParam) : 50)
+			: 0
 	};
 }
 
@@ -195,10 +197,7 @@ export async function getQueueList(filters: QueueFilters): Promise<QueueListResu
 	// Apply search filter to episode titles and series titles
 	if (filters.search) {
 		episodeConditions.push(
-			or(
-				ilike(episodes.title, `%${filters.search}%`),
-				ilike(series.title, `%${filters.search}%`)
-			)!
+			or(ilike(episodes.title, `%${filters.search}%`), ilike(series.title, `%${filters.search}%`))!
 		);
 	}
 
@@ -211,13 +210,18 @@ export async function getQueueList(filters: QueueFilters): Promise<QueueListResu
 			connectorType: connectors.type,
 			contentType: sql<'episode'>`'episode'::text`.as('content_type'),
 			contentId: searchRegistry.contentId,
-			title: sql<string>`COALESCE(${episodes.title}, 'Episode ' || ${episodes.seasonNumber} || 'x' || LPAD(${episodes.episodeNumber}::text, 2, '0'))`.as('title'),
+			title:
+				sql<string>`COALESCE(${episodes.title}, 'Episode ' || ${episodes.seasonNumber} || 'x' || LPAD(${episodes.episodeNumber}::text, 2, '0'))`.as(
+					'title'
+				),
 			seriesTitle: series.title,
 			seasonNumber: episodes.seasonNumber,
 			episodeNumber: episodes.episodeNumber,
 			year: sql<number | null>`NULL::integer`.as('year'),
 			searchType: sql<'gap' | 'upgrade'>`${searchRegistry.searchType}`.as('search_type'),
-			state: sql<'pending' | 'queued' | 'searching' | 'cooldown' | 'exhausted'>`${searchRegistry.state}`.as('state'),
+			state: sql<
+				'pending' | 'queued' | 'searching' | 'cooldown' | 'exhausted'
+			>`${searchRegistry.state}`.as('state'),
 			priority: searchRegistry.priority,
 			attemptCount: searchRegistry.attemptCount,
 			scheduledAt: requestQueue.scheduledAt,
@@ -260,7 +264,9 @@ export async function getQueueList(filters: QueueFilters): Promise<QueueListResu
 			episodeNumber: sql<number | null>`NULL::integer`.as('episode_number'),
 			year: movies.year,
 			searchType: sql<'gap' | 'upgrade'>`${searchRegistry.searchType}`.as('search_type'),
-			state: sql<'pending' | 'queued' | 'searching' | 'cooldown' | 'exhausted'>`${searchRegistry.state}`.as('state'),
+			state: sql<
+				'pending' | 'queued' | 'searching' | 'cooldown' | 'exhausted'
+			>`${searchRegistry.state}`.as('state'),
 			priority: searchRegistry.priority,
 			attemptCount: searchRegistry.attemptCount,
 			scheduledAt: requestQueue.scheduledAt,
@@ -421,7 +427,9 @@ export async function getThrottleInfo(connectorId: number): Promise<QueueThrottl
 			requestsThisMinute: throttleState.requestsThisMinute,
 			requestsToday: throttleState.requestsToday,
 			// Join throttle profile (or use defaults)
-			requestsPerMinute: sql<number>`COALESCE(${throttleProfiles.requestsPerMinute}, 5)`.as('requests_per_minute'),
+			requestsPerMinute: sql<number>`COALESCE(${throttleProfiles.requestsPerMinute}, 5)`.as(
+				'requests_per_minute'
+			),
 			dailyBudget: throttleProfiles.dailyBudget
 		})
 		.from(connectors)
@@ -462,7 +470,9 @@ export async function getAllThrottleInfo(): Promise<Map<number, QueueThrottleInf
 			pauseReason: throttleState.pauseReason,
 			requestsThisMinute: throttleState.requestsThisMinute,
 			requestsToday: throttleState.requestsToday,
-			requestsPerMinute: sql<number>`COALESCE(${throttleProfiles.requestsPerMinute}, 5)`.as('requests_per_minute'),
+			requestsPerMinute: sql<number>`COALESCE(${throttleProfiles.requestsPerMinute}, 5)`.as(
+				'requests_per_minute'
+			),
 			dailyBudget: throttleProfiles.dailyBudget
 		})
 		.from(connectors)
@@ -601,12 +611,7 @@ export async function removeFromQueueByIds(registryIds: number[]): Promise<numbe
 			state: 'pending',
 			updatedAt: now
 		})
-		.where(
-			and(
-				inArray(searchRegistry.id, registryIds),
-				eq(searchRegistry.state, 'queued')
-			)
-		);
+		.where(and(inArray(searchRegistry.id, registryIds), eq(searchRegistry.state, 'queued')));
 
 	return deleted.length;
 }
@@ -715,9 +720,7 @@ export async function clearQueueForConnectors(connectorIds?: number[]): Promise<
 
 		registryIds = toDelete.map((item) => item.searchRegistryId);
 
-		const deleted = await db
-			.delete(requestQueue)
-			.returning({ id: requestQueue.id });
+		const deleted = await db.delete(requestQueue).returning({ id: requestQueue.id });
 
 		deletedCount = deleted.length;
 	}
@@ -730,12 +733,7 @@ export async function clearQueueForConnectors(connectorIds?: number[]): Promise<
 				state: 'pending',
 				updatedAt: now
 			})
-			.where(
-				and(
-					inArray(searchRegistry.id, registryIds),
-					eq(searchRegistry.state, 'queued')
-				)
-			);
+			.where(and(inArray(searchRegistry.id, registryIds), eq(searchRegistry.state, 'queued')));
 	}
 
 	return deletedCount;

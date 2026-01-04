@@ -193,17 +193,27 @@
 							<div class="flex items-center gap-2 flex-wrap">
 								<p class="font-medium truncate">{job.displayName}</p>
 								{#if job.isRunning}
-									<Badge variant="outline" class="bg-blue-500/20 text-blue-600 dark:text-blue-400 animate-pulse">
+									<Badge
+										variant="outline"
+										class="bg-blue-500/20 text-blue-600 dark:text-blue-400 animate-pulse"
+									>
 										Running
 									</Badge>
 								{:else if isUpcomingSoon(job.nextRun)}
-									<Badge variant="outline" class="bg-amber-500/20 text-amber-600 dark:text-amber-400">
+									<Badge
+										variant="outline"
+										class="bg-amber-500/20 text-amber-600 dark:text-amber-400"
+									>
 										Soon
 									</Badge>
 								{/if}
 							</div>
 							<p class="text-sm text-muted-foreground mt-1">{job.description}</p>
-							<p class="text-sm font-medium mt-2 {job.isRunning ? 'text-blue-600 dark:text-blue-400' : ''}">
+							<p
+								class="text-sm font-medium mt-2 {job.isRunning
+									? 'text-blue-600 dark:text-blue-400'
+									: ''}"
+							>
 								{job.isRunning ? 'Running now' : formatRelativeTime(job.nextRun)}
 							</p>
 						</div>

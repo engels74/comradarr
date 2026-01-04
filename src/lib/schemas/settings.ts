@@ -85,14 +85,18 @@ export const authModeLabels: Record<AuthMode, string> = {
  */
 export const authModeDescriptions: Record<AuthMode, string> = {
 	full: 'Always require authentication for all access',
-	local_bypass: 'Allow unauthenticated access from local network (RFC1918 addresses: 10.x.x.x, 172.16-31.x.x, 192.168.x.x)'
+	local_bypass:
+		'Allow unauthenticated access from local network (RFC1918 addresses: 10.x.x.x, 172.16-31.x.x, 192.168.x.x)'
 };
 
 /**
  * Authentication mode update validation schema.
  */
 export const AuthModeSchema = v.object({
-	authMode: v.pipe(v.string('Authentication mode is required'), v.picklist(authModes, 'Invalid authentication mode'))
+	authMode: v.pipe(
+		v.string('Authentication mode is required'),
+		v.picklist(authModes, 'Invalid authentication mode')
+	)
 });
 
 export type AuthModeInput = v.InferInput<typeof AuthModeSchema>;
@@ -108,12 +112,18 @@ export type AuthModeOutput = v.InferOutput<typeof AuthModeSchema>;
  */
 export const PasswordChangeSchema = v.pipe(
 	v.object({
-		currentPassword: v.pipe(v.string('Current password is required'), v.minLength(1, 'Current password is required')),
+		currentPassword: v.pipe(
+			v.string('Current password is required'),
+			v.minLength(1, 'Current password is required')
+		),
 		newPassword: v.pipe(
 			v.string('New password is required'),
 			v.minLength(8, 'Password must be at least 8 characters')
 		),
-		confirmPassword: v.pipe(v.string('Please confirm your password'), v.minLength(1, 'Please confirm your password'))
+		confirmPassword: v.pipe(
+			v.string('Please confirm your password'),
+			v.minLength(1, 'Please confirm your password')
+		)
 	}),
 	v.forward(
 		v.partialCheck(

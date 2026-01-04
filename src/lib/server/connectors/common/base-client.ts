@@ -12,7 +12,13 @@
 
  */
 
-import type { BaseClientConfig, RequestOptions, SystemStatus, HealthCheck, RetryConfig } from './types.js';
+import type {
+	BaseClientConfig,
+	RequestOptions,
+	SystemStatus,
+	HealthCheck,
+	RetryConfig
+} from './types.js';
 import { withRetry, DEFAULT_RETRY_CONFIG } from './retry.js';
 import {
 	type ArrClientError,
@@ -253,7 +259,11 @@ export class BaseArrClient {
 			}
 
 			// DNS failure
-			if (message.includes('getaddrinfo') || message.includes('dns') || message.includes('enotfound')) {
+			if (
+				message.includes('getaddrinfo') ||
+				message.includes('dns') ||
+				message.includes('enotfound')
+			) {
 				return new NetworkError('DNS lookup failed', 'dns_failure');
 			}
 		}

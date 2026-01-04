@@ -204,10 +204,7 @@ export class ThrottleEnforcer {
 	 * @param connectorId - Connector ID
 	 * @param retryAfterSeconds - Optional Retry-After header value in seconds
 	 */
-	async handleRateLimitResponse(
-		connectorId: number,
-		retryAfterSeconds?: number
-	): Promise<void> {
+	async handleRateLimitResponse(connectorId: number, retryAfterSeconds?: number): Promise<void> {
 		const profile = await getThrottleProfileForConnector(connectorId);
 
 		// Use Retry-After if provided, otherwise use profile's rateLimitPauseSeconds
@@ -273,9 +270,8 @@ export class ThrottleEnforcer {
 
 		// Check pause state
 		const isPaused = state.pausedUntil !== null && state.pausedUntil > now;
-		const pauseExpiresInMs = isPaused && state.pausedUntil
-			? state.pausedUntil.getTime() - now.getTime()
-			: null;
+		const pauseExpiresInMs =
+			isPaused && state.pausedUntil ? state.pausedUntil.getTime() - now.getTime() : null;
 
 		return {
 			connectorId,
@@ -283,9 +279,8 @@ export class ThrottleEnforcer {
 			requestsThisMinute,
 			requestsToday,
 			remainingThisMinute: Math.max(0, profile.requestsPerMinute - requestsThisMinute),
-			remainingToday: profile.dailyBudget !== null
-				? Math.max(0, profile.dailyBudget - requestsToday)
-				: null,
+			remainingToday:
+				profile.dailyBudget !== null ? Math.max(0, profile.dailyBudget - requestsToday) : null,
 			isPaused,
 			pauseReason: isPaused ? (state.pauseReason as PauseReason) : null,
 			pauseExpiresInMs

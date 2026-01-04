@@ -10,7 +10,10 @@
  */
 
 import type { NotificationChannel, NotificationHistory } from '$lib/server/db/schema';
-import type { NotificationEventType, NotificationStatus } from '$lib/server/db/queries/notifications';
+import type {
+	NotificationEventType,
+	NotificationStatus
+} from '$lib/server/db/queries/notifications';
 import {
 	getBatchingEnabledChannels,
 	getPendingNotificationsForBatching,
@@ -272,11 +275,7 @@ export class NotificationBatcher {
 				// Mark notifications as failed (so they can be retried)
 				const errorMsg = sendResult.error ?? 'Unknown error';
 				for (const entry of toBatch) {
-					await updateNotificationHistoryStatus(
-						entry.id,
-						'failed' as NotificationStatus,
-						errorMsg
-					);
+					await updateNotificationHistoryStatus(entry.id, 'failed' as NotificationStatus, errorMsg);
 				}
 
 				return {
@@ -293,7 +292,11 @@ export class NotificationBatcher {
 
 			// Mark notifications as failed
 			for (const entry of toBatch) {
-				await updateNotificationHistoryStatus(entry.id, 'failed' as NotificationStatus, errorMessage);
+				await updateNotificationHistoryStatus(
+					entry.id,
+					'failed' as NotificationStatus,
+					errorMessage
+				);
 			}
 
 			return {

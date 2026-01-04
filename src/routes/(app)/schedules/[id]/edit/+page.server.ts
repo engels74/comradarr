@@ -5,11 +5,7 @@
 import type { PageServerLoad, Actions } from './$types';
 import { getAllConnectors } from '$lib/server/db/queries/connectors';
 import { getAllThrottleProfiles } from '$lib/server/db/queries/throttle';
-import {
-	getScheduleById,
-	updateSchedule,
-	deleteSchedule
-} from '$lib/server/db/queries/schedules';
+import { getScheduleById, updateSchedule, deleteSchedule } from '$lib/server/db/queries/schedules';
 import { refreshDynamicSchedules } from '$lib/server/scheduler';
 import { error, fail } from '@sveltejs/kit';
 import * as v from 'valibot';
@@ -86,9 +82,9 @@ export const actions: Actions = {
 			sweepType: data.sweepType?.toString() ?? existingSchedule.sweepType,
 			cronExpression: data.cronExpression?.toString() ?? existingSchedule.cronExpression,
 			timezone: data.timezone?.toString() ?? existingSchedule.timezone,
-			connectorId: rawConnectorId?.toString() ?? (existingSchedule.connectorId?.toString() ?? ''),
+			connectorId: rawConnectorId?.toString() ?? existingSchedule.connectorId?.toString() ?? '',
 			throttleProfileId:
-				rawThrottleProfileId?.toString() ?? (existingSchedule.throttleProfileId?.toString() ?? '')
+				rawThrottleProfileId?.toString() ?? existingSchedule.throttleProfileId?.toString() ?? ''
 		};
 
 		// Validate form data
@@ -150,7 +146,10 @@ export const actions: Actions = {
 			// Refresh scheduler to pick up changes
 			await refreshDynamicSchedules();
 		} catch (err) {
-			logger.error('Failed to update schedule', { error: err instanceof Error ? err.message : String(err), scheduleId: id });
+			logger.error('Failed to update schedule', {
+				error: err instanceof Error ? err.message : String(err),
+				scheduleId: id
+			});
 			return fail(500, {
 				error: 'Failed to update schedule. Please try again.',
 				...formValues
@@ -185,7 +184,10 @@ export const actions: Actions = {
 			// Refresh scheduler to remove the deleted schedule
 			await refreshDynamicSchedules();
 		} catch (err) {
-			logger.error('Failed to delete schedule', { error: err instanceof Error ? err.message : String(err), scheduleId: id });
+			logger.error('Failed to delete schedule', {
+				error: err instanceof Error ? err.message : String(err),
+				scheduleId: id
+			});
 			return fail(500, { error: 'Failed to delete schedule. Please try again.' });
 		}
 

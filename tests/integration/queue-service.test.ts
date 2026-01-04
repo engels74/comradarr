@@ -204,10 +204,7 @@ async function createPendingEpisodeRegistry(
 /**
  * Create a pending search registry entry for a movie
  */
-async function createPendingMovieRegistry(
-	connectorId: number,
-	movieId: number
-): Promise<number> {
+async function createPendingMovieRegistry(connectorId: number, movieId: number): Promise<number> {
 	const result = await db
 		.insert(searchRegistry)
 		.values({
@@ -240,10 +237,7 @@ async function countQueueItems(connectorId: number): Promise<number> {
  * Get search registry entry by ID
  */
 async function getRegistryById(registryId: number) {
-	const result = await db
-		.select()
-		.from(searchRegistry)
-		.where(eq(searchRegistry.id, registryId));
+	const result = await db.select().from(searchRegistry).where(eq(searchRegistry.id, registryId));
 	return result[0];
 }
 
@@ -470,13 +464,7 @@ describe('Queue Service - dequeuePriorityItems', () => {
 
 			// Create 5 episodes
 			for (let i = 1; i <= 5; i++) {
-				const episodeId = await insertTestEpisode(
-					testSonarrConnectorId,
-					seasonId,
-					100 + i,
-					1,
-					i
-				);
+				const episodeId = await insertTestEpisode(testSonarrConnectorId, seasonId, 100 + i, 1, i);
 				await createPendingEpisodeRegistry(testSonarrConnectorId, episodeId);
 			}
 
@@ -626,13 +614,7 @@ describe('Queue Service - clearQueue', () => {
 
 		// Create and enqueue 3 episodes
 		for (let i = 1; i <= 3; i++) {
-			const episodeId = await insertTestEpisode(
-				testSonarrConnectorId,
-				seasonId,
-				100 + i,
-				1,
-				i
-			);
+			const episodeId = await insertTestEpisode(testSonarrConnectorId, seasonId, 100 + i, 1, i);
 			await createPendingEpisodeRegistry(testSonarrConnectorId, episodeId);
 		}
 
@@ -719,13 +701,7 @@ describe('Queue Service - getQueueStatus', () => {
 
 		// Create and enqueue 2 episodes
 		for (let i = 1; i <= 2; i++) {
-			const episodeId = await insertTestEpisode(
-				testSonarrConnectorId,
-				seasonId,
-				100 + i,
-				1,
-				i
-			);
+			const episodeId = await insertTestEpisode(testSonarrConnectorId, seasonId, 100 + i, 1, i);
 			await createPendingEpisodeRegistry(testSonarrConnectorId, episodeId);
 		}
 

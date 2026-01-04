@@ -6,11 +6,12 @@
 		<script>
 			// FOUC prevention: Apply theme before first paint
 			// Default to dark mode if no preference stored
-			(function() {
+			(function () {
 				try {
 					var stored = localStorage.getItem('theme');
 					var theme = stored || 'dark';
-					var isDark = theme === 'dark' ||
+					var isDark =
+						theme === 'dark' ||
 						(theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
 					if (isDark) document.documentElement.classList.add('dark');
 				} catch (e) {

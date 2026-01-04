@@ -140,7 +140,8 @@ export class SlackSender implements NotificationSender {
 		return this.send(channel, sensitiveConfig, {
 			eventType: 'app_started',
 			title: 'Comradarr Test Notification',
-			message: 'This is a test notification from Comradarr. If you can see this, your Slack webhook is configured correctly!',
+			message:
+				'This is a test notification from Comradarr. If you can see this, your Slack webhook is configured correctly!',
 			timestamp: new Date(),
 			fields: [
 				{ name: 'Channel', value: channel.name, inline: true },
@@ -244,9 +245,7 @@ export class SlackSender implements NotificationSender {
 
 		if (response.status === 429) {
 			const retryAfter = response.headers.get('Retry-After');
-			return new NotificationRateLimitError(
-				retryAfter ? parseInt(retryAfter, 10) : undefined
-			);
+			return new NotificationRateLimitError(retryAfter ? parseInt(retryAfter, 10) : undefined);
 		}
 
 		if (response.status >= 500) {

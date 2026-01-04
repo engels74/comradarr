@@ -40,14 +40,17 @@
 	/**
 	 * Creates an enhance handler for form submission.
 	 */
-	function createEnhanceHandler(
-		setLoading: (val: boolean) => void,
-		closeDialog?: () => void
-	) {
+	function createEnhanceHandler(setLoading: (val: boolean) => void, closeDialog?: () => void) {
 		return () => {
 			setLoading(true);
 			onActionStart?.(); // Pause polling during form submission
-			return async ({ result, update }: { result: { type: string; data?: { message?: string; error?: string } }; update: () => Promise<void> }) => {
+			return async ({
+				result,
+				update
+			}: {
+				result: { type: string; data?: { message?: string; error?: string } };
+				update: () => Promise<void>;
+			}) => {
 				setLoading(false);
 				closeDialog?.();
 
@@ -83,13 +86,28 @@
 			<Button type="submit" variant="default" size="sm" disabled={isAnyLoading}>
 				{#if isResuming}
 					<svg class="size-4 mr-1.5 animate-spin" fill="none" viewBox="0 0 24 24">
-						<circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-						<path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+						<circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"
+						></circle>
+						<path
+							class="opacity-75"
+							fill="currentColor"
+							d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+						></path>
 					</svg>
 				{:else}
 					<svg class="size-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
-						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+						<path
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							stroke-width="2"
+							d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"
+						/>
+						<path
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							stroke-width="2"
+							d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+						/>
 					</svg>
 				{/if}
 				Resume All
@@ -105,12 +123,22 @@
 			<Button type="submit" variant="outline" size="sm" disabled={isAnyLoading}>
 				{#if isPausing}
 					<svg class="size-4 mr-1.5 animate-spin" fill="none" viewBox="0 0 24 24">
-						<circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-						<path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+						<circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"
+						></circle>
+						<path
+							class="opacity-75"
+							fill="currentColor"
+							d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+						></path>
 					</svg>
 				{:else}
 					<svg class="size-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+						<path
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							stroke-width="2"
+							d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z"
+						/>
 					</svg>
 				{/if}
 				Pause All
@@ -125,7 +153,12 @@
 				{#snippet child({ props })}
 					<Button {...props} variant="outline" size="sm" disabled={isAnyLoading}>
 						<svg class="size-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+							<path
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								stroke-width="2"
+								d="M19 9l-7 7-7-7"
+							/>
 						</svg>
 						Connectors
 						{#if anyPaused}
@@ -144,7 +177,9 @@
 						<DropdownMenu.Sub>
 							<DropdownMenu.SubTrigger>
 								<div class="flex items-center gap-2 w-full">
-									<span class={`rounded px-1.5 py-0.5 text-xs font-medium ${typeColors[connector.type] ?? 'bg-gray-500/10 text-gray-600'}`}>
+									<span
+										class={`rounded px-1.5 py-0.5 text-xs font-medium ${typeColors[connector.type] ?? 'bg-gray-500/10 text-gray-600'}`}
+									>
 										{connector.type}
 									</span>
 									<span class="flex-1 truncate">{connector.name}</span>
@@ -162,11 +197,24 @@
 										action="?/resumeQueue"
 										use:enhance={createEnhanceHandler((v) => (isResuming = v))}
 									>
-										<input type="hidden" name="connectorIds" value={JSON.stringify([connector.id])} />
+										<input
+											type="hidden"
+											name="connectorIds"
+											value={JSON.stringify([connector.id])}
+										/>
 										<DropdownMenu.Item>
-											<button type="submit" class="flex items-center gap-2 w-full" disabled={isAnyLoading}>
+											<button
+												type="submit"
+												class="flex items-center gap-2 w-full"
+												disabled={isAnyLoading}
+											>
 												<svg class="size-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-													<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+													<path
+														stroke-linecap="round"
+														stroke-linejoin="round"
+														stroke-width="2"
+														d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"
+													/>
 												</svg>
 												Resume
 											</button>
@@ -178,11 +226,24 @@
 										action="?/pauseQueue"
 										use:enhance={createEnhanceHandler((v) => (isPausing = v))}
 									>
-										<input type="hidden" name="connectorIds" value={JSON.stringify([connector.id])} />
+										<input
+											type="hidden"
+											name="connectorIds"
+											value={JSON.stringify([connector.id])}
+										/>
 										<DropdownMenu.Item>
-											<button type="submit" class="flex items-center gap-2 w-full" disabled={isAnyLoading}>
+											<button
+												type="submit"
+												class="flex items-center gap-2 w-full"
+												disabled={isAnyLoading}
+											>
 												<svg class="size-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-													<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+													<path
+														stroke-linecap="round"
+														stroke-linejoin="round"
+														stroke-width="2"
+														d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z"
+													/>
 												</svg>
 												Pause
 											</button>
@@ -201,9 +262,19 @@
 	<AlertDialog.Root bind:open={clearDialogOpen}>
 		<AlertDialog.Trigger>
 			{#snippet child({ props })}
-				<Button {...props} variant="outline" size="sm" disabled={isAnyLoading || totalQueueCount === 0}>
+				<Button
+					{...props}
+					variant="outline"
+					size="sm"
+					disabled={isAnyLoading || totalQueueCount === 0}
+				>
 					<svg class="size-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+						<path
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							stroke-width="2"
+							d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+						/>
 					</svg>
 					Clear Queue
 				</Button>
@@ -215,8 +286,8 @@
 				<AlertDialog.Header>
 					<AlertDialog.Title>Clear Queue</AlertDialog.Title>
 					<AlertDialog.Description>
-						Are you sure you want to clear {totalQueueCount} item{totalQueueCount !== 1 ? 's' : ''} from the queue?
-						Items will be reset to pending state and can be re-queued later.
+						Are you sure you want to clear {totalQueueCount} item{totalQueueCount !== 1 ? 's' : ''} from
+						the queue? Items will be reset to pending state and can be re-queued later.
 					</AlertDialog.Description>
 				</AlertDialog.Header>
 				<AlertDialog.Footer>

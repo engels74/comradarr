@@ -96,20 +96,13 @@
 							disabled={isLoading}
 							value={form?.name ?? ''}
 						/>
-						<p class="text-xs text-muted-foreground">
-							A friendly name to identify this schedule.
-						</p>
+						<p class="text-xs text-muted-foreground">A friendly name to identify this schedule.</p>
 					</div>
 
 					<!-- Connector Selection -->
 					<div class="grid gap-2">
 						<Label for="connectorId">Connector</Label>
-						<select
-							id="connectorId"
-							name="connectorId"
-							disabled={isLoading}
-							class={selectClass}
-						>
+						<select id="connectorId" name="connectorId" disabled={isLoading} class={selectClass}>
 							<option value="" selected={!form?.connectorId}>All Connectors</option>
 							{#each data.connectors as connector}
 								<option
@@ -143,7 +136,8 @@
 							{/each}
 						</select>
 						<p class="text-xs text-muted-foreground">
-							Incremental syncs check for new content. Full reconciliation rebuilds the entire content mirror.
+							Incremental syncs check for new content. Full reconciliation rebuilds the entire
+							content mirror.
 						</p>
 					</div>
 

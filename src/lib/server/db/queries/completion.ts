@@ -87,9 +87,10 @@ export async function getAllConnectorCompletionStats(): Promise<ConnectorComplet
 			monitored: sql<number>`COUNT(*) FILTER (WHERE ${episodes.monitored} = true)::int`.as(
 				'monitored'
 			),
-			downloaded: sql<number>`COUNT(*) FILTER (WHERE ${episodes.monitored} = true AND ${episodes.hasFile} = true)::int`.as(
-				'downloaded'
-			)
+			downloaded:
+				sql<number>`COUNT(*) FILTER (WHERE ${episodes.monitored} = true AND ${episodes.hasFile} = true)::int`.as(
+					'downloaded'
+				)
 		})
 		.from(episodes)
 		.groupBy(episodes.connectorId);
@@ -101,9 +102,10 @@ export async function getAllConnectorCompletionStats(): Promise<ConnectorComplet
 			monitored: sql<number>`COUNT(*) FILTER (WHERE ${movies.monitored} = true)::int`.as(
 				'monitored'
 			),
-			downloaded: sql<number>`COUNT(*) FILTER (WHERE ${movies.monitored} = true AND ${movies.hasFile} = true)::int`.as(
-				'downloaded'
-			)
+			downloaded:
+				sql<number>`COUNT(*) FILTER (WHERE ${movies.monitored} = true AND ${movies.hasFile} = true)::int`.as(
+					'downloaded'
+				)
 		})
 		.from(movies)
 		.groupBy(movies.connectorId);

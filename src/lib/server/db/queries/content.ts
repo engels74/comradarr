@@ -309,7 +309,9 @@ export function parseContentFilters(searchParams: URLSearchParams): ContentFilte
 		sortColumn: (searchParams.get('sort') as SortColumn) ?? 'title',
 		sortDirection: (searchParams.get('order') as SortDirection) ?? 'asc',
 		limit: limitParam ? Math.min(100, Math.max(10, Number(limitParam))) : 50,
-		offset: pageParam ? (Math.max(1, Number(pageParam)) - 1) * (limitParam ? Number(limitParam) : 50) : 0
+		offset: pageParam
+			? (Math.max(1, Number(pageParam)) - 1) * (limitParam ? Number(limitParam) : 50)
+			: 0
 	};
 }
 
@@ -340,8 +342,14 @@ interface SeriesWithStats {
 const episodeCountsSubquery = db
 	.select({
 		seriesId: seasons.seriesId,
-		missingCount: sql<number>`COUNT(*) FILTER (WHERE ${episodes.hasFile} = false AND ${episodes.monitored} = true)::int`.as('missing_count'),
-		upgradeCount: sql<number>`COUNT(*) FILTER (WHERE ${episodes.qualityCutoffNotMet} = true AND ${episodes.monitored} = true AND ${episodes.hasFile} = true)::int`.as('upgrade_count')
+		missingCount:
+			sql<number>`COUNT(*) FILTER (WHERE ${episodes.hasFile} = false AND ${episodes.monitored} = true)::int`.as(
+				'missing_count'
+			),
+		upgradeCount:
+			sql<number>`COUNT(*) FILTER (WHERE ${episodes.qualityCutoffNotMet} = true AND ${episodes.monitored} = true AND ${episodes.hasFile} = true)::int`.as(
+				'upgrade_count'
+			)
 	})
 	.from(episodes)
 	.innerJoin(seasons, eq(episodes.seasonId, seasons.id))
@@ -660,7 +668,8 @@ async function getMoviesCount(filters: ContentFilters): Promise<number> {
 	}
 
 	// If we have search state status filters, we need to join search_registry
-	const needsSearchRegistry = filters.status === 'queued' || filters.status === 'searching' || filters.status === 'exhausted';
+	const needsSearchRegistry =
+		filters.status === 'queued' || filters.status === 'searching' || filters.status === 'exhausted';
 
 	if (needsSearchRegistry) {
 		const result = await db
@@ -830,7 +839,11 @@ export async function getContentList(filters: ContentFilters): Promise<ContentLi
 /**
  * Sorts content items.
  */
-function sortItems(items: ContentItem[], column: SortColumn, direction: SortDirection): ContentItem[] {
+function sortItems(
+	items: ContentItem[],
+	column: SortColumn,
+	direction: SortDirection
+): ContentItem[] {
 	const multiplier = direction === 'asc' ? 1 : -1;
 
 	return items.sort((a, b) => {
@@ -878,9 +891,12 @@ export async function getConnectorsForFilter(): Promise<
  */
 export async function getContentStatusCounts(connectorId?: number): Promise<ContentStatusCounts> {
 	// Build connector conditions
-	const episodeConnectorCondition = connectorId !== undefined ? eq(episodes.connectorId, connectorId) : undefined;
-	const movieConnectorCondition = connectorId !== undefined ? eq(movies.connectorId, connectorId) : undefined;
-	const searchRegistryCondition = connectorId !== undefined ? eq(searchRegistry.connectorId, connectorId) : undefined;
+	const episodeConnectorCondition =
+		connectorId !== undefined ? eq(episodes.connectorId, connectorId) : undefined;
+	const movieConnectorCondition =
+		connectorId !== undefined ? eq(movies.connectorId, connectorId) : undefined;
+	const searchRegistryCondition =
+		connectorId !== undefined ? eq(searchRegistry.connectorId, connectorId) : undefined;
 
 	// Run all counts in parallel
 	const [
@@ -898,33 +914,20 @@ export async function getContentStatusCounts(connectorId?: number): Promise<Cont
 			.from(series)
 			.where(connectorId !== undefined ? eq(series.connectorId, connectorId) : undefined),
 		// Total movies
-		db
-			.select({ count: count() })
-			.from(movies)
-			.where(movieConnectorCondition),
+		db.select({ count: count() }).from(movies).where(movieConnectorCondition),
 		// Series with missing episodes (count distinct series)
 		db
 			.select({ count: sql<number>`COUNT(DISTINCT ${seasons.seriesId})::int` })
 			.from(episodes)
 			.innerJoin(seasons, eq(episodes.seasonId, seasons.id))
 			.where(
-				and(
-					episodeConnectorCondition,
-					eq(episodes.hasFile, false),
-					eq(episodes.monitored, true)
-				)
+				and(episodeConnectorCondition, eq(episodes.hasFile, false), eq(episodes.monitored, true))
 			),
 		// Movies missing
 		db
 			.select({ count: count() })
 			.from(movies)
-			.where(
-				and(
-					movieConnectorCondition,
-					eq(movies.hasFile, false),
-					eq(movies.monitored, true)
-				)
-			),
+			.where(and(movieConnectorCondition, eq(movies.hasFile, false), eq(movies.monitored, true))),
 		// Series with upgrade episodes (count distinct series)
 		db
 			.select({ count: sql<number>`COUNT(DISTINCT ${seasons.seriesId})::int` })
@@ -1059,10 +1062,7 @@ export async function getSeriesSeasonsWithEpisodes(
 		.from(episodes)
 		.leftJoin(
 			searchRegistry,
-			and(
-				eq(searchRegistry.contentType, 'episode'),
-				eq(searchRegistry.contentId, episodes.id)
-			)
+			and(eq(searchRegistry.contentType, 'episode'), eq(searchRegistry.contentId, episodes.id))
 		)
 		.where(inArray(episodes.seasonId, seasonIds))
 		.orderBy(asc(episodes.seasonNumber), asc(episodes.episodeNumber));
@@ -1096,7 +1096,9 @@ export async function getSeriesSeasonsWithEpisodes(
 	return seasonRows.map((season) => {
 		const eps = episodesBySeason.get(season.id) ?? [];
 		const missingCount = eps.filter((e) => e.monitored && !e.hasFile).length;
-		const upgradeCount = eps.filter((e) => e.monitored && e.hasFile && e.qualityCutoffNotMet).length;
+		const upgradeCount = eps.filter(
+			(e) => e.monitored && e.hasFile && e.qualityCutoffNotMet
+		).length;
 
 		return {
 			id: season.id,
@@ -1178,10 +1180,7 @@ export async function getSeasonEpisodes(seasonId: number): Promise<EpisodeDetail
 		.from(episodes)
 		.leftJoin(
 			searchRegistry,
-			and(
-				eq(searchRegistry.contentType, 'episode'),
-				eq(searchRegistry.contentId, episodes.id)
-			)
+			and(eq(searchRegistry.contentType, 'episode'), eq(searchRegistry.contentId, episodes.id))
 		)
 		.where(eq(episodes.seasonId, seasonId))
 		.orderBy(asc(episodes.episodeNumber));
@@ -1242,9 +1241,7 @@ export async function getSeriesSearchHistory(
 		})
 		.from(searchHistory)
 		.innerJoin(episodes, eq(searchHistory.contentId, episodes.id))
-		.where(
-			and(eq(searchHistory.contentType, 'episode'), inArray(searchHistory.contentId, ids))
-		)
+		.where(and(eq(searchHistory.contentType, 'episode'), inArray(searchHistory.contentId, ids)))
 		.orderBy(desc(searchHistory.createdAt))
 		.limit(limit);
 
@@ -1327,12 +1324,7 @@ export async function getMovieSearchHistory(
 		})
 		.from(searchHistory)
 		.innerJoin(movies, eq(searchHistory.contentId, movies.id))
-		.where(
-			and(
-				eq(searchHistory.contentType, 'movie'),
-				eq(searchHistory.contentId, movieId)
-			)
-		)
+		.where(and(eq(searchHistory.contentType, 'movie'), eq(searchHistory.contentId, movieId)))
 		.orderBy(desc(searchHistory.createdAt))
 		.limit(limit);
 
@@ -1424,7 +1416,11 @@ export async function bulkQueueForSearch(
 					priority: 0
 				})
 				.onConflictDoUpdate({
-					target: [searchRegistry.connectorId, searchRegistry.contentType, searchRegistry.contentId],
+					target: [
+						searchRegistry.connectorId,
+						searchRegistry.contentType,
+						searchRegistry.contentId
+					],
 					set: {
 						state: 'pending',
 						searchType,
@@ -1469,7 +1465,11 @@ export async function bulkQueueForSearch(
 					priority: 0
 				})
 				.onConflictDoUpdate({
-					target: [searchRegistry.connectorId, searchRegistry.contentType, searchRegistry.contentId],
+					target: [
+						searchRegistry.connectorId,
+						searchRegistry.contentType,
+						searchRegistry.contentId
+					],
 					set: {
 						state: 'pending',
 						searchType,
@@ -1523,7 +1523,10 @@ export async function bulkSetPriority(
 				.update(searchRegistry)
 				.set({ priority: clampedPriority, updatedAt: new Date() })
 				.where(
-					and(eq(searchRegistry.contentType, 'episode'), inArray(searchRegistry.contentId, episodeIds))
+					and(
+						eq(searchRegistry.contentType, 'episode'),
+						inArray(searchRegistry.contentId, episodeIds)
+					)
 				)
 				.returning({ id: searchRegistry.id });
 

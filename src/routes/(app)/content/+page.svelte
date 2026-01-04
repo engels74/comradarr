@@ -192,17 +192,12 @@
 	<div class="flex items-center justify-between mb-6">
 		<div>
 			<h1 class="text-3xl font-bold">Content Browser</h1>
-			<p class="text-muted-foreground mt-1">
-				Browse and manage your library content
-			</p>
+			<p class="text-muted-foreground mt-1">Browse and manage your library content</p>
 		</div>
 	</div>
 
 	<!-- Filters -->
-	<ContentFilters
-		connectors={data.connectors}
-		statusCounts={data.statusCounts}
-	/>
+	<ContentFilters connectors={data.connectors} statusCounts={data.statusCounts} />
 
 	<!-- Bulk Action Bar (shown when items selected) -->
 	<BulkActionBar
@@ -244,17 +239,10 @@
 				{#if loadError}
 					<div class="flex items-center gap-2 text-sm text-destructive">
 						<span>{loadError}</span>
-						<Button variant="outline" size="sm" onclick={loadMore}>
-							Retry
-						</Button>
+						<Button variant="outline" size="sm" onclick={loadMore}>Retry</Button>
 					</div>
 				{:else if hasMore}
-					<Button
-						variant="outline"
-						size="sm"
-						disabled={isLoadingMore}
-						onclick={loadMore}
-					>
+					<Button variant="outline" size="sm" disabled={isLoadingMore} onclick={loadMore}>
 						{#if isLoadingMore}
 							<span class="animate-spin mr-2">&#8987;</span>
 							Loading...
@@ -263,18 +251,14 @@
 						{/if}
 					</Button>
 				{:else if data.total > 0}
-					<span class="text-sm text-muted-foreground">
-						All items loaded
-					</span>
+					<span class="text-sm text-muted-foreground"> All items loaded </span>
 				{/if}
 
 				{#if totalPages > 1}
 					<Dialog.Root bind:open={jumpDialogOpen}>
 						<Dialog.Trigger>
 							{#snippet child({ props })}
-								<Button variant="outline" size="sm" {...props}>
-									Jump to Page
-								</Button>
+								<Button variant="outline" size="sm" {...props}>Jump to Page</Button>
 							{/snippet}
 						</Dialog.Trigger>
 						<Dialog.Content class="sm:max-w-[300px]">

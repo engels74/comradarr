@@ -19,10 +19,18 @@
 		onSelectionChange?: ((ids: Set<number>) => void) | undefined;
 	}
 
-	let { items, throttleInfo, maxHeight = '70vh', selectedIds = new Set(), onSelectionChange }: Props = $props();
+	let {
+		items,
+		throttleInfo,
+		maxHeight = '70vh',
+		selectedIds = new Set(),
+		onSelectionChange
+	}: Props = $props();
 
 	// Selection state
-	const isAllSelected = $derived(items.length > 0 && items.every((item) => selectedIds.has(item.searchRegistryId)));
+	const isAllSelected = $derived(
+		items.length > 0 && items.every((item) => selectedIds.has(item.searchRegistryId))
+	);
 	const isSomeSelected = $derived(items.some((item) => selectedIds.has(item.searchRegistryId)));
 	const isIndeterminate = $derived(isSomeSelected && !isAllSelected);
 
@@ -66,7 +74,12 @@
 	function handleRowClick(e: MouseEvent, registryId: number) {
 		// Don't toggle if clicking on a link or checkbox
 		const target = e.target as HTMLElement;
-		if (target.tagName === 'A' || target.closest('a') || target.tagName === 'BUTTON' || target.closest('button')) {
+		if (
+			target.tagName === 'A' ||
+			target.closest('a') ||
+			target.tagName === 'BUTTON' ||
+			target.closest('button')
+		) {
 			return;
 		}
 		toggleSelection(registryId);
@@ -238,11 +251,7 @@
 	</div>
 
 	<!-- Virtualized scroll container -->
-	<div
-		bind:this={scrollContainer}
-		class="overflow-auto"
-		style="max-height: {maxHeight};"
-	>
+	<div bind:this={scrollContainer} class="overflow-auto" style="max-height: {maxHeight};">
 		<!-- Content area with total height for scroll -->
 		<div style="height: {totalHeight}px; position: relative;">
 			{#if items.length === 0}
@@ -256,8 +265,8 @@
 					{#if item}
 						<div
 							class={cn(
-								"absolute left-0 right-0 flex items-center px-4 gap-4 border-b transition-colors cursor-pointer",
-								isSelected ? "bg-primary/5 hover:bg-primary/10" : "hover:bg-muted/50"
+								'absolute left-0 right-0 flex items-center px-4 gap-4 border-b transition-colors cursor-pointer',
+								isSelected ? 'bg-primary/5 hover:bg-primary/10' : 'hover:bg-muted/50'
 							)}
 							style="height: {ROW_HEIGHT}px; top: {virtualItem.start}px;"
 							onclick={(e) => handleRowClick(e, item.searchRegistryId)}
@@ -325,12 +334,7 @@
 
 							<!-- Attempts -->
 							<div class="w-16 flex-shrink-0 text-center">
-								<span
-									class={cn(
-										'text-sm',
-										item.attemptCount >= MAX_ATTEMPTS && 'text-red-500'
-									)}
-								>
+								<span class={cn('text-sm', item.attemptCount >= MAX_ATTEMPTS && 'text-red-500')}>
 									{item.attemptCount}/{MAX_ATTEMPTS}
 								</span>
 							</div>

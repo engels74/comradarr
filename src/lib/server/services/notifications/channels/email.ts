@@ -118,7 +118,8 @@ export class EmailSender implements NotificationSender {
 		return this.send(channel, sensitiveConfig, {
 			eventType: 'app_started',
 			title: 'Comradarr Test Notification',
-			message: 'This is a test notification from Comradarr. If you can see this, your email configuration is working correctly!',
+			message:
+				'This is a test notification from Comradarr. If you can see this, your email configuration is working correctly!',
 			timestamp: new Date(),
 			fields: [
 				{ name: 'Channel', value: channel.name, inline: true },
@@ -292,10 +293,8 @@ export class EmailSender implements NotificationSender {
 				error.message.includes('ETIMEDOUT') ||
 				error.message.includes('ENOTFOUND')
 			) {
-				return new NotificationNetworkError(
-					'Failed to connect to SMTP server',
-					error.message
-				).message;
+				return new NotificationNetworkError('Failed to connect to SMTP server', error.message)
+					.message;
 			}
 
 			// SSL/TLS errors
@@ -304,9 +303,8 @@ export class EmailSender implements NotificationSender {
 				error.message.includes('SSL') ||
 				error.message.includes('TLS')
 			) {
-				return new NotificationConfigurationError(
-					'SSL/TLS error - check secure setting and port'
-				).message;
+				return new NotificationConfigurationError('SSL/TLS error - check secure setting and port')
+					.message;
 			}
 
 			return error.message;

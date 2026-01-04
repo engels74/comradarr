@@ -41,7 +41,7 @@
 	<Card.Root>
 		<Card.Header>
 			<Card.Title class="text-2xl font-bold">Edit Prowlarr</Card.Title>
-			<Card.Description> Update the configuration for your Prowlarr instance. </Card.Description>
+			<Card.Description>Update the configuration for your Prowlarr instance.</Card.Description>
 		</Card.Header>
 		<Card.Content>
 			<form
@@ -78,7 +78,6 @@
 							{form.error}
 						</div>
 					{/if}
-
 
 					<div class="grid gap-2">
 						<Label for="name">Name</Label>

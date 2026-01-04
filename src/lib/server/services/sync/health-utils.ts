@@ -8,10 +8,7 @@
 
  */
 
-import {
-	AuthenticationError,
-	isArrClientError
-} from '$lib/server/connectors/common/errors';
+import { AuthenticationError, isArrClientError } from '$lib/server/connectors/common/errors';
 import { SYNC_CONFIG } from './config';
 
 /**

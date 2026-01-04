@@ -202,10 +202,7 @@ describe('withRetry', () => {
 		});
 
 		it('should retry on RateLimitError', async () => {
-			const fn = vi
-				.fn()
-				.mockRejectedValueOnce(new RateLimitError())
-				.mockResolvedValue('success');
+			const fn = vi.fn().mockRejectedValueOnce(new RateLimitError()).mockResolvedValue('success');
 
 			const resultPromise = (async () => {
 				const promise = withRetry(fn, { maxRetries: 3, jitter: false });
@@ -269,7 +266,9 @@ describe('withRetry', () => {
 		});
 
 		it('should respect maxRetries=0 (no retries)', async () => {
-			const fn = vi.fn().mockRejectedValue(new NetworkError('Connection failed', 'connection_refused'));
+			const fn = vi
+				.fn()
+				.mockRejectedValue(new NetworkError('Connection failed', 'connection_refused'));
 
 			await expect(withRetry(fn, { maxRetries: 0 })).rejects.toThrow(NetworkError);
 			expect(fn).toHaveBeenCalledTimes(1);

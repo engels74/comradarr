@@ -23,7 +23,15 @@
 		onRefresh?: () => void;
 	}
 
-	let { levelCounts, modules, selectedLevels, selectedModule, searchQuery, class: className, onRefresh }: Props = $props();
+	let {
+		levelCounts,
+		modules,
+		selectedLevels,
+		selectedModule,
+		searchQuery,
+		class: className,
+		onRefresh
+	}: Props = $props();
 
 	let localSearch = $state('');
 	let isRefreshing = $state(false);
@@ -116,9 +124,7 @@
 		window.open(exportUrl.toString(), '_blank');
 	}
 
-	const hasActiveFilters = $derived(
-		selectedLevels.length > 0 || selectedModule || searchQuery
-	);
+	const hasActiveFilters = $derived(selectedLevels.length > 0 || selectedModule || searchQuery);
 
 	const levelColors: Record<LogLevel, string> = {
 		error: 'bg-red-500',
@@ -155,15 +161,8 @@
 		</div>
 
 		<div class="flex gap-2">
-			<Button variant="outline" size="sm" onclick={handleSearch}>
-				Search
-			</Button>
-			<Button
-				variant="outline"
-				size="sm"
-				onclick={handleRefresh}
-				disabled={isRefreshing}
-			>
+			<Button variant="outline" size="sm" onclick={handleSearch}>Search</Button>
+			<Button variant="outline" size="sm" onclick={handleRefresh} disabled={isRefreshing}>
 				<RefreshCwIcon class={cn('h-4 w-4 mr-1', isRefreshing && 'animate-spin')} />
 				Refresh
 			</Button>
@@ -191,10 +190,12 @@
 				onclick={() => toggleLevel(level)}
 			>
 				<span class="uppercase">{level}</span>
-				<span class={cn(
-					'rounded-full px-1.5 py-0.5 text-[10px]',
-					isSelected ? 'bg-white/20' : 'bg-background'
-				)}>
+				<span
+					class={cn(
+						'rounded-full px-1.5 py-0.5 text-[10px]',
+						isSelected ? 'bg-white/20' : 'bg-background'
+					)}
+				>
 					{count}
 				</span>
 			</button>

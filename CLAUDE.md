@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Comradarr is a media library completion service integrating with *arr applications (Sonarr, Radarr, Whisparr) to identify and request missing or upgradeable content.
+Comradarr is a media library completion service integrating with \*arr applications (Sonarr, Radarr, Whisparr) to identify and request missing or upgradeable content.
 
 ## Tech Stack
 
@@ -44,7 +44,7 @@ bun run preview                # Preview built application
 ### Directory Structure
 
 - `src/lib/server/` - All server-side code (never imported client-side)
-  - `connectors/` - *arr API clients using factory pattern (`createConnectorClient()`)
+  - `connectors/` - \*arr API clients using factory pattern (`createConnectorClient()`)
   - `services/` - Business logic: sync, discovery, queue, throttle, analytics, etc.
   - `db/schema/` - Drizzle ORM schema definitions
   - `db/queries/` - Database query functions (one file per entity)
@@ -67,7 +67,8 @@ bun run preview                # Preview built application
 **Database Queries:** Each entity has a dedicated query file in `db/queries/` exporting typed functions. Schema uses snake_case columns, TypeScript uses camelCase.
 
 **Service Organization:** Services are in `services/` with index files exporting public functions and types. Key services:
-- `sync/` - Content synchronization from *arr apps
+
+- `sync/` - Content synchronization from \*arr apps
 - `discovery/` - Gap detection (missing) and upgrade detection (quality improvements)
 - `queue/` - Priority-based search request management
 - `throttle/` - Rate limiting per connector
@@ -79,6 +80,7 @@ bun run preview                # Preview built application
 ## TypeScript Configuration
 
 Uses strict TypeScript with additional flags:
+
 - `noUncheckedIndexedAccess: true` - Array/object access returns possibly undefined
 - `exactOptionalPropertyTypes: true` - Distinguishes `undefined` from optional
 - `noImplicitOverride: true` - Requires `override` keyword

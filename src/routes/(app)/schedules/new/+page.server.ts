@@ -124,7 +124,9 @@ export const actions: Actions = {
 			// Refresh scheduler to pick up new schedule
 			await refreshDynamicSchedules();
 		} catch (err) {
-			logger.error('Failed to create schedule', { error: err instanceof Error ? err.message : String(err) });
+			logger.error('Failed to create schedule', {
+				error: err instanceof Error ? err.message : String(err)
+			});
 			return fail(500, {
 				error: 'Failed to create schedule. Please try again.',
 				...formValues

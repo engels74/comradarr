@@ -150,10 +150,7 @@ export async function getQueueHealthSummary(): Promise<QueueHealthSummary> {
 		db.select({ count: count() }).from(requestQueue),
 
 		// Count of connectors with queuePaused = true
-		db
-			.select({ count: count() })
-			.from(connectors)
-			.where(eq(connectors.queuePaused, true))
+		db.select({ count: count() }).from(connectors).where(eq(connectors.queuePaused, true))
 	]);
 
 	return {

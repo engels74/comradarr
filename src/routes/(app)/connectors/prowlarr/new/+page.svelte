@@ -74,7 +74,6 @@
 						</div>
 					{/if}
 
-
 					<div class="grid gap-2">
 						<Label for="name">Name</Label>
 						<Input

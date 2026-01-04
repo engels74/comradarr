@@ -34,7 +34,10 @@ const logger = createLogger('connectors');
 /**
  * Creates an appropriate client for the connector type.
  */
-function createClient(connector: Connector, apiKey: string): SonarrClient | RadarrClient | WhisparrClient {
+function createClient(
+	connector: Connector,
+	apiKey: string
+): SonarrClient | RadarrClient | WhisparrClient {
 	const clientConfig = {
 		baseUrl: connector.url,
 		apiKey

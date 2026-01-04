@@ -99,7 +99,9 @@
 				<TimerIcon class="h-5 w-5 text-gray-600 dark:text-gray-400" />
 			</div>
 			<div>
-				<p class="text-2xl font-bold tabular-nums">{formatResponseTime(summary.avgResponseTimeMs)}</p>
+				<p class="text-2xl font-bold tabular-nums">
+					{formatResponseTime(summary.avgResponseTimeMs)}
+				</p>
 				<p class="text-sm text-muted-foreground">Avg Response</p>
 			</div>
 		</div>

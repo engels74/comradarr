@@ -12,11 +12,7 @@
 
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'bun:test';
 import { db } from '../../src/lib/server/db';
-import {
-	connectors,
-	throttleProfiles,
-	throttleState
-} from '../../src/lib/server/db/schema';
+import { connectors, throttleProfiles, throttleState } from '../../src/lib/server/db/schema';
 import { eq } from 'drizzle-orm';
 import {
 	ThrottleEnforcer,
@@ -221,11 +217,7 @@ describe('Throttle State CRUD Operations', () => {
 
 		it('should clear daily_budget_exhausted pause', async () => {
 			await getOrCreateThrottleState(testConnectorId);
-			await setPausedUntil(
-				testConnectorId,
-				new Date(Date.now() + 60000),
-				'daily_budget_exhausted'
-			);
+			await setPausedUntil(testConnectorId, new Date(Date.now() + 60000), 'daily_budget_exhausted');
 
 			await resetDayWindow(testConnectorId);
 

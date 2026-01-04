@@ -341,9 +341,7 @@
 		<Dialog.Content>
 			<Dialog.Header>
 				<Dialog.Title>Edit Rate Limit</Dialog.Title>
-				<Dialog.Description>
-					Update the rate limit for this API key.
-				</Dialog.Description>
+				<Dialog.Description>Update the rate limit for this API key.</Dialog.Description>
 			</Dialog.Header>
 			<form
 				method="POST"
@@ -401,9 +399,7 @@
 				</div>
 
 				<Dialog.Footer class="mt-6">
-					<Button type="button" variant="outline" onclick={closeRateLimitDialog}>
-						Cancel
-					</Button>
+					<Button type="button" variant="outline" onclick={closeRateLimitDialog}>Cancel</Button>
 					<Button type="submit" disabled={isSubmitting}>
 						{isSubmitting ? 'Saving...' : 'Save'}
 					</Button>
@@ -433,7 +429,11 @@
 				<div class="space-y-3">
 					{#each data.apiKeys as key}
 						<div
-							class="flex items-center justify-between p-3 rounded-lg border bg-card {isRevoked(key.revokedAt) ? 'opacity-60' : ''}"
+							class="flex items-center justify-between p-3 rounded-lg border bg-card {isRevoked(
+								key.revokedAt
+							)
+								? 'opacity-60'
+								: ''}"
 						>
 							<div class="flex flex-col gap-1">
 								<div class="flex items-center gap-2">

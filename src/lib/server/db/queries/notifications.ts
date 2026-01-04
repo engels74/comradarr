@@ -458,7 +458,9 @@ export async function getNotificationHistoryForChannel(
  * @param limit - Maximum number of entries to return (default 50)
  * @returns Array of notification history entries
  */
-export async function getRecentNotificationHistory(limit: number = 50): Promise<NotificationHistory[]> {
+export async function getRecentNotificationHistory(
+	limit: number = 50
+): Promise<NotificationHistory[]> {
 	return db
 		.select()
 		.from(notificationHistory)

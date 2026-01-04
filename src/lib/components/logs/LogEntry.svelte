@@ -80,7 +80,9 @@
 			{#if isExpanded}
 				<ChevronDownIcon class="h-4 w-4" />
 			{:else}
-				<ChevronRightIcon class={cn('h-4 w-4', !hasContext && !entry.correlationId && 'opacity-30')} />
+				<ChevronRightIcon
+					class={cn('h-4 w-4', !hasContext && !entry.correlationId && 'opacity-30')}
+				/>
 			{/if}
 		</button>
 
@@ -94,17 +96,22 @@
 		<LogLevelBadge level={entry.level} class="shrink-0" />
 
 		<!-- Module -->
-		<div class="shrink-0 w-24 truncate text-xs font-medium text-muted-foreground" title={entry.module}>
+		<div
+			class="shrink-0 w-24 truncate text-xs font-medium text-muted-foreground"
+			title={entry.module}
+		>
 			{entry.module}
 		</div>
 
 		<!-- Message -->
 		<div class="flex-1 min-w-0">
-			<p class={cn(
-				'text-sm break-words',
-				entry.level === 'error' && 'text-red-600 dark:text-red-400',
-				entry.level === 'warn' && 'text-yellow-600 dark:text-yellow-400'
-			)}>
+			<p
+				class={cn(
+					'text-sm break-words',
+					entry.level === 'error' && 'text-red-600 dark:text-red-400',
+					entry.level === 'warn' && 'text-yellow-600 dark:text-yellow-400'
+				)}
+			>
 				{entry.message}
 			</p>
 		</div>
@@ -144,7 +151,11 @@
 			{#if hasContext}
 				<div class="mt-2">
 					<span class="text-xs text-muted-foreground mb-1 block">Context:</span>
-					<pre class="text-xs font-mono bg-muted p-2 rounded-md overflow-x-auto">{JSON.stringify(entry.context, null, 2)}</pre>
+					<pre class="text-xs font-mono bg-muted p-2 rounded-md overflow-x-auto">{JSON.stringify(
+							entry.context,
+							null,
+							2
+						)}</pre>
 				</div>
 			{/if}
 		</div>

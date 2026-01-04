@@ -109,7 +109,9 @@
 				await update();
 				isSubmitting = false;
 				if (result.type === 'success' && result.data?.success) {
-					toastStore.success((result.data.message as string) || 'Search settings saved successfully');
+					toastStore.success(
+						(result.data.message as string) || 'Search settings saved successfully'
+					);
 				}
 			};
 		}}
@@ -357,12 +359,7 @@
 						<!-- Jitter -->
 						<div class="grid gap-2">
 							<div class="flex items-center space-x-3 pt-6">
-								<Checkbox
-									id="jitter"
-									name="jitter"
-									bind:checked={jitter}
-									disabled={isSubmitting}
-								/>
+								<Checkbox id="jitter" name="jitter" bind:checked={jitter} disabled={isSubmitting} />
 								<Label for="jitter" class="text-sm font-medium cursor-pointer">
 									{cooldownLabels.jitter}
 								</Label>

@@ -36,18 +36,23 @@
 	let clearStateDialogOpen = $state(false);
 
 	// Computed state
-	const isAnyLoading = $derived(isQueueing || isSettingPriority || isMarkingExhausted || isClearingState);
+	const isAnyLoading = $derived(
+		isQueueing || isSettingPriority || isMarkingExhausted || isClearingState
+	);
 
 	/**
 	 * Creates an enhance handler for form submission.
 	 */
-	function createEnhanceHandler(
-		setLoading: (val: boolean) => void,
-		closeDialog?: () => void
-	) {
+	function createEnhanceHandler(setLoading: (val: boolean) => void, closeDialog?: () => void) {
 		return () => {
 			setLoading(true);
-			return async ({ result, update }: { result: { type: string; data?: { message?: string; error?: string } }; update: () => Promise<void> }) => {
+			return async ({
+				result,
+				update
+			}: {
+				result: { type: string; data?: { message?: string; error?: string } };
+				update: () => Promise<void>;
+			}) => {
 				setLoading(false);
 				closeDialog?.();
 
@@ -78,7 +83,12 @@
 					aria-label="Clear selection"
 				>
 					<svg class="size-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+						<path
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							stroke-width="2"
+							d="M6 18L18 6M6 6l12 12"
+						/>
 					</svg>
 				</Button>
 				<span class="text-sm font-medium">
@@ -99,12 +109,28 @@
 					<Button type="submit" size="sm" disabled={isAnyLoading}>
 						{#if isQueueing}
 							<svg class="size-4 mr-1.5 animate-spin" fill="none" viewBox="0 0 24 24">
-								<circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-								<path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+								<circle
+									class="opacity-25"
+									cx="12"
+									cy="12"
+									r="10"
+									stroke="currentColor"
+									stroke-width="4"
+								></circle>
+								<path
+									class="opacity-75"
+									fill="currentColor"
+									d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+								></path>
 							</svg>
 						{:else}
 							<svg class="size-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+								<path
+									stroke-linecap="round"
+									stroke-linejoin="round"
+									stroke-width="2"
+									d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+								/>
 							</svg>
 						{/if}
 						Queue for Search
@@ -117,7 +143,12 @@
 						{#snippet child({ props })}
 							<Button {...props} variant="outline" size="sm" disabled={isAnyLoading}>
 								<svg class="size-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
+									<path
+										stroke-linecap="round"
+										stroke-linejoin="round"
+										stroke-width="2"
+										d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"
+									/>
 								</svg>
 								Set Priority
 							</Button>
@@ -129,21 +160,16 @@
 							<AlertDialog.Header>
 								<AlertDialog.Title>Set Priority</AlertDialog.Title>
 								<AlertDialog.Description>
-									Set the search priority for {selectedCount} selected item{selectedCount === 1 ? '' : 's'}.
-									Higher values (closer to 100) will be searched first.
+									Set the search priority for {selectedCount} selected item{selectedCount === 1
+										? ''
+										: 's'}. Higher values (closer to 100) will be searched first.
 								</AlertDialog.Description>
 							</AlertDialog.Header>
 
 							<div class="py-4">
 								<label class="flex flex-col gap-2">
 									<span class="text-sm font-medium">Priority (0-100)</span>
-									<input
-										type="range"
-										min="0"
-										max="100"
-										bind:value={priorityValue}
-										class="w-full"
-									/>
+									<input type="range" min="0" max="100" bind:value={priorityValue} class="w-full" />
 									<div class="flex justify-between text-xs text-muted-foreground">
 										<span>Low (0)</span>
 										<span class="font-medium text-foreground">{priorityValue}</span>
@@ -183,7 +209,12 @@
 						{#snippet child({ props })}
 							<Button {...props} variant="outline" size="sm" disabled={isAnyLoading}>
 								<svg class="size-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h.01M12 12h.01M19 12h.01M6 12a1 1 0 11-2 0 1 1 0 012 0zm7 0a1 1 0 11-2 0 1 1 0 012 0zm7 0a1 1 0 11-2 0 1 1 0 012 0z" />
+									<path
+										stroke-linecap="round"
+										stroke-linejoin="round"
+										stroke-width="2"
+										d="M5 12h.01M12 12h.01M19 12h.01M6 12a1 1 0 11-2 0 1 1 0 012 0zm7 0a1 1 0 11-2 0 1 1 0 012 0zm7 0a1 1 0 11-2 0 1 1 0 012 0z"
+									/>
 								</svg>
 								<span class="sr-only">More actions</span>
 							</Button>
@@ -191,16 +222,29 @@
 					</DropdownMenu.Trigger>
 					<DropdownMenu.Portal>
 						<DropdownMenu.Content align="end">
-							<DropdownMenu.Item onclick={() => (exhaustedDialogOpen = true)} class="text-destructive focus:text-destructive">
+							<DropdownMenu.Item
+								onclick={() => (exhaustedDialogOpen = true)}
+								class="text-destructive focus:text-destructive"
+							>
 								<svg class="size-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+									<path
+										stroke-linecap="round"
+										stroke-linejoin="round"
+										stroke-width="2"
+										d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"
+									/>
 								</svg>
 								Mark as Exhausted
 							</DropdownMenu.Item>
 							<DropdownMenu.Separator />
 							<DropdownMenu.Item onclick={() => (clearStateDialogOpen = true)}>
 								<svg class="size-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+									<path
+										stroke-linecap="round"
+										stroke-linejoin="round"
+										stroke-width="2"
+										d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+									/>
 								</svg>
 								Clear Search State
 							</DropdownMenu.Item>
@@ -220,7 +264,8 @@
 					<AlertDialog.Title>Mark as Exhausted</AlertDialog.Title>
 					<AlertDialog.Description>
 						Are you sure you want to mark {selectedCount} item{selectedCount === 1 ? '' : 's'} as exhausted?
-						This will stop all future automatic searches for these items until you manually clear the state.
+						This will stop all future automatic searches for these items until you manually clear the
+						state.
 					</AlertDialog.Description>
 				</AlertDialog.Header>
 				<AlertDialog.Footer>
@@ -255,8 +300,11 @@
 				<AlertDialog.Header>
 					<AlertDialog.Title>Clear Search State</AlertDialog.Title>
 					<AlertDialog.Description>
-						Are you sure you want to reset the search state for {selectedCount} item{selectedCount === 1 ? '' : 's'}?
-						This will reset attempt counts, clear cooldowns, and make items eligible for searching again.
+						Are you sure you want to reset the search state for {selectedCount} item{selectedCount ===
+						1
+							? ''
+							: 's'}? This will reset attempt counts, clear cooldowns, and make items eligible for
+						searching again.
 					</AlertDialog.Description>
 				</AlertDialog.Header>
 				<AlertDialog.Footer>

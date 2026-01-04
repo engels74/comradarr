@@ -258,19 +258,13 @@ describe('determineHealthFromChecks', () => {
 		});
 
 		it('should return healthy when all checks are ok', () => {
-			const checks = [
-				{ type: 'ok' as const },
-				{ type: 'ok' as const }
-			];
+			const checks = [{ type: 'ok' as const }, { type: 'ok' as const }];
 			const status = determineHealthFromChecks(checks);
 			expect(status).toBe('healthy');
 		});
 
 		it('should return healthy when checks contain only notices', () => {
-			const checks = [
-				{ type: 'notice' as const },
-				{ type: 'ok' as const }
-			];
+			const checks = [{ type: 'notice' as const }, { type: 'ok' as const }];
 			const status = determineHealthFromChecks(checks);
 			expect(status).toBe('healthy');
 		});
@@ -288,10 +282,7 @@ describe('determineHealthFromChecks', () => {
 
 	describe('degraded scenarios', () => {
 		it('should return degraded when checks contain any error', () => {
-			const checks = [
-				{ type: 'ok' as const },
-				{ type: 'error' as const }
-			];
+			const checks = [{ type: 'ok' as const }, { type: 'error' as const }];
 			const status = determineHealthFromChecks(checks);
 			expect(status).toBe('degraded');
 		});

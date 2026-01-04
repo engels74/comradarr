@@ -232,7 +232,11 @@ describe('calculatePriority', () => {
 			});
 
 			const noFailuresResult = calculatePriority(noFailuresInput, DEFAULT_PRIORITY_WEIGHTS, now);
-			const someFailuresResult = calculatePriority(someFailuresInput, DEFAULT_PRIORITY_WEIGHTS, now);
+			const someFailuresResult = calculatePriority(
+				someFailuresInput,
+				DEFAULT_PRIORITY_WEIGHTS,
+				now
+			);
 
 			expect(noFailuresResult.score).toBeGreaterThan(someFailuresResult.score);
 			expect(noFailuresResult.breakdown.failurePenalty).toBeLessThan(
@@ -324,7 +328,10 @@ describe('calculatePriority', () => {
 			});
 
 			const lowPenaltyConfig: PriorityWeights = { ...DEFAULT_PRIORITY_WEIGHTS, failurePenalty: 2 };
-			const highPenaltyConfig: PriorityWeights = { ...DEFAULT_PRIORITY_WEIGHTS, failurePenalty: 20 };
+			const highPenaltyConfig: PriorityWeights = {
+				...DEFAULT_PRIORITY_WEIGHTS,
+				failurePenalty: 20
+			};
 
 			const lowResult = calculatePriority(input, lowPenaltyConfig, now);
 			const highResult = calculatePriority(input, highPenaltyConfig, now);

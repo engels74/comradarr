@@ -196,7 +196,11 @@ function buildSearchSuccessPayload(data: SearchSuccessData): NotificationPayload
 	if (data.contentYear) {
 		contentDisplay += ` (${data.contentYear})`;
 	}
-	if (data.contentType === 'episode' && data.seasonNumber !== undefined && data.episodeNumber !== undefined) {
+	if (
+		data.contentType === 'episode' &&
+		data.seasonNumber !== undefined &&
+		data.episodeNumber !== undefined
+	) {
 		contentDisplay += ` S${String(data.seasonNumber).padStart(2, '0')}E${String(data.episodeNumber).padStart(2, '0')}`;
 	}
 
@@ -206,7 +210,11 @@ function buildSearchSuccessPayload(data: SearchSuccessData): NotificationPayload
 	];
 
 	if (data.contentType) {
-		fields.push({ name: 'Type', value: data.contentType === 'episode' ? 'Episode' : 'Movie', inline: true });
+		fields.push({
+			name: 'Type',
+			value: data.contentType === 'episode' ? 'Episode' : 'Movie',
+			inline: true
+		});
 	}
 
 	return {
@@ -227,7 +235,11 @@ function buildSearchExhaustedPayload(data: SearchExhaustedData): NotificationPay
 	if (data.contentYear) {
 		contentDisplay += ` (${data.contentYear})`;
 	}
-	if (data.contentType === 'episode' && data.seasonNumber !== undefined && data.episodeNumber !== undefined) {
+	if (
+		data.contentType === 'episode' &&
+		data.seasonNumber !== undefined &&
+		data.episodeNumber !== undefined
+	) {
 		contentDisplay += ` S${String(data.seasonNumber).padStart(2, '0')}E${String(data.episodeNumber).padStart(2, '0')}`;
 	}
 
@@ -237,7 +249,11 @@ function buildSearchExhaustedPayload(data: SearchExhaustedData): NotificationPay
 	];
 
 	if (data.contentType) {
-		fields.push({ name: 'Type', value: data.contentType === 'episode' ? 'Episode' : 'Movie', inline: true });
+		fields.push({
+			name: 'Type',
+			value: data.contentType === 'episode' ? 'Episode' : 'Movie',
+			inline: true
+		});
 	}
 
 	return {
@@ -261,7 +277,11 @@ function buildConnectorHealthChangedPayload(data: ConnectorHealthChangedData): N
 		{ name: 'Connector', value: data.connectorName, inline: true },
 		{ name: 'Type', value: capitalizeFirst(data.connectorType), inline: true },
 		{ name: 'Previous Status', value: capitalizeFirst(data.oldStatus), inline: true },
-		{ name: 'Current Status', value: `${statusEmoji} ${capitalizeFirst(data.newStatus)}`, inline: true }
+		{
+			name: 'Current Status',
+			value: `${statusEmoji} ${capitalizeFirst(data.newStatus)}`,
+			inline: true
+		}
 	];
 
 	if (data.errorMessage) {
@@ -325,7 +345,11 @@ function buildSyncFailedPayload(data: SyncFailedData): NotificationPayload {
 	];
 
 	if (data.consecutiveFailures !== undefined && data.consecutiveFailures > 1) {
-		fields.push({ name: 'Consecutive Failures', value: String(data.consecutiveFailures), inline: true });
+		fields.push({
+			name: 'Consecutive Failures',
+			value: String(data.consecutiveFailures),
+			inline: true
+		});
 	}
 
 	return {
@@ -380,7 +404,11 @@ function buildUpdateAvailablePayload(data: UpdateAvailableData): NotificationPay
 	];
 
 	if (data.releaseNotes) {
-		fields.push({ name: 'Release Notes', value: truncateText(data.releaseNotes, 500), inline: false });
+		fields.push({
+			name: 'Release Notes',
+			value: truncateText(data.releaseNotes, 500),
+			inline: false
+		});
 	}
 
 	const payload: NotificationPayload = {

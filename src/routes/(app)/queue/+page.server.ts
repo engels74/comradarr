@@ -35,26 +35,30 @@ export const load: PageServerLoad = async ({ url, depends }) => {
 	const filters = parseQueueFilters(url.searchParams);
 
 	// Load data in parallel for efficiency
-	const [queueResult, connectors, statusCounts, throttleInfoMap, pauseStatus, recentCompletions] = await Promise.all([
-		getQueueList(filters),
-		getConnectorsForQueueFilter(),
-		getQueueStatusCounts(filters.connectorId),
-		getAllThrottleInfo(),
-		getQueuePauseStatus(),
-		getRecentCompletions(25)
-	]);
+	const [queueResult, connectors, statusCounts, throttleInfoMap, pauseStatus, recentCompletions] =
+		await Promise.all([
+			getQueueList(filters),
+			getConnectorsForQueueFilter(),
+			getQueueStatusCounts(filters.connectorId),
+			getAllThrottleInfo(),
+			getQueuePauseStatus(),
+			getRecentCompletions(25)
+		]);
 
 	// Convert Map to serializable object
-	const throttleInfo: Record<number, {
-		connectorId: number;
-		isPaused: boolean;
-		pausedUntil: string | null;
-		pauseReason: string | null;
-		requestsPerMinute: number;
-		requestsThisMinute: number;
-		dailyBudget: number | null;
-		requestsToday: number;
-	}> = {};
+	const throttleInfo: Record<
+		number,
+		{
+			connectorId: number;
+			isPaused: boolean;
+			pausedUntil: string | null;
+			pauseReason: string | null;
+			requestsPerMinute: number;
+			requestsThisMinute: number;
+			dailyBudget: number | null;
+			requestsToday: number;
+		}
+	> = {};
 
 	for (const [connectorId, info] of throttleInfoMap) {
 		throttleInfo[connectorId] = {

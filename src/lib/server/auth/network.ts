@@ -21,7 +21,8 @@ export function isLocalNetworkIP(ip: string | null): boolean {
 	if (!ip) return false;
 
 	// Normalize the IP (remove port if present, trim whitespace)
-	const normalizedIP = ip.trim().split(':').slice(0, -1).length > 1 ? ip.trim() : ip.trim().split(':')[0]!;
+	const normalizedIP =
+		ip.trim().split(':').slice(0, -1).length > 1 ? ip.trim() : ip.trim().split(':')[0]!;
 
 	// IPv6 localhost
 	if (normalizedIP === '::1') return true;

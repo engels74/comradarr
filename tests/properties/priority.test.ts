@@ -93,13 +93,18 @@ describe('Priority Calculation Properties (Requirement 5.1)', () => {
 	describe('Property: Determinism', () => {
 		it('same inputs always produce same output', () => {
 			fc.assert(
-				fc.property(priorityInputArbitrary, priorityWeightsArbitrary, nowArbitrary, (input, weights, now) => {
-					const result1 = calculatePriority(input, weights, now);
-					const result2 = calculatePriority(input, weights, now);
+				fc.property(
+					priorityInputArbitrary,
+					priorityWeightsArbitrary,
+					nowArbitrary,
+					(input, weights, now) => {
+						const result1 = calculatePriority(input, weights, now);
+						const result2 = calculatePriority(input, weights, now);
 
-					expect(result1.score).toBe(result2.score);
-					expect(result1.breakdown).toEqual(result2.breakdown);
-				}),
+						expect(result1.score).toBe(result2.score);
+						expect(result1.breakdown).toEqual(result2.breakdown);
+					}
+				),
 				{ numRuns: 100 }
 			);
 		});
@@ -229,12 +234,17 @@ describe('Priority Calculation Properties (Requirement 5.1)', () => {
 	describe('Property: Score is Finite Integer', () => {
 		it('score is always a finite integer', () => {
 			fc.assert(
-				fc.property(priorityInputArbitrary, priorityWeightsArbitrary, nowArbitrary, (input, weights, now) => {
-					const result = calculatePriority(input, weights, now);
+				fc.property(
+					priorityInputArbitrary,
+					priorityWeightsArbitrary,
+					nowArbitrary,
+					(input, weights, now) => {
+						const result = calculatePriority(input, weights, now);
 
-					expect(Number.isFinite(result.score)).toBe(true);
-					expect(Number.isInteger(result.score)).toBe(true);
-				}),
+						expect(Number.isFinite(result.score)).toBe(true);
+						expect(Number.isInteger(result.score)).toBe(true);
+					}
+				),
 				{ numRuns: 100 }
 			);
 		});
@@ -243,15 +253,20 @@ describe('Priority Calculation Properties (Requirement 5.1)', () => {
 	describe('Property: Breakdown Components are Finite', () => {
 		it('all breakdown values are finite numbers', () => {
 			fc.assert(
-				fc.property(priorityInputArbitrary, priorityWeightsArbitrary, nowArbitrary, (input, weights, now) => {
-					const result = calculatePriority(input, weights, now);
+				fc.property(
+					priorityInputArbitrary,
+					priorityWeightsArbitrary,
+					nowArbitrary,
+					(input, weights, now) => {
+						const result = calculatePriority(input, weights, now);
 
-					expect(Number.isFinite(result.breakdown.contentAgeScore)).toBe(true);
-					expect(Number.isFinite(result.breakdown.missingDurationScore)).toBe(true);
-					expect(Number.isFinite(result.breakdown.userPriorityScore)).toBe(true);
-					expect(Number.isFinite(result.breakdown.failurePenalty)).toBe(true);
-					expect(Number.isFinite(result.breakdown.searchTypeBonus)).toBe(true);
-				}),
+						expect(Number.isFinite(result.breakdown.contentAgeScore)).toBe(true);
+						expect(Number.isFinite(result.breakdown.missingDurationScore)).toBe(true);
+						expect(Number.isFinite(result.breakdown.userPriorityScore)).toBe(true);
+						expect(Number.isFinite(result.breakdown.failurePenalty)).toBe(true);
+						expect(Number.isFinite(result.breakdown.searchTypeBonus)).toBe(true);
+					}
+				),
 				{ numRuns: 100 }
 			);
 		});

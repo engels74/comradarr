@@ -335,9 +335,15 @@ export class NotificationDispatcher {
 
 			// Log for debugging (retryable errors are less severe)
 			if (isRetryable) {
-				logger.warn('Retryable error sending notification', { channelName: channel.name, error: errorMessage });
+				logger.warn('Retryable error sending notification', {
+					channelName: channel.name,
+					error: errorMessage
+				});
 			} else {
-				logger.error('Failed to send notification', { channelName: channel.name, error: errorMessage });
+				logger.error('Failed to send notification', {
+					channelName: channel.name,
+					error: errorMessage
+				});
 			}
 
 			return result;

@@ -677,7 +677,10 @@
 												bind:checked={createBatchingEnabled}
 												disabled={isSubmitting}
 											/>
-											<Label for="create-batchingEnabled" class="text-sm font-medium cursor-pointer">
+											<Label
+												for="create-batchingEnabled"
+												class="text-sm font-medium cursor-pointer"
+											>
 												{baseChannelLabels.batchingEnabled}
 											</Label>
 										</div>
@@ -830,7 +833,9 @@
 										<Badge variant={channel.enabled ? 'default' : 'secondary'}>
 											{channel.enabled ? 'Enabled' : 'Disabled'}
 										</Badge>
-										<Badge variant="outline">{channelTypeLabels[channel.type as NotificationChannelType]}</Badge>
+										<Badge variant="outline"
+											>{channelTypeLabels[channel.type as NotificationChannelType]}</Badge
+										>
 									</div>
 									<div class="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
 										<span>{channel.stats.totalSent} sent</span>
@@ -1038,7 +1043,9 @@
 								disabled={isSubmitting}
 							>
 								<option value="HTML" selected={config?.parseMode === 'HTML'}>HTML</option>
-								<option value="Markdown" selected={config?.parseMode === 'Markdown'}>Markdown</option>
+								<option value="Markdown" selected={config?.parseMode === 'Markdown'}
+									>Markdown</option
+								>
 								<option value="MarkdownV2" selected={config?.parseMode === 'MarkdownV2'}
 									>MarkdownV2</option
 								>
@@ -1150,7 +1157,9 @@
 								checked={!!config?.secure}
 								disabled={isSubmitting}
 							/>
-							<Label for="edit-secure" class="text-sm cursor-pointer">{emailFieldLabels.secure}</Label>
+							<Label for="edit-secure" class="text-sm cursor-pointer"
+								>{emailFieldLabels.secure}</Label
+							>
 						</div>
 						<div class="grid gap-4 sm:grid-cols-2">
 							<div class="grid gap-2">

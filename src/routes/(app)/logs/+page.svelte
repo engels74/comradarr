@@ -76,9 +76,7 @@
 
 	// Buffer usage percentage
 	const bufferUsage = $derived(
-		data.buffer.size > 0
-			? Math.round((data.buffer.used / data.buffer.size) * 100)
-			: 0
+		data.buffer.size > 0 ? Math.round((data.buffer.used / data.buffer.size) * 100) : 0
 	);
 
 	// Total error count
@@ -98,9 +96,7 @@
 				<ScrollTextIcon class="h-8 w-8 text-muted-foreground" />
 				<h1 class="text-3xl font-bold">Logs</h1>
 			</div>
-			<p class="text-muted-foreground mt-1">
-				View and search application logs
-			</p>
+			<p class="text-muted-foreground mt-1">View and search application logs</p>
 		</div>
 
 		<div class="flex items-center gap-3">
@@ -125,7 +121,8 @@
 					<AlertDialog.Header>
 						<AlertDialog.Title>Clear All Logs</AlertDialog.Title>
 						<AlertDialog.Description>
-							This will permanently delete all {data.buffer.used.toLocaleString()} log entries from the buffer. This action cannot be undone.
+							This will permanently delete all {data.buffer.used.toLocaleString()} log entries from the
+							buffer. This action cannot be undone.
 						</AlertDialog.Description>
 					</AlertDialog.Header>
 					<AlertDialog.Footer>
@@ -143,7 +140,9 @@
 	{#if errorCount > 0 || warnCount > 0}
 		<div class="flex gap-4 mb-6">
 			{#if errorCount > 0}
-				<div class="flex items-center gap-2 rounded-lg bg-red-500/10 border border-red-500/30 px-4 py-2">
+				<div
+					class="flex items-center gap-2 rounded-lg bg-red-500/10 border border-red-500/30 px-4 py-2"
+				>
 					<AlertCircleIcon class="h-4 w-4 text-red-500" />
 					<span class="text-sm font-medium text-red-600 dark:text-red-400">
 						{errorCount} error{errorCount !== 1 ? 's' : ''}
@@ -151,7 +150,9 @@
 				</div>
 			{/if}
 			{#if warnCount > 0}
-				<div class="flex items-center gap-2 rounded-lg bg-yellow-500/10 border border-yellow-500/30 px-4 py-2">
+				<div
+					class="flex items-center gap-2 rounded-lg bg-yellow-500/10 border border-yellow-500/30 px-4 py-2"
+				>
 					<AlertCircleIcon class="h-4 w-4 text-yellow-500" />
 					<span class="text-sm font-medium text-yellow-600 dark:text-yellow-400">
 						{warnCount} warning{warnCount !== 1 ? 's' : ''}
@@ -237,7 +238,9 @@
 						{#if currentPage < totalPages - 3}
 							<span class="text-muted-foreground px-2">...</span>
 						{/if}
-						<Button variant="outline" size="sm" onclick={() => goToPage(totalPages)}>{totalPages}</Button>
+						<Button variant="outline" size="sm" onclick={() => goToPage(totalPages)}
+							>{totalPages}</Button
+						>
 					{/if}
 				{/if}
 

@@ -93,7 +93,8 @@ function parseTelegramFields(formData: FormData) {
 	return {
 		botToken: formData.get('botToken')?.toString() ?? '',
 		chatId: formData.get('chatId')?.toString() ?? '',
-		parseMode: (formData.get('parseMode')?.toString() as 'HTML' | 'Markdown' | 'MarkdownV2') || 'HTML',
+		parseMode:
+			(formData.get('parseMode')?.toString() as 'HTML' | 'Markdown' | 'MarkdownV2') || 'HTML',
 		disableWebPagePreview: formData.get('disableWebPagePreview') === 'on',
 		disableNotification: formData.get('disableNotification') === 'on'
 	};
@@ -327,7 +328,9 @@ export const actions: Actions = {
 		try {
 			await createNotificationChannel(channelInput);
 		} catch (err) {
-			logger.error('Failed to create channel', { error: err instanceof Error ? err.message : String(err) });
+			logger.error('Failed to create channel', {
+				error: err instanceof Error ? err.message : String(err)
+			});
 			return fail(500, {
 				action: 'create',
 				error: 'Failed to create channel. Please try again.',
@@ -465,7 +468,9 @@ export const actions: Actions = {
 				});
 			}
 		} catch (err) {
-			logger.error('Failed to update channel', { error: err instanceof Error ? err.message : String(err) });
+			logger.error('Failed to update channel', {
+				error: err instanceof Error ? err.message : String(err)
+			});
 			return fail(500, {
 				action: 'update',
 				error: 'Failed to update channel. Please try again.',
@@ -499,7 +504,9 @@ export const actions: Actions = {
 				});
 			}
 		} catch (err) {
-			logger.error('Failed to delete channel', { error: err instanceof Error ? err.message : String(err) });
+			logger.error('Failed to delete channel', {
+				error: err instanceof Error ? err.message : String(err)
+			});
 			return fail(500, {
 				action: 'delete',
 				error: 'Failed to delete channel. Please try again.'
@@ -533,7 +540,9 @@ export const actions: Actions = {
 				});
 			}
 		} catch (err) {
-			logger.error('Failed to toggle channel', { error: err instanceof Error ? err.message : String(err) });
+			logger.error('Failed to toggle channel', {
+				error: err instanceof Error ? err.message : String(err)
+			});
 			return fail(500, {
 				action: 'toggle',
 				error: 'Failed to toggle channel. Please try again.'
@@ -582,7 +591,9 @@ export const actions: Actions = {
 		try {
 			sensitiveConfig = await getDecryptedSensitiveConfig(channel);
 		} catch (err) {
-			logger.error('Failed to decrypt channel config', { error: err instanceof Error ? err.message : String(err) });
+			logger.error('Failed to decrypt channel config', {
+				error: err instanceof Error ? err.message : String(err)
+			});
 			return fail(500, {
 				action: 'test',
 				error: 'Failed to decrypt channel configuration. Check your SECRET_KEY.',
@@ -615,7 +626,11 @@ export const actions: Actions = {
 			};
 		} catch (err) {
 			const duration = Date.now() - startTime;
-			logger.error('Test notification failed', { error: err instanceof Error ? err.message : String(err), channelId: id, duration });
+			logger.error('Test notification failed', {
+				error: err instanceof Error ? err.message : String(err),
+				channelId: id,
+				duration
+			});
 
 			const errorMessage = err instanceof Error ? err.message : 'Unknown error';
 			return fail(500, {

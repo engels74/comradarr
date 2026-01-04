@@ -6,11 +6,7 @@ import { presetShadcn } from 'unocss-preset-shadcn';
 
 export default defineConfig({
 	extractors: [extractorSvelte()],
-	presets: [
-		presetWind({ preflight: false }),
-		presetAnimations(),
-		presetShadcn()
-	],
+	presets: [presetWind({ preflight: false }), presetAnimations(), presetShadcn()],
 	shortcuts: {
 		// Buttons
 		btn: 'py-2 px-4 font-semibold rounded-lg shadow-md transition-colors',

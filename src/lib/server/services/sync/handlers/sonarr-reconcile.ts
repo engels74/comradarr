@@ -144,9 +144,7 @@ export async function reconcileSonarrContent(
 			.from(episodes)
 			.innerJoin(seasons, eq(episodes.seasonId, seasons.id))
 			.innerJoin(series, eq(seasons.seriesId, series.id))
-			.where(
-				and(eq(series.connectorId, connectorId), inArray(series.arrId, seriesArrIdsToDelete))
-			);
+			.where(and(eq(series.connectorId, connectorId), inArray(series.arrId, seriesArrIdsToDelete)));
 
 		const episodeIdsToDelete = episodesToDelete.map((e) => e.id);
 
@@ -161,9 +159,7 @@ export async function reconcileSonarrContent(
 		// Delete series (cascades to seasons and episodes via FK)
 		await db
 			.delete(series)
-			.where(
-				and(eq(series.connectorId, connectorId), inArray(series.arrId, seriesArrIdsToDelete))
-			);
+			.where(and(eq(series.connectorId, connectorId), inArray(series.arrId, seriesArrIdsToDelete)));
 
 		result.seriesDeleted = seriesArrIdsToDelete.length;
 		result.episodesDeleted = episodeIdsToDelete.length;
@@ -353,9 +349,7 @@ async function reconcileEpisodesForSeries(
 		// Delete the episodes
 		await db
 			.delete(episodes)
-			.where(
-				and(eq(episodes.connectorId, connectorId), inArray(episodes.id, episodeIdsToDelete))
-			);
+			.where(and(eq(episodes.connectorId, connectorId), inArray(episodes.id, episodeIdsToDelete)));
 
 		result.deleted = episodesToDelete.length;
 	}

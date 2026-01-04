@@ -27,7 +27,13 @@ export type NotificationChannelType = (typeof NOTIFICATION_CHANNEL_TYPES)[number
 /**
  * Channel types that are currently implemented.
  */
-export const IMPLEMENTED_CHANNEL_TYPES = ['discord', 'telegram', 'slack', 'email', 'webhook'] as const;
+export const IMPLEMENTED_CHANNEL_TYPES = [
+	'discord',
+	'telegram',
+	'slack',
+	'email',
+	'webhook'
+] as const;
 
 export type ImplementedChannelType = (typeof IMPLEMENTED_CHANNEL_TYPES)[number];
 
@@ -78,16 +84,10 @@ export const BaseChannelSchema = v.object({
 	// Quiet hours configuration
 	quietHoursEnabled: v.optional(v.boolean(), false),
 	quietHoursStart: v.optional(
-		v.pipe(
-			v.string(),
-			v.regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'Invalid time format (use HH:MM)')
-		)
+		v.pipe(v.string(), v.regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'Invalid time format (use HH:MM)'))
 	),
 	quietHoursEnd: v.optional(
-		v.pipe(
-			v.string(),
-			v.regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'Invalid time format (use HH:MM)')
-		)
+		v.pipe(v.string(), v.regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'Invalid time format (use HH:MM)'))
 	),
 	quietHoursTimezone: v.optional(v.string(), 'UTC')
 });
@@ -131,11 +131,7 @@ export const TelegramConfigSchema = v.object({
 		v.trim(),
 		v.minLength(1, 'Bot token is required')
 	),
-	chatId: v.pipe(
-		v.string('Chat ID is required'),
-		v.trim(),
-		v.minLength(1, 'Chat ID is required')
-	),
+	chatId: v.pipe(v.string('Chat ID is required'), v.trim(), v.minLength(1, 'Chat ID is required')),
 	parseMode: v.optional(v.picklist(['HTML', 'Markdown', 'MarkdownV2']), 'HTML'),
 	disableWebPagePreview: v.optional(v.boolean(), false),
 	disableNotification: v.optional(v.boolean(), false)
@@ -193,16 +189,8 @@ export const EmailConfigSchema = v.object({
 		v.maxValue(65535, 'Port must be at most 65535')
 	),
 	secure: v.optional(v.boolean(), false),
-	from: v.pipe(
-		v.string('From email is required'),
-		v.trim(),
-		v.email('Invalid email address')
-	),
-	to: v.pipe(
-		v.string('To email is required'),
-		v.trim(),
-		v.minLength(1, 'To email is required')
-	),
+	from: v.pipe(v.string('From email is required'), v.trim(), v.email('Invalid email address')),
+	to: v.pipe(v.string('To email is required'), v.trim(), v.minLength(1, 'To email is required')),
 	username: v.optional(v.pipe(v.string(), v.trim())),
 	password: v.optional(v.pipe(v.string())),
 	subjectPrefix: v.optional(
@@ -221,11 +209,7 @@ export type EmailConfigOutput = v.InferOutput<typeof EmailConfigSchema>;
  * Generic webhook channel configuration schema.
  */
 export const WebhookConfigSchema = v.object({
-	url: v.pipe(
-		v.string('Webhook URL is required'),
-		v.trim(),
-		v.url('Invalid webhook URL')
-	),
+	url: v.pipe(v.string('Webhook URL is required'), v.trim(), v.url('Invalid webhook URL')),
 	method: v.optional(v.picklist(['POST', 'PUT']), 'POST'),
 	signingSecret: v.optional(v.pipe(v.string(), v.trim())),
 	contentType: v.optional(v.pipe(v.string(), v.trim()), 'application/json'),

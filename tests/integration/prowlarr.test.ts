@@ -63,9 +63,7 @@ const hostArbitrary = fc
 /**
  * Arbitrary generator for trailing slashes (0-3 slashes).
  */
-const trailingSlashesArbitrary = fc
-	.integer({ min: 0, max: 3 })
-	.map((count) => '/'.repeat(count));
+const trailingSlashesArbitrary = fc.integer({ min: 0, max: 3 }).map((count) => '/'.repeat(count));
 
 /**
  * Arbitrary generator for URLs.

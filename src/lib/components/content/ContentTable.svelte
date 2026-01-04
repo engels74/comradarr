@@ -24,7 +24,9 @@
 	// Computed selection states
 	const selectionEnabled = $derived(selectedKeys !== undefined && onToggleSelection !== undefined);
 	const allSelected = $derived(
-		selectionEnabled && items.length > 0 && items.every((item) => selectedKeys!.has(getItemKey(item)))
+		selectionEnabled &&
+			items.length > 0 &&
+			items.every((item) => selectedKeys!.has(getItemKey(item)))
 	);
 	const someSelected = $derived(
 		selectionEnabled && items.some((item) => selectedKeys!.has(getItemKey(item))) && !allSelected
@@ -130,10 +132,7 @@
 						</Table.Cell>
 					{/if}
 					<Table.Cell class="font-medium">
-						<a
-							href="/content/{item.type}/{item.id}"
-							class="hover:underline hover:text-primary"
-						>
+						<a href="/content/{item.type}/{item.id}" class="hover:underline hover:text-primary">
 							{item.title}
 							{#if item.year}
 								<span class="text-muted-foreground ml-1">({item.year})</span>
@@ -176,7 +175,10 @@
 				</Table.Row>
 			{:else}
 				<Table.Row>
-					<Table.Cell colspan={selectionEnabled ? 6 : 5} class="h-24 text-center text-muted-foreground">
+					<Table.Cell
+						colspan={selectionEnabled ? 6 : 5}
+						class="h-24 text-center text-muted-foreground"
+					>
 						No content found.
 					</Table.Cell>
 				</Table.Row>

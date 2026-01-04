@@ -205,7 +205,9 @@
 					<!-- Connector Selection (read-only display, connector cannot be changed after creation) -->
 					<div class="grid gap-2">
 						<Label>Connector</Label>
-						<div class="flex h-9 w-full items-center rounded-md border border-input bg-muted/50 px-3 py-1 text-sm">
+						<div
+							class="flex h-9 w-full items-center rounded-md border border-input bg-muted/50 px-3 py-1 text-sm"
+						>
 							{#if data.schedule.connector}
 								{data.schedule.connector.name} ({data.schedule.connector.type})
 							{:else}
@@ -231,7 +233,8 @@
 							{#each sweepTypes as sweepType}
 								<option
 									value={sweepType}
-									selected={getFormValue(formValues?.sweepType, data.schedule.sweepType) === sweepType}
+									selected={getFormValue(formValues?.sweepType, data.schedule.sweepType) ===
+										sweepType}
 								>
 									{formatSweepType(sweepType)}
 								</option>

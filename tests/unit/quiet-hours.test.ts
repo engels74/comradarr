@@ -91,7 +91,9 @@ describe('parseTimeString', () => {
 
 		it('should throw for null/undefined', () => {
 			expect(() => parseTimeString(null as unknown as string)).toThrow('Time string is required');
-			expect(() => parseTimeString(undefined as unknown as string)).toThrow('Time string is required');
+			expect(() => parseTimeString(undefined as unknown as string)).toThrow(
+				'Time string is required'
+			);
 		});
 
 		it('should throw for invalid format "22-00"', () => {

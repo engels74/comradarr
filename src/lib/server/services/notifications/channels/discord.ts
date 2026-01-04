@@ -155,7 +155,8 @@ export class DiscordSender implements NotificationSender {
 		return this.send(channel, sensitiveConfig, {
 			eventType: 'app_started',
 			title: 'Comradarr Test Notification',
-			message: 'This is a test notification from Comradarr. If you can see this, your Discord webhook is configured correctly!',
+			message:
+				'This is a test notification from Comradarr. If you can see this, your Discord webhook is configured correctly!',
 			timestamp: new Date(),
 			fields: [
 				{ name: 'Channel', value: channel.name, inline: true },
@@ -170,9 +171,7 @@ export class DiscordSender implements NotificationSender {
 	private handleErrorResponse(response: Response): Error {
 		if (response.status === 429) {
 			const retryAfter = response.headers.get('Retry-After');
-			return new NotificationRateLimitError(
-				retryAfter ? parseInt(retryAfter, 10) : undefined
-			);
+			return new NotificationRateLimitError(retryAfter ? parseInt(retryAfter, 10) : undefined);
 		}
 
 		if (response.status === 401 || response.status === 403) {
@@ -180,14 +179,19 @@ export class DiscordSender implements NotificationSender {
 		}
 
 		if (response.status === 404) {
-			return new NotificationConfigurationError('Discord webhook not found - it may have been deleted');
+			return new NotificationConfigurationError(
+				'Discord webhook not found - it may have been deleted'
+			);
 		}
 
 		if (response.status >= 500) {
 			return new NotificationServerError(response.status, response.statusText);
 		}
 
-		return new NotificationServerError(response.status, `HTTP ${response.status}: ${response.statusText}`);
+		return new NotificationServerError(
+			response.status,
+			`HTTP ${response.status}: ${response.statusText}`
+		);
 	}
 
 	/**

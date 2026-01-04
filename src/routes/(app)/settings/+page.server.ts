@@ -76,7 +76,9 @@ export const actions: Actions = {
 			// Apply log level change immediately without restart
 			setLogLevel(config.logLevel as LogLevel);
 		} catch (err) {
-			logger.error('Failed to update settings', { error: err instanceof Error ? err.message : String(err) });
+			logger.error('Failed to update settings', {
+				error: err instanceof Error ? err.message : String(err)
+			});
 			return fail(500, {
 				error: 'Failed to update settings. Please try again.',
 				...formValues

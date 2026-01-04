@@ -12,13 +12,7 @@
  */
 
 import { db } from '$lib/server/db';
-import {
-	connectors,
-	episodes,
-	movies,
-	requestQueue,
-	searchRegistry
-} from '$lib/server/db/schema';
+import { connectors, episodes, movies, requestQueue, searchRegistry } from '$lib/server/db/schema';
 import { and, eq, inArray, sql, desc, asc, isNull } from 'drizzle-orm';
 import type {
 	ContentType,
@@ -139,10 +133,7 @@ async function enqueueEpisodes(
 		})
 		.from(searchRegistry)
 		.innerJoin(episodes, eq(episodes.id, searchRegistry.contentId))
-		.leftJoin(
-			requestQueue,
-			eq(requestQueue.searchRegistryId, searchRegistry.id)
-		)
+		.leftJoin(requestQueue, eq(requestQueue.searchRegistryId, searchRegistry.id))
 		.where(
 			and(
 				eq(searchRegistry.connectorId, connectorId),
@@ -245,10 +236,7 @@ async function enqueueMovies(
 		})
 		.from(searchRegistry)
 		.innerJoin(movies, eq(movies.id, searchRegistry.contentId))
-		.leftJoin(
-			requestQueue,
-			eq(requestQueue.searchRegistryId, searchRegistry.id)
-		)
+		.leftJoin(requestQueue, eq(requestQueue.searchRegistryId, searchRegistry.id))
 		.where(
 			and(
 				eq(searchRegistry.connectorId, connectorId),
@@ -607,9 +595,7 @@ export async function clearQueue(connectorId?: number): Promise<QueueControlResu
 
 			registryIds = toDelete.map((item) => item.searchRegistryId);
 
-			const deleted = await db
-				.delete(requestQueue)
-				.returning({ id: requestQueue.id });
+			const deleted = await db.delete(requestQueue).returning({ id: requestQueue.id });
 
 			deletedCount = deleted.length;
 		}
@@ -622,12 +608,7 @@ export async function clearQueue(connectorId?: number): Promise<QueueControlResu
 					state: 'pending',
 					updatedAt: new Date()
 				})
-				.where(
-					and(
-						inArray(searchRegistry.id, registryIds),
-						eq(searchRegistry.state, 'queued')
-					)
-				);
+				.where(and(inArray(searchRegistry.id, registryIds), eq(searchRegistry.state, 'queued')));
 		}
 
 		return {

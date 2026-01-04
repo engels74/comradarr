@@ -130,7 +130,10 @@ export async function discoverGaps(
  *
 
  */
-async function discoverEpisodeGaps(connectorId: number, batchSize: number): Promise<DiscoveryStats> {
+async function discoverEpisodeGaps(
+	connectorId: number,
+	batchSize: number
+): Promise<DiscoveryStats> {
 	// Find all episode gaps (monitored=true AND hasFile=false)
 	// Uses LEFT JOIN to check for existing search registry entries
 	const episodeGaps = await db
@@ -251,7 +254,11 @@ async function discoverMovieGaps(connectorId: number, batchSize: number): Promis
 		.select({ count: sql<number>`count(*)::int` })
 		.from(movies)
 		.where(
-			and(eq(movies.connectorId, connectorId), eq(movies.monitored, true), eq(movies.hasFile, false))
+			and(
+				eq(movies.connectorId, connectorId),
+				eq(movies.monitored, true),
+				eq(movies.hasFile, false)
+			)
 		);
 
 	const totalMovieGaps = totalMovieGapsResult[0]?.count ?? 0;
@@ -320,7 +327,11 @@ export async function getGapStats(
 		.select({ count: sql<number>`count(*)::int` })
 		.from(movies)
 		.where(
-			and(eq(movies.connectorId, connectorId), eq(movies.monitored, true), eq(movies.hasFile, false))
+			and(
+				eq(movies.connectorId, connectorId),
+				eq(movies.monitored, true),
+				eq(movies.hasFile, false)
+			)
 		);
 
 	return {

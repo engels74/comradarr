@@ -83,7 +83,10 @@ function computeTimelineData(schedules: ScheduleWithRelations[]): TimelineData {
 				runCount++;
 			}
 		} catch (error) {
-			logger.warn('Failed to parse cron for schedule', { scheduleId: schedule.id, error: error instanceof Error ? error.message : String(error) });
+			logger.warn('Failed to parse cron for schedule', {
+				scheduleId: schedule.id,
+				error: error instanceof Error ? error.message : String(error)
+			});
 		}
 	}
 

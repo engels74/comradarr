@@ -29,9 +29,7 @@
 	/**
 	 * Format connector type with capitalized first letter
 	 */
-	const formattedType = $derived(
-		connector.type.charAt(0).toUpperCase() + connector.type.slice(1)
-	);
+	const formattedType = $derived(connector.type.charAt(0).toUpperCase() + connector.type.slice(1));
 
 	/**
 	 * Truncate URL for display

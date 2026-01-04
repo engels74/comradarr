@@ -39,8 +39,15 @@ import {
 } from '$lib/server/db/queries/schedules';
 import type { Connector } from '$lib/server/db/schema';
 import { createConnectorClient } from '$lib/server/connectors/factory';
-import { determineHealthFromChecks, type HealthStatus } from '$lib/server/services/sync/health-utils';
-import { AuthenticationError, NetworkError, TimeoutError } from '$lib/server/connectors/common/errors';
+import {
+	determineHealthFromChecks,
+	type HealthStatus
+} from '$lib/server/services/sync/health-utils';
+import {
+	AuthenticationError,
+	NetworkError,
+	TimeoutError
+} from '$lib/server/connectors/common/errors';
 import { runIncrementalSync, runFullReconciliation } from '$lib/server/services/sync';
 import { discoverGaps, discoverUpgrades } from '$lib/server/services/discovery';
 import {
@@ -162,7 +169,9 @@ export function initializeScheduler(): void {
 			name: 'throttle-window-reset',
 			protect: true, // Prevent overlapping executions
 			catch: (err) => {
-				logger.error('Throttle window reset failed', { error: err instanceof Error ? err.message : String(err) });
+				logger.error('Throttle window reset failed', {
+					error: err instanceof Error ? err.message : String(err)
+				});
 			}
 		},
 		withJobContext('throttle-window-reset', async () => {
@@ -202,7 +211,9 @@ export function initializeScheduler(): void {
 			name: 'prowlarr-health-check',
 			protect: true, // Prevent overlapping executions
 			catch: (err) => {
-				logger.error('Prowlarr health check failed', { error: err instanceof Error ? err.message : String(err) });
+				logger.error('Prowlarr health check failed', {
+					error: err instanceof Error ? err.message : String(err)
+				});
 			}
 		},
 		withJobContext('prowlarr-health-check', async () => {
@@ -239,7 +250,9 @@ export function initializeScheduler(): void {
 			name: 'connector-health-check',
 			protect: true, // Prevent overlapping executions
 			catch: (err) => {
-				logger.error('Connector health check failed', { error: err instanceof Error ? err.message : String(err) });
+				logger.error('Connector health check failed', {
+					error: err instanceof Error ? err.message : String(err)
+				});
 			}
 		},
 		withJobContext('connector-health-check', async () => {
@@ -347,7 +360,9 @@ export function initializeScheduler(): void {
 			name: 'incremental-sync-sweep',
 			protect: true, // Prevent overlapping executions
 			catch: (err) => {
-				logger.error('Incremental sync sweep failed', { error: err instanceof Error ? err.message : String(err) });
+				logger.error('Incremental sync sweep failed', {
+					error: err instanceof Error ? err.message : String(err)
+				});
 			}
 		},
 		withJobContext('incremental-sync-sweep', async () => {
@@ -452,7 +467,9 @@ export function initializeScheduler(): void {
 			name: 'full-reconciliation',
 			protect: true, // Prevent overlapping executions
 			catch: (err) => {
-				logger.error('Full reconciliation failed', { error: err instanceof Error ? err.message : String(err) });
+				logger.error('Full reconciliation failed', {
+					error: err instanceof Error ? err.message : String(err)
+				});
 			}
 		},
 		withJobContext('full-reconciliation', async () => {
@@ -556,13 +573,14 @@ export function initializeScheduler(): void {
 			name: 'completion-snapshot',
 			protect: true, // Prevent overlapping executions
 			catch: (err) => {
-				logger.error('Completion snapshot failed', { error: err instanceof Error ? err.message : String(err) });
+				logger.error('Completion snapshot failed', {
+					error: err instanceof Error ? err.message : String(err)
+				});
 			}
 		},
 		withJobContext('completion-snapshot', async () => {
-			const { captureCompletionSnapshots, cleanupOldSnapshots } = await import(
-				'$lib/server/db/queries/completion'
-			);
+			const { captureCompletionSnapshots, cleanupOldSnapshots } =
+				await import('$lib/server/db/queries/completion');
 
 			// Capture current state
 			const captured = await captureCompletionSnapshots();
@@ -596,7 +614,9 @@ export function initializeScheduler(): void {
 			name: 'db-maintenance',
 			protect: true, // Prevent overlapping executions
 			catch: (err) => {
-				logger.error('Database maintenance failed', { error: err instanceof Error ? err.message : String(err) });
+				logger.error('Database maintenance failed', {
+					error: err instanceof Error ? err.message : String(err)
+				});
 			}
 		},
 		withJobContext('db-maintenance', async () => {
@@ -659,7 +679,9 @@ export function initializeScheduler(): void {
 			name: 'queue-processor',
 			protect: true, // Prevent overlapping executions
 			catch: (err) => {
-				logger.error('Queue processor failed', { error: err instanceof Error ? err.message : String(err) });
+				logger.error('Queue processor failed', {
+					error: err instanceof Error ? err.message : String(err)
+				});
 			}
 		},
 		withJobContext('queue-processor', async () => {
@@ -797,7 +819,9 @@ export function initializeScheduler(): void {
 			name: 'notification-batch-processor',
 			protect: true, // Prevent overlapping executions
 			catch: (err) => {
-				logger.error('Notification batch processing failed', { error: err instanceof Error ? err.message : String(err) });
+				logger.error('Notification batch processing failed', {
+					error: err instanceof Error ? err.message : String(err)
+				});
 			}
 		},
 		withJobContext('notification-batch-processor', async () => {
@@ -834,7 +858,9 @@ export function initializeScheduler(): void {
 			name: 'queue-depth-sampler',
 			protect: true, // Prevent overlapping executions
 			catch: (err) => {
-				logger.error('Queue depth sampling failed', { error: err instanceof Error ? err.message : String(err) });
+				logger.error('Queue depth sampling failed', {
+					error: err instanceof Error ? err.message : String(err)
+				});
 			}
 		},
 		withJobContext('queue-depth-sampler', async () => {
@@ -863,7 +889,9 @@ export function initializeScheduler(): void {
 			name: 'analytics-hourly-aggregation',
 			protect: true, // Prevent overlapping executions
 			catch: (err) => {
-				logger.error('Hourly analytics aggregation failed', { error: err instanceof Error ? err.message : String(err) });
+				logger.error('Hourly analytics aggregation failed', {
+					error: err instanceof Error ? err.message : String(err)
+				});
 			}
 		},
 		withJobContext('analytics-hourly-aggregation', async () => {
@@ -898,7 +926,9 @@ export function initializeScheduler(): void {
 			name: 'analytics-daily-aggregation',
 			protect: true, // Prevent overlapping executions
 			catch: (err) => {
-				logger.error('Daily analytics aggregation failed', { error: err instanceof Error ? err.message : String(err) });
+				logger.error('Daily analytics aggregation failed', {
+					error: err instanceof Error ? err.message : String(err)
+				});
 			}
 		},
 		withJobContext('analytics-daily-aggregation', async () => {
@@ -937,7 +967,9 @@ export function initializeScheduler(): void {
 	// Initialize scheduled backup job from settings
 	// This is done asynchronously to avoid blocking initialization
 	initializeScheduledBackup().catch((err) => {
-		logger.error('Failed to initialize scheduled backup', { error: err instanceof Error ? err.message : String(err) });
+		logger.error('Failed to initialize scheduled backup', {
+			error: err instanceof Error ? err.message : String(err)
+		});
 	});
 
 	initialized = true;
@@ -1056,7 +1088,11 @@ export async function refreshDynamicSchedules(): Promise<void> {
 					timezone: schedule.timezone,
 					protect: true, // Prevent overlapping executions
 					catch: (err) => {
-						logger.error('Dynamic schedule failed', { scheduleId: schedule.id, scheduleName: schedule.name, error: err instanceof Error ? err.message : String(err) });
+						logger.error('Dynamic schedule failed', {
+							scheduleId: schedule.id,
+							scheduleName: schedule.name,
+							error: err instanceof Error ? err.message : String(err)
+						});
 					}
 				},
 				withJobContext(`sweep-schedule-${schedule.id}`, async () => {
@@ -1076,11 +1112,7 @@ export async function refreshDynamicSchedules(): Promise<void> {
 								scheduleId: schedule.id,
 								scheduleName: schedule.name,
 								connectorId: schedule.connectorId,
-								reason: !connector
-									? 'not found'
-									: !connector.enabled
-										? 'disabled'
-										: 'unhealthy'
+								reason: !connector ? 'not found' : !connector.enabled ? 'disabled' : 'unhealthy'
 							});
 							return;
 						}
@@ -1130,8 +1162,7 @@ export async function refreshDynamicSchedules(): Promise<void> {
 							if ('itemsSynced' in syncResult) {
 								summary.totalItemsSynced += syncResult.itemsSynced;
 							} else if ('itemsCreated' in syncResult) {
-								summary.totalItemsSynced +=
-									syncResult.itemsCreated + syncResult.itemsUpdated;
+								summary.totalItemsSynced += syncResult.itemsCreated + syncResult.itemsUpdated;
 							}
 
 							// 2. Run discovery (gaps and upgrades in parallel)
@@ -1191,7 +1222,10 @@ export async function refreshDynamicSchedules(): Promise<void> {
 				await updateNextRunAt(schedule.id, nextRun);
 			}
 		} catch (error) {
-			logger.error('Failed to create job for schedule', { scheduleId: schedule.id, error: error instanceof Error ? error.message : String(error) });
+			logger.error('Failed to create job for schedule', {
+				scheduleId: schedule.id,
+				error: error instanceof Error ? error.message : String(error)
+			});
 		}
 	}
 
@@ -1217,7 +1251,9 @@ async function initializeScheduledBackup(): Promise<void> {
 
 		await createScheduledBackupJob(settings.scheduledCron, settings.retentionCount);
 	} catch (error) {
-		logger.error('Failed to initialize scheduled backup', { error: error instanceof Error ? error.message : String(error) });
+		logger.error('Failed to initialize scheduled backup', {
+			error: error instanceof Error ? error.message : String(error)
+		});
 	}
 }
 
@@ -1244,7 +1280,9 @@ async function createScheduledBackupJob(
 				name: 'scheduled-backup',
 				protect: true, // Prevent overlapping executions
 				catch: (err) => {
-					logger.error('Scheduled backup failed', { error: err instanceof Error ? err.message : String(err) });
+					logger.error('Scheduled backup failed', {
+						error: err instanceof Error ? err.message : String(err)
+					});
 				}
 			},
 			withJobContext('scheduled-backup', async () => {
@@ -1292,7 +1330,9 @@ async function createScheduledBackupJob(
 			nextRun: nextRun?.toISOString()
 		});
 	} catch (error) {
-		logger.error('Failed to create scheduled backup job', { error: error instanceof Error ? error.message : String(error) });
+		logger.error('Failed to create scheduled backup job', {
+			error: error instanceof Error ? error.message : String(error)
+		});
 		scheduledBackupJob = null;
 	}
 }
@@ -1320,6 +1360,8 @@ export async function refreshScheduledBackup(): Promise<void> {
 		// Create or recreate the job with new settings
 		await createScheduledBackupJob(settings.scheduledCron, settings.retentionCount);
 	} catch (error) {
-		logger.error('Failed to refresh scheduled backup', { error: error instanceof Error ? error.message : String(error) });
+		logger.error('Failed to refresh scheduled backup', {
+			error: error instanceof Error ? error.message : String(error)
+		});
 	}
 }

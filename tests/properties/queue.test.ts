@@ -142,9 +142,7 @@ describe('Queue Processing Order (Requirements 5.2)', () => {
 						for (let i = 0; i < sorted.length - 1; i++) {
 							const current = sorted[i]!;
 							const next = sorted[i + 1]!;
-							expect(current.scheduledAt.getTime()).toBeLessThanOrEqual(
-								next.scheduledAt.getTime()
-							);
+							expect(current.scheduledAt.getTime()).toBeLessThanOrEqual(next.scheduledAt.getTime());
 						}
 					}
 				),

@@ -566,11 +566,7 @@ describe('parseRecordsWithWarnings', () => {
 	});
 
 	it('should call onInvalid callback for invalid records', () => {
-		const records = [
-			{ id: 1, name: 'Valid' },
-			{ id: 'invalid', name: 'Bad' },
-			null
-		];
+		const records = [{ id: 1, name: 'Valid' }, { id: 'invalid', name: 'Bad' }, null];
 
 		const onInvalid = vi.fn();
 

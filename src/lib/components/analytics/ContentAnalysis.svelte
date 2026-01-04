@@ -50,7 +50,10 @@
 	/**
 	 * Gets state badge variant based on state.
 	 */
-	function getStateBadge(state: string): { variant: 'default' | 'secondary' | 'destructive' | 'outline'; label: string } {
+	function getStateBadge(state: string): {
+		variant: 'default' | 'secondary' | 'destructive' | 'outline';
+		label: string;
+	} {
 		switch (state) {
 			case 'exhausted':
 				return { variant: 'destructive', label: 'Exhausted' };

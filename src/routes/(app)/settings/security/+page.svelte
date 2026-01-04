@@ -104,9 +104,7 @@
 					<KeyIcon class="h-5 w-5" />
 					Authentication Mode
 				</Card.Title>
-				<Card.Description>
-					Control how users authenticate to access Comradarr.
-				</Card.Description>
+				<Card.Description>Control how users authenticate to access Comradarr.</Card.Description>
 			</Card.Header>
 			<Card.Content>
 				<form
@@ -118,7 +116,9 @@
 							await update();
 							isSubmittingAuthMode = false;
 							if (result.type === 'success' && result.data?.success) {
-								toastStore.success((result.data.message as string) || 'Authentication mode updated');
+								toastStore.success(
+									(result.data.message as string) || 'Authentication mode updated'
+								);
 							}
 						};
 					}}
@@ -145,10 +145,7 @@
 								class={selectClass}
 							>
 								{#each authModes as mode}
-									<option
-										value={mode}
-										selected={data.securitySettings.authMode === mode}
-									>
+									<option value={mode} selected={data.securitySettings.authMode === mode}>
 										{authModeLabels[mode]}
 									</option>
 								{/each}
@@ -165,7 +162,8 @@
 								role="alert"
 							>
 								<strong>Security Notice:</strong> Local network bypass allows anyone on your local network
-								to access Comradarr without logging in. Only enable this if you trust all devices on your network.
+								to access Comradarr without logging in. Only enable this if you trust all devices on your
+								network.
 							</div>
 						{/if}
 
@@ -203,7 +201,9 @@
 								await update();
 								isSubmittingPassword = false;
 								if (result.type === 'success' && result.data?.success) {
-									toastStore.success((result.data.message as string) || 'Password changed successfully');
+									toastStore.success(
+										(result.data.message as string) || 'Password changed successfully'
+									);
 								}
 							};
 						}}
@@ -244,9 +244,7 @@
 									disabled={isSubmittingPassword}
 									autocomplete="new-password"
 								/>
-								<p class="text-xs text-muted-foreground">
-									Must be at least 8 characters long.
-								</p>
+								<p class="text-xs text-muted-foreground">Must be at least 8 characters long.</p>
 							</div>
 
 							<!-- Confirm Password -->
@@ -286,9 +284,7 @@
 					<MonitorSmartphoneIcon class="h-5 w-5" />
 					Active Sessions
 				</Card.Title>
-				<Card.Description>
-					Manage your active login sessions across devices.
-				</Card.Description>
+				<Card.Description>Manage your active login sessions across devices.</Card.Description>
 			</Card.Header>
 			<Card.Content>
 				<div class="grid gap-4">
@@ -312,9 +308,7 @@
 						<!-- Sessions List -->
 						<div class="space-y-3">
 							{#each data.sessions as session}
-								<div
-									class="flex items-center justify-between p-3 rounded-lg border bg-card"
-								>
+								<div class="flex items-center justify-between p-3 rounded-lg border bg-card">
 									<div class="flex flex-col gap-1">
 										<div class="flex items-center gap-2">
 											<span class="font-medium text-sm">
@@ -342,7 +336,9 @@
 													await update();
 													isSubmittingSession = false;
 													if (result.type === 'success' && result.data?.success) {
-														toastStore.success((result.data.message as string) || 'Session revoked');
+														toastStore.success(
+															(result.data.message as string) || 'Session revoked'
+														);
 													}
 												};
 											}}
@@ -376,7 +372,9 @@
 										await update();
 										isSubmittingSession = false;
 										if (result.type === 'success' && result.data?.success) {
-											toastStore.success((result.data.message as string) || 'All other sessions revoked');
+											toastStore.success(
+												(result.data.message as string) || 'All other sessions revoked'
+											);
 										}
 									};
 								}}

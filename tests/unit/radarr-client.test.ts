@@ -875,8 +875,24 @@ describe('RadarrClient.getWantedMissing()', () => {
 			sortDirection: 'descending',
 			totalRecords: 5,
 			records: [
-				{ id: 1, title: 'Movie 1', tmdbId: 1, year: 2020, hasFile: false, monitored: true, qualityCutoffNotMet: false },
-				{ id: 2, title: 'Movie 2', tmdbId: 2, year: 2020, hasFile: false, monitored: true, qualityCutoffNotMet: false }
+				{
+					id: 1,
+					title: 'Movie 1',
+					tmdbId: 1,
+					year: 2020,
+					hasFile: false,
+					monitored: true,
+					qualityCutoffNotMet: false
+				},
+				{
+					id: 2,
+					title: 'Movie 2',
+					tmdbId: 2,
+					year: 2020,
+					hasFile: false,
+					monitored: true,
+					qualityCutoffNotMet: false
+				}
 			]
 		};
 
@@ -887,8 +903,24 @@ describe('RadarrClient.getWantedMissing()', () => {
 			sortDirection: 'descending',
 			totalRecords: 5,
 			records: [
-				{ id: 3, title: 'Movie 3', tmdbId: 3, year: 2020, hasFile: false, monitored: true, qualityCutoffNotMet: false },
-				{ id: 4, title: 'Movie 4', tmdbId: 4, year: 2020, hasFile: false, monitored: true, qualityCutoffNotMet: false }
+				{
+					id: 3,
+					title: 'Movie 3',
+					tmdbId: 3,
+					year: 2020,
+					hasFile: false,
+					monitored: true,
+					qualityCutoffNotMet: false
+				},
+				{
+					id: 4,
+					title: 'Movie 4',
+					tmdbId: 4,
+					year: 2020,
+					hasFile: false,
+					monitored: true,
+					qualityCutoffNotMet: false
+				}
 			]
 		};
 
@@ -899,7 +931,15 @@ describe('RadarrClient.getWantedMissing()', () => {
 			sortDirection: 'descending',
 			totalRecords: 5,
 			records: [
-				{ id: 5, title: 'Movie 5', tmdbId: 5, year: 2020, hasFile: false, monitored: true, qualityCutoffNotMet: false }
+				{
+					id: 5,
+					title: 'Movie 5',
+					tmdbId: 5,
+					year: 2020,
+					hasFile: false,
+					monitored: true,
+					qualityCutoffNotMet: false
+				}
 			]
 		};
 
@@ -935,9 +975,25 @@ describe('RadarrClient.getWantedMissing()', () => {
 			sortDirection: 'descending',
 			totalRecords: 3,
 			records: [
-				{ id: 1, title: 'Valid Movie 1', tmdbId: 1, year: 2020, hasFile: false, monitored: true, qualityCutoffNotMet: false },
+				{
+					id: 1,
+					title: 'Valid Movie 1',
+					tmdbId: 1,
+					year: 2020,
+					hasFile: false,
+					monitored: true,
+					qualityCutoffNotMet: false
+				},
 				{ id: 2, title: 'Invalid Movie' }, // Invalid: missing required fields
-				{ id: 3, title: 'Valid Movie 2', tmdbId: 3, year: 2020, hasFile: false, monitored: true, qualityCutoffNotMet: false }
+				{
+					id: 3,
+					title: 'Valid Movie 2',
+					tmdbId: 3,
+					year: 2020,
+					hasFile: false,
+					monitored: true,
+					qualityCutoffNotMet: false
+				}
 			]
 		};
 
@@ -1158,8 +1214,24 @@ describe('RadarrClient.getWantedCutoff()', () => {
 			sortDirection: 'descending',
 			totalRecords: 5,
 			records: [
-				{ id: 1, title: 'Movie 1', tmdbId: 1, year: 2020, hasFile: true, monitored: true, qualityCutoffNotMet: true },
-				{ id: 2, title: 'Movie 2', tmdbId: 2, year: 2020, hasFile: true, monitored: true, qualityCutoffNotMet: true }
+				{
+					id: 1,
+					title: 'Movie 1',
+					tmdbId: 1,
+					year: 2020,
+					hasFile: true,
+					monitored: true,
+					qualityCutoffNotMet: true
+				},
+				{
+					id: 2,
+					title: 'Movie 2',
+					tmdbId: 2,
+					year: 2020,
+					hasFile: true,
+					monitored: true,
+					qualityCutoffNotMet: true
+				}
 			]
 		};
 
@@ -1170,8 +1242,24 @@ describe('RadarrClient.getWantedCutoff()', () => {
 			sortDirection: 'descending',
 			totalRecords: 5,
 			records: [
-				{ id: 3, title: 'Movie 3', tmdbId: 3, year: 2020, hasFile: true, monitored: true, qualityCutoffNotMet: true },
-				{ id: 4, title: 'Movie 4', tmdbId: 4, year: 2020, hasFile: true, monitored: true, qualityCutoffNotMet: true }
+				{
+					id: 3,
+					title: 'Movie 3',
+					tmdbId: 3,
+					year: 2020,
+					hasFile: true,
+					monitored: true,
+					qualityCutoffNotMet: true
+				},
+				{
+					id: 4,
+					title: 'Movie 4',
+					tmdbId: 4,
+					year: 2020,
+					hasFile: true,
+					monitored: true,
+					qualityCutoffNotMet: true
+				}
 			]
 		};
 
@@ -1182,7 +1270,15 @@ describe('RadarrClient.getWantedCutoff()', () => {
 			sortDirection: 'descending',
 			totalRecords: 5,
 			records: [
-				{ id: 5, title: 'Movie 5', tmdbId: 5, year: 2020, hasFile: true, monitored: true, qualityCutoffNotMet: true }
+				{
+					id: 5,
+					title: 'Movie 5',
+					tmdbId: 5,
+					year: 2020,
+					hasFile: true,
+					monitored: true,
+					qualityCutoffNotMet: true
+				}
 			]
 		};
 
@@ -1218,9 +1314,25 @@ describe('RadarrClient.getWantedCutoff()', () => {
 			sortDirection: 'descending',
 			totalRecords: 3,
 			records: [
-				{ id: 1, title: 'Valid Movie 1', tmdbId: 1, year: 2020, hasFile: true, monitored: true, qualityCutoffNotMet: true },
+				{
+					id: 1,
+					title: 'Valid Movie 1',
+					tmdbId: 1,
+					year: 2020,
+					hasFile: true,
+					monitored: true,
+					qualityCutoffNotMet: true
+				},
 				{ id: 2, title: 'Invalid Movie' }, // Invalid: missing required fields
-				{ id: 3, title: 'Valid Movie 2', tmdbId: 3, year: 2020, hasFile: true, monitored: true, qualityCutoffNotMet: true }
+				{
+					id: 3,
+					title: 'Valid Movie 2',
+					tmdbId: 3,
+					year: 2020,
+					hasFile: true,
+					monitored: true,
+					qualityCutoffNotMet: true
+				}
 			]
 		};
 

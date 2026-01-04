@@ -334,9 +334,7 @@ export async function getAllCachedIndexerHealth(): Promise<ProwlarrIndexerHealth
  * @param instanceId - Prowlarr instance ID
  * @returns Array of rate-limited indexer records
  */
-export async function getRateLimitedIndexers(
-	instanceId: number
-): Promise<ProwlarrIndexerHealth[]> {
+export async function getRateLimitedIndexers(instanceId: number): Promise<ProwlarrIndexerHealth[]> {
 	return db
 		.select()
 		.from(prowlarrIndexerHealth)

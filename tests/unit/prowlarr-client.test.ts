@@ -262,9 +262,7 @@ describe('ProwlarrClient', () => {
 		});
 
 		it('should throw NetworkError for connection refused', async () => {
-			globalThis.fetch = createMockFetch(
-				vi.fn().mockRejectedValue(new TypeError('fetch failed'))
-			);
+			globalThis.fetch = createMockFetch(vi.fn().mockRejectedValue(new TypeError('fetch failed')));
 
 			const client = new ProwlarrClient(validConfig);
 
@@ -306,9 +304,7 @@ describe('ProwlarrClient', () => {
 		});
 
 		it('should return false when network error occurs', async () => {
-			globalThis.fetch = createMockFetch(
-				vi.fn().mockRejectedValue(new TypeError('fetch failed'))
-			);
+			globalThis.fetch = createMockFetch(vi.fn().mockRejectedValue(new TypeError('fetch failed')));
 
 			const client = new ProwlarrClient(validConfig);
 			const result = await client.ping();

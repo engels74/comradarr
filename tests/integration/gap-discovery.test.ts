@@ -199,10 +199,7 @@ async function countSearchRegistry(
  * Get all search registry entries for a connector
  */
 async function getSearchRegistries(connectorId: number) {
-	return db
-		.select()
-		.from(searchRegistry)
-		.where(eq(searchRegistry.connectorId, connectorId));
+	return db.select().from(searchRegistry).where(eq(searchRegistry.connectorId, connectorId));
 }
 
 // ============================================================================
@@ -483,7 +480,11 @@ describe('Property 2: Gap Discovery Correctness - Property-Based Tests', () => {
 						await cleanupConnectorData(testSonarrConnectorId);
 
 						// Create series and season
-						const seriesId = await insertTestSeries(testSonarrConnectorId, 1, 'Property Test Series');
+						const seriesId = await insertTestSeries(
+							testSonarrConnectorId,
+							1,
+							'Property Test Series'
+						);
 						const seasonId = await insertTestSeason(seriesId, 1);
 
 						// Insert episodes
@@ -655,10 +656,7 @@ describe('Gap Registry Cleanup on Success', () => {
 			expect(registryCount).toBe(1);
 
 			// Update episode hasFile to true (simulating successful download)
-			await db
-				.update(episodes)
-				.set({ hasFile: true })
-				.where(eq(episodes.id, episodeId));
+			await db.update(episodes).set({ hasFile: true }).where(eq(episodes.id, episodeId));
 
 			// Run discovery again - should clean up resolved registry
 			const result2 = await discoverGaps(testSonarrConnectorId);
@@ -714,10 +712,7 @@ describe('Gap Registry Cleanup on Success', () => {
 			expect(registryCount).toBe(1);
 
 			// Update movie hasFile to true (simulating successful download)
-			await db
-				.update(movies)
-				.set({ hasFile: true })
-				.where(eq(movies.id, movieId));
+			await db.update(movies).set({ hasFile: true }).where(eq(movies.id, movieId));
 
 			// Run discovery again - should clean up resolved registry
 			const result2 = await discoverGaps(testRadarrConnectorId);
@@ -743,10 +738,7 @@ describe('Gap Registry Cleanup on Success', () => {
 			expect(registryCount).toBe(2);
 
 			// Update only one movie hasFile to true
-			await db
-				.update(movies)
-				.set({ hasFile: true })
-				.where(eq(movies.id, movieId1));
+			await db.update(movies).set({ hasFile: true }).where(eq(movies.id, movieId1));
 
 			// Run discovery again
 			const result2 = await discoverGaps(testRadarrConnectorId);
@@ -811,10 +803,7 @@ describe('Property 4: Gap Registry Cleanup on Success - Property-Based Tests', (
 
 						// Resolve the selected movies
 						for (const movieId of movieIdsToResolve) {
-							await db
-								.update(movies)
-								.set({ hasFile: true })
-								.where(eq(movies.id, movieId));
+							await db.update(movies).set({ hasFile: true }).where(eq(movies.id, movieId));
 						}
 
 						// Run discovery again

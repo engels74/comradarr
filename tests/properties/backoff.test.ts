@@ -67,25 +67,18 @@ describe('Exponential Backoff Calculation (Requirement 5.5)', () => {
 	describe('Property: Exponential Growth', () => {
 		it('delay increases by at least multiplier factor for consecutive attempts before reaching maxDelay (without jitter)', () => {
 			fc.assert(
-				fc.property(
-					retryConfigNoJitterArbitrary,
-					attemptArbitrary,
-					(config, attempt) => {
-						const currentDelay = calculateBackoffDelay(attempt, config);
-						const nextDelay = calculateBackoffDelay(attempt + 1, config);
+				fc.property(retryConfigNoJitterArbitrary, attemptArbitrary, (config, attempt) => {
+					const currentDelay = calculateBackoffDelay(attempt, config);
+					const nextDelay = calculateBackoffDelay(attempt + 1, config);
 
-						// If current delay hasn't reached maxDelay, next delay should be at least multiplier times greater
-						// (up to maxDelay cap)
-						if (currentDelay < config.maxDelay) {
-							const expectedMinNext = Math.min(
-								currentDelay * config.multiplier,
-								config.maxDelay
-							);
-							// Use >= with small epsilon for floating point
-							expect(nextDelay).toBeGreaterThanOrEqual(Math.floor(expectedMinNext * 0.999));
-						}
+					// If current delay hasn't reached maxDelay, next delay should be at least multiplier times greater
+					// (up to maxDelay cap)
+					if (currentDelay < config.maxDelay) {
+						const expectedMinNext = Math.min(currentDelay * config.multiplier, config.maxDelay);
+						// Use >= with small epsilon for floating point
+						expect(nextDelay).toBeGreaterThanOrEqual(Math.floor(expectedMinNext * 0.999));
 					}
-				),
+				}),
 				{ numRuns: 100 }
 			);
 		});
@@ -124,27 +117,23 @@ describe('Exponential Backoff Calculation (Requirement 5.5)', () => {
 	describe('Property: Jitter Bounds', () => {
 		it('with jitter enabled, delay is within ±25% of calculated value', () => {
 			fc.assert(
-				fc.property(
-					retryConfigWithJitterArbitrary,
-					attemptArbitrary,
-					(config, attempt) => {
-						// Calculate expected delay without jitter
-						const exponentialDelay = config.baseDelay * Math.pow(config.multiplier, attempt);
-						const clampedDelay = Math.min(exponentialDelay, config.maxDelay);
+				fc.property(retryConfigWithJitterArbitrary, attemptArbitrary, (config, attempt) => {
+					// Calculate expected delay without jitter
+					const exponentialDelay = config.baseDelay * Math.pow(config.multiplier, attempt);
+					const clampedDelay = Math.min(exponentialDelay, config.maxDelay);
 
-						// Run multiple times to verify jitter range (since jitter is random)
-						for (let i = 0; i < 10; i++) {
-							const actualDelay = calculateBackoffDelay(attempt, config);
+					// Run multiple times to verify jitter range (since jitter is random)
+					for (let i = 0; i < 10; i++) {
+						const actualDelay = calculateBackoffDelay(attempt, config);
 
-							// Jitter range is [0.75 * delay, 1.25 * delay]
-							const minExpected = Math.floor(clampedDelay * 0.75);
-							const maxExpected = Math.ceil(clampedDelay * 1.25);
+						// Jitter range is [0.75 * delay, 1.25 * delay]
+						const minExpected = Math.floor(clampedDelay * 0.75);
+						const maxExpected = Math.ceil(clampedDelay * 1.25);
 
-							expect(actualDelay).toBeGreaterThanOrEqual(minExpected);
-							expect(actualDelay).toBeLessThanOrEqual(maxExpected);
-						}
+						expect(actualDelay).toBeGreaterThanOrEqual(minExpected);
+						expect(actualDelay).toBeLessThanOrEqual(maxExpected);
 					}
-				),
+				}),
 				{ numRuns: 100 }
 			);
 		});

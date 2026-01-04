@@ -804,7 +804,9 @@ describe('BaseArrClient.requestWithRetry()', () => {
 			retry: { maxRetries: 3 }
 		});
 
-		await expect(client.exposedRequestWithRetry('system/status')).rejects.toThrow(AuthenticationError);
+		await expect(client.exposedRequestWithRetry('system/status')).rejects.toThrow(
+			AuthenticationError
+		);
 		expect(callCount).toBe(1);
 	});
 

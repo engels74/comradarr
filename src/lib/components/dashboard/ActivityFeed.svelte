@@ -182,7 +182,9 @@
 						<!-- Activity icon -->
 						<div class="shrink-0">
 							<div
-								class="h-8 w-8 rounded-full flex items-center justify-center {getIconBgClass(activity)}"
+								class="h-8 w-8 rounded-full flex items-center justify-center {getIconBgClass(
+									activity
+								)}"
 							>
 								<ActivityIcon class="h-4 w-4 {getIconTextClass(activity)}" />
 							</div>

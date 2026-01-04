@@ -17,9 +17,7 @@
 	<div class="flex items-center justify-between mb-6">
 		<div>
 			<h1 class="text-3xl font-bold">Connectors</h1>
-			<p class="text-muted-foreground mt-1">
-				Manage your *arr application connections
-			</p>
+			<p class="text-muted-foreground mt-1">Manage your *arr application connections</p>
 		</div>
 		<Button href="/connectors/new">Add Connector</Button>
 	</div>
@@ -37,7 +35,11 @@
 			{#each data.connectors as connector (connector.id)}
 				<ConnectorCard
 					{connector}
-					stats={data.stats[connector.id] ?? { connectorId: connector.id, gapsCount: 0, queueDepth: 0 }}
+					stats={data.stats[connector.id] ?? {
+						connectorId: connector.id,
+						gapsCount: 0,
+						queueDepth: 0
+					}}
 				/>
 			{/each}
 		</div>
@@ -49,9 +51,7 @@
 	<div class="flex items-center justify-between mb-6">
 		<div>
 			<h2 class="text-2xl font-bold">Prowlarr</h2>
-			<p class="text-muted-foreground mt-1">
-				Indexer health monitoring (informational only)
-			</p>
+			<p class="text-muted-foreground mt-1">Indexer health monitoring (informational only)</p>
 		</div>
 		<Button href="/connectors/prowlarr/new" variant="outline">Add Prowlarr</Button>
 	</div>
@@ -69,7 +69,11 @@
 			{#each data.prowlarrInstances as instance (instance.id)}
 				<ProwlarrInstanceCard
 					{instance}
-					stats={data.prowlarrStats[instance.id] ?? { instanceId: instance.id, totalIndexers: 0, rateLimitedIndexers: 0 }}
+					stats={data.prowlarrStats[instance.id] ?? {
+						instanceId: instance.id,
+						totalIndexers: 0,
+						rateLimitedIndexers: 0
+					}}
 				/>
 			{/each}
 		</div>

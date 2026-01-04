@@ -86,7 +86,9 @@ export const actions: Actions = {
 			// Refresh the scheduled backup job with new settings
 			await refreshScheduledBackup();
 		} catch (err) {
-			logger.error('Failed to update settings', { error: err instanceof Error ? err.message : String(err) });
+			logger.error('Failed to update settings', {
+				error: err instanceof Error ? err.message : String(err)
+			});
 			return fail(500, {
 				error: 'Failed to update settings. Please try again.',
 				...formValues
@@ -118,7 +120,9 @@ export const actions: Actions = {
 				return fail(404, { deleteError: 'Backup not found' });
 			}
 		} catch (err) {
-			logger.error('Failed to delete backup', { error: err instanceof Error ? err.message : String(err) });
+			logger.error('Failed to delete backup', {
+				error: err instanceof Error ? err.message : String(err)
+			});
 			return fail(500, { deleteError: 'Failed to delete backup. Please try again.' });
 		}
 

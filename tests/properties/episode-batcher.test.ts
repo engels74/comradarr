@@ -533,7 +533,10 @@ const episodeForGroupingArbitrary: fc.Arbitrary<EpisodeForGrouping> = fc.record(
 /**
  * Arbitrary for a list of episodes for grouping.
  */
-const episodesForGroupingArbitrary = fc.array(episodeForGroupingArbitrary, { minLength: 0, maxLength: 100 });
+const episodesForGroupingArbitrary = fc.array(episodeForGroupingArbitrary, {
+	minLength: 0,
+	maxLength: 100
+});
 
 /**
  * Arbitrary for a single MovieForBatching.
@@ -546,7 +549,10 @@ const movieForBatchingArbitrary: fc.Arbitrary<MovieForBatching> = fc.record({
 /**
  * Arbitrary for a list of movies for batching.
  */
-const moviesForBatchingArbitrary = fc.array(movieForBatchingArbitrary, { minLength: 0, maxLength: 100 });
+const moviesForBatchingArbitrary = fc.array(movieForBatchingArbitrary, {
+	minLength: 0,
+	maxLength: 100
+});
 
 /**
  * Arbitrary for valid batch size.
@@ -635,10 +641,13 @@ describe('Property 10: Episode Grouping by Series (Requirement 6.4)', () => {
 		it('no batch mixes episodes from different series', () => {
 			// Generate episodes with unique arrEpisodeIds to avoid lookup conflicts
 			const uniqueEpisodesArbitrary = fc
-				.array(fc.record({
-					episodeId: positiveIdArbitrary,
-					seriesId: seriesIdArbitrary
-				}), { minLength: 0, maxLength: 100 })
+				.array(
+					fc.record({
+						episodeId: positiveIdArbitrary,
+						seriesId: seriesIdArbitrary
+					}),
+					{ minLength: 0, maxLength: 100 }
+				)
 				.map((items) =>
 					// Assign unique arrEpisodeIds based on index
 					items.map((item, index) => ({
@@ -707,9 +716,7 @@ describe('Property 10: Episode Grouping by Series (Requirement 6.4)', () => {
 		});
 
 		it('returns empty array for invalid batch size', () => {
-			const episodes: EpisodeForGrouping[] = [
-				{ episodeId: 1, seriesId: 1, arrEpisodeId: 1001 }
-			];
+			const episodes: EpisodeForGrouping[] = [{ episodeId: 1, seriesId: 1, arrEpisodeId: 1001 }];
 			expect(createEpisodeBatches(episodes, 0)).toEqual([]);
 			expect(createEpisodeBatches(episodes, -1)).toEqual([]);
 		});
@@ -857,9 +864,7 @@ describe('Property 17: Search Command Batch Size Limits (Requirements 29.4, 29.5
 		});
 
 		it('returns empty array for invalid batch size', () => {
-			const movies: MovieForBatching[] = [
-				{ movieId: 1, arrMovieId: 101 }
-			];
+			const movies: MovieForBatching[] = [{ movieId: 1, arrMovieId: 101 }];
 			expect(createMovieBatches(movies, 0)).toEqual([]);
 			expect(createMovieBatches(movies, -1)).toEqual([]);
 		});

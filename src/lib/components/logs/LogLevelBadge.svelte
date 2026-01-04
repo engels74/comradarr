@@ -17,39 +17,36 @@
 
 	let { level, class: className }: Props = $props();
 
-	const levelConfig: Record<LogLevel, { bg: string; text: string; Icon: typeof CircleAlertIcon }> = {
-		error: {
-			bg: 'bg-red-500/20',
-			text: 'text-red-600 dark:text-red-400',
-			Icon: CircleAlertIcon
-		},
-		warn: {
-			bg: 'bg-yellow-500/20',
-			text: 'text-yellow-600 dark:text-yellow-400',
-			Icon: AlertTriangleIcon
-		},
-		info: {
-			bg: 'bg-blue-500/20',
-			text: 'text-blue-600 dark:text-blue-400',
-			Icon: InfoIcon
-		},
-		debug: {
-			bg: 'bg-purple-500/20',
-			text: 'text-purple-600 dark:text-purple-400',
-			Icon: BugIcon
-		},
-		trace: {
-			bg: 'bg-gray-500/20',
-			text: 'text-gray-600 dark:text-gray-400',
-			Icon: ScanIcon
-		}
-	};
+	const levelConfig: Record<LogLevel, { bg: string; text: string; Icon: typeof CircleAlertIcon }> =
+		{
+			error: {
+				bg: 'bg-red-500/20',
+				text: 'text-red-600 dark:text-red-400',
+				Icon: CircleAlertIcon
+			},
+			warn: {
+				bg: 'bg-yellow-500/20',
+				text: 'text-yellow-600 dark:text-yellow-400',
+				Icon: AlertTriangleIcon
+			},
+			info: {
+				bg: 'bg-blue-500/20',
+				text: 'text-blue-600 dark:text-blue-400',
+				Icon: InfoIcon
+			},
+			debug: {
+				bg: 'bg-purple-500/20',
+				text: 'text-purple-600 dark:text-purple-400',
+				Icon: BugIcon
+			},
+			trace: {
+				bg: 'bg-gray-500/20',
+				text: 'text-gray-600 dark:text-gray-400',
+				Icon: ScanIcon
+			}
+		};
 
-	const config = $derived(
-		level in levelConfig
-			? levelConfig[level as LogLevel]
-			: levelConfig.info
-	);
+	const config = $derived(level in levelConfig ? levelConfig[level as LogLevel] : levelConfig.info);
 </script>
 
 <span

@@ -226,7 +226,8 @@ export async function getGeneralSettings(): Promise<GeneralSettings> {
 		appName: settings['app_name'] ?? SETTINGS_DEFAULTS.app_name,
 		timezone: settings['timezone'] ?? SETTINGS_DEFAULTS.timezone,
 		logLevel: settings['log_level'] ?? SETTINGS_DEFAULTS.log_level,
-		checkForUpdates: (settings['check_for_updates'] ?? SETTINGS_DEFAULTS.check_for_updates) === 'true'
+		checkForUpdates:
+			(settings['check_for_updates'] ?? SETTINGS_DEFAULTS.check_for_updates) === 'true'
 	};
 }
 
@@ -318,7 +319,9 @@ export interface SearchSettings {
  * @returns Search settings object with all fields populated
  */
 export async function getSearchSettings(): Promise<SearchSettings> {
-	const keys = Object.keys(SEARCH_SETTINGS_DEFAULTS) as Array<keyof typeof SEARCH_SETTINGS_DEFAULTS>;
+	const keys = Object.keys(SEARCH_SETTINGS_DEFAULTS) as Array<
+		keyof typeof SEARCH_SETTINGS_DEFAULTS
+	>;
 	const settings = await getSettings(keys);
 
 	return {
@@ -364,7 +367,8 @@ export async function getSearchSettings(): Promise<SearchSettings> {
 					SEARCH_SETTINGS_DEFAULTS.search_cooldown_max_delay_hours
 			),
 			multiplier: Number(
-				settings['search_cooldown_multiplier'] ?? SEARCH_SETTINGS_DEFAULTS.search_cooldown_multiplier
+				settings['search_cooldown_multiplier'] ??
+					SEARCH_SETTINGS_DEFAULTS.search_cooldown_multiplier
 			),
 			jitter:
 				(settings['search_cooldown_jitter'] ?? SEARCH_SETTINGS_DEFAULTS.search_cooldown_jitter) ===
@@ -392,7 +396,10 @@ export async function updateSearchSettings(input: SearchSettings): Promise<void>
 			key: 'search_priority_weight_missing_duration',
 			value: String(input.priorityWeights.missingDuration)
 		},
-		{ key: 'search_priority_weight_user_priority', value: String(input.priorityWeights.userPriority) },
+		{
+			key: 'search_priority_weight_user_priority',
+			value: String(input.priorityWeights.userPriority)
+		},
 		{
 			key: 'search_priority_weight_failure_penalty',
 			value: String(input.priorityWeights.failurePenalty)
@@ -513,13 +520,15 @@ export interface BackupSettings {
  * @returns Backup settings object with all fields populated
  */
 export async function getBackupSettings(): Promise<BackupSettings> {
-	const keys = Object.keys(BACKUP_SETTINGS_DEFAULTS) as Array<keyof typeof BACKUP_SETTINGS_DEFAULTS>;
+	const keys = Object.keys(BACKUP_SETTINGS_DEFAULTS) as Array<
+		keyof typeof BACKUP_SETTINGS_DEFAULTS
+	>;
 	const settings = await getSettings(keys);
 
 	return {
 		scheduledEnabled:
-			(settings['backup_scheduled_enabled'] ?? BACKUP_SETTINGS_DEFAULTS.backup_scheduled_enabled) ===
-			'true',
+			(settings['backup_scheduled_enabled'] ??
+				BACKUP_SETTINGS_DEFAULTS.backup_scheduled_enabled) === 'true',
 		scheduledCron:
 			settings['backup_scheduled_cron'] ?? BACKUP_SETTINGS_DEFAULTS.backup_scheduled_cron,
 		retentionCount: Number(

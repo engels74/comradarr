@@ -17,7 +17,10 @@
 
 	let { outcome, class: className }: Props = $props();
 
-	const outcomeConfig: Record<Outcome, { bg: string; text: string; label: string; Icon: typeof CheckIcon }> = {
+	const outcomeConfig: Record<
+		Outcome,
+		{ bg: string; text: string; label: string; Icon: typeof CheckIcon }
+	> = {
 		success: {
 			bg: 'bg-green-500/20',
 			text: 'text-green-600 dark:text-green-400',
@@ -45,9 +48,7 @@
 	};
 
 	const config = $derived(
-		outcome && outcome in outcomeConfig
-			? outcomeConfig[outcome as Outcome]
-			: outcomeConfig.error
+		outcome && outcome in outcomeConfig ? outcomeConfig[outcome as Outcome] : outcomeConfig.error
 	);
 </script>
 

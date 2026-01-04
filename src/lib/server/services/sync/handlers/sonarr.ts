@@ -136,12 +136,7 @@ export async function syncSonarrContent(
 	);
 
 	// Phase 5: Collect and upsert all episodes
-	const totalEpisodes = await upsertEpisodes(
-		connectorId,
-		episodeResults,
-		seriesIdMap,
-		seasonIdMap
-	);
+	const totalEpisodes = await upsertEpisodes(connectorId, episodeResults, seriesIdMap, seasonIdMap);
 
 	return totalEpisodes;
 }

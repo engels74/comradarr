@@ -334,10 +334,7 @@ export class ProwlarrClient {
 	 */
 	async getIndexerHealth(): Promise<IndexerHealth[]> {
 		// Fetch both endpoints in parallel for efficiency
-		const [indexers, statuses] = await Promise.all([
-			this.getIndexers(),
-			this.getIndexerStatuses()
-		]);
+		const [indexers, statuses] = await Promise.all([this.getIndexers(), this.getIndexerStatuses()]);
 
 		// Create status lookup by indexerId
 		const statusMap = new Map<number, ProwlarrIndexerStatus>();

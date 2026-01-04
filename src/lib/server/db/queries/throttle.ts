@@ -15,10 +15,7 @@ import {
 	type NewThrottleProfile
 } from '$lib/server/db/schema';
 import { and, count, eq, ne } from 'drizzle-orm';
-import {
-	DEFAULT_FALLBACK_PRESET,
-	type ThrottlePreset
-} from '$lib/config/throttle-presets';
+import { DEFAULT_FALLBACK_PRESET, type ThrottlePreset } from '$lib/config/throttle-presets';
 
 // =============================================================================
 // Input Types
@@ -209,9 +206,7 @@ export async function deleteThrottleProfile(id: number): Promise<boolean> {
 	// Check if profile is in use
 	const usageCount = await getConnectorCountUsingProfile(id);
 	if (usageCount > 0) {
-		throw new Error(
-			`Cannot delete throttle profile: it is assigned to ${usageCount} connector(s)`
-		);
+		throw new Error(`Cannot delete throttle profile: it is assigned to ${usageCount} connector(s)`);
 	}
 
 	const result = await db
@@ -412,9 +407,7 @@ export async function setDefaultThrottleProfile(id: number): Promise<ThrottlePro
  * @param config - Configuration to check
  * @returns true if the config is a ThrottleProfile (has id)
  */
-export function isThrottleProfile(
-	config: EffectiveThrottleConfig
-): config is ThrottleProfile {
+export function isThrottleProfile(config: EffectiveThrottleConfig): config is ThrottleProfile {
 	return 'id' in config;
 }
 

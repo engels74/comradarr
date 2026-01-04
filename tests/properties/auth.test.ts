@@ -49,14 +49,18 @@ describe('Password Hashing (Requirement 10.2)', () => {
 			'should never verify an incorrect password',
 			async () => {
 				await fc.assert(
-					fc.asyncProperty(passwordArbitrary, passwordArbitrary, async (password, wrongPassword) => {
-						// Ensure passwords are different
-						fc.pre(password !== wrongPassword);
+					fc.asyncProperty(
+						passwordArbitrary,
+						passwordArbitrary,
+						async (password, wrongPassword) => {
+							// Ensure passwords are different
+							fc.pre(password !== wrongPassword);
 
-						const hash = await hashPassword(password);
-						const verified = await verifyPassword(hash, wrongPassword);
-						expect(verified).toBe(false);
-					}),
+							const hash = await hashPassword(password);
+							const verified = await verifyPassword(hash, wrongPassword);
+							expect(verified).toBe(false);
+						}
+					),
 					{ numRuns: PROPERTY_RUNS }
 				);
 			},

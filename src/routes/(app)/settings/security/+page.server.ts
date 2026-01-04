@@ -70,7 +70,9 @@ export const actions: Actions = {
 		try {
 			await updateSecuritySettings({ authMode: config.authMode });
 		} catch (err) {
-			logger.error('Failed to update auth mode', { error: err instanceof Error ? err.message : String(err) });
+			logger.error('Failed to update auth mode', {
+				error: err instanceof Error ? err.message : String(err)
+			});
 			return fail(500, {
 				action: 'updateAuthMode',
 				error: 'Failed to update authentication mode. Please try again.',
@@ -142,7 +144,9 @@ export const actions: Actions = {
 			const newPasswordHash = await hashPassword(config.newPassword);
 			await updateUserPassword(locals.user.id, newPasswordHash);
 		} catch (err) {
-			logger.error('Failed to update password', { error: err instanceof Error ? err.message : String(err) });
+			logger.error('Failed to update password', {
+				error: err instanceof Error ? err.message : String(err)
+			});
 			return fail(500, {
 				action: 'changePassword',
 				error: 'Failed to update password. Please try again.'
@@ -195,7 +199,9 @@ export const actions: Actions = {
 				});
 			}
 		} catch (err) {
-			logger.error('Failed to revoke session', { error: err instanceof Error ? err.message : String(err) });
+			logger.error('Failed to revoke session', {
+				error: err instanceof Error ? err.message : String(err)
+			});
 			return fail(500, {
 				action: 'revokeSession',
 				error: 'Failed to revoke session. Please try again.'
@@ -226,10 +232,15 @@ export const actions: Actions = {
 			return {
 				action: 'revokeAllSessions',
 				success: true,
-				message: count > 0 ? `Revoked ${count} session${count === 1 ? '' : 's'}` : 'No other sessions to revoke'
+				message:
+					count > 0
+						? `Revoked ${count} session${count === 1 ? '' : 's'}`
+						: 'No other sessions to revoke'
 			};
 		} catch (err) {
-			logger.error('Failed to revoke all sessions', { error: err instanceof Error ? err.message : String(err) });
+			logger.error('Failed to revoke all sessions', {
+				error: err instanceof Error ? err.message : String(err)
+			});
 			return fail(500, {
 				action: 'revokeAllSessions',
 				error: 'Failed to revoke sessions. Please try again.'

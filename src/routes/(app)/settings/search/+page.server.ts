@@ -74,7 +74,9 @@ export const actions: Actions = {
 			await updateSearchSettings(result.output);
 			invalidateSearchConfigCache();
 		} catch (err) {
-			logger.error('Failed to update settings', { error: err instanceof Error ? err.message : String(err) });
+			logger.error('Failed to update settings', {
+				error: err instanceof Error ? err.message : String(err)
+			});
 			return fail(500, {
 				error: 'Failed to update settings. Please try again.',
 				values: data
@@ -95,7 +97,9 @@ export const actions: Actions = {
 			await updateSearchSettings(SEARCH_SETTINGS_DEFAULTS);
 			invalidateSearchConfigCache();
 		} catch (err) {
-			logger.error('Failed to reset settings', { error: err instanceof Error ? err.message : String(err) });
+			logger.error('Failed to reset settings', {
+				error: err instanceof Error ? err.message : String(err)
+			});
 			return fail(500, {
 				error: 'Failed to reset settings. Please try again.'
 			});

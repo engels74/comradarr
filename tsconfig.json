@@ -16,7 +16,5 @@
 		"noImplicitOverride": true,
 		"verbatimModuleSyntax": true
 	},
-	"exclude": [
-		"src/lib/components/ui/**/*.ts"
-	]
+	"exclude": ["src/lib/components/ui/**/*.ts"]
 }

@@ -33,25 +33,45 @@
 		for (const connector of metrics) {
 			for (const point of connector.searchesDispatched) {
 				if (!timestampMap.has(point.timestamp)) {
-					timestampMap.set(point.timestamp, { dispatched: 0, successful: 0, failed: 0, noResults: 0 });
+					timestampMap.set(point.timestamp, {
+						dispatched: 0,
+						successful: 0,
+						failed: 0,
+						noResults: 0
+					});
 				}
 				timestampMap.get(point.timestamp)!.dispatched += point.value;
 			}
 			for (const point of connector.searchesSuccessful) {
 				if (!timestampMap.has(point.timestamp)) {
-					timestampMap.set(point.timestamp, { dispatched: 0, successful: 0, failed: 0, noResults: 0 });
+					timestampMap.set(point.timestamp, {
+						dispatched: 0,
+						successful: 0,
+						failed: 0,
+						noResults: 0
+					});
 				}
 				timestampMap.get(point.timestamp)!.successful += point.value;
 			}
 			for (const point of connector.searchesFailed) {
 				if (!timestampMap.has(point.timestamp)) {
-					timestampMap.set(point.timestamp, { dispatched: 0, successful: 0, failed: 0, noResults: 0 });
+					timestampMap.set(point.timestamp, {
+						dispatched: 0,
+						successful: 0,
+						failed: 0,
+						noResults: 0
+					});
 				}
 				timestampMap.get(point.timestamp)!.failed += point.value;
 			}
 			for (const point of connector.searchesNoResults) {
 				if (!timestampMap.has(point.timestamp)) {
-					timestampMap.set(point.timestamp, { dispatched: 0, successful: 0, failed: 0, noResults: 0 });
+					timestampMap.set(point.timestamp, {
+						dispatched: 0,
+						successful: 0,
+						failed: 0,
+						noResults: 0
+					});
 				}
 				timestampMap.get(point.timestamp)!.noResults += point.value;
 			}
@@ -98,7 +118,12 @@
 	</Card.Header>
 	<Card.Content>
 		{#if hasData}
-			<TimeSeriesChart datasets={aggregatedDatasets()} yAxisLabel="Searches" {period} height={280} />
+			<TimeSeriesChart
+				datasets={aggregatedDatasets()}
+				yAxisLabel="Searches"
+				{period}
+				height={280}
+			/>
 		{:else}
 			<div class="flex flex-col items-center justify-center py-12 text-muted-foreground">
 				<SearchIcon class="h-8 w-8 mb-2 opacity-50" />

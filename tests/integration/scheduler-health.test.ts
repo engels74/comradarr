@@ -120,9 +120,7 @@ describe('Unhealthy Connector Exclusion (Property 19)', () => {
 			const healthyConnectors = await getHealthyConnectors();
 
 			// Filter to only our test connectors
-			const testHealthyConnectors = healthyConnectors.filter((c) =>
-				c.name.startsWith('test-')
-			);
+			const testHealthyConnectors = healthyConnectors.filter((c) => c.name.startsWith('test-'));
 
 			// Should include only healthy and degraded
 			expect(testHealthyConnectors.length).toBe(2);
@@ -234,9 +232,7 @@ describe('Unhealthy Connector Exclusion (Property 19)', () => {
 			await createTestConnector('prop19-unknown', 'unknown');
 
 			const healthyConnectors = await getHealthyConnectors();
-			const testConnectors = healthyConnectors.filter((c) =>
-				c.name.startsWith('prop19-unknown')
-			);
+			const testConnectors = healthyConnectors.filter((c) => c.name.startsWith('prop19-unknown'));
 
 			expect(testConnectors.length).toBe(0);
 		});

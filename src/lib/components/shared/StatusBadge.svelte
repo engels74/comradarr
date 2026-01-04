@@ -22,9 +22,7 @@
 		unknown: { bg: 'bg-gray-400', text: 'text-white', label: 'Unknown' }
 	};
 
-	const config = $derived(
-		statusConfig[status as HealthStatus] ?? statusConfig.unknown
-	);
+	const config = $derived(statusConfig[status as HealthStatus] ?? statusConfig.unknown);
 </script>
 
 <span

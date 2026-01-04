@@ -117,7 +117,9 @@ export const actions: Actions = {
 				isDefault: config.isDefault ?? false
 			});
 		} catch (err) {
-			logger.error('Failed to create profile', { error: err instanceof Error ? err.message : String(err) });
+			logger.error('Failed to create profile', {
+				error: err instanceof Error ? err.message : String(err)
+			});
 			return fail(500, {
 				action: 'create',
 				error: 'Failed to create profile. Please try again.',
@@ -187,7 +189,9 @@ export const actions: Actions = {
 				});
 			}
 		} catch (err) {
-			logger.error('Failed to update profile', { error: err instanceof Error ? err.message : String(err) });
+			logger.error('Failed to update profile', {
+				error: err instanceof Error ? err.message : String(err)
+			});
 			return fail(500, {
 				action: 'update',
 				error: 'Failed to update profile. Please try again.',
@@ -228,7 +232,9 @@ export const actions: Actions = {
 					error: err.message
 				});
 			}
-			logger.error('Failed to delete profile', { error: err instanceof Error ? err.message : String(err) });
+			logger.error('Failed to delete profile', {
+				error: err instanceof Error ? err.message : String(err)
+			});
 			return fail(500, {
 				action: 'delete',
 				error: 'Failed to delete profile. Please try again.'
@@ -261,7 +267,9 @@ export const actions: Actions = {
 				});
 			}
 		} catch (err) {
-			logger.error('Failed to set default profile', { error: err instanceof Error ? err.message : String(err) });
+			logger.error('Failed to set default profile', {
+				error: err instanceof Error ? err.message : String(err)
+			});
 			return fail(500, {
 				action: 'setDefault',
 				error: 'Failed to set default profile. Please try again.'

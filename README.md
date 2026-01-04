@@ -11,4 +11,4 @@
   
 </div>
 
-A media library completion service that integrates with *arr applications (Sonarr, Radarr, Whisparr) to systematically identify and request missing or upgradeable content.
+A media library completion service that integrates with \*arr applications (Sonarr, Radarr, Whisparr) to systematically identify and request missing or upgradeable content.

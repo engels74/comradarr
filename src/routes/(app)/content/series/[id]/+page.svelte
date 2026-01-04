@@ -27,7 +27,9 @@
 		whisparr: 'bg-purple-500/10 text-purple-600 dark:text-purple-400'
 	};
 
-	const typeColor = $derived(typeColors[data.series.connectorType] ?? 'bg-gray-500/10 text-gray-600');
+	const typeColor = $derived(
+		typeColors[data.series.connectorType] ?? 'bg-gray-500/10 text-gray-600'
+	);
 
 	// Format series status for display
 	const statusLabel = $derived(
@@ -202,8 +204,7 @@
 					</div>
 					<div class="flex items-center justify-between p-3 rounded bg-red-50 dark:bg-red-900/20">
 						<span class="text-muted-foreground text-sm">Missing</span>
-						<span class="font-medium text-red-600 dark:text-red-400"
-							>{data.stats.totalMissing}</span
+						<span class="font-medium text-red-600 dark:text-red-400">{data.stats.totalMissing}</span
 						>
 					</div>
 					<div
@@ -350,7 +351,9 @@
 						{#each data.searchHistory as entry (entry.id)}
 							<Table.Row>
 								<Table.Cell class="font-medium">
-									S{String(entry.seasonNumber).padStart(2, '0')}E{String(entry.episodeNumber).padStart(2, '0')}
+									S{String(entry.seasonNumber).padStart(2, '0')}E{String(
+										entry.episodeNumber
+									).padStart(2, '0')}
 									{#if entry.episodeTitle}
 										- {entry.episodeTitle}
 									{/if}

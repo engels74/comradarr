@@ -201,10 +201,7 @@ async function countSearchRegistry(
  * Get all search registry entries for a connector
  */
 async function getSearchRegistries(connectorId: number) {
-	return db
-		.select()
-		.from(searchRegistry)
-		.where(eq(searchRegistry.connectorId, connectorId));
+	return db.select().from(searchRegistry).where(eq(searchRegistry.connectorId, connectorId));
 }
 
 // ============================================================================
@@ -502,7 +499,11 @@ describe('Property 3: Upgrade Discovery Correctness - Property-Based Tests', () 
 						await cleanupConnectorData(testSonarrConnectorId);
 
 						// Create series and season
-						const seriesId = await insertTestSeries(testSonarrConnectorId, 1, 'Property Test Series');
+						const seriesId = await insertTestSeries(
+							testSonarrConnectorId,
+							1,
+							'Property Test Series'
+						);
 						const seasonId = await insertTestSeason(seriesId, 1);
 
 						// Insert episodes
@@ -739,10 +740,7 @@ describe('Upgrade Registry Cleanup on Success', () => {
 			expect(registryCount).toBe(1);
 
 			// Update movie qualityCutoffNotMet to false (simulating successful upgrade)
-			await db
-				.update(movies)
-				.set({ qualityCutoffNotMet: false })
-				.where(eq(movies.id, movieId));
+			await db.update(movies).set({ qualityCutoffNotMet: false }).where(eq(movies.id, movieId));
 
 			// Run discovery again - should clean up resolved registry
 			const result2 = await discoverUpgrades(testRadarrConnectorId);
@@ -756,7 +754,14 @@ describe('Upgrade Registry Cleanup on Success', () => {
 
 		it('should handle mixed resolved and unresolved upgrades', async () => {
 			// Create two movies with qualityCutoffNotMet=true (upgrade candidates)
-			const movieId1 = await insertTestMovie(testRadarrConnectorId, 201, 'Movie 1', true, true, true);
+			const movieId1 = await insertTestMovie(
+				testRadarrConnectorId,
+				201,
+				'Movie 1',
+				true,
+				true,
+				true
+			);
 			await insertTestMovie(testRadarrConnectorId, 202, 'Movie 2', true, true, true);
 
 			// Run discovery - creates 2 registries
@@ -768,10 +773,7 @@ describe('Upgrade Registry Cleanup on Success', () => {
 			expect(registryCount).toBe(2);
 
 			// Update only one movie qualityCutoffNotMet to false
-			await db
-				.update(movies)
-				.set({ qualityCutoffNotMet: false })
-				.where(eq(movies.id, movieId1));
+			await db.update(movies).set({ qualityCutoffNotMet: false }).where(eq(movies.id, movieId1));
 
 			// Run discovery again
 			const result2 = await discoverUpgrades(testRadarrConnectorId);

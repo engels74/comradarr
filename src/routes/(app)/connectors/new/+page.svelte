@@ -74,7 +74,6 @@
 						</div>
 					{/if}
 
-
 					<div class="grid gap-2">
 						<Label for="name">Name</Label>
 						<Input
@@ -86,9 +85,7 @@
 							disabled={isLoading}
 							value={form?.name ?? ''}
 						/>
-						<p class="text-xs text-muted-foreground">
-							A friendly name to identify this connector.
-						</p>
+						<p class="text-xs text-muted-foreground">A friendly name to identify this connector.</p>
 					</div>
 
 					<div class="grid gap-2">

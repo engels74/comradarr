@@ -59,9 +59,10 @@
 	 */
 	function formatTitle(completion: SerializedCompletion): string {
 		if (completion.contentType === 'episode') {
-			const episode = completion.seasonNumber !== null && completion.episodeNumber !== null
-				? `S${String(completion.seasonNumber).padStart(2, '0')}E${String(completion.episodeNumber).padStart(2, '0')}`
-				: '';
+			const episode =
+				completion.seasonNumber !== null && completion.episodeNumber !== null
+					? `S${String(completion.seasonNumber).padStart(2, '0')}E${String(completion.episodeNumber).padStart(2, '0')}`
+					: '';
 			const title = completion.contentTitle ?? 'Unknown Episode';
 			return episode ? `${episode} - ${title}` : title;
 		}
@@ -86,7 +87,9 @@
 			<div class="space-y-3">
 				{#each completions as completion (completion.id)}
 					{@const link = getContentLink(completion)}
-					<div class="flex items-center justify-between gap-4 p-3 rounded-lg border bg-card hover:bg-muted/50 transition-colors">
+					<div
+						class="flex items-center justify-between gap-4 p-3 rounded-lg border bg-card hover:bg-muted/50 transition-colors"
+					>
 						<!-- Content info -->
 						<div class="flex-1 min-w-0">
 							<div class="flex items-center gap-2">

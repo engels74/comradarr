@@ -1,6 +1,12 @@
 <script lang="ts">
 	import type { PageProps } from './$types';
-	import { QueueBulkActions, QueueControls, QueueFilters, QueueTable, RecentCompletions } from '$lib/components/queue';
+	import {
+		QueueBulkActions,
+		QueueControls,
+		QueueFilters,
+		QueueTable,
+		RecentCompletions
+	} from '$lib/components/queue';
 	import { Button } from '$lib/components/ui/button';
 	import { toastStore } from '$lib/components/ui/toast';
 	import { goto } from '$app/navigation';
@@ -122,10 +128,7 @@
 	</div>
 
 	<!-- Filters -->
-	<QueueFilters
-		connectors={data.connectors}
-		statusCounts={data.statusCounts}
-	/>
+	<QueueFilters connectors={data.connectors} statusCounts={data.statusCounts} />
 
 	<!-- Bulk Actions (when items selected) -->
 	<QueueBulkActions
@@ -191,8 +194,5 @@
 	{/if}
 
 	<!-- Recent Completions -->
-	<RecentCompletions
-		completions={data.recentCompletions}
-		class="mt-8"
-	/>
+	<RecentCompletions completions={data.recentCompletions} class="mt-8" />
 </div>

@@ -79,11 +79,7 @@ export {
 	DEFAULT_PAGE_SIZE
 } from './common/pagination.js';
 
-export type {
-	FetchAllPagesOptions,
-	PageFetcher,
-	PaginationMetadata
-} from './common/pagination.js';
+export type { FetchAllPagesOptions, PageFetcher, PaginationMetadata } from './common/pagination.js';
 
 // Sonarr types
 export type {

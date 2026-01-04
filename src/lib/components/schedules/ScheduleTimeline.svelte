@@ -49,7 +49,9 @@
 					class="flex items-center gap-1.5 px-2 py-1 rounded-md bg-amber-500/10 text-amber-600 dark:text-amber-400"
 				>
 					<AlertTriangleIcon class="h-4 w-4" />
-					<span class="font-medium">{timeline.conflictCount} conflict{timeline.conflictCount !== 1 ? 's' : ''}</span>
+					<span class="font-medium"
+						>{timeline.conflictCount} conflict{timeline.conflictCount !== 1 ? 's' : ''}</span
+					>
 				</div>
 			{/if}
 		</div>
@@ -87,9 +89,9 @@
 				<div>
 					<p class="font-medium">Scheduling conflicts detected</p>
 					<p class="text-amber-600 dark:text-amber-400 mt-0.5">
-						{timeline.conflictCount} sweep{timeline.conflictCount !== 1 ? 's are' : ' is'} scheduled
-						within {timeline.conflictThresholdMinutes} minutes of each other. Consider adjusting your
-						schedules to avoid potential indexer overload.
+						{timeline.conflictCount} sweep{timeline.conflictCount !== 1 ? 's are' : ' is'} scheduled within
+						{timeline.conflictThresholdMinutes} minutes of each other. Consider adjusting your schedules
+						to avoid potential indexer overload.
 					</p>
 				</div>
 			</div>

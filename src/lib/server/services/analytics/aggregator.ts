@@ -157,12 +157,8 @@ export async function aggregateHourlyStats(hourBucket: Date): Promise<Aggregatio
 						searchesNoResults: stats.searchesNoResults,
 						avgQueueDepth: stats.avgQueueDepth,
 						peakQueueDepth: stats.peakQueueDepth,
-						avgResponseTimeMs: stats.avgResponseTimeMs
-							? Math.round(stats.avgResponseTimeMs)
-							: null,
-						maxResponseTimeMs: stats.maxResponseTimeMs
-							? Math.round(stats.maxResponseTimeMs)
-							: null,
+						avgResponseTimeMs: stats.avgResponseTimeMs ? Math.round(stats.avgResponseTimeMs) : null,
+						maxResponseTimeMs: stats.maxResponseTimeMs ? Math.round(stats.maxResponseTimeMs) : null,
 						errorCount: stats.errorCount,
 						updatedAt: new Date()
 					}
@@ -179,7 +175,9 @@ export async function aggregateHourlyStats(hourBucket: Date): Promise<Aggregatio
 			durationMs: Date.now() - startTime
 		};
 	} catch (error) {
-		logger.error('Hourly aggregation failed', { error: error instanceof Error ? error.message : String(error) });
+		logger.error('Hourly aggregation failed', {
+			error: error instanceof Error ? error.message : String(error)
+		});
 		return {
 			success: false,
 			hourlyStatsUpdated: 0,
@@ -275,12 +273,8 @@ export async function aggregateDailyStats(dateBucket: Date): Promise<Aggregation
 						searchesNoResults: stats.searchesNoResults,
 						avgQueueDepth: stats.avgQueueDepth,
 						peakQueueDepth: stats.peakQueueDepth,
-						avgResponseTimeMs: stats.avgResponseTimeMs
-							? Math.round(stats.avgResponseTimeMs)
-							: null,
-						maxResponseTimeMs: stats.maxResponseTimeMs
-							? Math.round(stats.maxResponseTimeMs)
-							: null,
+						avgResponseTimeMs: stats.avgResponseTimeMs ? Math.round(stats.avgResponseTimeMs) : null,
+						maxResponseTimeMs: stats.maxResponseTimeMs ? Math.round(stats.maxResponseTimeMs) : null,
 						errorCount: stats.errorCount,
 						updatedAt: new Date()
 					}
@@ -297,7 +291,9 @@ export async function aggregateDailyStats(dateBucket: Date): Promise<Aggregation
 			durationMs: Date.now() - startTime
 		};
 	} catch (error) {
-		logger.error('Daily aggregation failed', { error: error instanceof Error ? error.message : String(error) });
+		logger.error('Daily aggregation failed', {
+			error: error instanceof Error ? error.message : String(error)
+		});
 		return {
 			success: false,
 			hourlyStatsUpdated: 0,
@@ -330,7 +326,9 @@ export async function cleanupOldEvents(retentionDays: number = 7): Promise<numbe
 
 		return deleted.length;
 	} catch (error) {
-		logger.error('Failed to cleanup old events', { error: error instanceof Error ? error.message : String(error) });
+		logger.error('Failed to cleanup old events', {
+			error: error instanceof Error ? error.message : String(error)
+		});
 		return 0;
 	}
 }

@@ -661,7 +661,10 @@ export const completionSnapshots = pgTable(
 		// Index for querying recent snapshots per connector (most recent first)
 		index('completion_snapshots_connector_time_idx').on(table.connectorId, table.capturedAt.desc()),
 		// Unique constraint to prevent duplicate snapshots at same timestamp
-		uniqueIndex('completion_snapshots_connector_captured_idx').on(table.connectorId, table.capturedAt)
+		uniqueIndex('completion_snapshots_connector_captured_idx').on(
+			table.connectorId,
+			table.capturedAt
+		)
 	]
 );
 
@@ -829,10 +832,7 @@ export const analyticsDailyStats = pgTable(
 	},
 	(table) => [
 		// Unique constraint: one row per connector per day
-		uniqueIndex('analytics_daily_stats_connector_date_idx').on(
-			table.connectorId,
-			table.dateBucket
-		),
+		uniqueIndex('analytics_daily_stats_connector_date_idx').on(table.connectorId, table.dateBucket),
 		// Index for date range queries (CSV export)
 		index('analytics_daily_stats_date_idx').on(table.dateBucket.desc()),
 		// Index for connector-specific queries
