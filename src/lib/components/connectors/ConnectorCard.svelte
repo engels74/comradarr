@@ -16,15 +16,32 @@ interface Props {
 let { connector, stats, class: className }: Props = $props();
 
 /**
- * Connector type badge colors
+ * Connector type styles with OKLCH accent colors
  */
-const typeColors: Record<string, string> = {
-	sonarr: 'bg-blue-500/10 text-blue-600 dark:text-blue-400',
-	radarr: 'bg-orange-500/10 text-orange-600 dark:text-orange-400',
-	whisparr: 'bg-purple-500/10 text-purple-600 dark:text-purple-400'
+const typeStyles: Record<string, { badge: string; glow: string }> = {
+	sonarr: {
+		badge:
+			'bg-[oklch(var(--accent-sonarr)/0.15)] text-[oklch(var(--accent-sonarr))] border border-[oklch(var(--accent-sonarr)/0.3)]',
+		glow: 'hover:shadow-[0_0_20px_oklch(var(--accent-sonarr)/0.2)]'
+	},
+	radarr: {
+		badge:
+			'bg-[oklch(var(--accent-radarr)/0.15)] text-[oklch(var(--accent-radarr))] border border-[oklch(var(--accent-radarr)/0.3)]',
+		glow: 'hover:shadow-[0_0_20px_oklch(var(--accent-radarr)/0.2)]'
+	},
+	whisparr: {
+		badge:
+			'bg-[oklch(var(--accent-whisparr)/0.15)] text-[oklch(var(--accent-whisparr))] border border-[oklch(var(--accent-whisparr)/0.3)]',
+		glow: 'hover:shadow-[0_0_20px_oklch(var(--accent-whisparr)/0.2)]'
+	}
 };
 
-const typeColor = $derived(typeColors[connector.type] ?? 'bg-gray-500/10 text-gray-600');
+const currentStyles = $derived(
+	typeStyles[connector.type] ?? {
+		badge: 'bg-muted text-muted-foreground border border-border',
+		glow: ''
+	}
+);
 
 /**
  * Format connector type with capitalized first letter
@@ -41,14 +58,14 @@ const truncatedUrl = $derived(() => {
 });
 </script>
 
-<Card.Root class={cn('relative', className)}>
+<Card.Root variant="glass" class={cn('relative transition-all duration-300', currentStyles.glow, className)}>
 	<Card.Header class="pb-3">
 		<div class="flex items-start justify-between gap-2">
-			<div class="space-y-1">
-				<Card.Title class="text-lg">
+			<div class="space-y-2">
+				<Card.Title class="text-lg font-display font-semibold">
 					<a
 						href="/connectors/{connector.id}"
-						class="hover:underline hover:text-primary transition-colors"
+						class="hover:text-primary transition-colors"
 					>
 						{connector.name}
 					</a>
@@ -56,8 +73,8 @@ const truncatedUrl = $derived(() => {
 				<div class="flex items-center gap-2">
 					<span
 						class={cn(
-							'inline-flex items-center rounded-md px-2 py-1 text-xs font-medium',
-							typeColor
+							'inline-flex items-center rounded-lg px-2.5 py-1 text-xs font-medium',
+							currentStyles.badge
 						)}
 					>
 						{formattedType}
@@ -71,11 +88,12 @@ const truncatedUrl = $derived(() => {
 				<input type="hidden" name="enabled" value={!connector.enabled} />
 				<Button
 					type="submit"
-					variant={connector.enabled ? 'outline' : 'secondary'}
+					variant="glass"
 					size="sm"
 					class={cn(
+						'text-xs',
 						connector.enabled
-							? 'text-green-600 hover:text-green-700 dark:text-green-400'
+							? 'text-success border-success/30'
 							: 'text-muted-foreground'
 					)}
 				>
@@ -91,13 +109,13 @@ const truncatedUrl = $derived(() => {
 		</div>
 
 		<!-- Quick Stats -->
-		<div class="flex items-center gap-4 text-sm">
+		<div class="flex items-center gap-4 text-sm pt-2 border-t border-glass-border/20">
 			<div class="flex items-center gap-1.5">
-				<span class="font-medium text-foreground">{stats.gapsCount}</span>
+				<span class="font-semibold text-foreground">{stats.gapsCount}</span>
 				<span class="text-muted-foreground">gaps</span>
 			</div>
 			<div class="flex items-center gap-1.5">
-				<span class="font-medium text-foreground">{stats.queueDepth}</span>
+				<span class="font-semibold text-foreground">{stats.queueDepth}</span>
 				<span class="text-muted-foreground">queued</span>
 			</div>
 		</div>
@@ -105,10 +123,10 @@ const truncatedUrl = $derived(() => {
 		<!-- Last Sync -->
 		{#if connector.lastSync}
 			<div class="text-xs text-muted-foreground">
-				Last sync: {new Date(connector.lastSync).toLocaleString()}
+				Last sync: <span class="text-foreground/80">{new Date(connector.lastSync).toLocaleString()}</span>
 			</div>
 		{:else}
-			<div class="text-xs text-muted-foreground">Never synced</div>
+			<div class="text-xs text-muted-foreground italic opacity-75">Never synced</div>
 		{/if}
 	</Card.Content>
 </Card.Root>

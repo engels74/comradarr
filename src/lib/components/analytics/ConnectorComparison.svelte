@@ -12,11 +12,11 @@ interface Props {
 
 let { stats, class: className = '' }: Props = $props();
 
-// Connector type colors
+// Connector type colors using OKLCH accent colors
 const connectorTypeColors: Record<string, string> = {
-	sonarr: 'bg-blue-500/10 text-blue-700 dark:text-blue-400',
-	radarr: 'bg-orange-500/10 text-orange-700 dark:text-orange-400',
-	whisparr: 'bg-purple-500/10 text-purple-700 dark:text-purple-400'
+	sonarr: 'bg-[oklch(var(--accent-sonarr)/0.15)] text-[oklch(var(--accent-sonarr))]',
+	radarr: 'bg-[oklch(var(--accent-radarr)/0.15)] text-[oklch(var(--accent-radarr))]',
+	whisparr: 'bg-[oklch(var(--accent-whisparr)/0.15)] text-[oklch(var(--accent-whisparr))]'
 };
 
 /**
@@ -40,14 +40,14 @@ function formatResponseTime(ms: number | null): string {
 const hasData = $derived(stats.length > 0);
 </script>
 
-<Card.Root class={className}>
+<Card.Root variant="glass" class={className}>
 	<Card.Header class="pb-2">
-		<Card.Title class="text-lg">Connector Comparison</Card.Title>
+		<Card.Title class="text-lg font-display">Connector Comparison</Card.Title>
 		<Card.Description>Performance metrics across all connectors</Card.Description>
 	</Card.Header>
 	<Card.Content>
 		{#if hasData}
-			<div class="rounded-md border">
+			<div class="rounded-xl border border-glass-border/30 overflow-hidden">
 				<Table.Root>
 					<Table.Header>
 						<Table.Row>
@@ -99,9 +99,11 @@ const hasData = $derived(stats.length > 0);
 			</div>
 		{:else}
 			<div class="flex flex-col items-center justify-center py-12 text-muted-foreground">
-				<ServerIcon class="h-8 w-8 mb-2 opacity-50" />
-				<p>No connector data available</p>
-				<p class="text-sm mt-1">Add connectors to see comparison metrics</p>
+				<div class="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-glass/50 mb-3">
+					<ServerIcon class="h-6 w-6 opacity-50" />
+				</div>
+				<p class="font-medium">No connector data available</p>
+				<p class="text-sm mt-1 opacity-75">Add connectors to see comparison metrics</p>
 			</div>
 		{/if}
 	</Card.Content>

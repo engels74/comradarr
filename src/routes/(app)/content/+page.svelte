@@ -187,17 +187,17 @@ function handleActionComplete(message: string) {
 	<title>Content Browser - Comradarr</title>
 </svelte:head>
 
-<div class="container mx-auto p-6">
+<div class="container mx-auto p-6 lg:p-8">
 	<!-- Header -->
-	<div class="flex items-center justify-between mb-6">
-		<div>
-			<h1 class="text-3xl font-bold">Content Browser</h1>
-			<p class="text-muted-foreground mt-1">Browse and manage your library content</p>
-		</div>
-	</div>
+	<header class="mb-8 animate-float-up" style="animation-delay: 0ms;">
+		<h1 class="font-display text-3xl font-semibold tracking-tight md:text-4xl">Content Browser</h1>
+		<p class="text-muted-foreground mt-2">Browse and manage your library content</p>
+	</header>
 
 	<!-- Filters -->
-	<ContentFilters connectors={data.connectors} statusCounts={data.statusCounts} />
+	<div class="animate-float-up" style="animation-delay: 50ms;">
+		<ContentFilters connectors={data.connectors} statusCounts={data.statusCounts} />
+	</div>
 
 	<!-- Bulk Action Bar (shown when items selected) -->
 	<BulkActionBar
@@ -209,9 +209,14 @@ function handleActionComplete(message: string) {
 
 	<!-- Content -->
 	{#if loadedItems.length === 0}
-		<div class="rounded-lg border border-dashed p-8 text-center">
+		<div class="glass-panel p-8 text-center animate-float-up" style="animation-delay: 100ms;">
+			<div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-glass/50 mb-4">
+				<svg class="h-8 w-8 text-muted-foreground opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+				</svg>
+			</div>
 			<h2 class="text-lg font-medium mb-2">No content found</h2>
-			<p class="text-muted-foreground">
+			<p class="text-muted-foreground text-sm">
 				{#if data.filters.search}
 					No results for "{data.filters.search}". Try a different search term.
 				{:else if data.filters.status !== 'all'}

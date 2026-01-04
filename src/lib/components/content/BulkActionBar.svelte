@@ -71,7 +71,7 @@ function createEnhanceHandler(setLoading: (val: boolean) => void, closeDialog?: 
 </script>
 
 {#if selectedCount > 0}
-	<div class="sticky top-0 z-10 bg-background/95 backdrop-blur border-b shadow-sm mb-4">
+	<div class="sticky top-0 z-10 glass-elevated border-b border-glass-border/30 mb-4 rounded-xl">
 		<div class="flex items-center justify-between px-4 py-3">
 			<!-- Selection info -->
 			<div class="flex items-center gap-3">

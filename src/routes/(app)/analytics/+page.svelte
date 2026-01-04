@@ -41,16 +41,16 @@ function onPeriodChange(period: TimePeriod) {
 	<title>Analytics - Comradarr</title>
 </svelte:head>
 
-<div class="container mx-auto p-6">
+<div class="container mx-auto p-6 lg:p-8">
 	<!-- Header with period selector and export -->
-	<div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+	<header class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8 animate-float-up" style="animation-delay: 0ms;">
 		<div class="flex items-center gap-3">
-			<div class="p-2 rounded-lg bg-primary/10">
+			<div class="p-2.5 rounded-xl bg-primary/10">
 				<BarChart3Icon class="h-6 w-6 text-primary" />
 			</div>
 			<div>
-				<h1 class="text-3xl font-bold">Analytics</h1>
-				<p class="text-muted-foreground mt-1">
+				<h1 class="font-display text-3xl font-semibold tracking-tight md:text-4xl">Analytics</h1>
+				<p class="text-muted-foreground mt-2">
 					Performance metrics and insights for your library completion
 				</p>
 			</div>
@@ -59,27 +59,35 @@ function onPeriodChange(period: TimePeriod) {
 			<TimePeriodSelector value={data.period as TimePeriod} onchange={onPeriodChange} />
 			<ExportDialog />
 		</div>
-	</div>
+	</header>
 
 	<!-- Summary Cards -->
-	<AnalyticsSummaryCards summary={data.summary} class="mb-6" />
+	<section class="animate-float-up" style="animation-delay: 50ms;">
+		<AnalyticsSummaryCards summary={data.summary} class="mb-6" />
+	</section>
 
 	<!-- Time Series Charts (2-column grid on large screens) -->
-	<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+	<section class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6 animate-float-up" style="animation-delay: 100ms;">
 		<DiscoveryChart metrics={data.discoveryMetrics} period={data.period as TimePeriod} />
 		<SearchVolumeChart metrics={data.searchMetrics} period={data.period as TimePeriod} />
-	</div>
+	</section>
 
 	<!-- Queue Depth (full width) -->
-	<QueueDepthChart metrics={data.queueMetrics} period={data.period as TimePeriod} class="mb-6" />
+	<section class="animate-float-up" style="animation-delay: 150ms;">
+		<QueueDepthChart metrics={data.queueMetrics} period={data.period as TimePeriod} class="mb-6" />
+	</section>
 
 	<!-- Connector Comparison -->
-	<ConnectorComparison stats={data.connectorStats} class="mb-6" />
+	<section class="animate-float-up" style="animation-delay: 200ms;">
+		<ConnectorComparison stats={data.connectorStats} class="mb-6" />
+	</section>
 
 	<!-- Content Analysis (with tabs) -->
-	<ContentAnalysis
-		mostSearched={data.mostSearched}
-		hardestToFind={data.hardestToFind}
-		qualityDistribution={data.qualityDistribution}
-	/>
+	<section class="animate-float-up" style="animation-delay: 250ms;">
+		<ContentAnalysis
+			mostSearched={data.mostSearched}
+			hardestToFind={data.hardestToFind}
+			qualityDistribution={data.qualityDistribution}
+		/>
+	</section>
 </div>

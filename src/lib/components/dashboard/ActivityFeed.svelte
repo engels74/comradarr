@@ -156,32 +156,37 @@ function getIconTextClass(activity: SerializedActivity): string {
 }
 </script>
 
-<Card.Root class={className}>
+<Card.Root variant="glass" class={className}>
 	<Card.Header>
-		<Card.Title class="text-lg">Recent Activity</Card.Title>
+		<Card.Title class="text-lg flex items-center gap-2">
+			<RefreshCwIcon class="h-5 w-5 text-primary" />
+			Recent Activity
+		</Card.Title>
 		<Card.Description>
 			{activities.length} recent event{activities.length !== 1 ? 's' : ''} in your library
 		</Card.Description>
 	</Card.Header>
 	<Card.Content>
 		{#if activities.length === 0}
-			<div class="text-center py-8 text-muted-foreground">
-				<AlertCircleIcon class="h-8 w-8 mx-auto mb-2 opacity-50" />
-				<p>No recent activity yet.</p>
-				<p class="text-sm mt-1">Activity will appear here as searches and discoveries occur.</p>
+			<div class="text-center py-12 text-muted-foreground">
+				<div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-glass/50 mb-4">
+					<AlertCircleIcon class="h-8 w-8 opacity-50" />
+				</div>
+				<p class="font-medium">No recent activity yet.</p>
+				<p class="text-sm mt-1 opacity-75">Activity will appear here as searches and discoveries occur.</p>
 			</div>
 		{:else}
-			<div class="space-y-3">
+			<div class="space-y-2">
 				{#each activities as activity (activity.id)}
 					{@const ActivityIcon = getActivityIcon(activity)}
 					{@const ContentIcon = getContentIcon(activity)}
 					<div
-						class="flex items-center justify-between gap-4 p-3 rounded-lg border bg-card hover:bg-muted/50 transition-colors"
+						class="flex items-center justify-between gap-4 p-3 rounded-xl border border-glass-border/20 bg-glass/30 backdrop-blur-sm hover:bg-glass/50 transition-all duration-200"
 					>
 						<!-- Activity icon -->
 						<div class="shrink-0">
 							<div
-								class="h-8 w-8 rounded-full flex items-center justify-center {getIconBgClass(
+								class="h-9 w-9 rounded-xl flex items-center justify-center {getIconBgClass(
 									activity
 								)}"
 							>
@@ -221,7 +226,7 @@ function getIconTextClass(activity: SerializedActivity): string {
 							<OutcomeBadge outcome={activity.outcome} class="shrink-0" />
 						{:else if activity.type === 'discovery' && activity.searchType}
 							<span
-								class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium shrink-0 {getDiscoveryColor(
+								class="inline-flex items-center gap-1 rounded-lg px-2 py-0.5 text-xs font-medium shrink-0 {getDiscoveryColor(
 									activity.searchType
 								)}"
 							>
@@ -232,7 +237,7 @@ function getIconTextClass(activity: SerializedActivity): string {
 							</span>
 						{:else if activity.type === 'sync'}
 							<span
-								class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium shrink-0 bg-green-500/20 text-green-600 dark:text-green-400"
+								class="inline-flex items-center gap-1 rounded-lg px-2 py-0.5 text-xs font-medium shrink-0 bg-success/20 text-success"
 							>
 								<RefreshCwIcon class="h-3 w-3" />
 								Synced

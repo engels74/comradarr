@@ -9,38 +9,41 @@ import type { PageProps } from './$types';
 let { data }: PageProps = $props();
 </script>
 
-<div class="container mx-auto p-6">
+<div class="container mx-auto p-6 lg:p-8">
 	<!-- Page Header -->
-	<div class="mb-6">
-		<h1 class="text-3xl font-bold">Dashboard</h1>
-		<p class="text-muted-foreground mt-1">Overview of your media library completion status</p>
-	</div>
+	<header class="mb-8">
+		<h1 class="font-display text-3xl font-semibold tracking-tight md:text-4xl">Dashboard</h1>
+		<p class="text-muted-foreground mt-2">Overview of your media library completion status</p>
+	</header>
 
-	<!-- Statistics Section -->
-	<div class="mb-6">
+	<!-- Statistics Section - Hero Stats -->
+	<section class="mb-8 animate-float-up" style="animation-delay: 0ms;">
 		<StatisticsPanel contentStats={data.contentStats} todayStats={data.todayStats} />
+	</section>
+
+	<!-- Main Content Grid -->
+	<div class="grid gap-6 lg:grid-cols-2">
+		<!-- Library Completion Section (Requirement 15.4) -->
+		<section class="animate-float-up" style="animation-delay: 50ms;">
+			<LibraryCompletionPanel completionData={data.completionData} />
+		</section>
+
+		<!-- Upcoming Schedules Section (Requirement 15.5) -->
+		<!-- Only show when connectors are configured, as scheduled jobs are meaningless without them -->
+		{#if data.connectors.length > 0}
+			<section class="animate-float-up" style="animation-delay: 100ms;">
+				<UpcomingSchedulePanel scheduledJobs={data.scheduledJobs} />
+			</section>
+		{/if}
+
+		<!-- Connection Status Section -->
+		<section class="animate-float-up {data.connectors.length > 0 ? '' : 'lg:col-span-2'}" style="animation-delay: 150ms;">
+			<ConnectionStatusPanel connectors={data.connectors} stats={data.stats} />
+		</section>
 	</div>
 
-	<!-- Library Completion Section (Requirement 15.4) -->
-	<div class="mb-6">
-		<LibraryCompletionPanel completionData={data.completionData} />
-	</div>
-
-	<!-- Upcoming Schedules Section (Requirement 15.5) -->
-	<!-- Only show when connectors are configured, as scheduled jobs are meaningless without them -->
-	{#if data.connectors.length > 0}
-		<div class="mb-6">
-			<UpcomingSchedulePanel scheduledJobs={data.scheduledJobs} />
-		</div>
-	{/if}
-
-	<!-- Connection Status Section -->
-	<div class="mb-6">
-		<ConnectionStatusPanel connectors={data.connectors} stats={data.stats} />
-	</div>
-
-	<!-- Activity Feed Section -->
-	<div class="mb-6">
+	<!-- Activity Feed Section - Full Width -->
+	<section class="mt-6 animate-float-up" style="animation-delay: 200ms;">
 		<ActivityFeed activities={data.activities} />
-	</div>
+	</section>
 </div>

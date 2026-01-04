@@ -53,9 +53,9 @@ const datasets = $derived(() => {
 const hasData = $derived(metrics.length > 0 && metrics.some((m) => m.gapsDiscovered.length > 0));
 </script>
 
-<Card.Root class={className}>
+<Card.Root variant="glass" class={className}>
 	<Card.Header class="pb-2">
-		<Card.Title class="text-lg">Discovery Rate</Card.Title>
+		<Card.Title class="text-lg font-display">Discovery Rate</Card.Title>
 		<Card.Description>Gaps and upgrade candidates discovered over time</Card.Description>
 	</Card.Header>
 	<Card.Content>
@@ -63,9 +63,11 @@ const hasData = $derived(metrics.length > 0 && metrics.some((m) => m.gapsDiscove
 			<TimeSeriesChart datasets={datasets()} yAxisLabel="Items Discovered" {period} height={280} />
 		{:else}
 			<div class="flex flex-col items-center justify-center py-12 text-muted-foreground">
-				<AlertCircleIcon class="h-8 w-8 mb-2 opacity-50" />
-				<p>No discovery data available</p>
-				<p class="text-sm mt-1">Data will appear after discovery runs</p>
+				<div class="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-glass/50 mb-3">
+					<AlertCircleIcon class="h-6 w-6 opacity-50" />
+				</div>
+				<p class="font-medium">No discovery data available</p>
+				<p class="text-sm mt-1 opacity-75">Data will appear after discovery runs</p>
 			</div>
 		{/if}
 	</Card.Content>

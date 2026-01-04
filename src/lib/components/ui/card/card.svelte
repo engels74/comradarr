@@ -2,19 +2,31 @@
 import type { HTMLAttributes } from 'svelte/elements';
 import { cn, type WithElementRef } from '$lib/utils.js';
 
+interface CardProps extends WithElementRef<HTMLAttributes<HTMLDivElement>> {
+	variant?: 'default' | 'glass' | 'elevated';
+}
+
 let {
 	ref = $bindable(null),
 	class: className,
+	variant = 'default',
 	children,
 	...restProps
-}: WithElementRef<HTMLAttributes<HTMLDivElement>> = $props();
+}: CardProps = $props();
+
+const variantStyles = {
+	default: 'bg-card border-border shadow-sm',
+	glass: 'glass-panel',
+	elevated: 'glass-elevated'
+};
 </script>
 
 <div
 	bind:this={ref}
 	data-slot="card"
 	class={cn(
-		'bg-card text-card-foreground flex flex-col gap-6 rounded-xl border py-6 shadow-sm',
+		'flex flex-col gap-6 rounded-xl border py-6 text-card-foreground transition-all duration-200',
+		variantStyles[variant],
 		className
 	)}
 	{...restProps}

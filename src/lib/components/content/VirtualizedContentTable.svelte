@@ -106,17 +106,20 @@ function getSortIndicator(column: string): string {
 	return currentOrder === 'asc' ? ' \u2191' : ' \u2193';
 }
 
-// Connector type colors (matching existing pattern)
+// Connector type colors using OKLCH accent colors
 const typeColors: Record<string, string> = {
-	sonarr: 'bg-blue-500/10 text-blue-600 dark:text-blue-400',
-	radarr: 'bg-orange-500/10 text-orange-600 dark:text-orange-400',
-	whisparr: 'bg-purple-500/10 text-purple-600 dark:text-purple-400'
+	sonarr:
+		'bg-[oklch(var(--accent-sonarr)/0.15)] text-[oklch(var(--accent-sonarr))] border border-[oklch(var(--accent-sonarr)/0.3)]',
+	radarr:
+		'bg-[oklch(var(--accent-radarr)/0.15)] text-[oklch(var(--accent-radarr))] border border-[oklch(var(--accent-radarr)/0.3)]',
+	whisparr:
+		'bg-[oklch(var(--accent-whisparr)/0.15)] text-[oklch(var(--accent-whisparr))] border border-[oklch(var(--accent-whisparr)/0.3)]'
 };
 </script>
 
-<div class="rounded-md border">
+<div class="glass-panel overflow-hidden animate-float-up" style="animation-delay: 100ms;">
 	<!-- Sticky header -->
-	<div class="border-b bg-muted/50">
+	<div class="border-b border-glass-border/30 bg-glass/50 backdrop-blur-sm">
 		<div class="flex items-center h-12 px-4 gap-4 text-sm font-medium text-muted-foreground">
 			{#if selectionEnabled}
 				<div class="w-8 flex-shrink-0">
@@ -168,8 +171,8 @@ const typeColors: Record<string, string> = {
 						{@const isSelected = selectionEnabled && selectedKeys!.has(itemKey)}
 						<div
 							class={cn(
-								'absolute left-0 right-0 flex items-center px-4 gap-4 border-b hover:bg-muted/50 transition-colors',
-								isSelected && 'bg-muted/80'
+								'absolute left-0 right-0 flex items-center px-4 gap-4 border-b border-glass-border/20 hover:bg-glass/50 transition-all duration-200',
+								isSelected && 'bg-primary/10 border-l-2 border-l-primary'
 							)}
 							style="height: {ROW_HEIGHT}px; top: {virtualItem.start}px;"
 							data-state={isSelected ? 'selected' : undefined}
@@ -200,8 +203,8 @@ const typeColors: Record<string, string> = {
 							<div class="w-32 flex-shrink-0">
 								<span
 									class={cn(
-										'rounded-md px-2 py-1 text-xs font-medium truncate inline-block max-w-full',
-										typeColors[item.connectorType] ?? 'bg-gray-500/10 text-gray-600'
+										'rounded-lg px-2.5 py-1 text-xs font-medium truncate inline-block max-w-full',
+										typeColors[item.connectorType] ?? 'bg-muted text-muted-foreground border border-border'
 									)}
 								>
 									{item.connectorName}

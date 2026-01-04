@@ -136,7 +136,7 @@ const levelColors: Record<LogLevel, string> = {
 };
 </script>
 
-<div class={cn('space-y-4', className)}>
+<div class={cn('glass-panel p-4 space-y-4 animate-float-up', className)} style="animation-delay: 100ms;">
 	<!-- Search and Actions -->
 	<div class="flex flex-col sm:flex-row gap-3">
 		<div class="relative flex-1">
@@ -162,12 +162,12 @@ const levelColors: Record<LogLevel, string> = {
 		</div>
 
 		<div class="flex gap-2">
-			<Button variant="outline" size="sm" onclick={handleSearch}>Search</Button>
-			<Button variant="outline" size="sm" onclick={handleRefresh} disabled={isRefreshing}>
+			<Button variant="glass" size="sm" onclick={handleSearch}>Search</Button>
+			<Button variant="glass" size="sm" onclick={handleRefresh} disabled={isRefreshing}>
 				<RefreshCwIcon class={cn('h-4 w-4 mr-1', isRefreshing && 'animate-spin')} />
 				Refresh
 			</Button>
-			<Button variant="outline" size="sm" onclick={handleExport}>
+			<Button variant="glass" size="sm" onclick={handleExport}>
 				<DownloadIcon class="h-4 w-4 mr-1" />
 				Export
 			</Button>
@@ -183,18 +183,18 @@ const levelColors: Record<LogLevel, string> = {
 			<button
 				type="button"
 				class={cn(
-					'inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium transition-colors',
+					'inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-all duration-200',
 					isSelected
-						? `${levelColors[level]} text-white`
-						: 'bg-muted text-muted-foreground hover:bg-muted/80'
+						? `${levelColors[level]} text-white shadow-sm`
+						: 'bg-glass/50 border border-glass-border/30 text-muted-foreground hover:bg-glass/70 hover:text-foreground'
 				)}
 				onclick={() => toggleLevel(level)}
 			>
 				<span class="uppercase">{level}</span>
 				<span
 					class={cn(
-						'rounded-full px-1.5 py-0.5 text-[10px]',
-						isSelected ? 'bg-white/20' : 'bg-background'
+						'rounded-md px-1.5 py-0.5 text-[10px]',
+						isSelected ? 'bg-white/20' : 'bg-background/50'
 					)}
 				>
 					{count}
@@ -207,7 +207,7 @@ const levelColors: Record<LogLevel, string> = {
 	<div class="flex flex-wrap items-center gap-3">
 		<span class="text-sm font-medium text-muted-foreground">Module:</span>
 		<select
-			class="rounded-md border border-input bg-background px-3 py-1.5 text-sm"
+			class="rounded-lg border border-glass-border/30 bg-glass/50 backdrop-blur-sm px-3 py-1.5 text-sm transition-all focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary/50 hover:bg-glass/70"
 			value={selectedModule}
 			onchange={handleModuleChange}
 		>
