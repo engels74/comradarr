@@ -4,7 +4,7 @@
 	"version": "0.0.1",
 	"type": "module",
 	"scripts": {
-		"postinstall": "prek install && prek install --hook-type pre-push || true",
+		"postinstall": "if [ -d .git ]; then prek install && prek install --hook-type pre-push; fi",
 		"dev": "bun --bun vite dev",
 		"build": "bun --bun vite build",
 		"preview": "bun --bun vite preview",
