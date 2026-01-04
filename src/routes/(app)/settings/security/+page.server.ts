@@ -2,20 +2,20 @@
  * Security settings page server load and actions.
  */
 
-import type { PageServerLoad, Actions } from './$types';
-import { getSecuritySettings, updateSecuritySettings } from '$lib/server/db/queries/settings';
-import {
-	getUserById,
-	getUserSessions,
-	deleteUserSession,
-	deleteOtherUserSessions,
-	updateUserPassword
-} from '$lib/server/db/queries/auth';
-import { hashPassword, verifyPassword } from '$lib/server/auth';
 import { fail } from '@sveltejs/kit';
 import * as v from 'valibot';
 import { AuthModeSchema, PasswordChangeSchema } from '$lib/schemas/settings';
+import { hashPassword, verifyPassword } from '$lib/server/auth';
+import {
+	deleteOtherUserSessions,
+	deleteUserSession,
+	getUserById,
+	getUserSessions,
+	updateUserPassword
+} from '$lib/server/db/queries/auth';
+import { getSecuritySettings, updateSecuritySettings } from '$lib/server/db/queries/settings';
 import { createLogger } from '$lib/server/logger';
+import type { Actions, PageServerLoad } from './$types';
 
 const logger = createLogger('security');
 

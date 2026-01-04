@@ -11,8 +11,8 @@
  * - Hash format is valid Argon2id
  */
 
-import { describe, it, expect } from 'vitest';
 import * as fc from 'fast-check';
+import { describe, expect, it } from 'vitest';
 import { hashPassword, verifyPassword } from '../../src/lib/server/auth/password';
 
 /**

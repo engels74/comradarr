@@ -16,18 +16,18 @@
  * Run with: bun test tests/integration/gap-discovery.test.ts
  */
 
-import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'bun:test';
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'bun:test';
+import { and, eq, sql } from 'drizzle-orm';
 import * as fc from 'fast-check';
 import { db } from '../../src/lib/server/db';
 import {
 	connectors,
-	series,
-	seasons,
 	episodes,
 	movies,
-	searchRegistry
+	searchRegistry,
+	seasons,
+	series
 } from '../../src/lib/server/db/schema';
-import { eq, and, sql } from 'drizzle-orm';
 import { discoverGaps, getGapStats } from '../../src/lib/server/services/discovery';
 
 // Store original SECRET_KEY to restore after tests

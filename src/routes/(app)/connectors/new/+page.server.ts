@@ -4,24 +4,24 @@
 
 import { fail } from '@sveltejs/kit';
 import * as v from 'valibot';
-import { ConnectorSchema, type ConnectorOutput } from '$lib/schemas/connectors';
+import { type ConnectorOutput, ConnectorSchema } from '$lib/schemas/connectors';
 import {
-	createConnector,
-	connectorNameExists,
-	type ConnectorType
-} from '$lib/server/db/queries/connectors';
-import {
-	SonarrClient,
-	RadarrClient,
-	WhisparrClient,
 	AuthenticationError,
+	isArrClientError,
 	NetworkError,
-	TimeoutError,
+	RadarrClient,
+	SonarrClient,
 	SSLError,
-	isArrClientError
+	TimeoutError,
+	WhisparrClient
 } from '$lib/server/connectors';
-import type { Actions } from './$types';
+import {
+	type ConnectorType,
+	connectorNameExists,
+	createConnector
+} from '$lib/server/db/queries/connectors';
 import { createLogger } from '$lib/server/logger';
+import type { Actions } from './$types';
 
 const logger = createLogger('connectors');
 

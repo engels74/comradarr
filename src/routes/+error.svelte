@@ -1,25 +1,25 @@
 <script lang="ts">
-	/**
-	 * Global error page component.
-	 * Handles 404, 500, and other HTTP errors with branded UI.
-	 */
-	import { page } from '$app/stores';
-	import { Button } from '$lib/components/ui/button';
-	import comradarrIcon from '$lib/assets/comradarr-icon.svg';
+/**
+ * Global error page component.
+ * Handles 404, 500, and other HTTP errors with branded UI.
+ */
+import { page } from '$app/stores';
+import comradarrIcon from '$lib/assets/comradarr-icon.svg';
+import { Button } from '$lib/components/ui/button';
 
-	const errorMessages: Record<number, string> = {
-		400: 'Bad request',
-		401: 'Unauthorized',
-		403: 'Forbidden',
-		404: 'Page not found',
-		500: 'Internal server error',
-		502: 'Bad gateway',
-		503: 'Service unavailable'
-	};
+const errorMessages: Record<number, string> = {
+	400: 'Bad request',
+	401: 'Unauthorized',
+	403: 'Forbidden',
+	404: 'Page not found',
+	500: 'Internal server error',
+	502: 'Bad gateway',
+	503: 'Service unavailable'
+};
 
-	const errorMessage = $derived(
-		errorMessages[$page.status] ?? $page.error?.message ?? 'Something went wrong'
-	);
+const errorMessage = $derived(
+	errorMessages[$page.status] ?? $page.error?.message ?? 'Something went wrong'
+);
 </script>
 
 <svelte:head>

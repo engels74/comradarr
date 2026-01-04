@@ -7,10 +7,11 @@
  * - Content analysis (most searched, hardest to find, quality distribution)
  */
 
+import { and, count, eq, gte, lte, sql } from 'drizzle-orm';
 import { db } from '$lib/server/db';
 import {
-	analyticsHourlyStats,
 	analyticsDailyStats,
+	analyticsHourlyStats,
 	connectors,
 	episodes,
 	movies,
@@ -19,7 +20,6 @@ import {
 	seasons,
 	series
 } from '$lib/server/db/schema';
-import { and, count, desc, eq, gte, lte, sql } from 'drizzle-orm';
 
 // =============================================================================
 // Types

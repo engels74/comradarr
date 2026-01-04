@@ -1,31 +1,32 @@
 <script lang="ts">
-	/**
-	 * Conflict Indicator - displays a warning when sweeps conflict.
-	 */
-	import * as Tooltip from '$lib/components/ui/tooltip';
-	import AlertTriangleIcon from '@lucide/svelte/icons/alert-triangle';
-	import { conflictColors } from './types';
+/**
+ * Conflict Indicator - displays a warning when sweeps conflict.
+ */
 
-	interface Props {
-		/** Number of conflicting schedules */
-		conflictCount: number;
-		/** Names of conflicting schedules (for tooltip) */
-		conflictNames?: string[];
-		/** Additional CSS classes */
-		class?: string;
+import AlertTriangleIcon from '@lucide/svelte/icons/alert-triangle';
+import * as Tooltip from '$lib/components/ui/tooltip';
+import { conflictColors } from './types';
+
+interface Props {
+	/** Number of conflicting schedules */
+	conflictCount: number;
+	/** Names of conflicting schedules (for tooltip) */
+	conflictNames?: string[];
+	/** Additional CSS classes */
+	class?: string;
+}
+
+let { conflictCount, conflictNames = [], class: className = '' }: Props = $props();
+
+const tooltipText = $derived(() => {
+	if (conflictNames.length === 0) {
+		return `${conflictCount} conflict${conflictCount > 1 ? 's' : ''} within 5 minutes`;
 	}
-
-	let { conflictCount, conflictNames = [], class: className = '' }: Props = $props();
-
-	const tooltipText = $derived(() => {
-		if (conflictNames.length === 0) {
-			return `${conflictCount} conflict${conflictCount > 1 ? 's' : ''} within 5 minutes`;
-		}
-		if (conflictNames.length === 1) {
-			return `Conflicts with: ${conflictNames[0]}`;
-		}
-		return `Conflicts with: ${conflictNames.slice(0, 2).join(', ')}${conflictNames.length > 2 ? ` +${conflictNames.length - 2} more` : ''}`;
-	});
+	if (conflictNames.length === 1) {
+		return `Conflicts with: ${conflictNames[0]}`;
+	}
+	return `Conflicts with: ${conflictNames.slice(0, 2).join(', ')}${conflictNames.length > 2 ? ` +${conflictNames.length - 2} more` : ''}`;
+});
 </script>
 
 {#if conflictCount > 0}

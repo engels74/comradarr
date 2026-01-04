@@ -1,85 +1,86 @@
 <script lang="ts">
-	/**
-	 * Search behavior settings page.
-	 */
-	import { untrack } from 'svelte';
-	import { enhance } from '$app/forms';
-	import * as Card from '$lib/components/ui/card';
-	import { Input } from '$lib/components/ui/input';
-	import { Button } from '$lib/components/ui/button';
-	import { Label } from '$lib/components/ui/label';
-	import { Checkbox } from '$lib/components/ui/checkbox';
-	import { Separator } from '$lib/components/ui/separator';
-	import { toastStore } from '$lib/components/ui/toast';
-	import {
-		priorityWeightLabels,
-		priorityWeightDescriptions,
-		seasonPackLabels,
-		seasonPackDescriptions,
-		cooldownLabels,
-		cooldownDescriptions,
-		retryLabels,
-		retryDescriptions
-	} from '$lib/schemas/search-settings';
-	import type { PageProps } from './$types';
-	import SearchIcon from '@lucide/svelte/icons/search';
-	import RotateCcwIcon from '@lucide/svelte/icons/rotate-ccw';
+/**
+ * Search behavior settings page.
+ */
 
-	let { data, form }: PageProps = $props();
+import RotateCcwIcon from '@lucide/svelte/icons/rotate-ccw';
+import SearchIcon from '@lucide/svelte/icons/search';
+import { untrack } from 'svelte';
+import { enhance } from '$app/forms';
+import { Button } from '$lib/components/ui/button';
+import * as Card from '$lib/components/ui/card';
+import { Checkbox } from '$lib/components/ui/checkbox';
+import { Input } from '$lib/components/ui/input';
+import { Label } from '$lib/components/ui/label';
+import { Separator } from '$lib/components/ui/separator';
+import { toastStore } from '$lib/components/ui/toast';
+import {
+	cooldownDescriptions,
+	cooldownLabels,
+	priorityWeightDescriptions,
+	priorityWeightLabels,
+	retryDescriptions,
+	retryLabels,
+	seasonPackDescriptions,
+	seasonPackLabels
+} from '$lib/schemas/search-settings';
+import type { PageProps } from './$types';
 
-	let isSubmitting = $state(false);
-	let isResetting = $state(false);
+let { data, form }: PageProps = $props();
 
-	// Form state with initial values from loaded settings
-	// Use untrack to explicitly capture initial value without reactive tracking
-	let jitter = $state(untrack(() => data.settings.cooldownConfig.jitter));
+let isSubmitting = $state(false);
+let isResetting = $state(false);
 
-	// Update jitter when form is submitted with errors (preserve user's choice)
-	$effect(() => {
-		if (form && 'values' in form && form.values) {
-			jitter = form.values.cooldownConfig.jitter;
-		}
-	});
+// Form state with initial values from loaded settings
+// Use untrack to explicitly capture initial value without reactive tracking
+let jitter = $state(untrack(() => data.settings.cooldownConfig.jitter));
 
-	/**
-	 * Get nested form value for priority weights.
-	 */
-	function getPriorityValue(key: keyof typeof data.settings.priorityWeights): number {
-		if (form && 'values' in form && form.values) {
-			return form.values.priorityWeights[key];
-		}
-		return data.settings.priorityWeights[key];
+// Update jitter when form is submitted with errors (preserve user's choice)
+$effect(() => {
+	if (form && 'values' in form && form.values) {
+		jitter = form.values.cooldownConfig.jitter;
 	}
+});
 
-	/**
-	 * Get nested form value for season pack thresholds.
-	 */
-	function getSeasonPackValue(key: keyof typeof data.settings.seasonPackThresholds): number {
-		if (form && 'values' in form && form.values) {
-			return form.values.seasonPackThresholds[key];
-		}
-		return data.settings.seasonPackThresholds[key];
+/**
+ * Get nested form value for priority weights.
+ */
+function getPriorityValue(key: keyof typeof data.settings.priorityWeights): number {
+	if (form && 'values' in form && form.values) {
+		return form.values.priorityWeights[key];
 	}
+	return data.settings.priorityWeights[key];
+}
 
-	/**
-	 * Get nested form value for cooldown config.
-	 */
-	function getCooldownValue(key: 'baseDelayHours' | 'maxDelayHours' | 'multiplier'): number {
-		if (form && 'values' in form && form.values) {
-			return form.values.cooldownConfig[key];
-		}
-		return data.settings.cooldownConfig[key];
+/**
+ * Get nested form value for season pack thresholds.
+ */
+function getSeasonPackValue(key: keyof typeof data.settings.seasonPackThresholds): number {
+	if (form && 'values' in form && form.values) {
+		return form.values.seasonPackThresholds[key];
 	}
+	return data.settings.seasonPackThresholds[key];
+}
 
-	/**
-	 * Get nested form value for retry config.
-	 */
-	function getRetryValue(key: keyof typeof data.settings.retryConfig): number {
-		if (form && 'values' in form && form.values) {
-			return form.values.retryConfig[key];
-		}
-		return data.settings.retryConfig[key];
+/**
+ * Get nested form value for cooldown config.
+ */
+function getCooldownValue(key: 'baseDelayHours' | 'maxDelayHours' | 'multiplier'): number {
+	if (form && 'values' in form && form.values) {
+		return form.values.cooldownConfig[key];
 	}
+	return data.settings.cooldownConfig[key];
+}
+
+/**
+ * Get nested form value for retry config.
+ */
+function getRetryValue(key: keyof typeof data.settings.retryConfig): number {
+	if (form && 'values' in form && form.values) {
+		return form.values.retryConfig[key];
+	}
+	return data.settings.retryConfig[key];
+}
 </script>
 
 <svelte:head>

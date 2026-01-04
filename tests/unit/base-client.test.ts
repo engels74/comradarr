@@ -10,16 +10,16 @@
 
  */
 
-import { describe, it, expect, vi, beforeEach, afterEach, type Mock } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, type Mock, vi } from 'vitest';
 import {
+	AuthenticationError,
 	BaseArrClient,
 	NetworkError,
-	AuthenticationError,
+	NotFoundError,
 	RateLimitError,
 	ServerError,
-	TimeoutError,
-	NotFoundError,
-	SSLError
+	SSLError,
+	TimeoutError
 } from '../../src/lib/server/connectors/index';
 
 // Helper to create a mock fetch that satisfies TypeScript

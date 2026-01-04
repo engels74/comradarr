@@ -12,16 +12,16 @@
  * Run with: bun test tests/integration/search-dispatcher.test.ts
  */
 
-import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'bun:test';
-import { db } from '../../src/lib/server/db';
-import { connectors, throttleState } from '../../src/lib/server/db/schema';
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'bun:test';
 import { eq } from 'drizzle-orm';
-import { throttleEnforcer } from '../../src/lib/server/services/throttle/throttle-enforcer';
-import {
-	getThrottleState,
-	getOrCreateThrottleState
-} from '../../src/lib/server/db/queries/throttle-state';
 import { MODERATE_PRESET } from '../../src/lib/config/throttle-presets';
+import { db } from '../../src/lib/server/db';
+import {
+	getOrCreateThrottleState,
+	getThrottleState
+} from '../../src/lib/server/db/queries/throttle-state';
+import { connectors, throttleState } from '../../src/lib/server/db/schema';
+import { throttleEnforcer } from '../../src/lib/server/services/throttle/throttle-enforcer';
 
 // Store original SECRET_KEY to restore after tests
 const originalSecretKey = process.env.SECRET_KEY;

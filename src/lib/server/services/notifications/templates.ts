@@ -9,8 +9,8 @@
  */
 
 import type { NotificationEventType } from '$lib/server/db/queries/notifications';
-import type { NotificationPayload, NotificationField } from './types';
 import { getEventColor } from './base-channel';
+import type { NotificationField, NotificationPayload } from './types';
 
 // =============================================================================
 // Event Data Types
@@ -518,7 +518,7 @@ function capitalizeFirst(str: string): string {
  */
 function truncateText(text: string, maxLength: number): string {
 	if (text.length <= maxLength) return text;
-	return text.slice(0, maxLength - 3) + '...';
+	return `${text.slice(0, maxLength - 3)}...`;
 }
 
 /**

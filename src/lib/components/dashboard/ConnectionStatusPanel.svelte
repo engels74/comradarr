@@ -1,40 +1,40 @@
 <script lang="ts">
-	import * as Card from '$lib/components/ui/card';
-	import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
-	import type { Connector } from '$lib/server/db/schema';
-	import type { ConnectorStats } from '$lib/server/db/queries/connectors';
+import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
+import * as Card from '$lib/components/ui/card';
+import type { ConnectorStats } from '$lib/server/db/queries/connectors';
+import type { Connector } from '$lib/server/db/schema';
 
-	interface Props {
-		connectors: Connector[];
-		stats: Record<number, ConnectorStats>;
-		class?: string;
+interface Props {
+	connectors: Connector[];
+	stats: Record<number, ConnectorStats>;
+	class?: string;
+}
+
+let { connectors, stats, class: className = '' }: Props = $props();
+
+// Helper to get stats for a connector (with fallback)
+function getStatsForConnector(connectorId: number): ConnectorStats {
+	return stats[connectorId] ?? { connectorId, gapsCount: 0, queueDepth: 0 };
+}
+
+// Compute type badge colors
+function getTypeBadgeClasses(type: string): string {
+	switch (type) {
+		case 'sonarr':
+			return 'bg-blue-500 text-white';
+		case 'radarr':
+			return 'bg-orange-500 text-white';
+		case 'whisparr':
+			return 'bg-purple-500 text-white';
+		default:
+			return 'bg-gray-500 text-white';
 	}
+}
 
-	let { connectors, stats, class: className = '' }: Props = $props();
-
-	// Helper to get stats for a connector (with fallback)
-	function getStatsForConnector(connectorId: number): ConnectorStats {
-		return stats[connectorId] ?? { connectorId, gapsCount: 0, queueDepth: 0 };
-	}
-
-	// Compute type badge colors
-	function getTypeBadgeClasses(type: string): string {
-		switch (type) {
-			case 'sonarr':
-				return 'bg-blue-500 text-white';
-			case 'radarr':
-				return 'bg-orange-500 text-white';
-			case 'whisparr':
-				return 'bg-purple-500 text-white';
-			default:
-				return 'bg-gray-500 text-white';
-		}
-	}
-
-	// Format connector type for display
-	function formatType(type: string): string {
-		return type.charAt(0).toUpperCase() + type.slice(1);
-	}
+// Format connector type for display
+function formatType(type: string): string {
+	return type.charAt(0).toUpperCase() + type.slice(1);
+}
 </script>
 
 <div class={className}>

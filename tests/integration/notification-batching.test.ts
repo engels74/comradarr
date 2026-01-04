@@ -14,20 +14,19 @@
  * Run with: bun test tests/integration/notification-batching.test.ts
  */
 
-import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'bun:test';
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'bun:test';
+import { eq } from 'drizzle-orm';
 import { db } from '../../src/lib/server/db';
-import { notificationChannels, notificationHistory } from '../../src/lib/server/db/schema';
-import { eq, and } from 'drizzle-orm';
 import {
 	createNotificationChannel,
-	getBatchingEnabledChannels,
-	getPendingNotificationsForBatching,
-	markNotificationsAsBatched,
-	getNotificationsByBatchId,
 	createNotificationHistory,
 	deleteNotificationChannel,
-	type NotificationEventType
+	getBatchingEnabledChannels,
+	getNotificationsByBatchId,
+	getPendingNotificationsForBatching,
+	markNotificationsAsBatched
 } from '../../src/lib/server/db/queries/notifications';
+import { notificationHistory } from '../../src/lib/server/db/schema';
 
 // Store original SECRET_KEY to restore after tests
 const originalSecretKey = process.env.SECRET_KEY;
@@ -326,7 +325,7 @@ describe('markNotificationsAsBatched', () => {
 			status: 'pending'
 		});
 
-		const batchId = 'test_batch_' + Date.now();
+		const batchId = `test_batch_${Date.now()}`;
 		const count = await markNotificationsAsBatched([entry1.id, entry2.id], batchId);
 
 		expect(count).toBe(2);
@@ -364,7 +363,7 @@ describe('getNotificationsByBatchId', () => {
 			status: 'pending'
 		});
 
-		const batchId = 'test_batch_' + Date.now();
+		const batchId = `test_batch_${Date.now()}`;
 		await markNotificationsAsBatched([entry1.id, entry2.id], batchId);
 
 		const batched = await getNotificationsByBatchId(batchId);
@@ -396,7 +395,7 @@ describe('getNotificationsByBatchId', () => {
 			status: 'pending'
 		});
 
-		const batchId = 'test_batch_ordered_' + Date.now();
+		const batchId = `test_batch_ordered_${Date.now()}`;
 		await markNotificationsAsBatched([entry1.id, entry2.id], batchId);
 
 		const batched = await getNotificationsByBatchId(batchId);

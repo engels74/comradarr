@@ -16,17 +16,16 @@
 
  */
 
+import { and, eq, inArray, lte, sql } from 'drizzle-orm';
 import { db } from '$lib/server/db';
 import { episodes, searchRegistry } from '$lib/server/db/schema';
-import { and, eq, inArray, lte, sql } from 'drizzle-orm';
+import { calculateNextEligibleTime, shouldMarkExhausted } from './backoff';
 import type {
 	MarkSearchFailedInput,
 	ReenqueueCooldownResult,
 	SearchState,
 	StateTransitionResult
 } from './types';
-import { STATE_TRANSITION_CONFIG } from './config';
-import { calculateNextEligibleTime, shouldMarkExhausted } from './backoff';
 
 // Re-export for convenience
 export { calculateNextEligibleTime, shouldMarkExhausted } from './backoff';

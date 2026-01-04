@@ -1,11 +1,12 @@
 <script lang="ts">
-	/**
-	 * Logout page component.
-	 * This page should rarely be seen as the server immediately redirects.
-	 * Shown only if JavaScript is disabled and redirect fails.
-	 */
-	import * as Card from '$lib/components/ui/card';
-	import { Button } from '$lib/components/ui/button';
+/**
+ * Logout page component.
+ * This page should rarely be seen as the server immediately redirects.
+ * Shown only if JavaScript is disabled and redirect fails.
+ */
+
+import { Button } from '$lib/components/ui/button';
+import * as Card from '$lib/components/ui/card';
 </script>
 
 <svelte:head>

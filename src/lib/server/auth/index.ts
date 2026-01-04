@@ -5,21 +5,18 @@
  * and API key authentication.
  */
 
+// API key authentication and scope enforcement
+export { type ApiKeyScope, canRead, canWrite, requireAuth, requireScope } from './api-auth';
+// Network utilities for local bypass
+export { getClientIP, isLocalNetworkIP } from './network';
 // Password hashing utilities
 export { hashPassword, verifyPassword } from './password';
-
 // Session management
 export {
-	createSession,
-	validateSession,
-	deleteSession,
-	deleteAllUserSessions,
 	cleanupExpiredSessions,
-	type SessionUser
+	createSession,
+	deleteAllUserSessions,
+	deleteSession,
+	type SessionUser,
+	validateSession
 } from './session';
-
-// Network utilities for local bypass
-export { isLocalNetworkIP, getClientIP } from './network';
-
-// API key authentication and scope enforcement
-export { requireAuth, requireScope, canWrite, canRead, type ApiKeyScope } from './api-auth';

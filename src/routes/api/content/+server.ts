@@ -15,18 +15,18 @@
 
  */
 
-import { json, error } from '@sveltejs/kit';
-import type { RequestHandler } from './$types';
+import { error, json } from '@sveltejs/kit';
+import { requireScope } from '$lib/server/auth';
 import {
-	getContentList,
-	decodeCursor,
 	type ContentFilters,
-	type ContentType,
 	type ContentStatus,
+	type ContentType,
+	decodeCursor,
+	getContentList,
 	type SortColumn,
 	type SortDirection
 } from '$lib/server/db/queries/content';
-import { requireScope } from '$lib/server/auth';
+import type { RequestHandler } from './$types';
 
 const MAX_LIMIT = 100;
 const DEFAULT_LIMIT = 50;
@@ -49,7 +49,7 @@ export const GET: RequestHandler = async ({ url, locals }) => {
 	let limit = DEFAULT_LIMIT;
 	if (limitParam) {
 		const parsed = parseInt(limitParam, 10);
-		if (isNaN(parsed) || parsed < 1) {
+		if (Number.isNaN(parsed) || parsed < 1) {
 			error(400, 'Invalid limit parameter');
 		}
 		limit = Math.min(parsed, MAX_LIMIT);
@@ -59,7 +59,7 @@ export const GET: RequestHandler = async ({ url, locals }) => {
 	let connectorId: number | undefined;
 	if (connectorIdParam) {
 		const parsed = parseInt(connectorIdParam, 10);
-		if (isNaN(parsed) || parsed < 1) {
+		if (Number.isNaN(parsed) || parsed < 1) {
 			error(400, 'Invalid connectorId parameter');
 		}
 		connectorId = parsed;
@@ -79,7 +79,7 @@ export const GET: RequestHandler = async ({ url, locals }) => {
 		const offsetParam = url.searchParams.get('offset');
 		if (offsetParam) {
 			const parsedOffset = parseInt(offsetParam, 10);
-			if (!isNaN(parsedOffset) && parsedOffset >= 0) {
+			if (!Number.isNaN(parsedOffset) && parsedOffset >= 0) {
 				offset = parsedOffset;
 			}
 		}

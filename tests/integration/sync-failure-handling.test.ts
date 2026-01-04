@@ -12,22 +12,21 @@
 
  */
 
-import { describe, it, expect, beforeAll, afterAll, afterEach } from 'bun:test';
-import { db } from '../../src/lib/server/db';
-import { connectors, syncState } from '../../src/lib/server/db/schema';
+import { afterAll, afterEach, beforeAll, describe, expect, it } from 'bun:test';
 import { eq } from 'drizzle-orm';
+import { db } from '../../src/lib/server/db';
 import {
+	type CreateConnectorInput,
 	createConnector,
 	deleteConnector,
-	updateConnectorHealth,
-	getSyncState,
-	type CreateConnectorInput
+	getSyncState
 } from '../../src/lib/server/db/queries/connectors';
+import { connectors, syncState } from '../../src/lib/server/db/schema';
+import { SYNC_CONFIG } from '../../src/lib/server/services/sync/config';
 import {
 	determineHealthStatus,
 	updateHealthFromSyncResult
 } from '../../src/lib/server/services/sync/health';
-import { SYNC_CONFIG } from '../../src/lib/server/services/sync/config';
 
 // Store original SECRET_KEY to restore after tests
 const originalSecretKey = process.env.SECRET_KEY;

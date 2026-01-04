@@ -9,18 +9,18 @@
 
  */
 
-import { db } from '$lib/server/db';
-import { syncState, type Connector } from '$lib/server/db/schema';
 import { sql } from 'drizzle-orm';
-import { getDecryptedApiKey, updateConnectorLastSync } from '$lib/server/db/queries/connectors';
-import { SonarrClient } from '$lib/server/connectors/sonarr/client';
 import { RadarrClient } from '$lib/server/connectors/radarr/client';
+import { SonarrClient } from '$lib/server/connectors/sonarr/client';
 import { WhisparrClient } from '$lib/server/connectors/whisparr/client';
-import { reconcileSonarrContent } from './handlers/sonarr-reconcile';
-import { reconcileRadarrMovies } from './handlers/radarr-reconcile';
-import { withSyncRetry } from './with-sync-retry';
-import type { ReconciliationResult, SyncOptions } from './types';
+import { db } from '$lib/server/db';
+import { getDecryptedApiKey, updateConnectorLastSync } from '$lib/server/db/queries/connectors';
+import { type Connector, syncState } from '$lib/server/db/schema';
 import { createLogger } from '$lib/server/logger';
+import { reconcileRadarrMovies } from './handlers/radarr-reconcile';
+import { reconcileSonarrContent } from './handlers/sonarr-reconcile';
+import type { ReconciliationResult, SyncOptions } from './types';
+import { withSyncRetry } from './with-sync-retry';
 
 const logger = createLogger('sync');
 

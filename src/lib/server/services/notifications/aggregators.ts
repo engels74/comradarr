@@ -8,21 +8,21 @@
 
  */
 
-import type { NotificationHistory } from '$lib/server/db/schema';
 import type { NotificationEventType } from '$lib/server/db/queries/notifications';
-import type { NotificationPayload, NotificationField } from './types';
+import type { NotificationHistory } from '$lib/server/db/schema';
+import { getEventColor } from './base-channel';
 import type {
-	SweepStartedData,
-	SweepCompletedData,
-	SearchSuccessData,
-	SearchExhaustedData,
+	AppStartedData,
 	ConnectorHealthChangedData,
+	SearchExhaustedData,
+	SearchSuccessData,
+	SweepCompletedData,
+	SweepStartedData,
 	SyncCompletedData,
 	SyncFailedData,
-	AppStartedData,
 	UpdateAvailableData
 } from './templates';
-import { getEventColor } from './base-channel';
+import type { NotificationField, NotificationPayload } from './types';
 
 // =============================================================================
 // Constants
@@ -43,7 +43,7 @@ const MAX_TITLE_LENGTH = 40;
  */
 function truncateText(text: string, maxLength: number): string {
 	if (text.length <= maxLength) return text;
-	return text.slice(0, maxLength - 3) + '...';
+	return `${text.slice(0, maxLength - 3)}...`;
 }
 
 /**

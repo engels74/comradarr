@@ -9,12 +9,12 @@
  */
 
 import type {
-	SonarrSeries,
+	SonarrEpisode,
+	SonarrEpisodeFile,
 	SonarrSeason,
 	SonarrSeasonStatistics,
-	SonarrSeriesStatistics,
-	SonarrEpisode,
-	SonarrEpisodeFile
+	SonarrSeries,
+	SonarrSeriesStatistics
 } from '../sonarr/types.js';
 
 /**

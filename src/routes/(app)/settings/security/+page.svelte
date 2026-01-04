@@ -1,64 +1,65 @@
 <script lang="ts">
-	/**
-	 * Security settings page.
-	 */
-	import { enhance } from '$app/forms';
-	import * as Card from '$lib/components/ui/card';
-	import { Input } from '$lib/components/ui/input';
-	import { Button } from '$lib/components/ui/button';
-	import { Label } from '$lib/components/ui/label';
-	import { Badge } from '$lib/components/ui/badge';
-	import { Separator } from '$lib/components/ui/separator';
-	import { toastStore } from '$lib/components/ui/toast';
-	import { authModes, authModeLabels, authModeDescriptions } from '$lib/schemas/settings';
-	import type { PageProps } from './$types';
-	import ShieldIcon from '@lucide/svelte/icons/shield';
-	import KeyIcon from '@lucide/svelte/icons/key';
-	import MonitorSmartphoneIcon from '@lucide/svelte/icons/monitor-smartphone';
-	import AlertTriangleIcon from '@lucide/svelte/icons/alert-triangle';
-	import Trash2Icon from '@lucide/svelte/icons/trash-2';
+/**
+ * Security settings page.
+ */
 
-	let { data, form }: PageProps = $props();
+import AlertTriangleIcon from '@lucide/svelte/icons/alert-triangle';
+import KeyIcon from '@lucide/svelte/icons/key';
+import MonitorSmartphoneIcon from '@lucide/svelte/icons/monitor-smartphone';
+import ShieldIcon from '@lucide/svelte/icons/shield';
+import Trash2Icon from '@lucide/svelte/icons/trash-2';
+import { enhance } from '$app/forms';
+import { Badge } from '$lib/components/ui/badge';
+import { Button } from '$lib/components/ui/button';
+import * as Card from '$lib/components/ui/card';
+import { Input } from '$lib/components/ui/input';
+import { Label } from '$lib/components/ui/label';
+import { Separator } from '$lib/components/ui/separator';
+import { toastStore } from '$lib/components/ui/toast';
+import { authModeDescriptions, authModeLabels, authModes } from '$lib/schemas/settings';
+import type { PageProps } from './$types';
 
-	let isSubmittingAuthMode = $state(false);
-	let isSubmittingPassword = $state(false);
-	let isSubmittingSession = $state(false);
+let { data, form }: PageProps = $props();
 
-	// Common select styling
-	const selectClass =
-		'flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 md:text-sm';
+let isSubmittingAuthMode = $state(false);
+let isSubmittingPassword = $state(false);
+let isSubmittingSession = $state(false);
 
-	/**
-	 * Format user agent to display friendly device/browser name.
-	 */
-	function formatUserAgent(userAgent: string | null): string {
-		if (!userAgent) return 'Unknown device';
+// Common select styling
+const selectClass =
+	'flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 md:text-sm';
 
-		// Simple parsing - could be enhanced with a proper UA parser
-		if (userAgent.includes('Chrome')) return 'Chrome Browser';
-		if (userAgent.includes('Firefox')) return 'Firefox Browser';
-		if (userAgent.includes('Safari')) return 'Safari Browser';
-		if (userAgent.includes('Edge')) return 'Edge Browser';
-		if (userAgent.includes('Mobile')) return 'Mobile Device';
+/**
+ * Format user agent to display friendly device/browser name.
+ */
+function formatUserAgent(userAgent: string | null): string {
+	if (!userAgent) return 'Unknown device';
 
-		return 'Web Browser';
-	}
+	// Simple parsing - could be enhanced with a proper UA parser
+	if (userAgent.includes('Chrome')) return 'Chrome Browser';
+	if (userAgent.includes('Firefox')) return 'Firefox Browser';
+	if (userAgent.includes('Safari')) return 'Safari Browser';
+	if (userAgent.includes('Edge')) return 'Edge Browser';
+	if (userAgent.includes('Mobile')) return 'Mobile Device';
 
-	/**
-	 * Format relative time for session display.
-	 */
-	function formatRelativeTime(date: Date): string {
-		const now = new Date();
-		const diff = now.getTime() - new Date(date).getTime();
-		const minutes = Math.floor(diff / 60000);
-		const hours = Math.floor(minutes / 60);
-		const days = Math.floor(hours / 24);
+	return 'Web Browser';
+}
 
-		if (minutes < 1) return 'Just now';
-		if (minutes < 60) return `${minutes} minute${minutes === 1 ? '' : 's'} ago`;
-		if (hours < 24) return `${hours} hour${hours === 1 ? '' : 's'} ago`;
-		return `${days} day${days === 1 ? '' : 's'} ago`;
-	}
+/**
+ * Format relative time for session display.
+ */
+function formatRelativeTime(date: Date): string {
+	const now = new Date();
+	const diff = now.getTime() - new Date(date).getTime();
+	const minutes = Math.floor(diff / 60000);
+	const hours = Math.floor(minutes / 60);
+	const days = Math.floor(hours / 24);
+
+	if (minutes < 1) return 'Just now';
+	if (minutes < 60) return `${minutes} minute${minutes === 1 ? '' : 's'} ago`;
+	if (hours < 24) return `${hours} hour${hours === 1 ? '' : 's'} ago`;
+	return `${days} day${days === 1 ? '' : 's'} ago`;
+}
 </script>
 
 <svelte:head>

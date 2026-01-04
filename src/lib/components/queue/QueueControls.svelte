@@ -1,77 +1,77 @@
 <script lang="ts">
-	import { enhance } from '$app/forms';
-	import { invalidateAll } from '$app/navigation';
-	import { Button } from '$lib/components/ui/button';
-	import * as AlertDialog from '$lib/components/ui/alert-dialog';
-	import * as DropdownMenu from '$lib/components/ui/dropdown-menu';
-	import { Badge } from '$lib/components/ui/badge';
-	import type { ConnectorPauseStatus } from '$lib/server/db/queries/queue';
+import { enhance } from '$app/forms';
+import { invalidateAll } from '$app/navigation';
+import * as AlertDialog from '$lib/components/ui/alert-dialog';
+import { Badge } from '$lib/components/ui/badge';
+import { Button } from '$lib/components/ui/button';
+import * as DropdownMenu from '$lib/components/ui/dropdown-menu';
+import type { ConnectorPauseStatus } from '$lib/server/db/queries/queue';
 
-	/**
-	 * Queue controls component for global queue management.
-	 * Provides pause/resume and clear actions for all or specific connectors.
-	 */
+/**
+ * Queue controls component for global queue management.
+ * Provides pause/resume and clear actions for all or specific connectors.
+ */
 
-	interface Props {
-		pauseStatus: ConnectorPauseStatus[];
-		onActionStart?: (() => void) | undefined;
-		onActionComplete?: ((message: string) => void) | undefined;
-	}
+interface Props {
+	pauseStatus: ConnectorPauseStatus[];
+	onActionStart?: (() => void) | undefined;
+	onActionComplete?: ((message: string) => void) | undefined;
+}
 
-	let { pauseStatus, onActionStart, onActionComplete }: Props = $props();
+let { pauseStatus, onActionStart, onActionComplete }: Props = $props();
 
-	// Loading states
-	let isPausing = $state(false);
-	let isResuming = $state(false);
-	let isClearing = $state(false);
+// Loading states
+let isPausing = $state(false);
+let isResuming = $state(false);
+let isClearing = $state(false);
 
-	// Dialog states
-	let clearDialogOpen = $state(false);
+// Dialog states
+let clearDialogOpen = $state(false);
 
-	// Computed state
-	const isAnyLoading = $derived(isPausing || isResuming || isClearing);
+// Computed state
+const isAnyLoading = $derived(isPausing || isResuming || isClearing);
 
-	// Check if any connector is paused
-	const anyPaused = $derived(pauseStatus.some((c) => c.queuePaused));
-	const allPaused = $derived(pauseStatus.length > 0 && pauseStatus.every((c) => c.queuePaused));
-	const pausedCount = $derived(pauseStatus.filter((c) => c.queuePaused).length);
-	const totalQueueCount = $derived(pauseStatus.reduce((sum, c) => sum + c.queueCount, 0));
+// Check if any connector is paused
+const anyPaused = $derived(pauseStatus.some((c) => c.queuePaused));
+const allPaused = $derived(pauseStatus.length > 0 && pauseStatus.every((c) => c.queuePaused));
+const pausedCount = $derived(pauseStatus.filter((c) => c.queuePaused).length);
+const totalQueueCount = $derived(pauseStatus.reduce((sum, c) => sum + c.queueCount, 0));
 
-	/**
-	 * Creates an enhance handler for form submission.
-	 */
-	function createEnhanceHandler(setLoading: (val: boolean) => void, closeDialog?: () => void) {
-		return () => {
-			setLoading(true);
-			onActionStart?.(); // Pause polling during form submission
-			return async ({
-				result,
-				update
-			}: {
-				result: { type: string; data?: { message?: string; error?: string } };
-				update: () => Promise<void>;
-			}) => {
-				setLoading(false);
-				closeDialog?.();
+/**
+ * Creates an enhance handler for form submission.
+ */
+function createEnhanceHandler(setLoading: (val: boolean) => void, closeDialog?: () => void) {
+	return () => {
+		setLoading(true);
+		onActionStart?.(); // Pause polling during form submission
+		return async ({
+			result,
+			update
+		}: {
+			result: { type: string; data?: { message?: string; error?: string } };
+			update: () => Promise<void>;
+		}) => {
+			setLoading(false);
+			closeDialog?.();
 
-				if (result.type === 'success' && result.data?.message) {
-					onActionComplete?.(result.data.message);
-					await invalidateAll();
-				} else if (result.type === 'failure' && result.data?.error) {
-					onActionComplete?.(`Error: ${result.data.error}`);
-				}
+			if (result.type === 'success' && result.data?.message) {
+				onActionComplete?.(result.data.message);
+				await invalidateAll();
+			} else if (result.type === 'failure' && result.data?.error) {
+				onActionComplete?.(`Error: ${result.data.error}`);
+			}
 
-				await update();
-			};
+			await update();
 		};
-	}
-
-	// Connector type colors
-	const typeColors: Record<string, string> = {
-		sonarr: 'bg-blue-500/10 text-blue-600 dark:text-blue-400',
-		radarr: 'bg-orange-500/10 text-orange-600 dark:text-orange-400',
-		whisparr: 'bg-purple-500/10 text-purple-600 dark:text-purple-400'
 	};
+}
+
+// Connector type colors
+const typeColors: Record<string, string> = {
+	sonarr: 'bg-blue-500/10 text-blue-600 dark:text-blue-400',
+	radarr: 'bg-orange-500/10 text-orange-600 dark:text-orange-400',
+	whisparr: 'bg-purple-500/10 text-purple-600 dark:text-purple-400'
+};
 </script>
 
 <div class="flex items-center gap-2">

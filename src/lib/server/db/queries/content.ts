@@ -9,6 +9,7 @@
  * - Pagination
  */
 
+import { and, asc, count, desc, eq, ilike, inArray, type SQL, sql } from 'drizzle-orm';
 import { db } from '$lib/server/db';
 import {
 	connectors,
@@ -17,10 +18,8 @@ import {
 	searchHistory,
 	searchRegistry,
 	seasons,
-	series,
-	type Connector
+	series
 } from '$lib/server/db/schema';
-import { and, asc, count, desc, eq, ilike, inArray, or, sql, type SQL } from 'drizzle-orm';
 
 // =============================================================================
 // Types
@@ -408,7 +407,6 @@ function buildSeriesStatusConditions(status: ContentStatus | undefined): SQL | u
 			return sql`sr_state.state = 'searching'`;
 		case 'exhausted':
 			return sql`sr_state.state = 'exhausted'`;
-		case 'all':
 		default:
 			return undefined;
 	}
@@ -450,7 +448,6 @@ async function getSeriesList(filters: ContentFilters): Promise<SeriesWithStats[]
 		case 'connector':
 			orderBy = direction(connectors.name);
 			break;
-		case 'title':
 		default:
 			orderBy = direction(series.title);
 			break;
@@ -570,7 +567,6 @@ function buildMovieStatusConditions(status: ContentStatus | undefined): SQL | un
 			return sql`search_registry.state = 'searching'`;
 		case 'exhausted':
 			return sql`search_registry.state = 'exhausted'`;
-		case 'all':
 		default:
 			return undefined;
 	}
@@ -609,7 +605,6 @@ async function getMoviesList(filters: ContentFilters): Promise<MovieWithStats[]>
 		case 'year':
 			orderBy = direction(movies.year);
 			break;
-		case 'title':
 		default:
 			orderBy = direction(movies.title);
 			break;
@@ -821,7 +816,7 @@ export async function getContentList(filters: ContentFilters): Promise<ContentLi
 	}
 
 	// Generate next cursor if there are more results
-	const limit = filters.limit ?? 50;
+	const _limit = filters.limit ?? 50;
 	const offset = filters.offset ?? 0;
 	const hasMore = offset + items.length < total;
 	let nextCursor: string | null = null;
@@ -852,7 +847,6 @@ function sortItems(
 				return multiplier * a.connectorName.localeCompare(b.connectorName);
 			case 'year':
 				return multiplier * ((a.year ?? 0) - (b.year ?? 0));
-			case 'title':
 			default:
 				return multiplier * a.title.localeCompare(b.title);
 		}
@@ -914,7 +908,10 @@ export async function getContentStatusCounts(connectorId?: number): Promise<Cont
 			.from(series)
 			.where(connectorId !== undefined ? eq(series.connectorId, connectorId) : undefined),
 		// Total movies
-		db.select({ count: count() }).from(movies).where(movieConnectorCondition),
+		db
+			.select({ count: count() })
+			.from(movies)
+			.where(movieConnectorCondition),
 		// Series with missing episodes (count distinct series)
 		db
 			.select({ count: sql<number>`COUNT(DISTINCT ${seasons.seriesId})::int` })
@@ -977,9 +974,9 @@ export async function getContentStatusCounts(connectorId?: number): Promise<Cont
 		all: totalSeries + totalMovies,
 		missing: (missingEpisodesResult[0]?.count ?? 0) + (missingMoviesResult[0]?.count ?? 0),
 		upgrade: (upgradeEpisodesResult[0]?.count ?? 0) + (upgradeMoviesResult[0]?.count ?? 0),
-		queued: searchStateCounts['queued'] ?? 0,
-		searching: searchStateCounts['searching'] ?? 0,
-		exhausted: searchStateCounts['exhausted'] ?? 0
+		queued: searchStateCounts.queued ?? 0,
+		searching: searchStateCounts.searching ?? 0,
+		exhausted: searchStateCounts.exhausted ?? 0
 	};
 }
 

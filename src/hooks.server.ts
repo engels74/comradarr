@@ -1,15 +1,15 @@
 import type { Handle } from '@sveltejs/kit';
 import { json } from '@sveltejs/kit';
-import { validateSession, isLocalNetworkIP, getClientIP } from '$lib/server/auth';
-import { runWithContext, type RequestContext } from '$lib/server/context';
-import { getSecuritySettings } from '$lib/server/db/queries/settings';
-import { validateApiKey, logApiKeyUsage } from '$lib/server/db/queries/api-keys';
-import { apiKeyRateLimiter } from '$lib/server/services/api-rate-limit';
-import { db } from '$lib/server/db';
-import { users } from '$lib/server/db/schema';
 import { eq } from 'drizzle-orm';
-import { initializeScheduler } from '$lib/server/scheduler';
+import { getClientIP, isLocalNetworkIP, validateSession } from '$lib/server/auth';
+import { type RequestContext, runWithContext } from '$lib/server/context';
+import { db } from '$lib/server/db';
+import { logApiKeyUsage, validateApiKey } from '$lib/server/db/queries/api-keys';
+import { getSecuritySettings } from '$lib/server/db/queries/settings';
+import { users } from '$lib/server/db/schema';
 import { initializeLogLevel } from '$lib/server/logger';
+import { initializeScheduler } from '$lib/server/scheduler';
+import { apiKeyRateLimiter } from '$lib/server/services/api-rate-limit';
 
 /** Cookie name for session token */
 const SESSION_COOKIE_NAME = 'session';

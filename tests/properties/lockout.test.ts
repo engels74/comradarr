@@ -9,13 +9,13 @@
  * - 35.5: Reset counter on successful login
  */
 
-import { describe, it, expect } from 'vitest';
 import * as fc from 'fast-check';
+import { describe, expect, it } from 'vitest';
 import {
-	isAccountLocked,
 	getRemainingLockoutTime,
-	MAX_FAILED_ATTEMPTS,
-	LOCKOUT_DURATION_MINUTES
+	isAccountLocked,
+	LOCKOUT_DURATION_MINUTES,
+	MAX_FAILED_ATTEMPTS
 } from '../../src/lib/server/auth/lockout';
 
 describe('Account Lockout (Requirements 35.1-35.5)', () => {

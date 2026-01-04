@@ -2,12 +2,12 @@
  * Settings page server load and actions.
  */
 
-import type { PageServerLoad, Actions } from './$types';
-import { getGeneralSettings, updateGeneralSettings } from '$lib/server/db/queries/settings';
 import { fail } from '@sveltejs/kit';
 import * as v from 'valibot';
 import { GeneralSettingsSchema, type LogLevel } from '$lib/schemas/settings';
+import { getGeneralSettings, updateGeneralSettings } from '$lib/server/db/queries/settings';
 import { createLogger, setLogLevel } from '$lib/server/logger';
+import type { Actions, PageServerLoad } from './$types';
 
 const logger = createLogger('settings');
 

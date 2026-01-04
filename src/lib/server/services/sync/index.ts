@@ -4,26 +4,25 @@
  * @module services/sync
  */
 
-export { runIncrementalSync } from './incremental-sync';
+// Sync failure handling (Requirement 2.6)
+export { SYNC_CONFIG, type SyncConfig } from './config';
 export { runFullReconciliation } from './full-reconciliation';
-export type { SyncResult, SyncOptions, SyncStats, ReconciliationResult } from './types';
-export { mapSeriesToDb, mapSeasonToDb, mapEpisodeToDb, mapMovieToDb } from './mappers';
+// Re-export database-dependent functions
+export { updateHealthFromSyncResult } from './health';
+// Re-export pure utility functions (usable in unit tests without database)
+export {
+	calculateSyncBackoffDelay,
+	determineHealthStatus,
+	type HealthStatus,
+	type SyncFailureContext,
+	shouldRetrySync
+} from './health-utils';
+export { runIncrementalSync } from './incremental-sync';
+export { mapEpisodeToDb, mapMovieToDb, mapSeasonToDb, mapSeriesToDb } from './mappers';
 export {
 	deleteSearchRegistryForContent,
 	deleteSearchRegistryForEpisodes,
 	deleteSearchRegistryForMovies
 } from './search-state-cleanup';
-
-// Sync failure handling (Requirement 2.6)
-export { SYNC_CONFIG, type SyncConfig } from './config';
-// Re-export pure utility functions (usable in unit tests without database)
-export {
-	determineHealthStatus,
-	shouldRetrySync,
-	calculateSyncBackoffDelay,
-	type HealthStatus,
-	type SyncFailureContext
-} from './health-utils';
-// Re-export database-dependent functions
-export { updateHealthFromSyncResult } from './health';
-export { withSyncRetry, type SyncAttemptResult, type SyncRetryOptions } from './with-sync-retry';
+export type { ReconciliationResult, SyncOptions, SyncResult, SyncStats } from './types';
+export { type SyncAttemptResult, type SyncRetryOptions, withSyncRetry } from './with-sync-retry';

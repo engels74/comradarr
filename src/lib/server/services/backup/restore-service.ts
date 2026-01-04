@@ -13,23 +13,22 @@
 
 import { readFile } from 'node:fs/promises';
 import { sql } from 'drizzle-orm';
+import { DecryptionError, decrypt } from '$lib/server/crypto';
 import { db } from '$lib/server/db';
-import { decrypt, DecryptionError } from '$lib/server/crypto';
+import * as schema from '$lib/server/db/schema';
+import { createLogger } from '$lib/server/logger';
+import { createBackup, loadBackup } from './backup-service';
 import {
-	RestoreError,
-	SECRET_KEY_VERIFIER_PLAINTEXT,
-	TABLE_DELETE_ORDER,
-	TABLE_EXPORT_ORDER,
 	type BackupFile,
+	RestoreError,
 	type RestoreOptions,
 	type RestoreResult,
 	type RestoreValidation,
 	type SchemaVersion,
+	SECRET_KEY_VERIFIER_PLAINTEXT,
+	TABLE_DELETE_ORDER,
 	type TableExport
 } from './types';
-import { createBackup, loadBackup } from './backup-service';
-import * as schema from '$lib/server/db/schema';
-import { createLogger } from '$lib/server/logger';
 
 const logger = createLogger('restore');
 
@@ -118,7 +117,7 @@ async function validateSecretKeyMatch(secretKeyVerifier: string): Promise<boolea
 /**
  * Gets the current schema version from Drizzle migration journal.
  */
-async function getCurrentSchemaVersion(): Promise<SchemaVersion> {
+async function _getCurrentSchemaVersion(): Promise<SchemaVersion> {
 	try {
 		const journalPath = './drizzle/meta/_journal.json';
 		const journalContent = await readFile(journalPath, 'utf-8');
@@ -324,7 +323,7 @@ async function insertTableData(tableExport: TableExport): Promise<number> {
 async function applyPendingMigrations(): Promise<number> {
 	logger.info('Applying pending migrations');
 
-	const { spawn } = await import('child_process');
+	const { spawn } = await import('node:child_process');
 
 	return new Promise((resolve, reject) => {
 		const child = spawn('bunx', ['drizzle-kit', 'migrate'], {

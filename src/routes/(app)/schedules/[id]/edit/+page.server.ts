@@ -2,23 +2,23 @@
  * Edit schedule page server load and actions.
  */
 
-import type { PageServerLoad, Actions } from './$types';
-import { getAllConnectors } from '$lib/server/db/queries/connectors';
-import { getAllThrottleProfiles } from '$lib/server/db/queries/throttle';
-import { getScheduleById, updateSchedule, deleteSchedule } from '$lib/server/db/queries/schedules';
-import { refreshDynamicSchedules } from '$lib/server/scheduler';
 import { error, fail } from '@sveltejs/kit';
+import { Cron } from 'croner';
 import * as v from 'valibot';
 import { ScheduleUpdateSchema } from '$lib/schemas/schedules';
-import { Cron } from 'croner';
+import { getAllConnectors } from '$lib/server/db/queries/connectors';
+import { deleteSchedule, getScheduleById, updateSchedule } from '$lib/server/db/queries/schedules';
+import { getAllThrottleProfiles } from '$lib/server/db/queries/throttle';
 import { createLogger } from '$lib/server/logger';
+import { refreshDynamicSchedules } from '$lib/server/scheduler';
+import type { Actions, PageServerLoad } from './$types';
 
 const logger = createLogger('schedules');
 
 export const load: PageServerLoad = async ({ params }) => {
 	const id = parseInt(params.id, 10);
 
-	if (isNaN(id)) {
+	if (Number.isNaN(id)) {
 		error(404, 'Schedule not found');
 	}
 
@@ -46,7 +46,7 @@ export const actions: Actions = {
 	update: async ({ request, params }) => {
 		const id = parseInt(params.id, 10);
 
-		if (isNaN(id)) {
+		if (Number.isNaN(id)) {
 			return fail(400, { error: 'Invalid schedule ID' });
 		}
 
@@ -170,7 +170,7 @@ export const actions: Actions = {
 	delete: async ({ params }) => {
 		const id = parseInt(params.id, 10);
 
-		if (isNaN(id)) {
+		if (Number.isNaN(id)) {
 			return fail(400, { error: 'Invalid schedule ID' });
 		}
 

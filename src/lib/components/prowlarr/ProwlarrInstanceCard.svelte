@@ -1,36 +1,36 @@
 <script lang="ts">
-	import { enhance } from '$app/forms';
-	import * as Card from '$lib/components/ui/card';
-	import { Button } from '$lib/components/ui/button';
-	import { StatusBadge } from '$lib/components/shared';
-	import type { ProwlarrInstance } from '$lib/server/db/schema';
-	import { cn } from '$lib/utils.js';
+import { enhance } from '$app/forms';
+import { StatusBadge } from '$lib/components/shared';
+import { Button } from '$lib/components/ui/button';
+import * as Card from '$lib/components/ui/card';
+import type { ProwlarrInstance } from '$lib/server/db/schema';
+import { cn } from '$lib/utils.js';
 
-	/**
-	 * Stats for a Prowlarr instance.
-	 */
-	interface ProwlarrInstanceStats {
-		instanceId: number;
-		totalIndexers: number;
-		rateLimitedIndexers: number;
-	}
+/**
+ * Stats for a Prowlarr instance.
+ */
+interface ProwlarrInstanceStats {
+	instanceId: number;
+	totalIndexers: number;
+	rateLimitedIndexers: number;
+}
 
-	interface Props {
-		instance: ProwlarrInstance;
-		stats: ProwlarrInstanceStats;
-		class?: string;
-	}
+interface Props {
+	instance: ProwlarrInstance;
+	stats: ProwlarrInstanceStats;
+	class?: string;
+}
 
-	let { instance, stats, class: className }: Props = $props();
+let { instance, stats, class: className }: Props = $props();
 
-	/**
-	 * Truncate URL for display
-	 */
-	const truncatedUrl = $derived(() => {
-		const maxLength = 35;
-		if (instance.url.length <= maxLength) return instance.url;
-		return instance.url.substring(0, maxLength) + '...';
-	});
+/**
+ * Truncate URL for display
+ */
+const truncatedUrl = $derived(() => {
+	const maxLength = 35;
+	if (instance.url.length <= maxLength) return instance.url;
+	return `${instance.url.substring(0, maxLength)}...`;
+});
 </script>
 
 <Card.Root class={cn('relative', className)}>

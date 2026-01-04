@@ -7,80 +7,80 @@
   - Provide actionable quick actions
 -->
 <script lang="ts">
-	import type { PageProps, ActionData } from './$types';
-	import { enhance } from '$app/forms';
-	import { goto } from '$app/navigation';
-	import * as Card from '$lib/components/ui/card';
-	import * as Table from '$lib/components/ui/table';
-	import * as Dialog from '$lib/components/ui/dialog';
-	import { Button } from '$lib/components/ui/button';
-	import { Badge } from '$lib/components/ui/badge';
-	import { Separator } from '$lib/components/ui/separator';
-	import { StatusBadge } from '$lib/components/shared';
-	import { toastStore } from '$lib/components/ui/toast';
-	import { cn } from '$lib/utils.js';
+import { enhance } from '$app/forms';
+import { goto } from '$app/navigation';
+import { StatusBadge } from '$lib/components/shared';
+import { Badge } from '$lib/components/ui/badge';
+import { Button } from '$lib/components/ui/button';
+import * as Card from '$lib/components/ui/card';
+import * as Dialog from '$lib/components/ui/dialog';
+import { Separator } from '$lib/components/ui/separator';
+import * as Table from '$lib/components/ui/table';
+import { toastStore } from '$lib/components/ui/toast';
+import { cn } from '$lib/utils.js';
+import type { ActionData, PageProps } from './$types';
 
-	let { data, form }: { data: PageProps['data']; form: ActionData } = $props();
+let { data, form }: { data: PageProps['data']; form: ActionData } = $props();
 
-	// Connector type badge colors (matching ConnectorCard pattern)
-	const typeColors: Record<string, string> = {
-		sonarr: 'bg-blue-500/10 text-blue-600 dark:text-blue-400',
-		radarr: 'bg-orange-500/10 text-orange-600 dark:text-orange-400',
-		whisparr: 'bg-purple-500/10 text-purple-600 dark:text-purple-400'
-	};
+// Connector type badge colors (matching ConnectorCard pattern)
+const typeColors: Record<string, string> = {
+	sonarr: 'bg-blue-500/10 text-blue-600 dark:text-blue-400',
+	radarr: 'bg-orange-500/10 text-orange-600 dark:text-orange-400',
+	whisparr: 'bg-purple-500/10 text-purple-600 dark:text-purple-400'
+};
 
-	const typeColor = $derived(typeColors[data.connector.type] ?? 'bg-gray-500/10 text-gray-600');
+const typeColor = $derived(typeColors[data.connector.type] ?? 'bg-gray-500/10 text-gray-600');
 
-	const formattedType = $derived(
-		data.connector.type.charAt(0).toUpperCase() + data.connector.type.slice(1)
-	);
+const formattedType = $derived(
+	data.connector.type.charAt(0).toUpperCase() + data.connector.type.slice(1)
+);
 
-	// Calculate total failed searches
-	const failedSearchCount = $derived(
-		data.searchStateDistribution.exhausted + data.searchStateDistribution.cooldown
-	);
+// Calculate total failed searches
+const failedSearchCount = $derived(
+	data.searchStateDistribution.exhausted + data.searchStateDistribution.cooldown
+);
 
-	// Outcome badge styling
-	function getOutcomeBadgeVariant(
-		outcome: string
-	): 'default' | 'secondary' | 'destructive' | 'outline' {
-		switch (outcome) {
-			case 'success':
-				return 'default';
-			case 'no_results':
-				return 'secondary';
-			case 'error':
-			case 'timeout':
-				return 'destructive';
-			default:
-				return 'outline';
-		}
+// Outcome badge styling
+function getOutcomeBadgeVariant(
+	outcome: string
+): 'default' | 'secondary' | 'destructive' | 'outline' {
+	switch (outcome) {
+		case 'success':
+			return 'default';
+		case 'no_results':
+			return 'secondary';
+		case 'error':
+		case 'timeout':
+			return 'destructive';
+		default:
+			return 'outline';
 	}
+}
 
-	// Format outcome for display
-	function formatOutcome(outcome: string): string {
-		switch (outcome) {
-			case 'success':
-				return 'Success';
-			case 'no_results':
-				return 'No Results';
-			case 'error':
-				return 'Error';
-			case 'timeout':
-				return 'Timeout';
-			default:
-				return outcome;
-		}
+// Format outcome for display
+function formatOutcome(outcome: string): string {
+	switch (outcome) {
+		case 'success':
+			return 'Success';
+		case 'no_results':
+			return 'No Results';
+		case 'error':
+			return 'Error';
+		case 'timeout':
+			return 'Timeout';
+		default:
+			return outcome;
 	}
+}
 
-	// Loading states
-	let isTestingConnection = $state(false);
-	let isTriggeringSync = $state(false);
-	let isClearingFailedSearches = $state(false);
-	let isDeleting = $state(false);
+// Loading states
+let isTestingConnection = $state(false);
+let isTriggeringSync = $state(false);
+let isClearingFailedSearches = $state(false);
+let isDeleting = $state(false);
 
-	// Dialog state
-	let deleteDialogOpen = $state(false);
+// Dialog state
+let deleteDialogOpen = $state(false);
 </script>
 
 <svelte:head>

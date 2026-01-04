@@ -6,24 +6,24 @@ import { error, fail } from '@sveltejs/kit';
 import * as v from 'valibot';
 import { ConnectorUpdateSchema } from '$lib/schemas/connectors';
 import {
+	AuthenticationError,
+	isArrClientError,
+	NetworkError,
+	RadarrClient,
+	SonarrClient,
+	SSLError,
+	TimeoutError,
+	WhisparrClient
+} from '$lib/server/connectors';
+import {
+	connectorNameExists,
 	getConnector,
 	getDecryptedApiKey,
-	updateConnector,
-	connectorNameExists
+	updateConnector
 } from '$lib/server/db/queries/connectors';
-import {
-	SonarrClient,
-	RadarrClient,
-	WhisparrClient,
-	AuthenticationError,
-	NetworkError,
-	TimeoutError,
-	SSLError,
-	isArrClientError
-} from '$lib/server/connectors';
-import type { PageServerLoad, Actions } from './$types';
 import type { Connector } from '$lib/server/db/schema';
 import { createLogger } from '$lib/server/logger';
+import type { Actions, PageServerLoad } from './$types';
 
 const logger = createLogger('connectors');
 
@@ -85,7 +85,7 @@ function getErrorMessage(err: unknown): string {
 export const load: PageServerLoad = async ({ params }) => {
 	const id = Number(params.id);
 
-	if (isNaN(id)) {
+	if (Number.isNaN(id)) {
 		error(400, 'Invalid connector ID');
 	}
 
@@ -108,7 +108,7 @@ export const actions: Actions = {
 	testConnection: async ({ request, params }) => {
 		const id = Number(params.id);
 
-		if (isNaN(id)) {
+		if (Number.isNaN(id)) {
 			return fail(400, { error: 'Invalid connector ID' });
 		}
 
@@ -134,7 +134,7 @@ export const actions: Actions = {
 		} else {
 			try {
 				apiKey = await getDecryptedApiKey(connector);
-			} catch (err) {
+			} catch (_err) {
 				return fail(500, {
 					error: 'Failed to decrypt existing API key',
 					name: data.name,
@@ -210,7 +210,7 @@ export const actions: Actions = {
 	update: async ({ request, params }) => {
 		const id = Number(params.id);
 
-		if (isNaN(id)) {
+		if (Number.isNaN(id)) {
 			return fail(400, { error: 'Invalid connector ID' });
 		}
 

@@ -4,7 +4,7 @@
  * Requirement 34.5: Per-key rate limiting
  */
 
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 // Mock the database queries
 vi.mock('$lib/server/db/queries/api-key-rate-limit', () => ({
@@ -21,10 +21,10 @@ import {
 	getOrCreateRateLimitState,
 	getRateLimitState,
 	incrementRequestCounter,
-	resetMinuteWindow,
-	resetExpiredMinuteWindows,
 	isMinuteWindowExpired,
-	msUntilMinuteWindowExpires
+	msUntilMinuteWindowExpires,
+	resetExpiredMinuteWindows,
+	resetMinuteWindow
 } from '$lib/server/db/queries/api-key-rate-limit';
 
 import { ApiKeyRateLimiter } from '$lib/server/services/api-rate-limit/api-key-rate-limiter';

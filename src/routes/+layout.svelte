@@ -1,9 +1,9 @@
 <script lang="ts">
-	import 'virtual:uno.css';
-	import '../app.css';
-	import { ToastContainer } from '$lib/components/ui/toast';
+import 'virtual:uno.css';
+import '../app.css';
+import { ToastContainer } from '$lib/components/ui/toast';
 
-	let { children } = $props();
+let { children } = $props();
 </script>
 
 <svelte:head>

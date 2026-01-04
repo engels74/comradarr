@@ -1,20 +1,20 @@
 <script lang="ts">
-	import { Button } from '$lib/components/ui/button';
-	import type { TimePeriod } from './types';
+import { Button } from '$lib/components/ui/button';
+import type { TimePeriod } from './types';
 
-	interface Props {
-		value: TimePeriod;
-		onchange: (period: TimePeriod) => void;
-		class?: string;
-	}
+interface Props {
+	value: TimePeriod;
+	onchange: (period: TimePeriod) => void;
+	class?: string;
+}
 
-	let { value, onchange, class: className = '' }: Props = $props();
+let { value, onchange, class: className = '' }: Props = $props();
 
-	const periods: { value: TimePeriod; label: string }[] = [
-		{ value: '24h', label: '24h' },
-		{ value: '7d', label: '7d' },
-		{ value: '30d', label: '30d' }
-	];
+const periods: { value: TimePeriod; label: string }[] = [
+	{ value: '24h', label: '24h' },
+	{ value: '7d', label: '7d' },
+	{ value: '30d', label: '30d' }
+];
 </script>
 
 <div class="inline-flex rounded-md border border-border {className}" role="group">

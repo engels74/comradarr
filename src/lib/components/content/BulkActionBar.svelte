@@ -1,73 +1,73 @@
 <script lang="ts">
-	import { enhance } from '$app/forms';
-	import { invalidateAll } from '$app/navigation';
-	import { Button } from '$lib/components/ui/button';
-	import * as AlertDialog from '$lib/components/ui/alert-dialog';
-	import * as DropdownMenu from '$lib/components/ui/dropdown-menu';
-	import type { BulkActionTarget } from '$lib/server/db/queries/content';
+import { enhance } from '$app/forms';
+import { invalidateAll } from '$app/navigation';
+import * as AlertDialog from '$lib/components/ui/alert-dialog';
+import { Button } from '$lib/components/ui/button';
+import * as DropdownMenu from '$lib/components/ui/dropdown-menu';
+import type { BulkActionTarget } from '$lib/server/db/queries/content';
 
-	/**
-	 * Bulk action bar component for content browser.
-	 * Displays a sticky toolbar when items are selected.
-	 */
+/**
+ * Bulk action bar component for content browser.
+ * Displays a sticky toolbar when items are selected.
+ */
 
-	interface Props {
-		selectedCount: number;
-		selectedTargets: BulkActionTarget[];
-		onClearSelection: () => void;
-		onActionComplete?: ((message: string) => void) | undefined;
-	}
+interface Props {
+	selectedCount: number;
+	selectedTargets: BulkActionTarget[];
+	onClearSelection: () => void;
+	onActionComplete?: ((message: string) => void) | undefined;
+}
 
-	let { selectedCount, selectedTargets, onClearSelection, onActionComplete }: Props = $props();
+let { selectedCount, selectedTargets, onClearSelection, onActionComplete }: Props = $props();
 
-	// Serialize targets for form submission
-	const targetsJson = $derived(JSON.stringify(selectedTargets));
+// Serialize targets for form submission
+const targetsJson = $derived(JSON.stringify(selectedTargets));
 
-	// Loading states
-	let isQueueing = $state(false);
-	let isSettingPriority = $state(false);
-	let isMarkingExhausted = $state(false);
-	let isClearingState = $state(false);
+// Loading states
+let isQueueing = $state(false);
+let isSettingPriority = $state(false);
+let isMarkingExhausted = $state(false);
+let isClearingState = $state(false);
 
-	// Dialog states
-	let priorityDialogOpen = $state(false);
-	let priorityValue = $state(50);
-	let exhaustedDialogOpen = $state(false);
-	let clearStateDialogOpen = $state(false);
+// Dialog states
+let priorityDialogOpen = $state(false);
+let priorityValue = $state(50);
+let exhaustedDialogOpen = $state(false);
+let clearStateDialogOpen = $state(false);
 
-	// Computed state
-	const isAnyLoading = $derived(
-		isQueueing || isSettingPriority || isMarkingExhausted || isClearingState
-	);
+// Computed state
+const isAnyLoading = $derived(
+	isQueueing || isSettingPriority || isMarkingExhausted || isClearingState
+);
 
-	/**
-	 * Creates an enhance handler for form submission.
-	 */
-	function createEnhanceHandler(setLoading: (val: boolean) => void, closeDialog?: () => void) {
-		return () => {
-			setLoading(true);
-			return async ({
-				result,
-				update
-			}: {
-				result: { type: string; data?: { message?: string; error?: string } };
-				update: () => Promise<void>;
-			}) => {
-				setLoading(false);
-				closeDialog?.();
+/**
+ * Creates an enhance handler for form submission.
+ */
+function createEnhanceHandler(setLoading: (val: boolean) => void, closeDialog?: () => void) {
+	return () => {
+		setLoading(true);
+		return async ({
+			result,
+			update
+		}: {
+			result: { type: string; data?: { message?: string; error?: string } };
+			update: () => Promise<void>;
+		}) => {
+			setLoading(false);
+			closeDialog?.();
 
-				if (result.type === 'success' && result.data?.message) {
-					onActionComplete?.(result.data.message);
-					onClearSelection();
-					await invalidateAll();
-				} else if (result.type === 'failure' && result.data?.error) {
-					onActionComplete?.(`Error: ${result.data.error}`);
-				}
+			if (result.type === 'success' && result.data?.message) {
+				onActionComplete?.(result.data.message);
+				onClearSelection();
+				await invalidateAll();
+			} else if (result.type === 'failure' && result.data?.error) {
+				onActionComplete?.(`Error: ${result.data.error}`);
+			}
 
-				await update();
-			};
+			await update();
 		};
-	}
+	};
+}
 </script>
 
 {#if selectedCount > 0}

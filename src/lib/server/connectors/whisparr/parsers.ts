@@ -9,21 +9,18 @@
  */
 
 // Re-export Sonarr schemas as Whisparr schemas (identical API structure)
-export {
-	SonarrSeasonStatisticsSchema as WhisparrSeasonStatisticsSchema,
-	SonarrSeasonSchema as WhisparrSeasonSchema,
-	SonarrSeriesStatisticsSchema as WhisparrSeriesStatisticsSchema,
-	SonarrSeriesSchema as WhisparrSeriesSchema,
-	SonarrEpisodeFileSchema as WhisparrEpisodeFileSchema,
-	SonarrEpisodeSchema as WhisparrEpisodeSchema
-} from '../sonarr/parsers.js';
-
 // Re-export Sonarr parser functions as Whisparr parser functions
 export {
-	parseSonarrSeries as parseWhisparrSeries,
-	parseSonarrEpisode as parseWhisparrEpisode,
-	parsePaginatedSeries as parsePaginatedWhisparrSeries,
 	parsePaginatedEpisodes as parsePaginatedWhisparrEpisodes,
+	parsePaginatedEpisodesLenient as parsePaginatedWhisparrEpisodesLenient,
+	parsePaginatedSeries as parsePaginatedWhisparrSeries,
 	parsePaginatedSeriesLenient as parsePaginatedWhisparrSeriesLenient,
-	parsePaginatedEpisodesLenient as parsePaginatedWhisparrEpisodesLenient
+	parseSonarrEpisode as parseWhisparrEpisode,
+	parseSonarrSeries as parseWhisparrSeries,
+	SonarrEpisodeFileSchema as WhisparrEpisodeFileSchema,
+	SonarrEpisodeSchema as WhisparrEpisodeSchema,
+	SonarrSeasonSchema as WhisparrSeasonSchema,
+	SonarrSeasonStatisticsSchema as WhisparrSeasonStatisticsSchema,
+	SonarrSeriesSchema as WhisparrSeriesSchema,
+	SonarrSeriesStatisticsSchema as WhisparrSeriesStatisticsSchema
 } from '../sonarr/parsers.js';

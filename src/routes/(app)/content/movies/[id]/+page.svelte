@@ -8,83 +8,81 @@
   - lastSearchTime
 -->
 <script lang="ts">
-	import type { PageProps } from './$types';
-	import * as Card from '$lib/components/ui/card';
-	import * as Table from '$lib/components/ui/table';
-	import { Badge } from '$lib/components/ui/badge';
-	import { cn } from '$lib/utils.js';
+import { Badge } from '$lib/components/ui/badge';
+import * as Card from '$lib/components/ui/card';
+import * as Table from '$lib/components/ui/table';
+import { cn } from '$lib/utils.js';
+import type { PageProps } from './$types';
 
-	let { data }: PageProps = $props();
+let { data }: PageProps = $props();
 
-	// Connector type badge colors (matching existing pattern)
-	const typeColors: Record<string, string> = {
-		sonarr: 'bg-blue-500/10 text-blue-600 dark:text-blue-400',
-		radarr: 'bg-orange-500/10 text-orange-600 dark:text-orange-400',
-		whisparr: 'bg-purple-500/10 text-purple-600 dark:text-purple-400'
-	};
+// Connector type badge colors (matching existing pattern)
+const typeColors: Record<string, string> = {
+	sonarr: 'bg-blue-500/10 text-blue-600 dark:text-blue-400',
+	radarr: 'bg-orange-500/10 text-orange-600 dark:text-orange-400',
+	whisparr: 'bg-purple-500/10 text-purple-600 dark:text-purple-400'
+};
 
-	const typeColor = $derived(
-		typeColors[data.movie.connectorType] ?? 'bg-gray-500/10 text-gray-600'
-	);
+const typeColor = $derived(typeColors[data.movie.connectorType] ?? 'bg-gray-500/10 text-gray-600');
 
-	// Format movie year for display
-	const yearDisplay = $derived(data.movie.year ? `(${data.movie.year})` : '');
+// Format movie year for display
+const yearDisplay = $derived(data.movie.year ? `(${data.movie.year})` : '');
 
-	// Compute movie status
-	const movieStatus = $derived(() => {
-		if (!data.movie.hasFile) {
-			return { label: 'Missing', variant: 'destructive' as const };
-		}
-		if (data.movie.qualityCutoffNotMet) {
-			return { label: 'Upgrade', variant: 'secondary' as const };
-		}
-		return { label: 'Downloaded', variant: 'default' as const };
-	});
-
-	// Outcome badge styling (matching series detail pattern)
-	function getOutcomeBadgeVariant(
-		outcome: string
-	): 'default' | 'secondary' | 'destructive' | 'outline' {
-		switch (outcome) {
-			case 'success':
-				return 'default';
-			case 'no_results':
-				return 'secondary';
-			case 'error':
-			case 'timeout':
-				return 'destructive';
-			default:
-				return 'outline';
-		}
+// Compute movie status
+const movieStatus = $derived(() => {
+	if (!data.movie.hasFile) {
+		return { label: 'Missing', variant: 'destructive' as const };
 	}
-
-	function formatOutcome(outcome: string): string {
-		switch (outcome) {
-			case 'success':
-				return 'Success';
-			case 'no_results':
-				return 'No Results';
-			case 'error':
-				return 'Error';
-			case 'timeout':
-				return 'Timeout';
-			default:
-				return outcome;
-		}
+	if (data.movie.qualityCutoffNotMet) {
+		return { label: 'Upgrade', variant: 'secondary' as const };
 	}
+	return { label: 'Downloaded', variant: 'default' as const };
+});
 
-	// Format quality for display
-	function formatQuality(quality: unknown): string {
-		if (!quality) return 'N/A';
-		const q = quality as { quality?: { name?: string } };
-		return q.quality?.name ?? 'N/A';
+// Outcome badge styling (matching series detail pattern)
+function getOutcomeBadgeVariant(
+	outcome: string
+): 'default' | 'secondary' | 'destructive' | 'outline' {
+	switch (outcome) {
+		case 'success':
+			return 'default';
+		case 'no_results':
+			return 'secondary';
+		case 'error':
+		case 'timeout':
+			return 'destructive';
+		default:
+			return 'outline';
 	}
+}
 
-	// Format last search time
-	function formatLastSearchTime(date: Date | null): string {
-		if (!date) return 'Never';
-		return new Date(date).toLocaleString();
+function formatOutcome(outcome: string): string {
+	switch (outcome) {
+		case 'success':
+			return 'Success';
+		case 'no_results':
+			return 'No Results';
+		case 'error':
+			return 'Error';
+		case 'timeout':
+			return 'Timeout';
+		default:
+			return outcome;
 	}
+}
+
+// Format quality for display
+function formatQuality(quality: unknown): string {
+	if (!quality) return 'N/A';
+	const q = quality as { quality?: { name?: string } };
+	return q.quality?.name ?? 'N/A';
+}
+
+// Format last search time
+function formatLastSearchTime(date: Date | null): string {
+	if (!date) return 'Never';
+	return new Date(date).toLocaleString();
+}
 </script>
 
 <svelte:head>

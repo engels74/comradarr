@@ -10,14 +10,14 @@
  */
 
 import { getSyncState } from '$lib/server/db/queries/connectors';
+import { createLogger } from '$lib/server/logger';
 import { SYNC_CONFIG } from './config';
 import {
-	updateHealthFromSyncResult,
-	shouldRetrySync,
 	calculateSyncBackoffDelay,
-	type HealthStatus
+	type HealthStatus,
+	shouldRetrySync,
+	updateHealthFromSyncResult
 } from './health';
-import { createLogger } from '$lib/server/logger';
 
 const logger = createLogger('sync');
 

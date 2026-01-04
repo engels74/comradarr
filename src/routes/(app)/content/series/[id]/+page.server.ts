@@ -9,17 +9,17 @@
  */
 
 import { error } from '@sveltejs/kit';
-import type { PageServerLoad } from './$types';
 import {
-	getSeriesDetail,
 	getSeasonSummaries,
+	getSeriesDetail,
 	getSeriesSearchHistory
 } from '$lib/server/db/queries/content';
+import type { PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ params }) => {
 	const id = Number(params.id);
 
-	if (isNaN(id)) {
+	if (Number.isNaN(id)) {
 		error(400, 'Invalid series ID');
 	}
 

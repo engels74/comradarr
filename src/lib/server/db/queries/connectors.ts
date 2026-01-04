@@ -6,21 +6,21 @@
  * Decryption happens lazily, only when the key is needed for API calls.
  */
 
+import { and, count, desc, eq, inArray, or } from 'drizzle-orm';
+import { DecryptionError, decrypt, encrypt, SecretKeyError } from '$lib/server/crypto';
 import { db } from '$lib/server/db';
 import {
+	type Connector,
 	connectors,
 	episodes,
 	movies,
+	type NewConnector,
 	requestQueue,
+	type SyncState,
 	searchHistory,
 	searchRegistry,
-	syncState,
-	type Connector,
-	type NewConnector,
-	type SyncState
+	syncState
 } from '$lib/server/db/schema';
-import { and, count, desc, eq, inArray, or, sql } from 'drizzle-orm';
-import { encrypt, decrypt, DecryptionError, SecretKeyError } from '$lib/server/crypto';
 
 // Re-export crypto errors for consumers
 export { DecryptionError, SecretKeyError };
@@ -496,9 +496,15 @@ export async function getConnectorDetailedStats(
 				)
 			),
 		// Total episodes for connector
-		db.select({ count: count() }).from(episodes).where(eq(episodes.connectorId, connectorId)),
+		db
+			.select({ count: count() })
+			.from(episodes)
+			.where(eq(episodes.connectorId, connectorId)),
 		// Total movies for connector
-		db.select({ count: count() }).from(movies).where(eq(movies.connectorId, connectorId)),
+		db
+			.select({ count: count() })
+			.from(movies)
+			.where(eq(movies.connectorId, connectorId)),
 		// Queue depth
 		db
 			.select({ count: count() })

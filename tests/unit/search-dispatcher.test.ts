@@ -9,11 +9,11 @@
  * - Prowlarr health check integration (informational, non-blocking)
  */
 
-import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest';
+import { beforeEach, describe, expect, it, type Mock, vi } from 'vitest';
 import {
-	RateLimitError,
-	NetworkError,
 	AuthenticationError,
+	NetworkError,
+	RateLimitError,
 	ServerError
 } from '../../src/lib/server/connectors/common/errors';
 
@@ -45,16 +45,19 @@ vi.mock('$lib/server/connectors', async () => {
 		// Create mock classes that return the mock instances
 		SonarrClient: class MockSonarrClient {
 			constructor() {
+				// biome-ignore lint/correctness/noConstructorReturn: intentional pattern for mocking
 				return mockSonarrClient;
 			}
 		},
 		RadarrClient: class MockRadarrClient {
 			constructor() {
+				// biome-ignore lint/correctness/noConstructorReturn: intentional pattern for mocking
 				return mockRadarrClient;
 			}
 		},
 		WhisparrClient: class MockWhisparrClient {
 			constructor() {
+				// biome-ignore lint/correctness/noConstructorReturn: intentional pattern for mocking
 				return mockWhisparrClient;
 			}
 		},
@@ -85,14 +88,14 @@ vi.mock('$lib/server/services/prowlarr', () => ({
 	}
 }));
 
+import { getConnector, getDecryptedApiKey } from '$lib/server/db/queries/connectors';
+import { prowlarrHealthMonitor } from '$lib/server/services/prowlarr';
+import { throttleEnforcer } from '$lib/server/services/throttle';
 // Now import the module and mocks
 import {
-	dispatchSearch,
-	dispatchBatch
+	dispatchBatch,
+	dispatchSearch
 } from '../../src/lib/server/services/queue/search-dispatcher';
-import { getConnector, getDecryptedApiKey } from '$lib/server/db/queries/connectors';
-import { throttleEnforcer } from '$lib/server/services/throttle';
-import { prowlarrHealthMonitor } from '$lib/server/services/prowlarr';
 
 describe('dispatchSearch', () => {
 	const mockConnector = {

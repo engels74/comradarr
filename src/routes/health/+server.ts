@@ -10,8 +10,8 @@
  */
 
 import { json } from '@sveltejs/kit';
-import type { RequestHandler } from './$types';
 import { getHealthSummary, type HealthStatus } from '$lib/server/db/queries/health';
+import type { RequestHandler } from './$types';
 
 // =============================================================================
 // Types

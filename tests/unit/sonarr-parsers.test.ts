@@ -11,17 +11,16 @@
 
  */
 
-import { describe, it, expect } from 'vitest';
-import { vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import {
-	parseSonarrSeries,
-	parseSonarrEpisode,
-	parsePaginatedSeries,
 	parsePaginatedEpisodes,
-	parsePaginatedSeriesLenient,
 	parsePaginatedEpisodesLenient,
-	SonarrSeriesSchema,
-	SonarrEpisodeSchema
+	parsePaginatedSeries,
+	parsePaginatedSeriesLenient,
+	parseSonarrEpisode,
+	parseSonarrSeries,
+	SonarrEpisodeSchema,
+	SonarrSeriesSchema
 } from '../../src/lib/server/connectors/sonarr/parsers';
 
 // =============================================================================

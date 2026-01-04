@@ -4,6 +4,6 @@
  * @module services
  */
 
-export * from './sync';
 export * from './discovery';
 export * from './queue';
+export * from './sync';

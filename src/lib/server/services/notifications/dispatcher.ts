@@ -13,21 +13,21 @@
 
  */
 
-import type { NotificationChannel } from '$lib/server/db/schema';
 import type { NotificationEventType } from '$lib/server/db/queries/notifications';
 import {
-	getChannelsForEventType,
-	getNotificationChannel,
-	getDecryptedSensitiveConfig,
 	createNotificationHistory,
+	getChannelsForEventType,
+	getDecryptedSensitiveConfig,
+	getNotificationChannel,
 	updateNotificationHistoryStatus
 } from '$lib/server/db/queries/notifications';
+import type { NotificationChannel } from '$lib/server/db/schema';
+import { createLogger } from '$lib/server/logger';
+import { isRetryableNotificationError } from './errors';
 import { getSender, isSupportedChannelType } from './index';
+import { isInQuietHours } from './quiet-hours';
 import { buildPayload, type EventDataMap } from './templates';
 import type { NotificationPayload, NotificationResult } from './types';
-import { isRetryableNotificationError } from './errors';
-import { isInQuietHours } from './quiet-hours';
-import { createLogger } from '$lib/server/logger';
 
 const logger = createLogger('notifications');
 

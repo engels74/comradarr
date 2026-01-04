@@ -7,30 +7,28 @@
  * @module connectors/sonarr
  */
 
+export type { WantedOptions } from './client.js';
 // Client
 export { SonarrClient } from './client.js';
-export type { WantedOptions } from './client.js';
-
-// Types
-export type {
-	SonarrSeries,
-	SonarrSeason,
-	SonarrSeasonStatistics,
-	SonarrSeriesStatistics,
-	SonarrEpisode,
-	SonarrEpisodeFile
-} from './types.js';
-
 // Parsers
 export {
-	parseSonarrSeries,
-	parseSonarrEpisode,
-	parsePaginatedSeries,
 	parsePaginatedEpisodes,
-	SonarrSeriesSchema,
+	parsePaginatedSeries,
+	parseSonarrEpisode,
+	parseSonarrSeries,
+	SonarrEpisodeFileSchema,
+	SonarrEpisodeSchema,
 	SonarrSeasonSchema,
 	SonarrSeasonStatisticsSchema,
-	SonarrSeriesStatisticsSchema,
-	SonarrEpisodeSchema,
-	SonarrEpisodeFileSchema
+	SonarrSeriesSchema,
+	SonarrSeriesStatisticsSchema
 } from './parsers.js';
+// Types
+export type {
+	SonarrEpisode,
+	SonarrEpisodeFile,
+	SonarrSeason,
+	SonarrSeasonStatistics,
+	SonarrSeries,
+	SonarrSeriesStatistics
+} from './types.js';

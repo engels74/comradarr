@@ -8,16 +8,16 @@
 
  */
 
+import { and, eq, gte, lt, sql } from 'drizzle-orm';
 import { db } from '$lib/server/db';
 import {
+	analyticsDailyStats,
 	analyticsEvents,
 	analyticsHourlyStats,
-	analyticsDailyStats,
 	connectors
 } from '$lib/server/db/schema';
-import { sql, and, gte, lt, eq } from 'drizzle-orm';
-import type { AggregationResult } from './types';
 import { createLogger } from '$lib/server/logger';
+import type { AggregationResult } from './types';
 
 const logger = createLogger('analytics');
 

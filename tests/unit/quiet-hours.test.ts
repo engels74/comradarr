@@ -12,16 +12,16 @@
 
  */
 
-import { describe, it, expect, vi } from 'vitest';
-import {
-	parseTimeString,
-	getCurrentTimeInTimezone,
-	timeToMinutes,
-	isTimeInRange,
-	isInQuietHours,
-	type TimeOfDay
-} from '../../src/lib/server/services/notifications/quiet-hours';
+import { describe, expect, it } from 'vitest';
 import type { NotificationChannel } from '../../src/lib/server/db/schema';
+import {
+	getCurrentTimeInTimezone,
+	isInQuietHours,
+	isTimeInRange,
+	parseTimeString,
+	type TimeOfDay,
+	timeToMinutes
+} from '../../src/lib/server/services/notifications/quiet-hours';
 
 /**
  * Helper to create a mock notification channel with quiet hours configuration.

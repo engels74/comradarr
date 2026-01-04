@@ -1,138 +1,139 @@
 <script lang="ts">
-	/**
-	 * Log viewer filters component.
-	 */
-	import { page } from '$app/stores';
-	import { goto } from '$app/navigation';
-	import { cn } from '$lib/utils.js';
-	import { Button } from '$lib/components/ui/button';
-	import { Input } from '$lib/components/ui/input';
-	import { logLevels, type LogLevel } from '$lib/schemas/settings';
-	import SearchIcon from '@lucide/svelte/icons/search';
-	import XIcon from '@lucide/svelte/icons/x';
-	import RefreshCwIcon from '@lucide/svelte/icons/refresh-cw';
-	import DownloadIcon from '@lucide/svelte/icons/download';
+/**
+ * Log viewer filters component.
+ */
 
-	interface Props {
-		levelCounts: Record<LogLevel, number>;
-		modules: string[];
-		selectedLevels: LogLevel[];
-		selectedModule: string;
-		searchQuery: string;
-		class?: string | undefined;
-		onRefresh?: () => void;
+import DownloadIcon from '@lucide/svelte/icons/download';
+import RefreshCwIcon from '@lucide/svelte/icons/refresh-cw';
+import SearchIcon from '@lucide/svelte/icons/search';
+import XIcon from '@lucide/svelte/icons/x';
+import { goto } from '$app/navigation';
+import { page } from '$app/stores';
+import { Button } from '$lib/components/ui/button';
+import { Input } from '$lib/components/ui/input';
+import { type LogLevel, logLevels } from '$lib/schemas/settings';
+import { cn } from '$lib/utils.js';
+
+interface Props {
+	levelCounts: Record<LogLevel, number>;
+	modules: string[];
+	selectedLevels: LogLevel[];
+	selectedModule: string;
+	searchQuery: string;
+	class?: string | undefined;
+	onRefresh?: () => void;
+}
+
+let {
+	levelCounts,
+	modules,
+	selectedLevels,
+	selectedModule,
+	searchQuery,
+	class: className,
+	onRefresh
+}: Props = $props();
+
+let localSearch = $state('');
+let isRefreshing = $state(false);
+
+// Initialize localSearch from prop
+$effect(() => {
+	localSearch = searchQuery;
+});
+
+function updateFilters(params: Record<string, string | undefined>) {
+	const url = new URL($page.url);
+
+	for (const [key, value] of Object.entries(params)) {
+		if (value) {
+			url.searchParams.set(key, value);
+		} else {
+			url.searchParams.delete(key);
+		}
 	}
 
-	let {
-		levelCounts,
-		modules,
-		selectedLevels,
-		selectedModule,
-		searchQuery,
-		class: className,
-		onRefresh
-	}: Props = $props();
+	// Reset offset when filters change
+	url.searchParams.delete('offset');
 
-	let localSearch = $state('');
-	let isRefreshing = $state(false);
+	goto(url.toString());
+}
 
-	// Initialize localSearch from prop
-	$effect(() => {
-		localSearch = searchQuery;
+function toggleLevel(level: LogLevel) {
+	const newLevels = selectedLevels.includes(level)
+		? selectedLevels.filter((l) => l !== level)
+		: [...selectedLevels, level];
+
+	updateFilters({
+		levels: newLevels.length > 0 ? newLevels.join(',') : undefined
 	});
+}
 
-	function updateFilters(params: Record<string, string | undefined>) {
-		const url = new URL($page.url);
+function handleSearch() {
+	updateFilters({
+		search: localSearch.trim() || undefined
+	});
+}
 
-		for (const [key, value] of Object.entries(params)) {
-			if (value) {
-				url.searchParams.set(key, value);
-			} else {
-				url.searchParams.delete(key);
-			}
-		}
+function clearSearch() {
+	localSearch = '';
+	updateFilters({ search: undefined });
+}
 
-		// Reset offset when filters change
-		url.searchParams.delete('offset');
+function handleModuleChange(e: Event) {
+	const target = e.target as HTMLSelectElement;
+	updateFilters({
+		module: target.value || undefined
+	});
+}
 
-		goto(url.toString());
+function clearAllFilters() {
+	const url = new URL($page.url);
+	url.searchParams.delete('levels');
+	url.searchParams.delete('module');
+	url.searchParams.delete('search');
+	url.searchParams.delete('offset');
+	localSearch = '';
+	goto(url.toString());
+}
+
+async function handleRefresh() {
+	if (isRefreshing) return;
+	isRefreshing = true;
+	onRefresh?.();
+	// Small delay for visual feedback
+	await new Promise((resolve) => setTimeout(resolve, 500));
+	isRefreshing = false;
+}
+
+function handleExport() {
+	const url = new URL($page.url);
+	const exportUrl = new URL('/api/logs', url.origin);
+
+	// Copy current filters to export URL
+	if (selectedLevels.length > 0) {
+		exportUrl.searchParams.set('levels', selectedLevels.join(','));
 	}
-
-	function toggleLevel(level: LogLevel) {
-		const newLevels = selectedLevels.includes(level)
-			? selectedLevels.filter((l) => l !== level)
-			: [...selectedLevels, level];
-
-		updateFilters({
-			levels: newLevels.length > 0 ? newLevels.join(',') : undefined
-		});
+	if (selectedModule) {
+		exportUrl.searchParams.set('module', selectedModule);
 	}
-
-	function handleSearch() {
-		updateFilters({
-			search: localSearch.trim() || undefined
-		});
+	if (searchQuery) {
+		exportUrl.searchParams.set('search', searchQuery);
 	}
+	exportUrl.searchParams.set('format', 'json');
 
-	function clearSearch() {
-		localSearch = '';
-		updateFilters({ search: undefined });
-	}
+	window.open(exportUrl.toString(), '_blank');
+}
 
-	function handleModuleChange(e: Event) {
-		const target = e.target as HTMLSelectElement;
-		updateFilters({
-			module: target.value || undefined
-		});
-	}
+const hasActiveFilters = $derived(selectedLevels.length > 0 || selectedModule || searchQuery);
 
-	function clearAllFilters() {
-		const url = new URL($page.url);
-		url.searchParams.delete('levels');
-		url.searchParams.delete('module');
-		url.searchParams.delete('search');
-		url.searchParams.delete('offset');
-		localSearch = '';
-		goto(url.toString());
-	}
-
-	async function handleRefresh() {
-		if (isRefreshing) return;
-		isRefreshing = true;
-		onRefresh?.();
-		// Small delay for visual feedback
-		await new Promise((resolve) => setTimeout(resolve, 500));
-		isRefreshing = false;
-	}
-
-	function handleExport() {
-		const url = new URL($page.url);
-		const exportUrl = new URL('/api/logs', url.origin);
-
-		// Copy current filters to export URL
-		if (selectedLevels.length > 0) {
-			exportUrl.searchParams.set('levels', selectedLevels.join(','));
-		}
-		if (selectedModule) {
-			exportUrl.searchParams.set('module', selectedModule);
-		}
-		if (searchQuery) {
-			exportUrl.searchParams.set('search', searchQuery);
-		}
-		exportUrl.searchParams.set('format', 'json');
-
-		window.open(exportUrl.toString(), '_blank');
-	}
-
-	const hasActiveFilters = $derived(selectedLevels.length > 0 || selectedModule || searchQuery);
-
-	const levelColors: Record<LogLevel, string> = {
-		error: 'bg-red-500',
-		warn: 'bg-yellow-500',
-		info: 'bg-blue-500',
-		debug: 'bg-purple-500',
-		trace: 'bg-gray-500'
-	};
+const levelColors: Record<LogLevel, string> = {
+	error: 'bg-red-500',
+	warn: 'bg-yellow-500',
+	info: 'bg-blue-500',
+	debug: 'bg-purple-500',
+	trace: 'bg-gray-500'
+};
 </script>
 
 <div class={cn('space-y-4', className)}>

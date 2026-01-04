@@ -13,17 +13,16 @@
 
  */
 
-// Types
-export type {
-	GapDiscoveryResult,
-	UpgradeDiscoveryResult,
-	DiscoveryOptions,
-	ContentGap,
-	DiscoveryStats
-} from './types';
-
 // Gap detection
 export { discoverGaps, getGapStats } from './gap-detector';
+// Types
+export type {
+	ContentGap,
+	DiscoveryOptions,
+	DiscoveryStats,
+	GapDiscoveryResult,
+	UpgradeDiscoveryResult
+} from './types';
 
 // Upgrade detection
 export { discoverUpgrades, getUpgradeStats } from './upgrade-detector';

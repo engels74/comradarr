@@ -2,36 +2,35 @@
  * Notification settings page server load and actions.
  */
 
-import type { PageServerLoad, Actions } from './$types';
-import {
-	getAllNotificationChannels,
-	getNotificationChannel,
-	getNotificationChannelStats,
-	createNotificationChannel,
-	updateNotificationChannel,
-	deleteNotificationChannel,
-	notificationChannelNameExists,
-	getDecryptedSensitiveConfig,
-	type NotificationChannelStats,
-	type NotificationChannelType,
-	type NotificationEventType
-} from '$lib/server/db/queries/notifications';
-import type { NotificationChannel } from '$lib/server/db/schema';
 import { fail } from '@sveltejs/kit';
 import * as v from 'valibot';
 import {
 	BaseChannelSchema,
 	DiscordConfigSchema,
-	TelegramConfigSchema,
-	SlackConfigSchema,
 	EmailConfigSchema,
-	WebhookConfigSchema,
 	getSensitiveFields,
 	isImplementedChannelType,
-	type NotificationChannelType as SchemaChannelType
+	SlackConfigSchema,
+	TelegramConfigSchema,
+	WebhookConfigSchema
 } from '$lib/schemas/notification-channel';
-import { getSender, isSupportedChannelType } from '$lib/server/services/notifications';
+import {
+	createNotificationChannel,
+	deleteNotificationChannel,
+	getAllNotificationChannels,
+	getDecryptedSensitiveConfig,
+	getNotificationChannel,
+	getNotificationChannelStats,
+	type NotificationChannelStats,
+	type NotificationChannelType,
+	type NotificationEventType,
+	notificationChannelNameExists,
+	updateNotificationChannel
+} from '$lib/server/db/queries/notifications';
+import type { NotificationChannel } from '$lib/server/db/schema';
 import { createLogger } from '$lib/server/logger';
+import { getSender, isSupportedChannelType } from '$lib/server/services/notifications';
+import type { Actions, PageServerLoad } from './$types';
 
 const logger = createLogger('notifications');
 
@@ -349,7 +348,7 @@ export const actions: Actions = {
 		const id = Number(formData.get('id'));
 		const type = formData.get('type')?.toString();
 
-		if (!id || isNaN(id)) {
+		if (!id || Number.isNaN(id)) {
 			return fail(400, {
 				action: 'update',
 				error: 'Invalid channel ID'
@@ -488,7 +487,7 @@ export const actions: Actions = {
 		const formData = await request.formData();
 		const id = Number(formData.get('id'));
 
-		if (!id || isNaN(id)) {
+		if (!id || Number.isNaN(id)) {
 			return fail(400, {
 				action: 'delete',
 				error: 'Invalid channel ID'
@@ -524,7 +523,7 @@ export const actions: Actions = {
 		const id = Number(formData.get('id'));
 		const enabled = formData.get('enabled') === 'true';
 
-		if (!id || isNaN(id)) {
+		if (!id || Number.isNaN(id)) {
 			return fail(400, {
 				action: 'toggle',
 				error: 'Invalid channel ID'
@@ -559,7 +558,7 @@ export const actions: Actions = {
 		const formData = await request.formData();
 		const id = Number(formData.get('id'));
 
-		if (!id || isNaN(id)) {
+		if (!id || Number.isNaN(id)) {
 			return fail(400, {
 				action: 'test',
 				error: 'Invalid channel ID',

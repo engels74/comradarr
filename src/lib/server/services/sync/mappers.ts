@@ -8,13 +8,13 @@
 
  */
 
-import type {
-	SonarrSeries,
-	SonarrSeason,
-	SonarrEpisode
-} from '$lib/server/connectors/sonarr/types';
 import type { RadarrMovie } from '$lib/server/connectors/radarr/types';
-import type { NewSeries, NewSeason, NewEpisode, NewMovie } from '$lib/server/db/schema';
+import type {
+	SonarrEpisode,
+	SonarrSeason,
+	SonarrSeries
+} from '$lib/server/connectors/sonarr/types';
+import type { NewEpisode, NewMovie, NewSeason, NewSeries } from '$lib/server/db/schema';
 
 /**
  * Map Sonarr/Whisparr series API response to database record.

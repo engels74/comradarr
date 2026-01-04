@@ -9,15 +9,9 @@
  * - Cleanup of old snapshots
  */
 
+import { desc, eq, lt, sql } from 'drizzle-orm';
 import { db } from '$lib/server/db';
-import {
-	completionSnapshots,
-	connectors,
-	episodes,
-	movies,
-	type CompletionSnapshot
-} from '$lib/server/db/schema';
-import { and, count, desc, eq, lt, sql } from 'drizzle-orm';
+import { completionSnapshots, connectors, episodes, movies } from '$lib/server/db/schema';
 
 // =============================================================================
 // Types

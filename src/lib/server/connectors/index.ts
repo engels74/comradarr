@@ -9,134 +9,118 @@
 
 // Base client
 export { BaseArrClient } from './common/base-client.js';
-
-// Factory
-export { createConnectorClient } from './factory.js';
-
-// Sonarr client
-export { SonarrClient } from './sonarr/client.js';
-
-// Radarr client
-export { RadarrClient } from './radarr/client.js';
-export type { ApiVersionInfo } from './radarr/client.js';
-
-// Whisparr client
-export { WhisparrClient } from './whisparr/client.js';
-
-// Types
-export type {
-	ConnectorType,
-	BaseClientConfig,
-	RequestOptions,
-	SystemStatus,
-	HealthCheck,
-	PaginatedResponse,
-	PaginationOptions,
-	CommandResponse,
-	CommandStatus,
-	RetryConfig
-} from './common/types.js';
-
-// Retry utilities
-export { withRetry, calculateBackoffDelay, DEFAULT_RETRY_CONFIG } from './common/retry.js';
-
+export type { ErrorCategory, NetworkErrorCause } from './common/errors.js';
 // Errors
 export {
 	ArrClientError,
-	NetworkError,
 	AuthenticationError,
+	isArrClientError,
+	isRetryableError,
+	NetworkError,
+	NotFoundError,
 	RateLimitError,
 	ServerError,
-	TimeoutError,
-	ValidationError,
-	NotFoundError,
 	SSLError,
-	isArrClientError,
-	isRetryableError
+	TimeoutError,
+	ValidationError
 } from './common/errors.js';
-
-export type { ErrorCategory, NetworkErrorCause } from './common/errors.js';
-
-// Parsers
-export {
-	parseQualityModel,
-	parseCommandResponse,
-	parsePaginatedResponse,
-	parseRecordsWithWarnings,
-	createPaginatedResponseSchema,
-	QualityModelSchema,
-	CommandResponseSchema,
-	CommandStatusSchema
-} from './common/parsers.js';
-
-export type { ParseResult } from './common/parsers.js';
-
+export type { FetchAllPagesOptions, PageFetcher, PaginationMetadata } from './common/pagination.js';
 // Pagination utilities
 export {
-	fetchAllPages,
 	collectAllPages,
 	collectAllPagesWithMetadata,
-	DEFAULT_PAGE_SIZE
+	DEFAULT_PAGE_SIZE,
+	fetchAllPages
 } from './common/pagination.js';
+export type { ParseResult } from './common/parsers.js';
+// Parsers
+export {
+	CommandResponseSchema,
+	CommandStatusSchema,
+	createPaginatedResponseSchema,
+	parseCommandResponse,
+	parsePaginatedResponse,
+	parseQualityModel,
+	parseRecordsWithWarnings,
+	QualityModelSchema
+} from './common/parsers.js';
 
-export type { FetchAllPagesOptions, PageFetcher, PaginationMetadata } from './common/pagination.js';
-
-// Sonarr types
+// Retry utilities
+export { calculateBackoffDelay, DEFAULT_RETRY_CONFIG, withRetry } from './common/retry.js';
+// Types
 export type {
-	SonarrSeries,
-	SonarrSeason,
-	SonarrSeasonStatistics,
-	SonarrSeriesStatistics,
-	SonarrEpisode,
-	SonarrEpisodeFile
-} from './sonarr/types.js';
+	BaseClientConfig,
+	CommandResponse,
+	CommandStatus,
+	ConnectorType,
+	HealthCheck,
+	PaginatedResponse,
+	PaginationOptions,
+	RequestOptions,
+	RetryConfig,
+	SystemStatus
+} from './common/types.js';
+// Factory
+export { createConnectorClient } from './factory.js';
+export type { ApiVersionInfo } from './radarr/client.js';
+// Radarr client
+export { RadarrClient } from './radarr/client.js';
+// Radarr parsers
+export {
+	parsePaginatedMovies,
+	parsePaginatedMoviesLenient,
+	parseRadarrMovie,
+	RadarrMovieFileSchema,
+	RadarrMovieSchema
+} from './radarr/parsers.js';
+// Radarr types
+export type { RadarrMovie, RadarrMovieFile } from './radarr/types.js';
+// Sonarr client
+export { SonarrClient } from './sonarr/client.js';
 
 // Sonarr parsers
 export {
-	parseSonarrSeries,
-	parseSonarrEpisode,
-	parsePaginatedSeries,
 	parsePaginatedEpisodes,
-	SonarrSeriesSchema,
+	parsePaginatedSeries,
+	parseSonarrEpisode,
+	parseSonarrSeries,
+	SonarrEpisodeFileSchema,
+	SonarrEpisodeSchema,
 	SonarrSeasonSchema,
 	SonarrSeasonStatisticsSchema,
-	SonarrSeriesStatisticsSchema,
-	SonarrEpisodeSchema,
-	SonarrEpisodeFileSchema
+	SonarrSeriesSchema,
+	SonarrSeriesStatisticsSchema
 } from './sonarr/parsers.js';
-
-// Radarr types
-export type { RadarrMovie, RadarrMovieFile } from './radarr/types.js';
-
-// Radarr parsers
-export {
-	parseRadarrMovie,
-	parsePaginatedMovies,
-	parsePaginatedMoviesLenient,
-	RadarrMovieSchema,
-	RadarrMovieFileSchema
-} from './radarr/parsers.js';
-
-// Whisparr types
+// Sonarr types
 export type {
-	WhisparrSeries,
-	WhisparrSeason,
-	WhisparrSeasonStatistics,
-	WhisparrSeriesStatistics,
-	WhisparrEpisode,
-	WhisparrEpisodeFile
-} from './whisparr/types.js';
-
+	SonarrEpisode,
+	SonarrEpisodeFile,
+	SonarrSeason,
+	SonarrSeasonStatistics,
+	SonarrSeries,
+	SonarrSeriesStatistics
+} from './sonarr/types.js';
+// Whisparr client
+export { WhisparrClient } from './whisparr/client.js';
 // Whisparr parsers
 export {
-	parseWhisparrSeries,
-	parseWhisparrEpisode,
-	parsePaginatedWhisparrSeries,
 	parsePaginatedWhisparrEpisodes,
-	WhisparrSeriesSchema,
+	parsePaginatedWhisparrSeries,
+	parseWhisparrEpisode,
+	parseWhisparrSeries,
+	WhisparrEpisodeFileSchema,
+	WhisparrEpisodeSchema,
 	WhisparrSeasonSchema,
 	WhisparrSeasonStatisticsSchema,
-	WhisparrSeriesStatisticsSchema,
-	WhisparrEpisodeSchema,
-	WhisparrEpisodeFileSchema
+	WhisparrSeriesSchema,
+	WhisparrSeriesStatisticsSchema
 } from './whisparr/parsers.js';
+// Whisparr types
+export type {
+	WhisparrEpisode,
+	WhisparrEpisodeFile,
+	WhisparrSeason,
+	WhisparrSeasonStatistics,
+	WhisparrSeries,
+	WhisparrSeriesStatistics
+} from './whisparr/types.js';

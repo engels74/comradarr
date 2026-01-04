@@ -9,11 +9,11 @@
 
  */
 
-import { db } from '$lib/server/db';
 import { sql } from 'drizzle-orm';
+import { db } from '$lib/server/db';
 import { getSettingWithDefault } from '$lib/server/db/queries/settings';
-import type { HistoryPruningResult } from './types';
 import { createLogger } from '$lib/server/logger';
+import type { HistoryPruningResult } from './types';
 
 const logger = createLogger('history-pruning');
 
@@ -150,7 +150,7 @@ async function getRetentionDaysFromSettings(): Promise<number> {
 	const parsed = parseInt(value, 10);
 
 	// Validate the parsed value
-	if (isNaN(parsed) || parsed < 1) {
+	if (Number.isNaN(parsed) || parsed < 1) {
 		logger.warn('Invalid retention days setting, using default', {
 			value,
 			default: DEFAULT_RETENTION_DAYS

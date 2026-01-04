@@ -8,10 +8,10 @@
 
  */
 
-import { db } from '$lib/server/db';
-import { movies } from '$lib/server/db/schema';
 import { sql } from 'drizzle-orm';
 import type { RadarrClient } from '$lib/server/connectors/radarr/client';
+import { db } from '$lib/server/db';
+import { movies } from '$lib/server/db/schema';
 import { mapMovieToDb } from '../mappers';
 
 /**

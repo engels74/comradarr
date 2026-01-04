@@ -9,7 +9,7 @@
 
  */
 
-import { describe, it, expect, vi, beforeEach, afterEach, type Mock } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, type Mock, vi } from 'vitest';
 import { SonarrClient } from '../../src/lib/server/connectors/index';
 
 // Helper to create a mock fetch that satisfies TypeScript

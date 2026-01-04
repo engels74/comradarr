@@ -13,14 +13,14 @@
  */
 
 import * as v from 'valibot';
-import type { PaginatedResponse } from '../common/types';
 import {
-	type ParseResult,
-	type LenientParseResult,
 	createPaginatedResponseSchema,
-	QualityModelSchema,
-	parsePaginatedResponseLenient
+	type LenientParseResult,
+	type ParseResult,
+	parsePaginatedResponseLenient,
+	QualityModelSchema
 } from '../common/parsers';
+import type { PaginatedResponse } from '../common/types';
 import type { RadarrMovie, RadarrMovieFile } from './types';
 
 // =============================================================================

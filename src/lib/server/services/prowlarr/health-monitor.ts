@@ -8,26 +8,26 @@
 
  */
 
-import { ProwlarrClient } from './client.js';
-import type {
-	HealthCheckResult,
-	CachedIndexerHealth,
-	HealthSummary,
-	HealthMonitorConfig,
-	ProwlarrHealthStatus
-} from './types.js';
-import type { ProwlarrInstance } from '$lib/server/db/schema';
+import { isArrClientError } from '$lib/server/connectors/common/errors';
 import {
-	getEnabledProwlarrInstances,
+	deleteStaleIndexerHealth,
+	getAllCachedIndexerHealth,
 	getAllProwlarrInstances,
 	getDecryptedApiKey,
-	updateProwlarrHealth,
-	upsertIndexerHealth,
+	getEnabledProwlarrInstances,
 	getIndexerHealthByInstance,
-	getAllCachedIndexerHealth,
-	deleteStaleIndexerHealth
+	updateProwlarrHealth,
+	upsertIndexerHealth
 } from '$lib/server/db/queries/prowlarr';
-import { isArrClientError } from '$lib/server/connectors/common/errors';
+import type { ProwlarrInstance } from '$lib/server/db/schema';
+import { ProwlarrClient } from './client.js';
+import type {
+	CachedIndexerHealth,
+	HealthCheckResult,
+	HealthMonitorConfig,
+	HealthSummary,
+	ProwlarrHealthStatus
+} from './types.js';
 
 // =============================================================================
 // Constants

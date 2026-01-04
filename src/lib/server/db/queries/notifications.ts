@@ -6,17 +6,17 @@
  * before storage. Decryption happens lazily, only when needed for sending notifications.
  */
 
+import { and, count, desc, eq, gte, inArray, sql } from 'drizzle-orm';
+import { DecryptionError, decrypt, encrypt, SecretKeyError } from '$lib/server/crypto';
 import { db } from '$lib/server/db';
 import {
-	notificationChannels,
-	notificationHistory,
-	type NotificationChannel,
 	type NewNotificationChannel,
+	type NewNotificationHistory,
+	type NotificationChannel,
 	type NotificationHistory,
-	type NewNotificationHistory
+	notificationChannels,
+	notificationHistory
 } from '$lib/server/db/schema';
-import { and, count, desc, eq, gte, inArray, sql } from 'drizzle-orm';
-import { decrypt, DecryptionError, encrypt, SecretKeyError } from '$lib/server/crypto';
 
 // Re-export crypto errors for consumers
 export { DecryptionError, SecretKeyError };

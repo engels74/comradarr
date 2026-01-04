@@ -1,73 +1,73 @@
 <script lang="ts">
-	import * as Card from '$lib/components/ui/card';
-	import { Badge } from '$lib/components/ui/badge';
-	import OutcomeBadge from './OutcomeBadge.svelte';
-	import type { SerializedCompletion } from './types';
+import { Badge } from '$lib/components/ui/badge';
+import * as Card from '$lib/components/ui/card';
+import OutcomeBadge from './OutcomeBadge.svelte';
+import type { SerializedCompletion } from './types';
 
-	/**
-	 * Recent completions display component.
-	 * Shows the last N completed searches with outcome indicators.
-	 */
+/**
+ * Recent completions display component.
+ * Shows the last N completed searches with outcome indicators.
+ */
 
-	interface Props {
-		completions: SerializedCompletion[];
-		class?: string | undefined;
+interface Props {
+	completions: SerializedCompletion[];
+	class?: string | undefined;
+}
+
+let { completions, class: className }: Props = $props();
+
+// Connector type badge colors
+const typeColors: Record<string, string> = {
+	sonarr: 'bg-blue-500/10 text-blue-600 dark:text-blue-400',
+	radarr: 'bg-orange-500/10 text-orange-600 dark:text-orange-400',
+	whisparr: 'bg-purple-500/10 text-purple-600 dark:text-purple-400'
+};
+
+/**
+ * Format relative time for display.
+ */
+function formatRelativeTime(dateStr: string): string {
+	const date = new Date(dateStr);
+	const now = new Date();
+	const diffMs = now.getTime() - date.getTime();
+	const diffMins = Math.floor(diffMs / 60000);
+	const diffHours = Math.floor(diffMs / 3600000);
+	const diffDays = Math.floor(diffMs / 86400000);
+
+	if (diffMins < 1) return 'just now';
+	if (diffMins < 60) return `${diffMins}m ago`;
+	if (diffHours < 24) return `${diffHours}h ago`;
+	if (diffDays < 7) return `${diffDays}d ago`;
+	return date.toLocaleDateString();
+}
+
+/**
+ * Get the content link URL.
+ */
+function getContentLink(completion: SerializedCompletion): string {
+	if (completion.contentType === 'episode' && completion.seriesId) {
+		return `/content/series/${completion.seriesId}`;
 	}
-
-	let { completions, class: className }: Props = $props();
-
-	// Connector type badge colors
-	const typeColors: Record<string, string> = {
-		sonarr: 'bg-blue-500/10 text-blue-600 dark:text-blue-400',
-		radarr: 'bg-orange-500/10 text-orange-600 dark:text-orange-400',
-		whisparr: 'bg-purple-500/10 text-purple-600 dark:text-purple-400'
-	};
-
-	/**
-	 * Format relative time for display.
-	 */
-	function formatRelativeTime(dateStr: string): string {
-		const date = new Date(dateStr);
-		const now = new Date();
-		const diffMs = now.getTime() - date.getTime();
-		const diffMins = Math.floor(diffMs / 60000);
-		const diffHours = Math.floor(diffMs / 3600000);
-		const diffDays = Math.floor(diffMs / 86400000);
-
-		if (diffMins < 1) return 'just now';
-		if (diffMins < 60) return `${diffMins}m ago`;
-		if (diffHours < 24) return `${diffHours}h ago`;
-		if (diffDays < 7) return `${diffDays}d ago`;
-		return date.toLocaleDateString();
+	if (completion.contentType === 'movie') {
+		return `/content/movies/${completion.contentId}`;
 	}
+	return '#';
+}
 
-	/**
-	 * Get the content link URL.
-	 */
-	function getContentLink(completion: SerializedCompletion): string {
-		if (completion.contentType === 'episode' && completion.seriesId) {
-			return `/content/series/${completion.seriesId}`;
-		}
-		if (completion.contentType === 'movie') {
-			return `/content/movies/${completion.contentId}`;
-		}
-		return '#';
+/**
+ * Format content title for display.
+ */
+function formatTitle(completion: SerializedCompletion): string {
+	if (completion.contentType === 'episode') {
+		const episode =
+			completion.seasonNumber !== null && completion.episodeNumber !== null
+				? `S${String(completion.seasonNumber).padStart(2, '0')}E${String(completion.episodeNumber).padStart(2, '0')}`
+				: '';
+		const title = completion.contentTitle ?? 'Unknown Episode';
+		return episode ? `${episode} - ${title}` : title;
 	}
-
-	/**
-	 * Format content title for display.
-	 */
-	function formatTitle(completion: SerializedCompletion): string {
-		if (completion.contentType === 'episode') {
-			const episode =
-				completion.seasonNumber !== null && completion.episodeNumber !== null
-					? `S${String(completion.seasonNumber).padStart(2, '0')}E${String(completion.episodeNumber).padStart(2, '0')}`
-					: '';
-			const title = completion.contentTitle ?? 'Unknown Episode';
-			return episode ? `${episode} - ${title}` : title;
-		}
-		return completion.contentTitle ?? 'Unknown Movie';
-	}
+	return completion.contentTitle ?? 'Unknown Movie';
+}
 </script>
 
 <Card.Root class={className}>

@@ -1,36 +1,36 @@
 <script lang="ts">
-	import * as Card from '$lib/components/ui/card';
-	import type { AnalyticsSummary } from './types';
-	import SearchIcon from '@lucide/svelte/icons/search';
-	import CheckCircle2Icon from '@lucide/svelte/icons/check-circle-2';
-	import AlertCircleIcon from '@lucide/svelte/icons/alert-circle';
-	import ArrowUpCircleIcon from '@lucide/svelte/icons/arrow-up-circle';
-	import TimerIcon from '@lucide/svelte/icons/timer';
+import AlertCircleIcon from '@lucide/svelte/icons/alert-circle';
+import ArrowUpCircleIcon from '@lucide/svelte/icons/arrow-up-circle';
+import CheckCircle2Icon from '@lucide/svelte/icons/check-circle-2';
+import SearchIcon from '@lucide/svelte/icons/search';
+import TimerIcon from '@lucide/svelte/icons/timer';
+import * as Card from '$lib/components/ui/card';
+import type { AnalyticsSummary } from './types';
 
-	interface Props {
-		summary: AnalyticsSummary;
-		class?: string;
-	}
+interface Props {
+	summary: AnalyticsSummary;
+	class?: string;
+}
 
-	let { summary, class: className = '' }: Props = $props();
+let { summary, class: className = '' }: Props = $props();
 
-	/**
-	 * Gets success rate background color class.
-	 */
-	function getSuccessRateBg(rate: number): string {
-		if (rate >= 80) return 'bg-green-500/10';
-		if (rate >= 50) return 'bg-yellow-500/10';
-		return 'bg-red-500/10';
-	}
+/**
+ * Gets success rate background color class.
+ */
+function getSuccessRateBg(rate: number): string {
+	if (rate >= 80) return 'bg-green-500/10';
+	if (rate >= 50) return 'bg-yellow-500/10';
+	return 'bg-red-500/10';
+}
 
-	/**
-	 * Formats response time for display.
-	 */
-	function formatResponseTime(ms: number | null): string {
-		if (ms === null) return '-';
-		if (ms < 1000) return `${ms}ms`;
-		return `${(ms / 1000).toFixed(1)}s`;
-	}
+/**
+ * Formats response time for display.
+ */
+function formatResponseTime(ms: number | null): string {
+	if (ms === null) return '-';
+	if (ms < 1000) return `${ms}ms`;
+	return `${(ms / 1000).toFixed(1)}s`;
+}
 </script>
 
 <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 {className}">

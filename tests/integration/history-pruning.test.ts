@@ -9,10 +9,10 @@
  * Run with: bun test tests/integration/history-pruning.test.ts
  */
 
-import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'bun:test';
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'bun:test';
+import { eq, sql } from 'drizzle-orm';
 import { db } from '../../src/lib/server/db';
 import { connectors, searchHistory } from '../../src/lib/server/db/schema';
-import { eq, sql } from 'drizzle-orm';
 import { pruneSearchHistory } from '../../src/lib/server/services/maintenance';
 
 // Store original SECRET_KEY to restore after tests

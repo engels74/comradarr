@@ -1,77 +1,78 @@
 <script lang="ts">
-	/**
-	 * Edit schedule form page.
-	 */
-	import { untrack } from 'svelte';
-	import { enhance } from '$app/forms';
-	import { goto } from '$app/navigation';
-	import * as Card from '$lib/components/ui/card';
-	import { Input } from '$lib/components/ui/input';
-	import { Button } from '$lib/components/ui/button';
-	import { Label } from '$lib/components/ui/label';
-	import { toastStore } from '$lib/components/ui/toast';
-	import { CronBuilder } from '$lib/components/schedules';
-	import { sweepTypes, timezoneOptions } from '$lib/schemas/schedules';
-	import type { PageProps } from './$types';
-	import TrashIcon from '@lucide/svelte/icons/trash-2';
+/**
+ * Edit schedule form page.
+ */
 
-	// Type for form values returned from update action
-	interface UpdateFormValues {
-		error: string;
-		name: string;
-		sweepType: string;
-		cronExpression: string;
-		timezone: string;
-		connectorId: string;
-		throttleProfileId: string;
+import TrashIcon from '@lucide/svelte/icons/trash-2';
+import { untrack } from 'svelte';
+import { enhance } from '$app/forms';
+import { goto } from '$app/navigation';
+import { CronBuilder } from '$lib/components/schedules';
+import { Button } from '$lib/components/ui/button';
+import * as Card from '$lib/components/ui/card';
+import { Input } from '$lib/components/ui/input';
+import { Label } from '$lib/components/ui/label';
+import { toastStore } from '$lib/components/ui/toast';
+import { sweepTypes, timezoneOptions } from '$lib/schemas/schedules';
+import type { PageProps } from './$types';
+
+// Type for form values returned from update action
+interface UpdateFormValues {
+	error: string;
+	name: string;
+	sweepType: string;
+	cronExpression: string;
+	timezone: string;
+	connectorId: string;
+	throttleProfileId: string;
+}
+
+let { data, form }: PageProps = $props();
+
+let isSubmitting = $state(false);
+let isDeleting = $state(false);
+let showDeleteConfirm = $state(false);
+
+// Extract form values with proper type narrowing (form may come from update or delete action)
+function isUpdateFormValues(f: typeof form): f is UpdateFormValues {
+	return f !== null && 'name' in f;
+}
+const formValues = $derived(isUpdateFormValues(form) ? form : null);
+
+// Form state (pre-populated from schedule data, updated via two-way binding)
+// Use untrack to explicitly capture initial values without reactive tracking
+let cronExpression = $state(untrack(() => data.schedule.cronExpression));
+let timezone = $state(untrack(() => data.schedule.timezone));
+
+// Update state when form values change (after form submission with errors)
+$effect(() => {
+	if (formValues?.cronExpression) {
+		cronExpression = formValues.cronExpression;
 	}
-
-	let { data, form }: PageProps = $props();
-
-	let isSubmitting = $state(false);
-	let isDeleting = $state(false);
-	let showDeleteConfirm = $state(false);
-
-	// Extract form values with proper type narrowing (form may come from update or delete action)
-	function isUpdateFormValues(f: typeof form): f is UpdateFormValues {
-		return f !== null && 'name' in f;
+	if (formValues?.timezone) {
+		timezone = formValues.timezone;
 	}
-	const formValues = $derived(isUpdateFormValues(form) ? form : null);
+});
 
-	// Form state (pre-populated from schedule data, updated via two-way binding)
-	// Use untrack to explicitly capture initial values without reactive tracking
-	let cronExpression = $state(untrack(() => data.schedule.cronExpression));
-	let timezone = $state(untrack(() => data.schedule.timezone));
+const isLoading = $derived(isSubmitting || isDeleting);
 
-	// Update state when form values change (after form submission with errors)
-	$effect(() => {
-		if (formValues?.cronExpression) {
-			cronExpression = formValues.cronExpression;
-		}
-		if (formValues?.timezone) {
-			timezone = formValues.timezone;
-		}
-	});
+// Select styling
+const selectClass =
+	'flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 md:text-sm';
 
-	const isLoading = $derived(isSubmitting || isDeleting);
+/**
+ * Format sweep type for display.
+ */
+function formatSweepType(type: string): string {
+	return type === 'incremental' ? 'Incremental Sync' : 'Full Reconciliation';
+}
 
-	// Select styling
-	const selectClass =
-		'flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 md:text-sm';
-
-	/**
-	 * Format sweep type for display.
-	 */
-	function formatSweepType(type: string): string {
-		return type === 'incremental' ? 'Incremental Sync' : 'Full Reconciliation';
-	}
-
-	/**
-	 * Get current form value with fallback to schedule data.
-	 */
-	function getFormValue<T>(formValue: T | undefined, scheduleValue: T): T {
-		return formValue !== undefined ? formValue : scheduleValue;
-	}
+/**
+ * Get current form value with fallback to schedule data.
+ */
+function getFormValue<T>(formValue: T | undefined, scheduleValue: T): T {
+	return formValue !== undefined ? formValue : scheduleValue;
+}
 </script>
 
 <svelte:head>

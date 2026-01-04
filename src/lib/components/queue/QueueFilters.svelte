@@ -1,63 +1,63 @@
 <script lang="ts">
-	import { goto } from '$app/navigation';
-	import { page } from '$app/stores';
-	import { Input } from '$lib/components/ui/input';
-	import type { QueueStatusCounts, QueueConnector } from '$lib/server/db/queries/queue';
+import { goto } from '$app/navigation';
+import { page } from '$app/stores';
+import { Input } from '$lib/components/ui/input';
+import type { QueueConnector, QueueStatusCounts } from '$lib/server/db/queries/queue';
 
-	/**
-	 * Queue filter controls with URL-based state.
-	 */
+/**
+ * Queue filter controls with URL-based state.
+ */
 
-	interface Props {
-		connectors: QueueConnector[];
-		statusCounts: QueueStatusCounts;
-	}
+interface Props {
+	connectors: QueueConnector[];
+	statusCounts: QueueStatusCounts;
+}
 
-	let { connectors, statusCounts }: Props = $props();
+let { connectors, statusCounts }: Props = $props();
 
-	// Initialize from URL params
-	let search = $state($page.url.searchParams.get('search') ?? '');
-	let connectorId = $state($page.url.searchParams.get('connector') ?? '');
-	let contentType = $state($page.url.searchParams.get('type') ?? 'all');
-	let queueState = $state($page.url.searchParams.get('state') ?? 'all');
-	let searchType = $state($page.url.searchParams.get('searchType') ?? 'all');
+// Initialize from URL params
+let search = $state($page.url.searchParams.get('search') ?? '');
+let connectorId = $state($page.url.searchParams.get('connector') ?? '');
+let contentType = $state($page.url.searchParams.get('type') ?? 'all');
+let queueState = $state($page.url.searchParams.get('state') ?? 'all');
+let searchType = $state($page.url.searchParams.get('searchType') ?? 'all');
 
-	// Debounced search
-	let searchTimeout: ReturnType<typeof setTimeout>;
+// Debounced search
+let searchTimeout: ReturnType<typeof setTimeout>;
 
-	/**
-	 * Updates URL with current filter state.
-	 */
-	function updateFilters() {
-		const params = new URLSearchParams();
+/**
+ * Updates URL with current filter state.
+ */
+function updateFilters() {
+	const params = new URLSearchParams();
 
-		if (search) params.set('search', search);
-		if (connectorId) params.set('connector', connectorId);
-		if (contentType !== 'all') params.set('type', contentType);
-		if (queueState !== 'all') params.set('state', queueState);
-		if (searchType !== 'all') params.set('searchType', searchType);
+	if (search) params.set('search', search);
+	if (connectorId) params.set('connector', connectorId);
+	if (contentType !== 'all') params.set('type', contentType);
+	if (queueState !== 'all') params.set('state', queueState);
+	if (searchType !== 'all') params.set('searchType', searchType);
 
-		// Preserve pagination
-		const currentLimit = $page.url.searchParams.get('limit');
-		if (currentLimit) params.set('limit', currentLimit);
+	// Preserve pagination
+	const currentLimit = $page.url.searchParams.get('limit');
+	if (currentLimit) params.set('limit', currentLimit);
 
-		goto(`/queue?${params.toString()}`, { replaceState: true, keepFocus: true });
-	}
+	goto(`/queue?${params.toString()}`, { replaceState: true, keepFocus: true });
+}
 
-	/**
-	 * Handles search input with debounce.
-	 */
-	function onSearchInput() {
-		clearTimeout(searchTimeout);
-		searchTimeout = setTimeout(updateFilters, 300);
-	}
+/**
+ * Handles search input with debounce.
+ */
+function onSearchInput() {
+	clearTimeout(searchTimeout);
+	searchTimeout = setTimeout(updateFilters, 300);
+}
 
-	/**
-	 * Handles filter dropdown changes.
-	 */
-	function onFilterChange() {
-		updateFilters();
-	}
+/**
+ * Handles filter dropdown changes.
+ */
+function onFilterChange() {
+	updateFilters();
+}
 </script>
 
 <div class="flex flex-wrap gap-4 mb-6">

@@ -14,16 +14,16 @@
 
  */
 
-import { describe, it, expect } from 'vitest';
+import { describe, expect, it } from 'vitest';
+import {
+	DEFAULT_PRIORITY_WEIGHTS,
+	PRIORITY_CONSTANTS
+} from '../../src/lib/server/services/queue/config';
 // Import directly from specific files to avoid loading database-dependent queue-service.ts
 import {
 	calculatePriority,
 	comparePriority
 } from '../../src/lib/server/services/queue/priority-calculator';
-import {
-	DEFAULT_PRIORITY_WEIGHTS,
-	PRIORITY_CONSTANTS
-} from '../../src/lib/server/services/queue/config';
 import type { PriorityInput, PriorityWeights } from '../../src/lib/server/services/queue/types';
 
 /**

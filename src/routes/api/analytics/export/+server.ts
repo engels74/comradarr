@@ -10,9 +10,9 @@
  */
 
 import { error } from '@sveltejs/kit';
-import type { RequestHandler } from './$types';
-import { getDailyStatsForExport, type ExportRow } from '$lib/server/db/queries/analytics';
 import { requireScope } from '$lib/server/auth';
+import { type ExportRow, getDailyStatsForExport } from '$lib/server/db/queries/analytics';
+import type { RequestHandler } from './$types';
 
 /**
  * CSV column headers.
@@ -101,8 +101,8 @@ function parseDate(dateString: string | null, paramName: string): Date {
 		error(400, `Invalid date format for ${paramName}. Expected YYYY-MM-DD.`);
 	}
 
-	const date = new Date(dateString + 'T00:00:00Z');
-	if (isNaN(date.getTime())) {
+	const date = new Date(`${dateString}T00:00:00Z`);
+	if (Number.isNaN(date.getTime())) {
 		error(400, `Invalid date value for ${paramName}.`);
 	}
 

@@ -9,10 +9,10 @@
  */
 
 import { BaseArrClient } from '../common/base-client.js';
-import type { BaseClientConfig, PaginationOptions, CommandResponse } from '../common/types.js';
-import { parseSonarrSeries, parseSonarrEpisode, parsePaginatedEpisodesLenient } from './parsers.js';
 import { parseCommandResponse } from '../common/parsers.js';
-import type { SonarrSeries, SonarrEpisode } from './types.js';
+import type { CommandResponse, PaginationOptions } from '../common/types.js';
+import { parsePaginatedEpisodesLenient, parseSonarrEpisode, parseSonarrSeries } from './parsers.js';
+import type { SonarrEpisode, SonarrSeries } from './types.js';
 
 /**
  * Options for fetching wanted episodes (missing or cutoff unmet)
@@ -46,15 +46,6 @@ export interface WantedOptions extends PaginationOptions {
  * ```
  */
 export class SonarrClient extends BaseArrClient {
-	/**
-	 * Create a new SonarrClient instance
-	 *
-	 * @param config - Client configuration including baseUrl and apiKey
-	 */
-	constructor(config: BaseClientConfig) {
-		super(config);
-	}
-
 	// Inherited from BaseArrClient:
 	// - ping(): Promise<boolean>
 	// - getSystemStatus(): Promise<SystemStatus>

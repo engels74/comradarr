@@ -1,12 +1,12 @@
 <script lang="ts">
-	import ActivityFeed from '$lib/components/dashboard/ActivityFeed.svelte';
-	import ConnectionStatusPanel from '$lib/components/dashboard/ConnectionStatusPanel.svelte';
-	import LibraryCompletionPanel from '$lib/components/dashboard/LibraryCompletionPanel.svelte';
-	import StatisticsPanel from '$lib/components/dashboard/StatisticsPanel.svelte';
-	import UpcomingSchedulePanel from '$lib/components/dashboard/UpcomingSchedulePanel.svelte';
-	import type { PageProps } from './$types';
+import ActivityFeed from '$lib/components/dashboard/ActivityFeed.svelte';
+import ConnectionStatusPanel from '$lib/components/dashboard/ConnectionStatusPanel.svelte';
+import LibraryCompletionPanel from '$lib/components/dashboard/LibraryCompletionPanel.svelte';
+import StatisticsPanel from '$lib/components/dashboard/StatisticsPanel.svelte';
+import UpcomingSchedulePanel from '$lib/components/dashboard/UpcomingSchedulePanel.svelte';
+import type { PageProps } from './$types';
 
-	let { data }: PageProps = $props();
+let { data }: PageProps = $props();
 </script>
 
 <div class="container mx-auto p-6">

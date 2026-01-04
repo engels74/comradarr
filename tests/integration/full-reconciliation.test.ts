@@ -13,25 +13,23 @@
  * Run with: bun test tests/integration/full-reconciliation.test.ts
  */
 
-import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'bun:test';
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'bun:test';
+import { and, eq, inArray, sql } from 'drizzle-orm';
 import * as fc from 'fast-check';
 import { db } from '../../src/lib/server/db';
 import {
 	connectors,
-	series,
-	seasons,
 	episodes,
 	movies,
-	searchRegistry
+	searchRegistry,
+	seasons,
+	series
 } from '../../src/lib/server/db/schema';
-import { eq, and, sql, inArray } from 'drizzle-orm';
 import {
 	deleteSearchRegistryForContent,
 	deleteSearchRegistryForEpisodes,
 	deleteSearchRegistryForMovies
 } from '../../src/lib/server/services/sync/search-state-cleanup';
-import { reconcileRadarrMovies } from '../../src/lib/server/services/sync/handlers/radarr-reconcile';
-import { reconcileSonarrContent } from '../../src/lib/server/services/sync/handlers/sonarr-reconcile';
 
 // Store original SECRET_KEY to restore after tests
 const originalSecretKey = process.env.SECRET_KEY;

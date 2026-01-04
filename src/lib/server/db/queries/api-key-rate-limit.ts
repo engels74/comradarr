@@ -8,9 +8,9 @@
  * - lastRequestAt: Timestamp of last request
  */
 
+import { eq, isNull, lt, or, sql } from 'drizzle-orm';
 import { db } from '$lib/server/db';
-import { apiKeyRateLimitState, type ApiKeyRateLimitState } from '$lib/server/db/schema';
-import { eq, lt, sql, or, isNull } from 'drizzle-orm';
+import { type ApiKeyRateLimitState, apiKeyRateLimitState } from '$lib/server/db/schema';
 import {
 	isMinuteWindowExpired,
 	msUntilMinuteWindowExpires

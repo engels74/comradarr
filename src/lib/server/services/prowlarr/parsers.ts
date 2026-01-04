@@ -15,7 +15,7 @@
 
 import * as v from 'valibot';
 import type { ParseResult } from '$lib/server/connectors/common/parsers';
-import type { ProwlarrIndexerStatus, ProwlarrIndexer } from './types.js';
+import type { ProwlarrIndexer, ProwlarrIndexerStatus } from './types.js';
 
 /**
  * Valibot schema for indexer status response.

@@ -8,9 +8,9 @@
  */
 
 import { error, json } from '@sveltejs/kit';
-import type { RequestHandler } from './$types';
-import { deleteBackup, loadBackup, getBackupInfo } from '$lib/server/services/backup';
 import { requireScope } from '$lib/server/auth';
+import { deleteBackup, getBackupInfo, loadBackup } from '$lib/server/services/backup';
+import type { RequestHandler } from './$types';
 
 /**
  * GET /api/backup/[id]

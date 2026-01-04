@@ -12,25 +12,25 @@
  * Run with: bun test tests/integration/state-transitions.test.ts
  */
 
-import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'bun:test';
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'bun:test';
+import { eq } from 'drizzle-orm';
 import { db } from '../../src/lib/server/db';
 import {
 	connectors,
-	series,
-	seasons,
 	episodes,
 	movies,
+	requestQueue,
 	searchRegistry,
-	requestQueue
+	seasons,
+	series
 } from '../../src/lib/server/db/schema';
-import { eq, sql } from 'drizzle-orm';
-import {
-	markSearchFailed,
-	markSearchExhausted,
-	reenqueueEligibleCooldownItems,
-	getSearchState
-} from '../../src/lib/server/services/queue/state-transitions';
 import { STATE_TRANSITION_CONFIG } from '../../src/lib/server/services/queue/config';
+import {
+	getSearchState,
+	markSearchExhausted,
+	markSearchFailed,
+	reenqueueEligibleCooldownItems
+} from '../../src/lib/server/services/queue/state-transitions';
 
 // Store original SECRET_KEY to restore after tests
 const originalSecretKey = process.env.SECRET_KEY;

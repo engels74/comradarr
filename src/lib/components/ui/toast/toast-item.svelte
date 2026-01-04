@@ -1,22 +1,22 @@
 <script lang="ts" module>
-	import { tv, type VariantProps } from 'tailwind-variants';
+import { tv, type VariantProps } from 'tailwind-variants';
 
-	export const toastVariants = tv({
-		base: 'pointer-events-auto relative flex items-start gap-3 rounded-lg border p-4 pr-10 shadow-lg bg-background animate-in slide-in-from-top-2 fade-in-0 duration-200',
-		variants: {
-			type: {
-				success: 'border-green-500/30 bg-green-500/10 text-green-600 dark:text-green-400',
-				error: 'border-destructive/30 bg-destructive/10 text-destructive',
-				warning: 'border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400',
-				info: 'border-border bg-card text-card-foreground'
-			}
-		},
-		defaultVariants: {
-			type: 'info'
+export const toastVariants = tv({
+	base: 'pointer-events-auto relative flex items-start gap-3 rounded-lg border p-4 pr-10 shadow-lg bg-background animate-in slide-in-from-top-2 fade-in-0 duration-200',
+	variants: {
+		type: {
+			success: 'border-green-500/30 bg-green-500/10 text-green-600 dark:text-green-400',
+			error: 'border-destructive/30 bg-destructive/10 text-destructive',
+			warning: 'border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400',
+			info: 'border-border bg-card text-card-foreground'
 		}
-	});
+	},
+	defaultVariants: {
+		type: 'info'
+	}
+});
 
-	export type ToastVariantType = VariantProps<typeof toastVariants>['type'];
+export type ToastVariantType = VariantProps<typeof toastVariants>['type'];
 </script>
 
 <script lang="ts">

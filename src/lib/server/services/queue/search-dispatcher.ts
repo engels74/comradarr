@@ -11,18 +11,18 @@
 
  */
 
-import { getConnector, getDecryptedApiKey } from '$lib/server/db/queries/connectors';
 import {
-	SonarrClient,
-	RadarrClient,
-	WhisparrClient,
-	RateLimitError,
+	type CommandResponse,
 	isArrClientError,
-	type CommandResponse
+	RadarrClient,
+	RateLimitError,
+	SonarrClient,
+	WhisparrClient
 } from '$lib/server/connectors';
+import { getConnector, getDecryptedApiKey } from '$lib/server/db/queries/connectors';
 import { createLogger } from '$lib/server/logger';
-import { throttleEnforcer } from '$lib/server/services/throttle';
 import { prowlarrHealthMonitor } from '$lib/server/services/prowlarr';
+import { throttleEnforcer } from '$lib/server/services/throttle';
 import type { ContentType, SearchType } from './types';
 
 const logger = createLogger('dispatcher');

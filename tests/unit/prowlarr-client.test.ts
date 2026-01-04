@@ -13,16 +13,16 @@
 
  */
 
-import { describe, it, expect, vi, beforeEach, afterEach, type Mock } from 'vitest';
-import { ProwlarrClient } from '../../src/lib/server/services/prowlarr/client';
+import { afterEach, beforeEach, describe, expect, it, type Mock, vi } from 'vitest';
 import {
-	NetworkError,
 	AuthenticationError,
+	NetworkError,
+	NotFoundError,
 	RateLimitError,
 	ServerError,
-	TimeoutError,
-	NotFoundError
+	TimeoutError
 } from '../../src/lib/server/connectors/common/errors';
+import { ProwlarrClient } from '../../src/lib/server/services/prowlarr/client';
 
 // Helper to create a mock fetch that satisfies TypeScript
 function createMockFetch(impl: Mock): typeof fetch {
@@ -483,10 +483,10 @@ describe('ProwlarrClient', () => {
 				}
 			];
 
-			let callCount = 0;
+			let _callCount = 0;
 			globalThis.fetch = createMockFetch(
 				vi.fn().mockImplementation(async (url: string) => {
-					callCount++;
+					_callCount++;
 					if (url.includes('indexerstatus')) {
 						return new Response(JSON.stringify(mockStatuses), { status: 200 });
 					}

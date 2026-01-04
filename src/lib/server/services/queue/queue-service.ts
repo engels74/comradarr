@@ -11,9 +11,11 @@
 
  */
 
+import { and, asc, desc, eq, inArray, isNull, sql } from 'drizzle-orm';
 import { db } from '$lib/server/db';
 import { connectors, episodes, movies, requestQueue, searchRegistry } from '$lib/server/db/schema';
-import { and, eq, inArray, sql, desc, asc, isNull } from 'drizzle-orm';
+import { QUEUE_CONFIG } from './config';
+import { calculatePriority } from './priority-calculator';
 import type {
 	ContentType,
 	DequeueOptions,
@@ -26,8 +28,6 @@ import type {
 	QueueStatus,
 	SearchType
 } from './types';
-import { calculatePriority } from './priority-calculator';
-import { QUEUE_CONFIG } from './config';
 
 /**
  * Enqueues all pending search registry items for a connector.

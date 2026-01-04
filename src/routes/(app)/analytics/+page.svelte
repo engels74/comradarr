@@ -1,39 +1,40 @@
 <script lang="ts">
-	/**
-	 * Analytics Dashboard Page
-	 *
-	 * Displays:
-	 * - Time-series charts for key metrics
-	 * - Connector comparison table
-	 * - Content analysis (most searched, hardest to find, quality distribution)
-	 * - CSV export with date range selection
-	 */
-	import { goto } from '$app/navigation';
-	import { page } from '$app/stores';
-	import type { PageProps } from './$types';
-	import type { TimePeriod } from '$lib/components/analytics/types';
-	import {
-		TimePeriodSelector,
-		DiscoveryChart,
-		SearchVolumeChart,
-		QueueDepthChart,
-		ConnectorComparison,
-		ContentAnalysis,
-		AnalyticsSummaryCards,
-		ExportDialog
-	} from '$lib/components/analytics';
-	import BarChart3Icon from '@lucide/svelte/icons/bar-chart-3';
+/**
+ * Analytics Dashboard Page
+ *
+ * Displays:
+ * - Time-series charts for key metrics
+ * - Connector comparison table
+ * - Content analysis (most searched, hardest to find, quality distribution)
+ * - CSV export with date range selection
+ */
 
-	let { data }: PageProps = $props();
+import BarChart3Icon from '@lucide/svelte/icons/bar-chart-3';
+import { goto } from '$app/navigation';
+import { page } from '$app/stores';
+import {
+	AnalyticsSummaryCards,
+	ConnectorComparison,
+	ContentAnalysis,
+	DiscoveryChart,
+	ExportDialog,
+	QueueDepthChart,
+	SearchVolumeChart,
+	TimePeriodSelector
+} from '$lib/components/analytics';
+import type { TimePeriod } from '$lib/components/analytics/types';
+import type { PageProps } from './$types';
 
-	/**
-	 * Handles period change by updating URL.
-	 */
-	function onPeriodChange(period: TimePeriod) {
-		const params = new URLSearchParams($page.url.searchParams);
-		params.set('period', period);
-		goto(`/analytics?${params.toString()}`);
-	}
+let { data }: PageProps = $props();
+
+/**
+ * Handles period change by updating URL.
+ */
+function onPeriodChange(period: TimePeriod) {
+	const params = new URLSearchParams($page.url.searchParams);
+	params.set('period', period);
+	goto(`/analytics?${params.toString()}`);
+}
 </script>
 
 <svelte:head>

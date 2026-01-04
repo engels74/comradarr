@@ -14,24 +14,23 @@
 
 import { mkdir, readdir, readFile, rm, stat, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { db } from '$lib/server/db';
 import { encrypt } from '$lib/server/crypto';
+import { db } from '$lib/server/db';
+// Import schema tables for dynamic querying
+import * as schema from '$lib/server/db/schema';
+import { createLogger } from '$lib/server/logger';
 import {
 	BackupError,
-	SECRET_KEY_VERIFIER_PLAINTEXT,
-	TABLE_EXPORT_ORDER,
 	type BackupFile,
 	type BackupInfo,
 	type BackupMetadata,
 	type BackupOptions,
 	type BackupResult,
 	type SchemaVersion,
+	SECRET_KEY_VERIFIER_PLAINTEXT,
+	TABLE_EXPORT_ORDER,
 	type TableExport
 } from './types';
-
-// Import schema tables for dynamic querying
-import * as schema from '$lib/server/db/schema';
-import { createLogger } from '$lib/server/logger';
 
 const logger = createLogger('backup');
 
@@ -123,7 +122,7 @@ async function exportTable(tableName: string): Promise<TableExport> {
 	}
 
 	// Export all rows from the table
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	// biome-ignore lint/suspicious/noExplicitAny: dynamic table selection requires type assertion
 	const rows = await db.select().from(schemaTable as any);
 
 	return {

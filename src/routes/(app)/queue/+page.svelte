@@ -1,106 +1,106 @@
 <script lang="ts">
-	import type { PageProps } from './$types';
-	import {
-		QueueBulkActions,
-		QueueControls,
-		QueueFilters,
-		QueueTable,
-		RecentCompletions
-	} from '$lib/components/queue';
-	import { Button } from '$lib/components/ui/button';
-	import { toastStore } from '$lib/components/ui/toast';
-	import { goto } from '$app/navigation';
-	import { page } from '$app/stores';
-	import { onMount } from 'svelte';
-	import { createPollingController, POLLING_INTERVALS } from '$lib/utils/polling';
+import { onMount } from 'svelte';
+import { goto } from '$app/navigation';
+import { page } from '$app/stores';
+import {
+	QueueBulkActions,
+	QueueControls,
+	QueueFilters,
+	QueueTable,
+	RecentCompletions
+} from '$lib/components/queue';
+import { Button } from '$lib/components/ui/button';
+import { toastStore } from '$lib/components/ui/toast';
+import { createPollingController, POLLING_INTERVALS } from '$lib/utils/polling';
+import type { PageProps } from './$types';
 
-	/**
-	 * Queue management page with virtualized table.
-	 *
-	 * - Display items in priority order
-	 * - Show estimated dispatch time
-	 * - Show current processing indicator
-	 * - Manual priority adjustment and removal from queue
-	 * - Pause, resume, and clear queue actions
-	 * - Display recent completions with outcome indicators
-	 * - Real-time updates without page refresh
-	 */
+/**
+ * Queue management page with virtualized table.
+ *
+ * - Display items in priority order
+ * - Show estimated dispatch time
+ * - Show current processing indicator
+ * - Manual priority adjustment and removal from queue
+ * - Pause, resume, and clear queue actions
+ * - Display recent completions with outcome indicators
+ * - Real-time updates without page refresh
+ */
 
-	let { data }: PageProps = $props();
+let { data }: PageProps = $props();
 
-	// Polling controller for real-time updates
-	const polling = createPollingController({
-		dependencyKey: 'app:queue',
-		interval: POLLING_INTERVALS.FAST
-	});
+// Polling controller for real-time updates
+const polling = createPollingController({
+	dependencyKey: 'app:queue',
+	interval: POLLING_INTERVALS.FAST
+});
 
-	// Start/stop polling on mount/unmount
-	onMount(() => {
-		polling.start();
-		return () => polling.stop();
-	});
+// Start/stop polling on mount/unmount
+onMount(() => {
+	polling.start();
+	return () => polling.stop();
+});
 
-	// Selection state
-	let selectedIds = $state<Set<number>>(new Set());
+// Selection state
+let selectedIds = $state<Set<number>>(new Set());
 
-	// Clear selection when data changes (e.g., after an action)
-	$effect(() => {
-		// Access data to create dependency
-		data.queue;
-		// Clear selection on data refresh
-		selectedIds = new Set();
-	});
+// Clear selection when data changes (e.g., after an action)
+$effect(() => {
+	// Access data to create dependency
+	data.queue;
+	// Clear selection on data refresh
+	selectedIds = new Set();
+});
 
-	/**
-	 * Handle selection change from QueueTable.
-	 */
-	function handleSelectionChange(ids: Set<number>) {
-		selectedIds = ids;
-	}
+/**
+ * Handle selection change from QueueTable.
+ */
+function handleSelectionChange(ids: Set<number>) {
+	selectedIds = ids;
+}
 
-	/**
-	 * Clear all selections.
-	 */
-	function clearSelection() {
-		selectedIds = new Set();
-	}
+/**
+ * Clear all selections.
+ */
+function clearSelection() {
+	selectedIds = new Set();
+}
 
-	/**
-	 * Handle action start - pause polling during form submission.
-	 */
-	function handleActionStart() {
-		polling.pause();
-	}
+/**
+ * Handle action start - pause polling during form submission.
+ */
+function handleActionStart() {
+	polling.pause();
+}
 
-	/**
-	 * Handle action complete - resume polling and show feedback.
-	 */
-	function handleActionComplete(message: string) {
-		toastStore.success(message);
-		// Resume polling after a short delay to allow UI to settle
-		setTimeout(() => {
-			polling.resume();
-		}, 500);
-	}
+/**
+ * Handle action complete - resume polling and show feedback.
+ */
+function handleActionComplete(message: string) {
+	toastStore.success(message);
+	// Resume polling after a short delay to allow UI to settle
+	setTimeout(() => {
+		polling.resume();
+	}, 500);
+}
 
-	// Pagination state
-	const pageSize = $derived(data.filters.limit ?? 50);
-	const totalPages = $derived(Math.ceil(data.total / pageSize));
-	const currentPage = $derived(Math.floor((data.filters.offset ?? 0) / pageSize) + 1);
+// Pagination state
+const pageSize = $derived(data.filters.limit ?? 50);
+const totalPages = $derived(Math.ceil(data.total / pageSize));
+const currentPage = $derived(Math.floor((data.filters.offset ?? 0) / pageSize) + 1);
 
-	/**
-	 * Navigate to a page.
-	 */
-	function goToPage(pageNum: number) {
-		if (pageNum < 1 || pageNum > totalPages) return;
+/**
+ * Navigate to a page.
+ */
+function goToPage(pageNum: number) {
+	if (pageNum < 1 || pageNum > totalPages) return;
 
-		const params = new URLSearchParams($page.url.searchParams);
-		params.set('page', pageNum.toString());
-		goto(`/queue?${params.toString()}`);
-	}
+	const params = new URLSearchParams($page.url.searchParams);
+	params.set('page', pageNum.toString());
+	goto(`/queue?${params.toString()}`);
+}
 
-	// Count of active items (queued + searching)
-	const activeCount = $derived(data.statusCounts.queued + data.statusCounts.searching);
+// Count of active items (queued + searching)
+const activeCount = $derived(data.statusCounts.queued + data.statusCounts.searching);
 </script>
 
 <svelte:head>

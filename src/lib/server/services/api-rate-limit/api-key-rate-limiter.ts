@@ -17,10 +17,10 @@ import {
 	getOrCreateRateLimitState,
 	getRateLimitState,
 	incrementRequestCounter,
-	resetMinuteWindow,
 	isMinuteWindowExpired,
 	msUntilMinuteWindowExpires,
-	resetExpiredMinuteWindows
+	resetExpiredMinuteWindows,
+	resetMinuteWindow
 } from '$lib/server/db/queries/api-key-rate-limit';
 
 // =============================================================================

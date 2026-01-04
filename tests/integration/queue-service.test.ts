@@ -11,25 +11,25 @@
  * Run with: bun test tests/integration/queue-service.test.ts
  */
 
-import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'bun:test';
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'bun:test';
+import { eq, sql } from 'drizzle-orm';
 import { db } from '../../src/lib/server/db';
 import {
 	connectors,
-	series,
-	seasons,
 	episodes,
 	movies,
+	requestQueue,
 	searchRegistry,
-	requestQueue
+	seasons,
+	series
 } from '../../src/lib/server/db/schema';
-import { eq, sql, and } from 'drizzle-orm';
 import {
-	enqueuePendingItems,
-	dequeuePriorityItems,
-	pauseQueue,
-	resumeQueue,
 	clearQueue,
-	getQueueStatus
+	dequeuePriorityItems,
+	enqueuePendingItems,
+	getQueueStatus,
+	pauseQueue,
+	resumeQueue
 } from '../../src/lib/server/services/queue';
 
 // Store original SECRET_KEY to restore after tests
@@ -361,7 +361,7 @@ describe('Queue Service - enqueuePendingItems', () => {
 			const seasonId = await insertTestSeason(seriesId, 1);
 			const episodeId = await insertTestEpisode(testSonarrConnectorId, seasonId, 101, 1, 1);
 
-			const registryId = await createPendingEpisodeRegistry(testSonarrConnectorId, episodeId);
+			const _registryId = await createPendingEpisodeRegistry(testSonarrConnectorId, episodeId);
 
 			await enqueuePendingItems(testSonarrConnectorId);
 

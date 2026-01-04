@@ -24,14 +24,16 @@
 		"db:migrate": "bunx drizzle-kit migrate",
 		"db:push": "bunx drizzle-kit push",
 		"db:studio": "bunx drizzle-kit studio",
-		"format": "prettier --write .",
-		"format:check": "prettier --check ."
+		"format": "biome format --write .",
+		"format:check": "biome format .",
+		"lint": "biome lint .",
+		"lint:fix": "biome lint --write .",
+		"check:biome": "biome check ."
 	},
 	"devDependencies": {
+		"@biomejs/biome": "^2.3.11",
 		"@internationalized/date": "^3.10.1",
 		"@j178/prek": "^0.2.25",
-		"prettier": "^3.7.4",
-		"prettier-plugin-svelte": "^3.4.1",
 		"@resvg/resvg-js": "^2.6.2",
 		"@sveltejs/adapter-auto": "^7.0.0",
 		"@sveltejs/kit": "^2.49.2",

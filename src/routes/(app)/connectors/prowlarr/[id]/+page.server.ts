@@ -3,22 +3,22 @@
  */
 
 import { error, fail } from '@sveltejs/kit';
-import type { PageServerLoad, Actions } from './$types';
-import {
-	getProwlarrInstance,
-	getDecryptedApiKey,
-	getIndexerHealthByInstance,
-	updateProwlarrHealth,
-	deleteProwlarrInstance
-} from '$lib/server/db/queries/prowlarr';
-import { ProwlarrClient, prowlarrHealthMonitor } from '$lib/server/services/prowlarr';
 import {
 	AuthenticationError,
+	isArrClientError,
 	NetworkError,
-	TimeoutError,
 	SSLError,
-	isArrClientError
+	TimeoutError
 } from '$lib/server/connectors';
+import {
+	deleteProwlarrInstance,
+	getDecryptedApiKey,
+	getIndexerHealthByInstance,
+	getProwlarrInstance,
+	updateProwlarrHealth
+} from '$lib/server/db/queries/prowlarr';
+import { ProwlarrClient, prowlarrHealthMonitor } from '$lib/server/services/prowlarr';
+import type { Actions, PageServerLoad } from './$types';
 
 /**
  * Returns a user-friendly error message based on the error type.
@@ -54,7 +54,7 @@ function getErrorMessage(err: unknown): string {
 export const load: PageServerLoad = async ({ params }) => {
 	const id = Number(params.id);
 
-	if (isNaN(id)) {
+	if (Number.isNaN(id)) {
 		error(400, 'Invalid Prowlarr instance ID');
 	}
 
@@ -91,7 +91,7 @@ export const actions: Actions = {
 	testConnection: async ({ params }) => {
 		const id = Number(params.id);
 
-		if (isNaN(id)) {
+		if (Number.isNaN(id)) {
 			return fail(400, { error: 'Invalid Prowlarr instance ID' });
 		}
 
@@ -146,7 +146,7 @@ export const actions: Actions = {
 	checkHealth: async ({ params }) => {
 		const id = Number(params.id);
 
-		if (isNaN(id)) {
+		if (Number.isNaN(id)) {
 			return fail(400, { error: 'Invalid Prowlarr instance ID' });
 		}
 
@@ -187,7 +187,7 @@ export const actions: Actions = {
 	delete: async ({ params }) => {
 		const id = Number(params.id);
 
-		if (isNaN(id)) {
+		if (Number.isNaN(id)) {
 			return fail(400, { error: 'Invalid Prowlarr instance ID' });
 		}
 

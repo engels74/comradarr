@@ -12,18 +12,18 @@
 
  */
 
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
-	withRetry,
+	AuthenticationError,
 	calculateBackoffDelay,
 	DEFAULT_RETRY_CONFIG,
 	NetworkError,
-	AuthenticationError,
+	NotFoundError,
 	RateLimitError,
 	ServerError,
+	SSLError,
 	TimeoutError,
-	NotFoundError,
-	SSLError
+	withRetry
 } from '../../src/lib/server/connectors/index';
 
 describe('calculateBackoffDelay', () => {

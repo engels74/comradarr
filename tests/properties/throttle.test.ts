@@ -17,17 +17,17 @@
 
  */
 
-import { describe, it, expect } from 'vitest';
 import * as fc from 'fast-check';
+import { describe, expect, it } from 'vitest';
+import type { ThrottlePreset } from '../../src/lib/config/throttle-presets';
 import {
 	getStartOfDayUTC,
 	getStartOfNextDayUTC,
-	isMinuteWindowExpired,
 	isDayWindowExpired,
-	msUntilMinuteWindowExpires,
-	msUntilMidnightUTC
+	isMinuteWindowExpired,
+	msUntilMidnightUTC,
+	msUntilMinuteWindowExpires
 } from '../../src/lib/server/services/throttle/time-utils';
-import type { ThrottlePreset } from '../../src/lib/config/throttle-presets';
 
 // =============================================================================
 // Arbitraries
@@ -60,7 +60,7 @@ const validDateArbitrary = fc
 /**
  * Arbitrary for time offsets in milliseconds.
  */
-const timeOffsetMsArbitrary = fc.integer({ min: 0, max: 24 * 60 * 60 * 1000 });
+const _timeOffsetMsArbitrary = fc.integer({ min: 0, max: 24 * 60 * 60 * 1000 });
 
 // =============================================================================
 // Property 11: Throttle Profile Enforcement
@@ -222,7 +222,7 @@ describe('Property 12: Request Counter Reset (Requirement 7.4)', () => {
 				fc.property(
 					validDateArbitrary,
 					fc.integer({ min: 1, max: 100 }), // Requests before reset
-					(windowStart, requestsBefore) => {
+					(windowStart, _requestsBefore) => {
 						// Window has requests
 						const windowEnd = new Date(windowStart.getTime() + 60 * 1000);
 
@@ -249,8 +249,8 @@ describe('Property 12: Request Counter Reset (Requirement 7.4)', () => {
 					fc.integer({ min: 1, max: 100 }), // Requests in first window
 					fc.integer({ min: 1, max: 100 }), // Requests in second window
 					(profile, requestsWindow1, requestsWindow2) => {
-						const window1Start = new Date('2024-06-15T12:00:00.000Z');
-						const window2Start = new Date('2024-06-15T12:01:00.000Z'); // 1 minute later
+						const _window1Start = new Date('2024-06-15T12:00:00.000Z');
+						const _window2Start = new Date('2024-06-15T12:01:00.000Z'); // 1 minute later
 
 						// First window can only accept up to limit
 						const acceptedWindow1 = Math.min(requestsWindow1, profile.requestsPerMinute);

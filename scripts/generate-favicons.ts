@@ -2,9 +2,10 @@
  * Generate PNG favicons from the simplified SVG favicon.
  * Run with: bun run scripts/generate-favicons.ts
  */
+
+import { readFileSync, writeFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { Resvg } from '@resvg/resvg-js';
-import { readFileSync, writeFileSync } from 'fs';
-import { join } from 'path';
 
 const faviconSvg = readFileSync(join(import.meta.dir, '../static/favicon.svg'), 'utf-8');
 

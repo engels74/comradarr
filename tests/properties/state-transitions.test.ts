@@ -14,8 +14,8 @@
 
  */
 
-import { describe, it, expect } from 'vitest';
 import * as fc from 'fast-check';
+import { describe, expect, it } from 'vitest';
 // Import directly from specific files to avoid loading database-dependent modules
 import {
 	calculateNextEligibleTime,
@@ -56,7 +56,7 @@ const dateArbitrary = fc
 		min: new Date('2020-01-01'),
 		max: new Date('2030-12-31')
 	})
-	.filter((d) => !isNaN(d.getTime()));
+	.filter((d) => !Number.isNaN(d.getTime()));
 
 describe('State Transitions (Requirements 5.5, 5.6)', () => {
 	describe('Property 8: Exhaustion at Max Attempts', () => {
@@ -301,8 +301,7 @@ describe('Configuration Consistency', () => {
 					STATE_TRANSITION_CONFIG;
 
 				// Calculate delay at max attempts
-				const maxAttemptDelay =
-					COOLDOWN_BASE_DELAY * Math.pow(COOLDOWN_MULTIPLIER, MAX_ATTEMPTS - 1);
+				const maxAttemptDelay = COOLDOWN_BASE_DELAY * COOLDOWN_MULTIPLIER ** (MAX_ATTEMPTS - 1);
 
 				// Max delay should be reached within MAX_ATTEMPTS attempts
 				// or the configured max delay should cap it

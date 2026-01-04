@@ -1,11 +1,11 @@
 <script lang="ts">
-	import type { PageProps } from './$types';
-	import { ConnectorCard } from '$lib/components/connectors';
-	import { ProwlarrInstanceCard } from '$lib/components/prowlarr';
-	import { Button } from '$lib/components/ui/button';
-	import { Separator } from '$lib/components/ui/separator';
+import { ConnectorCard } from '$lib/components/connectors';
+import { ProwlarrInstanceCard } from '$lib/components/prowlarr';
+import { Button } from '$lib/components/ui/button';
+import { Separator } from '$lib/components/ui/separator';
+import type { PageProps } from './$types';
 
-	let { data }: PageProps = $props();
+let { data }: PageProps = $props();
 </script>
 
 <svelte:head>

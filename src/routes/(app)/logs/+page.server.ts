@@ -2,16 +2,16 @@
  * Server-side data loading for the log viewer page.
  */
 
-import type { PageServerLoad } from './$types';
+import { type LogLevel, logLevels } from '$lib/schemas/settings';
+import { createLogger } from '$lib/server/logger';
 import {
-	queryLogs,
 	getBufferConfig,
 	getLogLevelCounts,
 	getUniqueModules,
-	type LogFilter
+	type LogFilter,
+	queryLogs
 } from '$lib/server/services/log-buffer';
-import { logLevels, type LogLevel } from '$lib/schemas/settings';
-import { createLogger } from '$lib/server/logger';
+import type { PageServerLoad } from './$types';
 
 const logger = createLogger('log-viewer');
 

@@ -13,11 +13,11 @@
 
 import { updateConnectorHealth } from '$lib/server/db/queries/connectors';
 import {
-	determineHealthStatus,
-	shouldRetrySync,
 	calculateSyncBackoffDelay,
+	determineHealthStatus,
 	type HealthStatus,
-	type SyncFailureContext
+	type SyncFailureContext,
+	shouldRetrySync
 } from './health-utils';
 
 // Re-export pure functions and types from health-utils

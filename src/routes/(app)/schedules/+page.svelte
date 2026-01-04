@@ -1,12 +1,13 @@
 <script lang="ts">
-	/**
-	 * Schedules list page with timeline visualization.
-	 */
-	import type { PageProps } from './$types';
-	import { ScheduleCard, ScheduleTimeline } from '$lib/components/schedules';
-	import { Button } from '$lib/components/ui/button';
+/**
+ * Schedules list page with timeline visualization.
+ */
 
-	let { data }: PageProps = $props();
+import { ScheduleCard, ScheduleTimeline } from '$lib/components/schedules';
+import { Button } from '$lib/components/ui/button';
+import type { PageProps } from './$types';
+
+let { data }: PageProps = $props();
 </script>
 
 <svelte:head>

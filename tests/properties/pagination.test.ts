@@ -10,16 +10,15 @@
  * all pages should yield exactly totalRecords items with no duplicates and no missing items.
  */
 
-import { describe, it, expect } from 'vitest';
 import * as fc from 'fast-check';
+import { describe, expect, it } from 'vitest';
 import {
-	fetchAllPages,
 	collectAllPages,
 	collectAllPagesWithMetadata,
 	DEFAULT_PAGE_SIZE,
+	fetchAllPages,
 	type PageFetcher
 } from '../../src/lib/server/connectors/common/pagination';
-import type { PaginatedResponse } from '../../src/lib/server/connectors/common/types';
 
 /**
  * Simple record type for testing
@@ -35,7 +34,7 @@ interface TestRecord {
  */
 function createMockFetcher(
 	totalRecords: number,
-	pageSize: number = DEFAULT_PAGE_SIZE
+	_pageSize: number = DEFAULT_PAGE_SIZE
 ): { fetcher: PageFetcher<TestRecord>; allRecords: TestRecord[]; callCount: () => number } {
 	// Pre-generate all records with unique sequential IDs
 	const allRecords: TestRecord[] = [];

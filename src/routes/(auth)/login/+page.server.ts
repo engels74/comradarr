@@ -8,12 +8,12 @@ import { LoginSchema } from '$lib/schemas/auth';
 import { verifyPassword } from '$lib/server/auth/password';
 import { createSession } from '$lib/server/auth/session';
 import {
-	getUserByUsername,
 	checkAndResetLockout,
 	getRemainingLockoutTime,
+	getUserByUsername,
+	MAX_FAILED_ATTEMPTS,
 	recordFailedLogin,
-	recordSuccessfulLogin,
-	MAX_FAILED_ATTEMPTS
+	recordSuccessfulLogin
 } from '$lib/server/db/queries/auth';
 import type { Actions, PageServerLoad } from './$types';
 

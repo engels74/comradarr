@@ -1,69 +1,69 @@
 <script lang="ts">
-	import { enhance } from '$app/forms';
-	import { invalidateAll } from '$app/navigation';
-	import { Button } from '$lib/components/ui/button';
-	import * as AlertDialog from '$lib/components/ui/alert-dialog';
+import { enhance } from '$app/forms';
+import { invalidateAll } from '$app/navigation';
+import * as AlertDialog from '$lib/components/ui/alert-dialog';
+import { Button } from '$lib/components/ui/button';
 
-	/**
-	 * Bulk action bar for selected queue items.
-	 * Provides priority adjustment and removal from queue.
-	 */
+/**
+ * Bulk action bar for selected queue items.
+ * Provides priority adjustment and removal from queue.
+ */
 
-	interface Props {
-		selectedCount: number;
-		selectedIds: Set<number>;
-		onClearSelection: () => void;
-		onActionStart?: (() => void) | undefined;
-		onActionComplete?: ((message: string) => void) | undefined;
-	}
+interface Props {
+	selectedCount: number;
+	selectedIds: Set<number>;
+	onClearSelection: () => void;
+	onActionStart?: (() => void) | undefined;
+	onActionComplete?: ((message: string) => void) | undefined;
+}
 
-	let { selectedCount, selectedIds, onClearSelection, onActionStart, onActionComplete }: Props =
-		$props();
+let { selectedCount, selectedIds, onClearSelection, onActionStart, onActionComplete }: Props =
+	$props();
 
-	// Serialize IDs for form submission
-	const registryIdsJson = $derived(JSON.stringify([...selectedIds]));
+// Serialize IDs for form submission
+const registryIdsJson = $derived(JSON.stringify([...selectedIds]));
 
-	// Loading states
-	let isAdjustingPriority = $state(false);
-	let isRemoving = $state(false);
+// Loading states
+let isAdjustingPriority = $state(false);
+let isRemoving = $state(false);
 
-	// Dialog states
-	let priorityDialogOpen = $state(false);
-	let priorityValue = $state(50);
-	let removeDialogOpen = $state(false);
+// Dialog states
+let priorityDialogOpen = $state(false);
+let priorityValue = $state(50);
+let removeDialogOpen = $state(false);
 
-	// Computed state
-	const isAnyLoading = $derived(isAdjustingPriority || isRemoving);
+// Computed state
+const isAnyLoading = $derived(isAdjustingPriority || isRemoving);
 
-	/**
-	 * Creates an enhance handler for form submission.
-	 */
-	function createEnhanceHandler(setLoading: (val: boolean) => void, closeDialog?: () => void) {
-		return () => {
-			setLoading(true);
-			onActionStart?.(); // Pause polling during form submission
-			return async ({
-				result,
-				update
-			}: {
-				result: { type: string; data?: { message?: string; error?: string } };
-				update: () => Promise<void>;
-			}) => {
-				setLoading(false);
-				closeDialog?.();
+/**
+ * Creates an enhance handler for form submission.
+ */
+function createEnhanceHandler(setLoading: (val: boolean) => void, closeDialog?: () => void) {
+	return () => {
+		setLoading(true);
+		onActionStart?.(); // Pause polling during form submission
+		return async ({
+			result,
+			update
+		}: {
+			result: { type: string; data?: { message?: string; error?: string } };
+			update: () => Promise<void>;
+		}) => {
+			setLoading(false);
+			closeDialog?.();
 
-				if (result.type === 'success' && result.data?.message) {
-					onActionComplete?.(result.data.message);
-					onClearSelection();
-					await invalidateAll();
-				} else if (result.type === 'failure' && result.data?.error) {
-					onActionComplete?.(`Error: ${result.data.error}`);
-				}
+			if (result.type === 'success' && result.data?.message) {
+				onActionComplete?.(result.data.message);
+				onClearSelection();
+				await invalidateAll();
+			} else if (result.type === 'failure' && result.data?.error) {
+				onActionComplete?.(`Error: ${result.data.error}`);
+			}
 
-				await update();
-			};
+			await update();
 		};
-	}
+	};
+}
 </script>
 
 {#if selectedCount > 0}

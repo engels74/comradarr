@@ -10,32 +10,30 @@
  * @module connectors/whisparr
  */
 
+export type { WantedOptions } from './client.js';
 // Client
 export { WhisparrClient } from './client.js';
-export type { WantedOptions } from './client.js';
-
-// Types
-export type {
-	WhisparrSeries,
-	WhisparrSeason,
-	WhisparrSeasonStatistics,
-	WhisparrSeriesStatistics,
-	WhisparrEpisode,
-	WhisparrEpisodeFile
-} from './types.js';
-
 // Parsers
 export {
-	parseWhisparrSeries,
-	parseWhisparrEpisode,
-	parsePaginatedWhisparrSeries,
 	parsePaginatedWhisparrEpisodes,
-	parsePaginatedWhisparrSeriesLenient,
 	parsePaginatedWhisparrEpisodesLenient,
-	WhisparrSeriesSchema,
+	parsePaginatedWhisparrSeries,
+	parsePaginatedWhisparrSeriesLenient,
+	parseWhisparrEpisode,
+	parseWhisparrSeries,
+	WhisparrEpisodeFileSchema,
+	WhisparrEpisodeSchema,
 	WhisparrSeasonSchema,
 	WhisparrSeasonStatisticsSchema,
-	WhisparrSeriesStatisticsSchema,
-	WhisparrEpisodeSchema,
-	WhisparrEpisodeFileSchema
+	WhisparrSeriesSchema,
+	WhisparrSeriesStatisticsSchema
 } from './parsers.js';
+// Types
+export type {
+	WhisparrEpisode,
+	WhisparrEpisodeFile,
+	WhisparrSeason,
+	WhisparrSeasonStatistics,
+	WhisparrSeries,
+	WhisparrSeriesStatistics
+} from './types.js';

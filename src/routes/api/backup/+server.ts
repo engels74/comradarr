@@ -7,10 +7,10 @@
 
  */
 
-import { json, error } from '@sveltejs/kit';
-import type { RequestHandler } from './$types';
-import { createBackup, listBackups } from '$lib/server/services/backup';
+import { error, json } from '@sveltejs/kit';
 import { requireScope } from '$lib/server/auth';
+import { createBackup, listBackups } from '$lib/server/services/backup';
+import type { RequestHandler } from './$types';
 
 /**
  * POST /api/backup

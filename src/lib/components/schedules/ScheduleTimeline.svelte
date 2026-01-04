@@ -1,28 +1,29 @@
 <script lang="ts">
-	/**
-	 * Schedule Timeline - main container with calendar and list views.
-	 */
-	import { cn } from '$lib/utils.js';
-	import * as Tabs from '$lib/components/ui/tabs';
-	import { WeeklyCalendar, ChronologicalList } from './index';
-	import { type TimelineData, type ScheduledRun } from './types';
-	import CalendarDaysIcon from '@lucide/svelte/icons/calendar-days';
-	import ListIcon from '@lucide/svelte/icons/list';
-	import AlertTriangleIcon from '@lucide/svelte/icons/alert-triangle';
+/**
+ * Schedule Timeline - main container with calendar and list views.
+ */
 
-	interface Props {
-		/** Timeline data from server */
-		timeline: TimelineData;
-		/** Additional CSS classes */
-		class?: string;
-	}
+import AlertTriangleIcon from '@lucide/svelte/icons/alert-triangle';
+import CalendarDaysIcon from '@lucide/svelte/icons/calendar-days';
+import ListIcon from '@lucide/svelte/icons/list';
+import * as Tabs from '$lib/components/ui/tabs';
+import { cn } from '$lib/utils.js';
+import { ChronologicalList, WeeklyCalendar } from './index';
+import { type ScheduledRun, type TimelineData } from './types';
 
-	let { timeline, class: className = '' }: Props = $props();
+interface Props {
+	/** Timeline data from server */
+	timeline: TimelineData;
+	/** Additional CSS classes */
+	class?: string;
+}
 
-	// Flatten all runs for conflict lookup
-	const allRuns = $derived<ScheduledRun[]>(timeline.calendarDays.flatMap((day) => day.runs));
+let { timeline, class: className = '' }: Props = $props();
 
-	const hasConflicts = $derived(timeline.conflictCount > 0);
+// Flatten all runs for conflict lookup
+const allRuns = $derived<ScheduledRun[]>(timeline.calendarDays.flatMap((day) => day.runs));
+
+const hasConflicts = $derived(timeline.conflictCount > 0);
 </script>
 
 <div class={cn('', className)}>

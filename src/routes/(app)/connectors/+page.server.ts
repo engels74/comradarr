@@ -2,12 +2,11 @@
  * Connector list page server load and actions.
  */
 
-import type { PageServerLoad, Actions } from './$types';
 import {
-	getAllConnectors,
+	type ConnectorStats,
 	getAllConnectorStats,
-	updateConnector,
-	type ConnectorStats
+	getAllConnectors,
+	updateConnector
 } from '$lib/server/db/queries/connectors';
 import {
 	getAllProwlarrInstances,
@@ -15,6 +14,7 @@ import {
 	updateProwlarrInstance
 } from '$lib/server/db/queries/prowlarr';
 import { createLogger } from '$lib/server/logger';
+import type { Actions, PageServerLoad } from './$types';
 
 const logger = createLogger('connectors');
 
@@ -68,7 +68,7 @@ export const actions: Actions = {
 		const id = Number(data.get('id'));
 		const enabled = data.get('enabled') === 'true';
 
-		if (isNaN(id)) {
+		if (Number.isNaN(id)) {
 			logger.warn('Toggle connector failed - invalid ID', { rawId: data.get('id') });
 			return { success: false, error: 'Invalid connector ID' };
 		}
@@ -88,7 +88,7 @@ export const actions: Actions = {
 		const id = Number(data.get('id'));
 		const enabled = data.get('enabled') === 'true';
 
-		if (isNaN(id)) {
+		if (Number.isNaN(id)) {
 			logger.warn('Toggle Prowlarr instance failed - invalid ID', { rawId: data.get('id') });
 			return { success: false, error: 'Invalid Prowlarr instance ID' };
 		}

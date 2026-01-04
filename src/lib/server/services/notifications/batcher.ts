@@ -9,23 +9,23 @@
 
  */
 
-import type { NotificationChannel, NotificationHistory } from '$lib/server/db/schema';
 import type {
 	NotificationEventType,
 	NotificationStatus
 } from '$lib/server/db/queries/notifications';
 import {
 	getBatchingEnabledChannels,
+	getDecryptedSensitiveConfig,
 	getPendingNotificationsForBatching,
 	markNotificationsAsBatched,
-	updateNotificationHistoryStatus,
-	getDecryptedSensitiveConfig
+	updateNotificationHistoryStatus
 } from '$lib/server/db/queries/notifications';
-import { getSender, isSupportedChannelType } from './index';
-import { buildAggregatePayload } from './aggregators';
-import type { NotificationResult } from './types';
-import { isInQuietHours } from './quiet-hours';
+import type { NotificationChannel } from '$lib/server/db/schema';
 import { createLogger } from '$lib/server/logger';
+import { buildAggregatePayload } from './aggregators';
+import { getSender, isSupportedChannelType } from './index';
+import { isInQuietHours } from './quiet-hours';
+import type { NotificationResult } from './types';
 
 const logger = createLogger('notification-batcher');
 

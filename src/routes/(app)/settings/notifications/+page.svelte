@@ -1,197 +1,198 @@
 <script lang="ts">
-	/**
-	 * Notification settings page.
-	 */
-	import { enhance } from '$app/forms';
-	import * as Card from '$lib/components/ui/card';
-	import * as Dialog from '$lib/components/ui/dialog';
-	import { Input } from '$lib/components/ui/input';
-	import { Button } from '$lib/components/ui/button';
-	import { Label } from '$lib/components/ui/label';
-	import { Badge } from '$lib/components/ui/badge';
-	import { Checkbox } from '$lib/components/ui/checkbox';
-	import { Separator } from '$lib/components/ui/separator';
-	import { toastStore } from '$lib/components/ui/toast';
-	import {
-		NOTIFICATION_CHANNEL_TYPES,
-		NOTIFICATION_EVENT_TYPES,
-		channelTypeLabels,
-		channelTypeDescriptions,
-		eventTypeLabels,
-		baseChannelLabels,
-		baseChannelDescriptions,
-		discordFieldLabels,
-		discordFieldDescriptions,
-		telegramFieldLabels,
-		telegramFieldDescriptions,
-		slackFieldLabels,
-		slackFieldDescriptions,
-		emailFieldLabels,
-		emailFieldDescriptions,
-		webhookFieldLabels,
-		webhookFieldDescriptions,
-		isImplementedChannelType,
-		type NotificationChannelType
-	} from '$lib/schemas/notification-channel';
-	import type { PageProps } from './$types';
-	import type { ChannelWithStats } from './+page.server';
-	import BellIcon from '@lucide/svelte/icons/bell';
-	import PlusIcon from '@lucide/svelte/icons/plus';
-	import PencilIcon from '@lucide/svelte/icons/pencil';
-	import Trash2Icon from '@lucide/svelte/icons/trash-2';
-	import SendIcon from '@lucide/svelte/icons/send';
-	import ToggleLeftIcon from '@lucide/svelte/icons/toggle-left';
-	import ToggleRightIcon from '@lucide/svelte/icons/toggle-right';
-	import MessageCircleIcon from '@lucide/svelte/icons/message-circle';
-	import HashIcon from '@lucide/svelte/icons/hash';
-	import MailIcon from '@lucide/svelte/icons/mail';
-	import WebhookIcon from '@lucide/svelte/icons/webhook';
-	import BellRingIcon from '@lucide/svelte/icons/bell-ring';
-	import MessageSquareIcon from '@lucide/svelte/icons/message-square';
-	import ServerIcon from '@lucide/svelte/icons/server';
-	import LoaderCircleIcon from '@lucide/svelte/icons/loader-circle';
+/**
+ * Notification settings page.
+ */
 
-	let { data, form }: PageProps = $props();
+import BellIcon from '@lucide/svelte/icons/bell';
+import BellRingIcon from '@lucide/svelte/icons/bell-ring';
+import HashIcon from '@lucide/svelte/icons/hash';
+import LoaderCircleIcon from '@lucide/svelte/icons/loader-circle';
+import MailIcon from '@lucide/svelte/icons/mail';
+import MessageCircleIcon from '@lucide/svelte/icons/message-circle';
+import MessageSquareIcon from '@lucide/svelte/icons/message-square';
+import PencilIcon from '@lucide/svelte/icons/pencil';
+import PlusIcon from '@lucide/svelte/icons/plus';
+import SendIcon from '@lucide/svelte/icons/send';
+import ServerIcon from '@lucide/svelte/icons/server';
+import ToggleLeftIcon from '@lucide/svelte/icons/toggle-left';
+import ToggleRightIcon from '@lucide/svelte/icons/toggle-right';
+import Trash2Icon from '@lucide/svelte/icons/trash-2';
+import WebhookIcon from '@lucide/svelte/icons/webhook';
+import { enhance } from '$app/forms';
+import { Badge } from '$lib/components/ui/badge';
+import { Button } from '$lib/components/ui/button';
+import * as Card from '$lib/components/ui/card';
+import { Checkbox } from '$lib/components/ui/checkbox';
+import * as Dialog from '$lib/components/ui/dialog';
+import { Input } from '$lib/components/ui/input';
+import { Label } from '$lib/components/ui/label';
+import { Separator } from '$lib/components/ui/separator';
+import { toastStore } from '$lib/components/ui/toast';
+import {
+	baseChannelDescriptions,
+	baseChannelLabels,
+	channelTypeDescriptions,
+	channelTypeLabels,
+	discordFieldDescriptions,
+	discordFieldLabels,
+	emailFieldDescriptions,
+	emailFieldLabels,
+	eventTypeLabels,
+	isImplementedChannelType,
+	NOTIFICATION_CHANNEL_TYPES,
+	NOTIFICATION_EVENT_TYPES,
+	type NotificationChannelType,
+	slackFieldDescriptions,
+	slackFieldLabels,
+	telegramFieldDescriptions,
+	telegramFieldLabels,
+	webhookFieldDescriptions,
+	webhookFieldLabels
+} from '$lib/schemas/notification-channel';
+import type { ChannelWithStats } from './+page.server';
+import type { PageProps } from './$types';
 
-	let isSubmitting = $state(false);
-	let createDialogOpen = $state(false);
-	let editDialogOpen = $state(false);
-	let deleteDialogOpen = $state(false);
-	let selectedType = $state<NotificationChannelType | null>(null);
-	let editingChannel = $state<ChannelWithStats | null>(null);
-	let deletingChannel = $state<ChannelWithStats | null>(null);
-	let testingChannelId = $state<number | null>(null);
+let { data, form }: PageProps = $props();
 
-	// Form state for create dialog
-	let createSelectedEvents = $state<string[]>([]);
-	let createBatchingEnabled = $state(false);
-	let createQuietHoursEnabled = $state(false);
+let isSubmitting = $state(false);
+let createDialogOpen = $state(false);
+let editDialogOpen = $state(false);
+let deleteDialogOpen = $state(false);
+let selectedType = $state<NotificationChannelType | null>(null);
+let editingChannel = $state<ChannelWithStats | null>(null);
+let deletingChannel = $state<ChannelWithStats | null>(null);
+let testingChannelId = $state<number | null>(null);
 
-	// Form state for edit dialog
-	let editSelectedEvents = $state<string[]>([]);
-	let editBatchingEnabled = $state(false);
-	let editQuietHoursEnabled = $state(false);
+// Form state for create dialog
+let createSelectedEvents = $state<string[]>([]);
+let createBatchingEnabled = $state(false);
+let createQuietHoursEnabled = $state(false);
 
-	// Close dialogs on successful submission and show toast
-	$effect(() => {
-		if (form?.success) {
-			createDialogOpen = false;
-			editDialogOpen = false;
-			deleteDialogOpen = false;
-			selectedType = null;
-			editingChannel = null;
-			deletingChannel = null;
-			// Reset form states
-			createSelectedEvents = [];
-			createBatchingEnabled = false;
-			createQuietHoursEnabled = false;
-			// Show success toast
-			if (form.message) {
-				toastStore.success(form.message);
-			}
-		}
-	});
+// Form state for edit dialog
+let editSelectedEvents = $state<string[]>([]);
+let editBatchingEnabled = $state(false);
+let editQuietHoursEnabled = $state(false);
 
-	// Sync edit form state when editing channel changes
-	$effect(() => {
-		if (editingChannel) {
-			const events = editingChannel.enabledEvents as string[] | null;
-			editSelectedEvents = events ?? [];
-			editBatchingEnabled = editingChannel.batchingEnabled;
-			editQuietHoursEnabled = editingChannel.quietHoursEnabled;
-		}
-	});
-
-	/**
-	 * Get icon component for channel type.
-	 */
-	function getChannelIcon(type: string) {
-		switch (type) {
-			case 'discord':
-				return MessageCircleIcon;
-			case 'telegram':
-				return SendIcon;
-			case 'slack':
-				return HashIcon;
-			case 'email':
-				return MailIcon;
-			case 'webhook':
-				return WebhookIcon;
-			case 'pushover':
-				return BellRingIcon;
-			case 'gotify':
-				return ServerIcon;
-			case 'ntfy':
-				return MessageSquareIcon;
-			default:
-				return BellIcon;
-		}
-	}
-
-	/**
-	 * Open edit dialog for a channel.
-	 */
-	function openEditDialog(channel: ChannelWithStats) {
-		editingChannel = channel;
-		editDialogOpen = true;
-	}
-
-	/**
-	 * Open delete confirmation dialog.
-	 */
-	function openDeleteDialog(channel: ChannelWithStats) {
-		deletingChannel = channel;
-		deleteDialogOpen = true;
-	}
-
-	/**
-	 * Reset create dialog state.
-	 */
-	function resetCreateDialog() {
+// Close dialogs on successful submission and show toast
+$effect(() => {
+	if (form?.success) {
+		createDialogOpen = false;
+		editDialogOpen = false;
+		deleteDialogOpen = false;
 		selectedType = null;
+		editingChannel = null;
+		deletingChannel = null;
+		// Reset form states
 		createSelectedEvents = [];
 		createBatchingEnabled = false;
 		createQuietHoursEnabled = false;
-	}
-
-	/**
-	 * Toggle event in selected events array.
-	 */
-	function toggleCreateEvent(event: string, checked: boolean) {
-		if (checked) {
-			createSelectedEvents = [...createSelectedEvents, event];
-		} else {
-			createSelectedEvents = createSelectedEvents.filter((e) => e !== event);
+		// Show success toast
+		if (form.message) {
+			toastStore.success(form.message);
 		}
 	}
+});
 
-	function toggleEditEvent(event: string, checked: boolean) {
-		if (checked) {
-			editSelectedEvents = [...editSelectedEvents, event];
-		} else {
-			editSelectedEvents = editSelectedEvents.filter((e) => e !== event);
-		}
+// Sync edit form state when editing channel changes
+$effect(() => {
+	if (editingChannel) {
+		const events = editingChannel.enabledEvents as string[] | null;
+		editSelectedEvents = events ?? [];
+		editBatchingEnabled = editingChannel.batchingEnabled;
+		editQuietHoursEnabled = editingChannel.quietHoursEnabled;
 	}
+});
 
-	// Common input styling
-	const inputClass = 'w-full';
-	const selectClass =
-		'flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50';
+/**
+ * Get icon component for channel type.
+ */
+function getChannelIcon(type: string) {
+	switch (type) {
+		case 'discord':
+			return MessageCircleIcon;
+		case 'telegram':
+			return SendIcon;
+		case 'slack':
+			return HashIcon;
+		case 'email':
+			return MailIcon;
+		case 'webhook':
+			return WebhookIcon;
+		case 'pushover':
+			return BellRingIcon;
+		case 'gotify':
+			return ServerIcon;
+		case 'ntfy':
+			return MessageSquareIcon;
+		default:
+			return BellIcon;
+	}
+}
 
-	// Common timezones for quiet hours
-	const commonTimezones = [
-		'UTC',
-		'America/New_York',
-		'America/Chicago',
-		'America/Denver',
-		'America/Los_Angeles',
-		'Europe/London',
-		'Europe/Paris',
-		'Europe/Berlin',
-		'Asia/Tokyo',
-		'Asia/Shanghai',
-		'Australia/Sydney'
-	];
+/**
+ * Open edit dialog for a channel.
+ */
+function openEditDialog(channel: ChannelWithStats) {
+	editingChannel = channel;
+	editDialogOpen = true;
+}
+
+/**
+ * Open delete confirmation dialog.
+ */
+function openDeleteDialog(channel: ChannelWithStats) {
+	deletingChannel = channel;
+	deleteDialogOpen = true;
+}
+
+/**
+ * Reset create dialog state.
+ */
+function resetCreateDialog() {
+	selectedType = null;
+	createSelectedEvents = [];
+	createBatchingEnabled = false;
+	createQuietHoursEnabled = false;
+}
+
+/**
+ * Toggle event in selected events array.
+ */
+function toggleCreateEvent(event: string, checked: boolean) {
+	if (checked) {
+		createSelectedEvents = [...createSelectedEvents, event];
+	} else {
+		createSelectedEvents = createSelectedEvents.filter((e) => e !== event);
+	}
+}
+
+function toggleEditEvent(event: string, checked: boolean) {
+	if (checked) {
+		editSelectedEvents = [...editSelectedEvents, event];
+	} else {
+		editSelectedEvents = editSelectedEvents.filter((e) => e !== event);
+	}
+}
+
+// Common input styling
+const inputClass = 'w-full';
+const selectClass =
+	'flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50';
+
+// Common timezones for quiet hours
+const commonTimezones = [
+	'UTC',
+	'America/New_York',
+	'America/Chicago',
+	'America/Denver',
+	'America/Los_Angeles',
+	'Europe/London',
+	'Europe/Paris',
+	'Europe/Berlin',
+	'Asia/Tokyo',
+	'Asia/Shanghai',
+	'Australia/Sydney'
+];
 </script>
 
 <svelte:head>

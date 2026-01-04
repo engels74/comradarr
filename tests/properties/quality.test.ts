@@ -6,12 +6,12 @@
  * - 14.5: Deserialize and reconstruct QualityModel structure accurately from stored data
  */
 
-import { describe, it, expect } from 'vitest';
 import * as fc from 'fast-check';
+import { describe, expect, it } from 'vitest';
 import {
+	deserializeQuality,
 	type QualityModel,
-	serializeQuality,
-	deserializeQuality
+	serializeQuality
 } from '../../src/lib/utils/quality';
 
 /**

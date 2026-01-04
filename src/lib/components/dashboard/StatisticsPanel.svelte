@@ -1,35 +1,35 @@
 <script lang="ts">
-	import * as Card from '$lib/components/ui/card';
-	import AlertCircleIcon from '@lucide/svelte/icons/alert-circle';
-	import ArrowUpCircleIcon from '@lucide/svelte/icons/arrow-up-circle';
-	import ListTodoIcon from '@lucide/svelte/icons/list-todo';
-	import CheckCircle2Icon from '@lucide/svelte/icons/check-circle-2';
-	import TargetIcon from '@lucide/svelte/icons/target';
-	import type { ContentStatusCounts } from '$lib/server/db/queries/content';
-	import type { TodaySearchStats } from '$lib/server/db/queries/queue';
+import AlertCircleIcon from '@lucide/svelte/icons/alert-circle';
+import ArrowUpCircleIcon from '@lucide/svelte/icons/arrow-up-circle';
+import CheckCircle2Icon from '@lucide/svelte/icons/check-circle-2';
+import ListTodoIcon from '@lucide/svelte/icons/list-todo';
+import TargetIcon from '@lucide/svelte/icons/target';
+import * as Card from '$lib/components/ui/card';
+import type { ContentStatusCounts } from '$lib/server/db/queries/content';
+import type { TodaySearchStats } from '$lib/server/db/queries/queue';
 
-	interface Props {
-		contentStats: ContentStatusCounts;
-		todayStats: TodaySearchStats;
-		class?: string;
-	}
+interface Props {
+	contentStats: ContentStatusCounts;
+	todayStats: TodaySearchStats;
+	class?: string;
+}
 
-	let { contentStats, todayStats, class: className = '' }: Props = $props();
+let { contentStats, todayStats, class: className = '' }: Props = $props();
 
-	// Determine success rate styling based on percentage
-	const successRateBgColor = $derived(() => {
-		if (todayStats.completedToday === 0) return 'bg-gray-500/10';
-		if (todayStats.successRate >= 70) return 'bg-green-500/10';
-		if (todayStats.successRate >= 40) return 'bg-amber-500/10';
-		return 'bg-red-500/10';
-	});
+// Determine success rate styling based on percentage
+const successRateBgColor = $derived(() => {
+	if (todayStats.completedToday === 0) return 'bg-gray-500/10';
+	if (todayStats.successRate >= 70) return 'bg-green-500/10';
+	if (todayStats.successRate >= 40) return 'bg-amber-500/10';
+	return 'bg-red-500/10';
+});
 
-	const successRateTextColor = $derived(() => {
-		if (todayStats.completedToday === 0) return 'text-gray-600 dark:text-gray-400';
-		if (todayStats.successRate >= 70) return 'text-green-600 dark:text-green-400';
-		if (todayStats.successRate >= 40) return 'text-amber-600 dark:text-amber-400';
-		return 'text-red-600 dark:text-red-400';
-	});
+const successRateTextColor = $derived(() => {
+	if (todayStats.completedToday === 0) return 'text-gray-600 dark:text-gray-400';
+	if (todayStats.successRate >= 70) return 'text-green-600 dark:text-green-400';
+	if (todayStats.successRate >= 40) return 'text-amber-600 dark:text-amber-400';
+	return 'text-red-600 dark:text-red-400';
+});
 </script>
 
 <div class={className}>

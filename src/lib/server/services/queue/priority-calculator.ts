@@ -18,8 +18,8 @@
 
  */
 
-import type { PriorityInput, PriorityResult, PriorityWeights, PriorityBreakdown } from './types';
-import { DEFAULT_PRIORITY_WEIGHTS, PRIORITY_CONSTANTS, getPriorityWeights } from './config';
+import { DEFAULT_PRIORITY_WEIGHTS, getPriorityWeights, PRIORITY_CONSTANTS } from './config';
+import type { PriorityBreakdown, PriorityInput, PriorityResult, PriorityWeights } from './types';
 
 /**
  * Calculate the priority score for a queue item.

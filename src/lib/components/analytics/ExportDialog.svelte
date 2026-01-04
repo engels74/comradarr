@@ -1,118 +1,118 @@
 <script lang="ts">
-	/**
-	 * Export dialog for downloading analytics data as CSV.
-	 * Provides date range selection and triggers CSV download.
-	 */
+/**
+ * Export dialog for downloading analytics data as CSV.
+ * Provides date range selection and triggers CSV download.
+ */
 
-	import { Button } from '$lib/components/ui/button';
-	import { Input } from '$lib/components/ui/input';
-	import { Label } from '$lib/components/ui/label';
-	import * as Dialog from '$lib/components/ui/dialog';
-	import DownloadIcon from '@lucide/svelte/icons/download';
+import DownloadIcon from '@lucide/svelte/icons/download';
+import { Button } from '$lib/components/ui/button';
+import * as Dialog from '$lib/components/ui/dialog';
+import { Input } from '$lib/components/ui/input';
+import { Label } from '$lib/components/ui/label';
 
-	interface Props {
-		class?: string;
+interface Props {
+	class?: string;
+}
+
+let { class: className = '' }: Props = $props();
+
+// Dialog state
+let dialogOpen = $state(false);
+
+// Form state
+let isExporting = $state(false);
+let errorMessage = $state<string | null>(null);
+
+// Date range state - default to last 30 days
+const today = new Date();
+const thirtyDaysAgo = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000);
+
+let startDate = $state(formatDate(thirtyDaysAgo));
+let endDate = $state(formatDate(today));
+
+// Validation
+const isValidRange = $derived(() => {
+	if (!startDate || !endDate) return false;
+	const start = new Date(startDate);
+	const end = new Date(endDate);
+	return start <= end;
+});
+
+/**
+ * Formats a Date to YYYY-MM-DD string.
+ */
+function formatDate(date: Date): string {
+	return date.toISOString().split('T')[0]!;
+}
+
+/**
+ * Handles the export action.
+ */
+async function handleExport() {
+	if (!isValidRange()) {
+		errorMessage = 'Start date must be before or equal to end date.';
+		return;
 	}
 
-	let { class: className = '' }: Props = $props();
+	isExporting = true;
+	errorMessage = null;
 
-	// Dialog state
-	let dialogOpen = $state(false);
+	try {
+		// Build the export URL with date range parameters
+		const url = `/api/analytics/export?startDate=${startDate}&endDate=${endDate}`;
 
-	// Form state
-	let isExporting = $state(false);
-	let errorMessage = $state<string | null>(null);
+		// Fetch the CSV file
+		const response = await fetch(url);
 
-	// Date range state - default to last 30 days
-	const today = new Date();
-	const thirtyDaysAgo = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000);
-
-	let startDate = $state(formatDate(thirtyDaysAgo));
-	let endDate = $state(formatDate(today));
-
-	// Validation
-	const isValidRange = $derived(() => {
-		if (!startDate || !endDate) return false;
-		const start = new Date(startDate);
-		const end = new Date(endDate);
-		return start <= end;
-	});
-
-	/**
-	 * Formats a Date to YYYY-MM-DD string.
-	 */
-	function formatDate(date: Date): string {
-		return date.toISOString().split('T')[0]!;
-	}
-
-	/**
-	 * Handles the export action.
-	 */
-	async function handleExport() {
-		if (!isValidRange()) {
-			errorMessage = 'Start date must be before or equal to end date.';
-			return;
+		if (!response.ok) {
+			const text = await response.text();
+			throw new Error(text || `Export failed with status ${response.status}`);
 		}
 
-		isExporting = true;
+		// Get the filename from the Content-Disposition header or use a default
+		const contentDisposition = response.headers.get('Content-Disposition');
+		let filename = `comradarr-analytics-${startDate}-to-${endDate}.csv`;
+		if (contentDisposition) {
+			const match = contentDisposition.match(/filename="(.+)"/);
+			if (match?.[1]) {
+				filename = match[1];
+			}
+		}
+
+		// Create a blob and trigger download
+		const blob = await response.blob();
+		const downloadUrl = window.URL.createObjectURL(blob);
+		const link = document.createElement('a');
+		link.href = downloadUrl;
+		link.download = filename;
+		document.body.appendChild(link);
+		link.click();
+		document.body.removeChild(link);
+		window.URL.revokeObjectURL(downloadUrl);
+
+		// Close dialog on success
+		dialogOpen = false;
+	} catch (err) {
+		errorMessage = err instanceof Error ? err.message : 'An error occurred during export.';
+	} finally {
+		isExporting = false;
+	}
+}
+
+/**
+ * Resets form state when dialog opens.
+ */
+function handleDialogChange(open: boolean) {
+	dialogOpen = open;
+	if (open) {
 		errorMessage = null;
-
-		try {
-			// Build the export URL with date range parameters
-			const url = `/api/analytics/export?startDate=${startDate}&endDate=${endDate}`;
-
-			// Fetch the CSV file
-			const response = await fetch(url);
-
-			if (!response.ok) {
-				const text = await response.text();
-				throw new Error(text || `Export failed with status ${response.status}`);
-			}
-
-			// Get the filename from the Content-Disposition header or use a default
-			const contentDisposition = response.headers.get('Content-Disposition');
-			let filename = `comradarr-analytics-${startDate}-to-${endDate}.csv`;
-			if (contentDisposition) {
-				const match = contentDisposition.match(/filename="(.+)"/);
-				if (match?.[1]) {
-					filename = match[1];
-				}
-			}
-
-			// Create a blob and trigger download
-			const blob = await response.blob();
-			const downloadUrl = window.URL.createObjectURL(blob);
-			const link = document.createElement('a');
-			link.href = downloadUrl;
-			link.download = filename;
-			document.body.appendChild(link);
-			link.click();
-			document.body.removeChild(link);
-			window.URL.revokeObjectURL(downloadUrl);
-
-			// Close dialog on success
-			dialogOpen = false;
-		} catch (err) {
-			errorMessage = err instanceof Error ? err.message : 'An error occurred during export.';
-		} finally {
-			isExporting = false;
-		}
+		// Reset to default date range
+		const now = new Date();
+		const thirtyDaysBack = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+		startDate = formatDate(thirtyDaysBack);
+		endDate = formatDate(now);
 	}
-
-	/**
-	 * Resets form state when dialog opens.
-	 */
-	function handleDialogChange(open: boolean) {
-		dialogOpen = open;
-		if (open) {
-			errorMessage = null;
-			// Reset to default date range
-			const now = new Date();
-			const thirtyDaysBack = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-			startDate = formatDate(thirtyDaysBack);
-			endDate = formatDate(now);
-		}
-	}
+}
 </script>
 
 <Dialog.Root open={dialogOpen} onOpenChange={handleDialogChange}>

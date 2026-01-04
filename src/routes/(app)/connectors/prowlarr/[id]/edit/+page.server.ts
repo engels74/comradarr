@@ -6,21 +6,21 @@ import { error, fail } from '@sveltejs/kit';
 import * as v from 'valibot';
 import { ProwlarrInstanceUpdateSchema } from '$lib/schemas/prowlarr';
 import {
-	getProwlarrInstance,
-	getDecryptedApiKey,
-	updateProwlarrInstance,
-	prowlarrInstanceNameExists
-} from '$lib/server/db/queries/prowlarr';
-import { ProwlarrClient } from '$lib/server/services/prowlarr';
-import {
 	AuthenticationError,
+	isArrClientError,
 	NetworkError,
-	TimeoutError,
 	SSLError,
-	isArrClientError
+	TimeoutError
 } from '$lib/server/connectors';
-import type { PageServerLoad, Actions } from './$types';
+import {
+	getDecryptedApiKey,
+	getProwlarrInstance,
+	prowlarrInstanceNameExists,
+	updateProwlarrInstance
+} from '$lib/server/db/queries/prowlarr';
 import { createLogger } from '$lib/server/logger';
+import { ProwlarrClient } from '$lib/server/services/prowlarr';
+import type { Actions, PageServerLoad } from './$types';
 
 const logger = createLogger('prowlarr');
 
@@ -58,7 +58,7 @@ function getErrorMessage(err: unknown): string {
 export const load: PageServerLoad = async ({ params }) => {
 	const id = Number(params.id);
 
-	if (isNaN(id)) {
+	if (Number.isNaN(id)) {
 		error(400, 'Invalid Prowlarr instance ID');
 	}
 
@@ -81,7 +81,7 @@ export const actions: Actions = {
 	testConnection: async ({ request, params }) => {
 		const id = Number(params.id);
 
-		if (isNaN(id)) {
+		if (Number.isNaN(id)) {
 			return fail(400, { error: 'Invalid Prowlarr instance ID' });
 		}
 
@@ -106,7 +106,7 @@ export const actions: Actions = {
 		} else {
 			try {
 				apiKey = await getDecryptedApiKey(instance);
-			} catch (err) {
+			} catch (_err) {
 				return fail(500, {
 					error: 'Failed to decrypt existing API key',
 					name: data.name,
@@ -172,7 +172,7 @@ export const actions: Actions = {
 	update: async ({ request, params }) => {
 		const id = Number(params.id);
 
-		if (isNaN(id)) {
+		if (Number.isNaN(id)) {
 			return fail(400, { error: 'Invalid Prowlarr instance ID' });
 		}
 

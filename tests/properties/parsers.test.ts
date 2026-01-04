@@ -9,19 +9,18 @@
  * - 27.8: Malformed records return errors, don't throw
  */
 
-import { describe, it, expect } from 'vitest';
 import * as fc from 'fast-check';
 import * as v from 'valibot';
+import { describe, expect, it } from 'vitest';
 import {
-	parseQualityModel,
 	parseCommandResponse,
 	parsePaginatedResponse,
 	parsePaginatedResponseLenient,
-	parseRecordsWithWarnings,
-	QualityModelSchema
+	parseQualityModel,
+	parseRecordsWithWarnings
 } from '../../src/lib/server/connectors/common/parsers';
-import type { QualityModel } from '../../src/lib/utils/quality';
 import type { CommandStatus } from '../../src/lib/server/connectors/common/types';
+import type { QualityModel } from '../../src/lib/utils/quality';
 
 /**
  * Arbitrary generator for valid QualityModel objects.

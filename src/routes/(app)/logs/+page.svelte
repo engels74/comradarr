@@ -1,87 +1,86 @@
 <script lang="ts">
-	import type { PageProps } from './$types';
-	import { LogFilters, LogTable } from '$lib/components/logs';
-	import { Button } from '$lib/components/ui/button';
-	import { goto } from '$app/navigation';
-	import { invalidate } from '$app/navigation';
-	import { page } from '$app/stores';
-	import { onMount } from 'svelte';
-	import { createPollingController, POLLING_INTERVALS } from '$lib/utils/polling';
-	import ScrollTextIcon from '@lucide/svelte/icons/scroll-text';
-	import TrashIcon from '@lucide/svelte/icons/trash';
-	import AlertCircleIcon from '@lucide/svelte/icons/alert-circle';
-	import * as AlertDialog from '$lib/components/ui/alert-dialog';
+import AlertCircleIcon from '@lucide/svelte/icons/alert-circle';
+import ScrollTextIcon from '@lucide/svelte/icons/scroll-text';
+import TrashIcon from '@lucide/svelte/icons/trash';
+import { onMount } from 'svelte';
+import { goto, invalidate } from '$app/navigation';
+import { page } from '$app/stores';
+import { LogFilters, LogTable } from '$lib/components/logs';
+import * as AlertDialog from '$lib/components/ui/alert-dialog';
+import { Button } from '$lib/components/ui/button';
+import { createPollingController, POLLING_INTERVALS } from '$lib/utils/polling';
+import type { PageProps } from './$types';
 
-	/**
-	 * Log viewer page.
-	 * Displays application logs with filtering, search, and real-time updates.
-	 */
+/**
+ * Log viewer page.
+ * Displays application logs with filtering, search, and real-time updates.
+ */
 
-	let { data }: PageProps = $props();
+let { data }: PageProps = $props();
 
-	// Polling for real-time updates
-	const polling = createPollingController({
-		dependencyKey: 'app:logs',
-		interval: POLLING_INTERVALS.SLOW
-	});
+// Polling for real-time updates
+const polling = createPollingController({
+	dependencyKey: 'app:logs',
+	interval: POLLING_INTERVALS.SLOW
+});
 
-	// Start/stop polling on mount/unmount
-	onMount(() => {
-		polling.start();
-		return () => polling.stop();
-	});
+// Start/stop polling on mount/unmount
+onMount(() => {
+	polling.start();
+	return () => polling.stop();
+});
 
-	// Clear logs dialog state
-	let showClearDialog = $state(false);
-	let isClearing = $state(false);
+// Clear logs dialog state
+let showClearDialog = $state(false);
+let isClearing = $state(false);
 
-	// Pagination state
-	const pageSize = $derived(data.filters.limit);
-	const totalPages = $derived(Math.ceil(data.total / pageSize));
-	const currentPage = $derived(Math.floor(data.filters.offset / pageSize) + 1);
+// Pagination state
+const pageSize = $derived(data.filters.limit);
+const totalPages = $derived(Math.ceil(data.total / pageSize));
+const currentPage = $derived(Math.floor(data.filters.offset / pageSize) + 1);
 
-	/**
-	 * Navigate to a page.
-	 */
-	function goToPage(pageNum: number) {
-		if (pageNum < 1 || pageNum > totalPages) return;
+/**
+ * Navigate to a page.
+ */
+function goToPage(pageNum: number) {
+	if (pageNum < 1 || pageNum > totalPages) return;
 
-		const params = new URLSearchParams($page.url.searchParams);
-		params.set('offset', ((pageNum - 1) * pageSize).toString());
-		goto(`/logs?${params.toString()}`);
-	}
+	const params = new URLSearchParams($page.url.searchParams);
+	params.set('offset', ((pageNum - 1) * pageSize).toString());
+	goto(`/logs?${params.toString()}`);
+}
 
-	/**
-	 * Handle refresh.
-	 */
-	function handleRefresh() {
-		invalidate('app:logs');
-	}
+/**
+ * Handle refresh.
+ */
+function handleRefresh() {
+	invalidate('app:logs');
+}
 
-	/**
-	 * Clear all logs.
-	 */
-	async function handleClearLogs() {
-		isClearing = true;
-		try {
-			const response = await fetch('/api/logs', { method: 'DELETE' });
-			if (response.ok) {
-				showClearDialog = false;
-				invalidate('app:logs');
-			}
-		} finally {
-			isClearing = false;
+/**
+ * Clear all logs.
+ */
+async function handleClearLogs() {
+	isClearing = true;
+	try {
+		const response = await fetch('/api/logs', { method: 'DELETE' });
+		if (response.ok) {
+			showClearDialog = false;
+			invalidate('app:logs');
 		}
+	} finally {
+		isClearing = false;
 	}
+}
 
-	// Buffer usage percentage
-	const bufferUsage = $derived(
-		data.buffer.size > 0 ? Math.round((data.buffer.used / data.buffer.size) * 100) : 0
-	);
+// Buffer usage percentage
+const bufferUsage = $derived(
+	data.buffer.size > 0 ? Math.round((data.buffer.used / data.buffer.size) * 100) : 0
+);
 
-	// Total error count
-	const errorCount = $derived(data.levelCounts.error);
-	const warnCount = $derived(data.levelCounts.warn);
+// Total error count
+const errorCount = $derived(data.levelCounts.error);
+const warnCount = $derived(data.levelCounts.warn);
 </script>
 
 <svelte:head>

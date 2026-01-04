@@ -6,15 +6,15 @@
  * sweep cycles for gap and upgrade discovery.
  */
 
+import { eq, isNull, or } from 'drizzle-orm';
 import { db } from '$lib/server/db';
 import {
-	sweepSchedules,
 	connectors,
-	throttleProfiles,
+	type NewSweepSchedule,
 	type SweepSchedule,
-	type NewSweepSchedule
+	sweepSchedules,
+	throttleProfiles
 } from '$lib/server/db/schema';
-import { eq, isNull, or } from 'drizzle-orm';
 
 // =============================================================================
 // Types

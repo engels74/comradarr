@@ -1,22 +1,23 @@
 <script lang="ts">
-	/**
-	 * Chronological List - sorted list view of upcoming sweeps grouped by day.
-	 */
-	import { cn } from '$lib/utils.js';
-	import { TimelineEvent } from './index';
-	import { type DayGroup, type ScheduledRun } from './types';
-	import CalendarIcon from '@lucide/svelte/icons/calendar';
+/**
+ * Chronological List - sorted list view of upcoming sweeps grouped by day.
+ */
 
-	interface Props {
-		/** Day groups with runs */
-		dayGroups: DayGroup[];
-		/** All runs for conflict name lookup */
-		allRuns: ScheduledRun[];
-		/** Additional CSS classes */
-		class?: string;
-	}
+import CalendarIcon from '@lucide/svelte/icons/calendar';
+import { cn } from '$lib/utils.js';
+import { TimelineEvent } from './index';
+import { type DayGroup, type ScheduledRun } from './types';
 
-	let { dayGroups, allRuns, class: className = '' }: Props = $props();
+interface Props {
+	/** Day groups with runs */
+	dayGroups: DayGroup[];
+	/** All runs for conflict name lookup */
+	allRuns: ScheduledRun[];
+	/** Additional CSS classes */
+	class?: string;
+}
+
+let { dayGroups, allRuns, class: className = '' }: Props = $props();
 </script>
 
 <div class={cn('space-y-6', className)}>

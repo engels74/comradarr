@@ -6,51 +6,51 @@
   - Provide actionable quick actions
 -->
 <script lang="ts">
-	import type { PageProps, ActionData } from './$types';
-	import { enhance } from '$app/forms';
-	import { goto } from '$app/navigation';
-	import * as Card from '$lib/components/ui/card';
-	import * as Table from '$lib/components/ui/table';
-	import * as Dialog from '$lib/components/ui/dialog';
-	import { Button } from '$lib/components/ui/button';
-	import { Badge } from '$lib/components/ui/badge';
-	import { StatusBadge } from '$lib/components/shared';
-	import { toastStore } from '$lib/components/ui/toast';
-	import { cn } from '$lib/utils.js';
+import { enhance } from '$app/forms';
+import { goto } from '$app/navigation';
+import { StatusBadge } from '$lib/components/shared';
+import { Badge } from '$lib/components/ui/badge';
+import { Button } from '$lib/components/ui/button';
+import * as Card from '$lib/components/ui/card';
+import * as Dialog from '$lib/components/ui/dialog';
+import * as Table from '$lib/components/ui/table';
+import { toastStore } from '$lib/components/ui/toast';
+import { cn } from '$lib/utils.js';
+import type { ActionData, PageProps } from './$types';
 
-	let { data, form }: { data: PageProps['data']; form: ActionData } = $props();
+let { data, form }: { data: PageProps['data']; form: ActionData } = $props();
 
-	// Loading states
-	let isTestingConnection = $state(false);
-	let isCheckingHealth = $state(false);
-	let isDeleting = $state(false);
+// Loading states
+let isTestingConnection = $state(false);
+let isCheckingHealth = $state(false);
+let isDeleting = $state(false);
 
-	// Dialog state
-	let deleteDialogOpen = $state(false);
+// Dialog state
+let deleteDialogOpen = $state(false);
 
-	// Calculate summary stats
-	const totalIndexers = $derived(data.indexerHealth.length);
-	const enabledIndexers = $derived(data.indexerHealth.filter((i) => i.enabled).length);
-	const rateLimitedIndexers = $derived(data.indexerHealth.filter((i) => i.isRateLimited).length);
-	const hasStaleData = $derived(data.indexerHealth.some((i) => i.isStale));
+// Calculate summary stats
+const totalIndexers = $derived(data.indexerHealth.length);
+const enabledIndexers = $derived(data.indexerHealth.filter((i) => i.enabled).length);
+const rateLimitedIndexers = $derived(data.indexerHealth.filter((i) => i.isRateLimited).length);
+const hasStaleData = $derived(data.indexerHealth.some((i) => i.isStale));
 
-	/**
-	 * Format relative time for display
-	 */
-	function formatRelativeTime(date: Date | string | null): string {
-		if (!date) return 'Never';
-		const d = new Date(date);
-		const now = new Date();
-		const diffMs = now.getTime() - d.getTime();
-		const diffMins = Math.floor(diffMs / (1000 * 60));
-		const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
-		const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+/**
+ * Format relative time for display
+ */
+function formatRelativeTime(date: Date | string | null): string {
+	if (!date) return 'Never';
+	const d = new Date(date);
+	const now = new Date();
+	const diffMs = now.getTime() - d.getTime();
+	const diffMins = Math.floor(diffMs / (1000 * 60));
+	const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+	const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
 
-		if (diffMins < 1) return 'Just now';
-		if (diffMins < 60) return `${diffMins}m ago`;
-		if (diffHours < 24) return `${diffHours}h ago`;
-		return `${diffDays}d ago`;
-	}
+	if (diffMins < 1) return 'Just now';
+	if (diffMins < 60) return `${diffMins}m ago`;
+	if (diffHours < 24) return `${diffHours}h ago`;
+	return `${diffDays}d ago`;
+}
 </script>
 
 <svelte:head>

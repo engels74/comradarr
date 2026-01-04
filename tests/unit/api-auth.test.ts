@@ -9,9 +9,8 @@
 
  */
 
-import { describe, it, expect } from 'vitest';
-import { requireAuth, requireScope, canWrite, canRead } from '../../src/lib/server/auth/api-auth';
-import { error } from '@sveltejs/kit';
+import { describe, expect, it } from 'vitest';
+import { canRead, canWrite, requireAuth, requireScope } from '../../src/lib/server/auth/api-auth';
 
 // Mock App.Locals for testing
 function createLocals(overrides: Partial<App.Locals> = {}): App.Locals {

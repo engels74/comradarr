@@ -12,8 +12,8 @@
 
  */
 
-import { describe, it, expect } from 'vitest';
 import * as fc from 'fast-check';
+import { describe, expect, it } from 'vitest';
 
 /**
  * Minimal queue item type for testing ordering logic.

@@ -12,25 +12,25 @@
 
  */
 
-import type {
-	BaseClientConfig,
-	RequestOptions,
-	SystemStatus,
-	HealthCheck,
-	RetryConfig
-} from './types.js';
-import { withRetry, DEFAULT_RETRY_CONFIG } from './retry.js';
 import {
 	type ArrClientError,
-	NetworkError,
 	AuthenticationError,
+	isArrClientError,
+	NetworkError,
+	NotFoundError,
 	RateLimitError,
 	ServerError,
-	TimeoutError,
-	NotFoundError,
 	SSLError,
-	isArrClientError
+	TimeoutError
 } from './errors.js';
+import { DEFAULT_RETRY_CONFIG, withRetry } from './retry.js';
+import type {
+	BaseClientConfig,
+	HealthCheck,
+	RequestOptions,
+	RetryConfig,
+	SystemStatus
+} from './types.js';
 
 /** Default request timeout in milliseconds (30 seconds) */
 const DEFAULT_TIMEOUT = 30000;

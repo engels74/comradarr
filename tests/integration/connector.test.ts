@@ -17,14 +17,14 @@
  * Bun's native SQL driver (bun:sql).
  */
 
-import { describe, it, expect, beforeAll, afterAll, afterEach } from 'bun:test';
+import { afterAll, afterEach, beforeAll, describe, expect, it } from 'bun:test';
 import * as fc from 'fast-check';
 import {
+	type CreateConnectorInput,
 	createConnector,
-	getConnector,
-	getDecryptedApiKey,
 	deleteConnector,
-	type CreateConnectorInput
+	getConnector,
+	getDecryptedApiKey
 } from '../../src/lib/server/db/queries/connectors';
 
 // Store original SECRET_KEY to restore after tests
