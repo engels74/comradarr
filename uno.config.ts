@@ -11,6 +11,15 @@ export default defineConfig({
 		fontFamily: {
 			sans: ['Plus Jakarta Sans', 'system-ui', 'sans-serif'],
 			display: ['Outfit', 'system-ui', 'sans-serif']
+		},
+		colors: {
+			// Glass surfaces - enables bg-glass, border-glass-border, etc.
+			glass: 'oklch(var(--glass) / <alpha-value>)',
+			'glass-border': 'oklch(var(--glass-border) / <alpha-value>)',
+			'glass-highlight': 'oklch(var(--glass-highlight) / <alpha-value>)',
+			// Status colors - enables text-success, bg-warning, etc.
+			success: 'oklch(var(--success) / <alpha-value>)',
+			warning: 'oklch(var(--warning) / <alpha-value>)'
 		}
 	},
 	shortcuts: {
