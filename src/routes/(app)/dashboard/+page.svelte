@@ -22,7 +22,7 @@ let { data }: PageProps = $props();
 	</section>
 
 	<!-- Main Content Grid - Library & Schedules side by side -->
-	<div class="grid gap-8 lg:grid-cols-2 mb-10">
+	<div class="grid gap-8 mb-10 {data.connectors.length > 0 ? 'lg:grid-cols-2' : 'lg:grid-cols-1'}">
 		<!-- Library Completion Section -->
 		<section class="animate-float-up" style="animation-delay: 50ms;">
 			<LibraryCompletionPanel completionData={data.completionData} />

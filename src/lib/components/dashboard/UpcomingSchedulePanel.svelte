@@ -236,6 +236,8 @@ const otherJobs = $derived(
 						type="button"
 						onclick={() => showOtherJobs = !showOtherJobs}
 						class="w-full flex items-center justify-between group cursor-pointer"
+						aria-expanded={showOtherJobs}
+						aria-controls="other-jobs-content"
 					>
 						<span class="text-xs font-medium text-muted-foreground uppercase tracking-wider">
 							{otherJobs.length} Background Tasks
@@ -250,7 +252,7 @@ const otherJobs = $derived(
 
 					<!-- Expandable content -->
 					{#if showOtherJobs}
-						<div class="mt-4 grid grid-cols-2 gap-2">
+						<div id="other-jobs-content" class="mt-4 grid grid-cols-2 gap-2">
 							{#each otherJobs as job (job.name)}
 								{@const colors = getJobColors(job.name)}
 								{@const Icon = getJobIcon(job.name)}
@@ -282,7 +284,7 @@ const otherJobs = $derived(
 								{@const Icon = getJobIcon(job.name)}
 								<div
 									class="p-1.5 rounded-full {colors.bg} transition-all duration-200 hover:scale-110"
-									title="{job.displayName}: {job.isRunning ? 'Running' : formatRelativeTime(job.nextRun)}"
+									title={`${job.displayName}: ${job.isRunning ? 'Running' : formatRelativeTime(job.nextRun)}`}
 								>
 									{#if job.isRunning}
 										<Icon class="h-3 w-3 {colors.text} animate-spin" />
