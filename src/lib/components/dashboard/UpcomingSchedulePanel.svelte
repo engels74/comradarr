@@ -5,6 +5,7 @@
 
 import CalendarClockIcon from '@lucide/svelte/icons/calendar-clock';
 import CameraIcon from '@lucide/svelte/icons/camera';
+import ChevronDownIcon from '@lucide/svelte/icons/chevron-down';
 import ClockIcon from '@lucide/svelte/icons/clock';
 import DatabaseIcon from '@lucide/svelte/icons/database';
 import GaugeIcon from '@lucide/svelte/icons/gauge';
@@ -14,6 +15,9 @@ import TimerIcon from '@lucide/svelte/icons/timer';
 import { Badge } from '$lib/components/ui/badge';
 import * as Card from '$lib/components/ui/card';
 import type { SerializedScheduledJob } from './types';
+
+// State for collapsible secondary jobs section
+let showOtherJobs = $state(false);
 
 interface Props {
 	scheduledJobs: SerializedScheduledJob[];
@@ -224,33 +228,72 @@ const otherJobs = $derived(
 				{/each}
 			</div>
 
-			<!-- Secondary Jobs - More compact grid -->
+			<!-- Secondary Jobs - Collapsible status strip -->
 			{#if otherJobs.length > 0}
 				<div class="pt-4 border-t border-glass-border/20">
-					<p class="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-3">Other Background Tasks</p>
-					<div class="grid grid-cols-2 lg:grid-cols-3 gap-3">
-						{#each otherJobs as job (job.name)}
-							{@const colors = getJobColors(job.name)}
-							{@const Icon = getJobIcon(job.name)}
-							<div class="p-3 rounded-lg border border-glass-border/20 bg-glass/20 transition-all duration-200 hover:bg-glass/40">
-								<div class="flex items-center gap-3">
-									<div class="p-1.5 rounded-lg {colors.bg} shrink-0">
+					<!-- Collapsible header -->
+					<button
+						type="button"
+						onclick={() => showOtherJobs = !showOtherJobs}
+						class="w-full flex items-center justify-between group cursor-pointer"
+					>
+						<span class="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+							{otherJobs.length} Background Tasks
+						</span>
+						<span class="flex items-center gap-2 text-xs text-muted-foreground group-hover:text-foreground transition-colors">
+							<span class="opacity-75">{showOtherJobs ? 'Hide' : 'Show'}</span>
+							<ChevronDownIcon
+								class="h-4 w-4 transition-transform duration-200 {showOtherJobs ? 'rotate-180' : ''}"
+							/>
+						</span>
+					</button>
+
+					<!-- Expandable content -->
+					{#if showOtherJobs}
+						<div class="mt-4 flex flex-wrap gap-2">
+							{#each otherJobs as job (job.name)}
+								{@const colors = getJobColors(job.name)}
+								{@const Icon = getJobIcon(job.name)}
+								<div
+									class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-glass/30 border border-glass-border/20 transition-all duration-200 hover:bg-glass/50 hover:border-glass-border/40"
+									title={job.description}
+								>
+									<div class="p-1 rounded-full {colors.bg}">
 										{#if job.isRunning}
-											<Icon class="h-4 w-4 {colors.text} animate-spin" />
+											<Icon class="h-3 w-3 {colors.text} animate-spin" />
 										{:else}
-											<Icon class="h-4 w-4 {colors.text}" />
+											<Icon class="h-3 w-3 {colors.text}" />
 										{/if}
 									</div>
-									<div class="flex-1 min-w-0">
-										<p class="text-sm font-medium truncate">{job.displayName}</p>
-										<p class="text-xs text-muted-foreground">
-											{job.isRunning ? 'Running' : formatRelativeTime(job.nextRun)}
-										</p>
-									</div>
+									<span class="text-xs font-medium whitespace-nowrap">{job.displayName}</span>
+									<span class="text-xs text-muted-foreground whitespace-nowrap">
+										{job.isRunning ? 'Running' : formatRelativeTime(job.nextRun)}
+									</span>
 								</div>
-							</div>
-						{/each}
-					</div>
+							{/each}
+						</div>
+					{:else}
+						<!-- Collapsed preview: show running jobs or next few jobs as subtle indicators -->
+						<div class="mt-3 flex items-center gap-1.5">
+							{#each otherJobs.slice(0, 6) as job (job.name)}
+								{@const colors = getJobColors(job.name)}
+								{@const Icon = getJobIcon(job.name)}
+								<div
+									class="p-1.5 rounded-full {colors.bg} transition-all duration-200 hover:scale-110"
+									title="{job.displayName}: {job.isRunning ? 'Running' : formatRelativeTime(job.nextRun)}"
+								>
+									{#if job.isRunning}
+										<Icon class="h-3 w-3 {colors.text} animate-spin" />
+									{:else}
+										<Icon class="h-3 w-3 {colors.text} opacity-60" />
+									{/if}
+								</div>
+							{/each}
+							{#if otherJobs.length > 6}
+								<span class="text-xs text-muted-foreground ml-1">+{otherJobs.length - 6}</span>
+							{/if}
+						</div>
+					{/if}
 				</div>
 			{/if}
 		{/if}
