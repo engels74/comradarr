@@ -93,7 +93,10 @@ const stats: StatCard[] = $derived([
 </script>
 
 <div class={className}>
-	<h2 class="font-display text-xl font-semibold mb-4 tracking-tight">Statistics</h2>
+	<div class="mb-5">
+		<h2 class="font-display text-xl font-semibold tracking-tight">Statistics</h2>
+		<p class="text-sm text-muted-foreground mt-1">Current library status at a glance</p>
+	</div>
 
 	<div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
 		{#each stats as stat, i}

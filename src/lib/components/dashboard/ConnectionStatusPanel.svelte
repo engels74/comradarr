@@ -57,73 +57,78 @@ function formatType(type: string): string {
 }
 </script>
 
-<div class={className}>
-	<h2 class="font-display text-xl font-semibold mb-4 tracking-tight">Connector Status</h2>
-
-	{#if connectors.length === 0}
-		<!-- Empty State -->
-		<Card.Root variant="glass" class="p-8">
-			<div class="text-center text-muted-foreground">
+<Card.Root variant="glass" class={className}>
+	<Card.Header>
+		<Card.Title class="text-lg flex items-center gap-2">
+			<PlugIcon class="h-5 w-5 text-primary" />
+			Connector Status
+		</Card.Title>
+		<Card.Description>Health and sync status of your connected *arr instances</Card.Description>
+	</Card.Header>
+	<Card.Content>
+		{#if connectors.length === 0}
+			<!-- Empty State -->
+			<div class="text-center py-12 text-muted-foreground">
 				<div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-glass/50 mb-4">
 					<PlugIcon class="h-8 w-8 opacity-50" />
 				</div>
-				<p class="font-medium text-lg mb-2">No connectors configured</p>
-				<p class="text-sm opacity-75">Add a connector to get started monitoring your media library.</p>
+				<p class="font-medium">No connectors configured</p>
+				<p class="text-sm mt-1 opacity-75">Add a connector to get started monitoring your media library.</p>
 			</div>
-		</Card.Root>
-	{:else}
-		<!-- Grid of Connector Cards -->
-		<div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-			{#each connectors as connector (connector.id)}
-				{@const connectorStats = getStatsForConnector(connector.id)}
-				{@const typeStyles = getTypeStyles(connector.type)}
-				<Card.Root variant="glass" class="p-5 transition-all duration-300 {typeStyles.glow}">
-					<!-- Header Row: Name and Type Badge -->
-					<div class="flex items-start justify-between mb-3">
-						<a
-							href="/connectors/{connector.id}"
-							class="text-lg font-display font-semibold hover:text-primary transition-colors flex-1 truncate"
-						>
-							{connector.name}
-						</a>
-						<span
-							class="ml-2 px-2.5 py-1 rounded-lg text-xs font-medium whitespace-nowrap {typeStyles.badge}"
-						>
-							{formatType(connector.type)}
-						</span>
-					</div>
-
-					<!-- Status Row -->
-					<div class="mb-3">
-						<StatusBadge status={connector.healthStatus} />
-					</div>
-
-					<!-- Sync Info -->
-					<div class="text-sm text-muted-foreground mb-3">
-						{#if connector.lastSync}
-							<p>
-								Last sync: <span class="font-medium text-foreground/80"
-									>{new Date(connector.lastSync).toLocaleString()}</span
-								>
-							</p>
-						{:else}
-							<p class="italic opacity-75">Never synced</p>
-						{/if}
-					</div>
-
-					<!-- Quick Statistics -->
-					<div class="flex items-center gap-4 text-sm pt-3 border-t border-glass-border/20">
-						<div class="flex items-center gap-1.5">
-							<span class="text-muted-foreground">Gaps:</span>
-							<span class="font-semibold text-foreground">{connectorStats.gapsCount}</span>
+		{:else}
+			<!-- Grid of Connector Cards - Optimized for full width -->
+			<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+				{#each connectors as connector (connector.id)}
+					{@const connectorStats = getStatsForConnector(connector.id)}
+					{@const typeStyles = getTypeStyles(connector.type)}
+					<div class="p-4 rounded-xl border border-glass-border/30 bg-glass/30 backdrop-blur-sm transition-all duration-300 hover:bg-glass/50 {typeStyles.glow}">
+						<!-- Header Row: Name and Type Badge -->
+						<div class="flex items-start justify-between mb-3">
+							<a
+								href="/connectors/{connector.id}"
+								class="font-display font-semibold hover:text-primary transition-colors flex-1 truncate"
+							>
+								{connector.name}
+							</a>
+							<span
+								class="ml-2 px-2 py-0.5 rounded-lg text-xs font-medium whitespace-nowrap {typeStyles.badge}"
+							>
+								{formatType(connector.type)}
+							</span>
 						</div>
-						<div class="flex items-center gap-1.5">
-							<span class="text-muted-foreground">Queued:</span>
-							<span class="font-semibold text-foreground">{connectorStats.queueDepth}</span>
+
+						<!-- Status Row -->
+						<div class="mb-3">
+							<StatusBadge status={connector.healthStatus} />
+						</div>
+
+						<!-- Sync Info -->
+						<div class="text-sm text-muted-foreground mb-3">
+							{#if connector.lastSync}
+								<p>
+									Last sync: <span class="font-medium text-foreground/80"
+										>{new Date(connector.lastSync).toLocaleString()}</span
+									>
+								</p>
+							{:else}
+								<p class="italic opacity-75">Never synced</p>
+							{/if}
+						</div>
+
+						<!-- Quick Statistics -->
+						<div class="flex items-center gap-4 text-sm pt-3 border-t border-glass-border/20">
+							<div class="flex items-center gap-1.5">
+								<span class="text-muted-foreground">Gaps:</span>
+								<span class="font-semibold text-foreground">{connectorStats.gapsCount}</span>
+							</div>
+							<div class="flex items-center gap-1.5">
+								<span class="text-muted-foreground">Queued:</span>
+								<span class="font-semibold text-foreground">{connectorStats.queueDepth}</span>
+							</div>
 						</div>
 					</div>
-				</Card.Root>
-			{/each}
-		</div>
-	{/if}
-</div>
+				{/each}
+			</div>
+		{/if}
+	</Card.Content>
+</Card.Root>
