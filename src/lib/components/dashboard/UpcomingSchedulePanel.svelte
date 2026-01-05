@@ -160,94 +160,99 @@ const otherJobs = $derived(
 );
 </script>
 
-<div class={className}>
-	<h2 class="text-2xl font-semibold mb-4 flex items-center gap-2">
-		<CalendarClockIcon class="h-6 w-6" />
-		Upcoming Schedules
-	</h2>
-
-	{#if scheduledJobs.length === 0}
-		<!-- Empty state -->
-		<Card.Root class="p-8">
-			<div class="text-center text-muted-foreground">
-				<CalendarClockIcon class="h-8 w-8 mx-auto mb-2 opacity-50" />
-				<p>Scheduler not initialized</p>
-				<p class="text-sm mt-1">Jobs will appear once the scheduler starts</p>
+<Card.Root variant="glass" class={className}>
+	<Card.Header>
+		<Card.Title class="text-lg flex items-center gap-2">
+			<CalendarClockIcon class="h-5 w-5 text-primary" />
+			Upcoming Schedules
+		</Card.Title>
+		<Card.Description>Background jobs and their next scheduled runs</Card.Description>
+	</Card.Header>
+	<Card.Content>
+		{#if scheduledJobs.length === 0}
+			<!-- Empty state -->
+			<div class="text-center py-12 text-muted-foreground">
+				<div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-glass/50 mb-4">
+					<CalendarClockIcon class="h-8 w-8 opacity-50" />
+				</div>
+				<p class="font-medium">Scheduler not initialized</p>
+				<p class="text-sm mt-1 opacity-75">Jobs will appear once the scheduler starts</p>
 			</div>
-		</Card.Root>
-	{:else}
-		<!-- Sweep Jobs (Primary) -->
-		<div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-			{#each sweepJobs as job (job.name)}
-				{@const colors = getJobColors(job.name)}
-				{@const Icon = getJobIcon(job.name)}
-				<Card.Root class="p-4 border {colors.border} transition-colors hover:border-primary/50">
-					<div class="flex items-start gap-3">
-						<div class="p-2 rounded-lg {colors.bg}">
-							{#if job.isRunning}
-								<Icon class="h-5 w-5 {colors.text} animate-spin" />
-							{:else}
-								<Icon class="h-5 w-5 {colors.text}" />
-							{/if}
-						</div>
-						<div class="flex-1 min-w-0">
-							<div class="flex items-center gap-2 flex-wrap">
-								<p class="font-medium truncate">{job.displayName}</p>
-								{#if job.isRunning}
-									<Badge
-										variant="outline"
-										class="bg-blue-500/20 text-blue-600 dark:text-blue-400 animate-pulse"
-									>
-										Running
-									</Badge>
-								{:else if isUpcomingSoon(job.nextRun)}
-									<Badge
-										variant="outline"
-										class="bg-amber-500/20 text-amber-600 dark:text-amber-400"
-									>
-										Soon
-									</Badge>
-								{/if}
-							</div>
-							<p class="text-sm text-muted-foreground mt-1">{job.description}</p>
-							<p
-								class="text-sm font-medium mt-2 {job.isRunning
-									? 'text-blue-600 dark:text-blue-400'
-									: ''}"
-							>
-								{job.isRunning ? 'Running now' : formatRelativeTime(job.nextRun)}
-							</p>
-						</div>
-					</div>
-				</Card.Root>
-			{/each}
-		</div>
-
-		<!-- Other Jobs (Secondary) -->
-		{#if otherJobs.length > 0}
-			<div class="grid grid-cols-2 md:grid-cols-4 gap-3">
-				{#each otherJobs as job (job.name)}
+		{:else}
+			<!-- Primary Sweep Jobs -->
+			<div class="space-y-3 mb-6">
+				{#each sweepJobs as job (job.name)}
 					{@const colors = getJobColors(job.name)}
 					{@const Icon = getJobIcon(job.name)}
-					<Card.Root class="p-3 border {colors.border}">
-						<div class="flex items-center gap-2">
-							<div class="p-1.5 rounded {colors.bg}">
+					<div class="p-4 rounded-xl border border-glass-border/30 bg-glass/30 backdrop-blur-sm transition-all duration-200 hover:bg-glass/50 {colors.border}">
+						<div class="flex items-start gap-4">
+							<div class="p-2.5 rounded-xl {colors.bg} shrink-0">
 								{#if job.isRunning}
-									<Icon class="h-4 w-4 {colors.text} animate-spin" />
+									<Icon class="h-5 w-5 {colors.text} animate-spin" />
 								{:else}
-									<Icon class="h-4 w-4 {colors.text}" />
+									<Icon class="h-5 w-5 {colors.text}" />
 								{/if}
 							</div>
 							<div class="flex-1 min-w-0">
-								<p class="text-sm font-medium truncate">{job.displayName}</p>
-								<p class="text-xs text-muted-foreground">
-									{job.isRunning ? 'Running' : formatRelativeTime(job.nextRun)}
+								<div class="flex items-center gap-2 flex-wrap mb-1">
+									<p class="font-medium">{job.displayName}</p>
+									{#if job.isRunning}
+										<Badge
+											variant="outline"
+											class="bg-blue-500/20 text-blue-600 dark:text-blue-400 animate-pulse text-xs"
+										>
+											Running
+										</Badge>
+									{:else if isUpcomingSoon(job.nextRun)}
+										<Badge
+											variant="outline"
+											class="bg-amber-500/20 text-amber-600 dark:text-amber-400 text-xs"
+										>
+											Soon
+										</Badge>
+									{/if}
+								</div>
+								<p class="text-sm text-muted-foreground">{job.description}</p>
+							</div>
+							<div class="text-right shrink-0">
+								<p class="text-sm font-semibold {job.isRunning ? 'text-blue-600 dark:text-blue-400' : 'text-foreground'}">
+									{job.isRunning ? 'Running now' : formatRelativeTime(job.nextRun)}
 								</p>
 							</div>
 						</div>
-					</Card.Root>
+					</div>
 				{/each}
 			</div>
+
+			<!-- Secondary Jobs - More compact grid -->
+			{#if otherJobs.length > 0}
+				<div class="pt-4 border-t border-glass-border/20">
+					<p class="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-3">Other Background Tasks</p>
+					<div class="grid grid-cols-2 lg:grid-cols-3 gap-3">
+						{#each otherJobs as job (job.name)}
+							{@const colors = getJobColors(job.name)}
+							{@const Icon = getJobIcon(job.name)}
+							<div class="p-3 rounded-lg border border-glass-border/20 bg-glass/20 transition-all duration-200 hover:bg-glass/40">
+								<div class="flex items-center gap-3">
+									<div class="p-1.5 rounded-lg {colors.bg} shrink-0">
+										{#if job.isRunning}
+											<Icon class="h-4 w-4 {colors.text} animate-spin" />
+										{:else}
+											<Icon class="h-4 w-4 {colors.text}" />
+										{/if}
+									</div>
+									<div class="flex-1 min-w-0">
+										<p class="text-sm font-medium truncate">{job.displayName}</p>
+										<p class="text-xs text-muted-foreground">
+											{job.isRunning ? 'Running' : formatRelativeTime(job.nextRun)}
+										</p>
+									</div>
+								</div>
+							</div>
+						{/each}
+					</div>
+				</div>
+			{/if}
 		{/if}
-	{/if}
-</div>
+	</Card.Content>
+</Card.Root>
