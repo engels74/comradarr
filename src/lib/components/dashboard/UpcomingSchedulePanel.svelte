@@ -250,24 +250,26 @@ const otherJobs = $derived(
 
 					<!-- Expandable content -->
 					{#if showOtherJobs}
-						<div class="mt-4 flex flex-wrap gap-2">
+						<div class="mt-4 grid grid-cols-2 gap-2">
 							{#each otherJobs as job (job.name)}
 								{@const colors = getJobColors(job.name)}
 								{@const Icon = getJobIcon(job.name)}
 								<div
-									class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-glass/30 border border-glass-border/20 transition-all duration-200 hover:bg-glass/50 hover:border-glass-border/40"
+									class="flex items-center gap-2.5 px-3 py-2 rounded-lg bg-glass/30 border border-glass-border/20 transition-all duration-200 hover:bg-glass/50 hover:border-glass-border/40"
 									title={job.description}
 								>
-									<div class="p-1 rounded-full {colors.bg}">
+									<div class="p-1.5 rounded-lg {colors.bg} shrink-0">
 										{#if job.isRunning}
-											<Icon class="h-3 w-3 {colors.text} animate-spin" />
+											<Icon class="h-3.5 w-3.5 {colors.text} animate-spin" />
 										{:else}
-											<Icon class="h-3 w-3 {colors.text}" />
+											<Icon class="h-3.5 w-3.5 {colors.text}" />
 										{/if}
 									</div>
-									<span class="text-xs font-medium whitespace-nowrap">{job.displayName}</span>
-									<span class="text-xs text-muted-foreground whitespace-nowrap">
-										{job.isRunning ? 'Running' : formatRelativeTime(job.nextRun)}
+									<div class="flex-1 min-w-0">
+										<span class="text-sm font-medium truncate block">{job.displayName}</span>
+									</div>
+									<span class="text-xs text-muted-foreground whitespace-nowrap shrink-0">
+										{job.isRunning ? 'Running...' : formatRelativeTime(job.nextRun)}
 									</span>
 								</div>
 							{/each}
