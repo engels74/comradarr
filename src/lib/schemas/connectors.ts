@@ -39,6 +39,28 @@ export type ConnectorInput = v.InferInput<typeof ConnectorSchema>;
 export type ConnectorOutput = v.InferOutput<typeof ConnectorSchema>;
 
 /**
+ * Test connection validation schema.
+ * Type is optional - will be auto-detected from the *arr application.
+ *
+ * - url: Required valid URL
+ * - apiKey: Required string
+ * - type: Optional, one of 'sonarr' | 'radarr' | 'whisparr' (for manual override)
+ */
+export const TestConnectionSchema = v.object({
+	url: v.pipe(
+		v.string('URL is required'),
+		v.trim(),
+		v.minLength(1, 'URL is required'),
+		v.url('Please enter a valid URL')
+	),
+	apiKey: v.pipe(v.string('API Key is required'), v.minLength(1, 'API Key is required')),
+	type: v.optional(v.pipe(v.string(), v.picklist(connectorTypes, 'Invalid connector type')))
+});
+
+export type TestConnectionInput = v.InferInput<typeof TestConnectionSchema>;
+export type TestConnectionOutput = v.InferOutput<typeof TestConnectionSchema>;
+
+/**
  * Update connector form validation schema.
  * API key is optional - leave blank to keep existing.
  */

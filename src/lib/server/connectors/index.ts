@@ -9,6 +9,8 @@
 
 // Base client
 export { BaseArrClient } from './common/base-client.js';
+// Detection utility
+export { type DetectionResult, detectConnectorType } from './common/detect.js';
 export type { ErrorCategory, NetworkErrorCause } from './common/errors.js';
 // Errors
 export {

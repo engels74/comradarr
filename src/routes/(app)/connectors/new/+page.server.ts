@@ -4,9 +4,14 @@
 
 import { fail } from '@sveltejs/kit';
 import * as v from 'valibot';
-import { type ConnectorOutput, ConnectorSchema } from '$lib/schemas/connectors';
+import {
+	ConnectorSchema,
+	type ConnectorType as SchemaConnectorType,
+	TestConnectionSchema
+} from '$lib/schemas/connectors';
 import {
 	AuthenticationError,
+	detectConnectorType,
 	isArrClientError,
 	NetworkError,
 	RadarrClient,
@@ -28,13 +33,17 @@ const logger = createLogger('connectors');
 /**
  * Creates an appropriate client for the connector type.
  */
-function createClient(config: ConnectorOutput): SonarrClient | RadarrClient | WhisparrClient {
+function createClient(
+	type: SchemaConnectorType,
+	url: string,
+	apiKey: string
+): SonarrClient | RadarrClient | WhisparrClient {
 	const clientConfig = {
-		baseUrl: config.url.replace(/\/+$/, ''), // Normalize URL
-		apiKey: config.apiKey
+		baseUrl: url.replace(/\/+$/, ''), // Normalize URL
+		apiKey
 	};
 
-	switch (config.type) {
+	switch (type) {
 		case 'sonarr':
 			return new SonarrClient(clientConfig);
 		case 'radarr':
@@ -77,27 +86,28 @@ function getErrorMessage(error: unknown): string {
 
 export const actions: Actions = {
 	/**
-	 * Test connection to the *arr application.
+	 * Test connection to the *arr application with automatic type detection.
 	 *
-	 * Validates form data, creates a client, and calls ping().
-	 * Returns success or detailed error message.
+	 * 1. Validates URL and API key (type is optional)
+	 * 2. Auto-detects connector type from /api/v3/system/status
+	 * 3. Tests connectivity using the detected type
+	 * 4. Returns detected type for UI auto-population
 	 */
 	testConnection: async ({ request }) => {
 		const formData = await request.formData();
 		const data = {
-			name: formData.get('name'),
-			type: formData.get('type'),
 			url: formData.get('url'),
-			apiKey: formData.get('apiKey')
+			apiKey: formData.get('apiKey'),
+			type: formData.get('type') || undefined // Optional type for manual override
 		};
 
-		// Validate form data
-		const result = v.safeParse(ConnectorSchema, data);
+		// Validate URL and API key (type is optional for auto-detection)
+		const result = v.safeParse(TestConnectionSchema, data);
 		if (!result.success) {
 			const errors = result.issues.map((issue) => issue.message);
 			return fail(400, {
 				error: errors[0] ?? 'Invalid input',
-				name: data.name?.toString() ?? '',
+				name: formData.get('name')?.toString() ?? '',
 				type: data.type?.toString() ?? '',
 				url: data.url?.toString() ?? ''
 			});
@@ -105,50 +115,88 @@ export const actions: Actions = {
 
 		const config = result.output;
 
-		// Create client and test connection
+		// Step 1: Detect connector type
+		const detectionResult = await detectConnectorType(config.url, config.apiKey);
+
+		if (!detectionResult.success) {
+			// Detection failed - return the error
+			logger.warn('Connection test failed - type detection error', {
+				url: config.url,
+				error: detectionResult.error
+			});
+			return fail(400, {
+				error: detectionResult.error,
+				name: formData.get('name')?.toString() ?? '',
+				type: config.type ?? '',
+				url: config.url
+			});
+		}
+
+		// Use detected type (detection already validates connectivity via system/status)
+		const detectedType = detectionResult.type;
+
+		// Step 2: Test connection using ping for additional validation
 		try {
-			const client = createClient(config);
+			const client = createClient(detectedType, config.url, config.apiKey);
 			const isConnected = await client.ping();
 
 			if (isConnected) {
 				logger.info('Connection test successful', {
-					name: config.name,
-					type: config.type,
+					detectedType,
+					appName: detectionResult.appName,
+					version: detectionResult.version,
 					url: config.url
 				});
 				return {
 					success: true,
-					message: 'Connection successful!',
-					name: config.name,
-					type: config.type,
+					message: `Connected to ${detectionResult.appName} v${detectionResult.version}`,
+					detectedType,
+					appName: detectionResult.appName,
+					version: detectionResult.version,
+					name: formData.get('name')?.toString() ?? '',
+					type: detectedType,
 					url: config.url
 				};
 			} else {
-				logger.warn('Connection test failed - no response', {
-					name: config.name,
-					type: config.type,
+				// Ping failed but detection worked - still return success with detected type
+				// (system/status already verified connectivity)
+				logger.info('Connection test successful (detection passed, ping failed)', {
+					detectedType,
+					appName: detectionResult.appName,
+					version: detectionResult.version,
 					url: config.url
 				});
-				return fail(400, {
-					error: 'Connection failed. Check your URL and API key.',
-					name: config.name,
-					type: config.type,
+				return {
+					success: true,
+					message: `Connected to ${detectionResult.appName} v${detectionResult.version}`,
+					detectedType,
+					appName: detectionResult.appName,
+					version: detectionResult.version,
+					name: formData.get('name')?.toString() ?? '',
+					type: detectedType,
 					url: config.url
-				});
+				};
 			}
 		} catch (error) {
-			logger.warn('Connection test failed', {
-				name: config.name,
-				type: config.type,
+			// Ping threw but detection worked - still return success
+			// (system/status already verified connectivity)
+			logger.info('Connection test successful (detection passed, ping error)', {
+				detectedType,
+				appName: detectionResult.appName,
+				version: detectionResult.version,
 				url: config.url,
-				error: getErrorMessage(error)
+				pingError: getErrorMessage(error)
 			});
-			return fail(400, {
-				error: getErrorMessage(error),
-				name: config.name,
-				type: config.type,
+			return {
+				success: true,
+				message: `Connected to ${detectionResult.appName} v${detectionResult.version}`,
+				detectedType,
+				appName: detectionResult.appName,
+				version: detectionResult.version,
+				name: formData.get('name')?.toString() ?? '',
+				type: detectedType,
 				url: config.url
-			});
+			};
 		}
 	},
 
