@@ -4,17 +4,8 @@
 
 import { fail } from '@sveltejs/kit';
 import * as v from 'valibot';
-import { type ConnectorOutput, ConnectorSchema } from '$lib/schemas/connectors';
-import {
-	AuthenticationError,
-	isArrClientError,
-	NetworkError,
-	RadarrClient,
-	SonarrClient,
-	SSLError,
-	TimeoutError,
-	WhisparrClient
-} from '$lib/server/connectors';
+import { ConnectorSchema, TestConnectionSchema } from '$lib/schemas/connectors';
+import { detectConnectorType } from '$lib/server/connectors';
 import {
 	type ConnectorType,
 	connectorNameExists,
@@ -25,79 +16,32 @@ import type { Actions } from './$types';
 
 const logger = createLogger('connectors');
 
-/**
- * Creates an appropriate client for the connector type.
- */
-function createClient(config: ConnectorOutput): SonarrClient | RadarrClient | WhisparrClient {
-	const clientConfig = {
-		baseUrl: config.url.replace(/\/+$/, ''), // Normalize URL
-		apiKey: config.apiKey
-	};
-
-	switch (config.type) {
-		case 'sonarr':
-			return new SonarrClient(clientConfig);
-		case 'radarr':
-			return new RadarrClient(clientConfig);
-		case 'whisparr':
-			return new WhisparrClient(clientConfig);
-	}
-}
-
-/**
- * Returns a user-friendly error message based on the error type.
- */
-function getErrorMessage(error: unknown): string {
-	if (error instanceof AuthenticationError) {
-		return 'Invalid API key. Check your API key in the *arr application settings.';
-	}
-	if (error instanceof NetworkError) {
-		if (error.errorCause === 'connection_refused') {
-			return 'Connection refused. Check the URL and ensure the application is running.';
-		}
-		if (error.errorCause === 'dns_failure') {
-			return 'Could not resolve hostname. Check the URL is correct.';
-		}
-		return 'Network error. Check your connection and URL.';
-	}
-	if (error instanceof TimeoutError) {
-		return 'Connection timed out. The server may be slow or unreachable.';
-	}
-	if (error instanceof SSLError) {
-		return 'SSL certificate error. Check your SSL configuration.';
-	}
-	if (isArrClientError(error)) {
-		return `Connection failed: ${error.message}`;
-	}
-	if (error instanceof Error) {
-		return `Connection failed: ${error.message}`;
-	}
-	return 'An unexpected error occurred while testing the connection.';
-}
-
 export const actions: Actions = {
 	/**
-	 * Test connection to the *arr application.
+	 * Test connection to the *arr application with automatic type detection.
 	 *
-	 * Validates form data, creates a client, and calls ping().
-	 * Returns success or detailed error message.
+	 * 1. Validates URL and API key (type is optional)
+	 * 2. Auto-detects connector type from /api/v3/system/status
+	 * 3. Returns detected type for UI auto-population
+	 *
+	 * Note: The detection step validates connectivity via an authenticated request
+	 * to /api/v3/system/status, which is more comprehensive than the /ping endpoint.
 	 */
 	testConnection: async ({ request }) => {
 		const formData = await request.formData();
 		const data = {
-			name: formData.get('name'),
-			type: formData.get('type'),
 			url: formData.get('url'),
-			apiKey: formData.get('apiKey')
+			apiKey: formData.get('apiKey'),
+			type: formData.get('type') || undefined // Optional type for manual override
 		};
 
-		// Validate form data
-		const result = v.safeParse(ConnectorSchema, data);
+		// Validate URL and API key (type is optional for auto-detection)
+		const result = v.safeParse(TestConnectionSchema, data);
 		if (!result.success) {
 			const errors = result.issues.map((issue) => issue.message);
 			return fail(400, {
 				error: errors[0] ?? 'Invalid input',
-				name: data.name?.toString() ?? '',
+				name: formData.get('name')?.toString() ?? '',
 				type: data.type?.toString() ?? '',
 				url: data.url?.toString() ?? ''
 			});
@@ -105,51 +49,43 @@ export const actions: Actions = {
 
 		const config = result.output;
 
-		// Create client and test connection
-		try {
-			const client = createClient(config);
-			const isConnected = await client.ping();
+		// Detect connector type via /api/v3/system/status
+		// This endpoint requires authentication and validates:
+		// - URL is reachable
+		// - API key is valid
+		// - Application responds with valid data
+		const detectionResult = await detectConnectorType(config.url, config.apiKey);
 
-			if (isConnected) {
-				logger.info('Connection test successful', {
-					name: config.name,
-					type: config.type,
-					url: config.url
-				});
-				return {
-					success: true,
-					message: 'Connection successful!',
-					name: config.name,
-					type: config.type,
-					url: config.url
-				};
-			} else {
-				logger.warn('Connection test failed - no response', {
-					name: config.name,
-					type: config.type,
-					url: config.url
-				});
-				return fail(400, {
-					error: 'Connection failed. Check your URL and API key.',
-					name: config.name,
-					type: config.type,
-					url: config.url
-				});
-			}
-		} catch (error) {
+		if (!detectionResult.success) {
 			logger.warn('Connection test failed', {
-				name: config.name,
-				type: config.type,
 				url: config.url,
-				error: getErrorMessage(error)
+				error: detectionResult.error
 			});
 			return fail(400, {
-				error: getErrorMessage(error),
-				name: config.name,
-				type: config.type,
+				error: detectionResult.error,
+				name: formData.get('name')?.toString() ?? '',
+				type: config.type ?? '',
 				url: config.url
 			});
 		}
+
+		logger.info('Connection test successful', {
+			detectedType: detectionResult.type,
+			appName: detectionResult.appName,
+			version: detectionResult.version,
+			url: config.url
+		});
+
+		return {
+			success: true,
+			message: `Connected to ${detectionResult.appName} v${detectionResult.version}`,
+			detectedType: detectionResult.type,
+			appName: detectionResult.appName,
+			version: detectionResult.version,
+			name: formData.get('name')?.toString() ?? '',
+			type: detectionResult.type,
+			url: config.url
+		};
 	},
 
 	/**
