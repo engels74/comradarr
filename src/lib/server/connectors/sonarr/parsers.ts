@@ -114,7 +114,7 @@ export const SonarrEpisodeSchema = v.object({
 	airDateUtc: v.optional(v.string()),
 	hasFile: v.boolean(),
 	monitored: v.boolean(),
-	qualityCutoffNotMet: v.boolean(),
+	qualityCutoffNotMet: v.optional(v.nullable(v.boolean())),
 	episodeFileId: v.optional(v.number()),
 	episodeFile: v.optional(SonarrEpisodeFileSchema)
 });
@@ -210,7 +210,8 @@ export function parseSonarrEpisode(data: unknown): ParseResult<SonarrEpisode> {
 			episodeNumber: output.episodeNumber,
 			hasFile: output.hasFile,
 			monitored: output.monitored,
-			qualityCutoffNotMet: output.qualityCutoffNotMet,
+			// qualityCutoffNotMet may be undefined (missing) or null (no file)
+			qualityCutoffNotMet: output.qualityCutoffNotMet ?? null,
 			// Conditionally include optional properties only when defined
 			...(output.title !== undefined && { title: output.title }),
 			...(output.airDateUtc !== undefined && { airDateUtc: output.airDateUtc }),
@@ -339,7 +340,8 @@ export function parsePaginatedEpisodes(
 					episodeNumber: record.episodeNumber,
 					hasFile: record.hasFile,
 					monitored: record.monitored,
-					qualityCutoffNotMet: record.qualityCutoffNotMet,
+					// qualityCutoffNotMet may be undefined (missing) or null (no file)
+					qualityCutoffNotMet: record.qualityCutoffNotMet ?? null,
 					...(record.title !== undefined && { title: record.title }),
 					...(record.airDateUtc !== undefined && { airDateUtc: record.airDateUtc }),
 					...(record.episodeFileId !== undefined && { episodeFileId: record.episodeFileId }),

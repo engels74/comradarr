@@ -82,7 +82,8 @@ export function mapEpisodeToDb(
 		monitored: apiEpisode.monitored,
 		hasFile: apiEpisode.hasFile,
 		quality: apiEpisode.episodeFile?.quality ?? null,
-		qualityCutoffNotMet: apiEpisode.qualityCutoffNotMet,
+		// API returns null when no file exists; coerce to false for DB
+		qualityCutoffNotMet: apiEpisode.qualityCutoffNotMet ?? false,
 		episodeFileId: apiEpisode.episodeFileId ?? null
 	};
 }
@@ -107,7 +108,8 @@ export function mapMovieToDb(connectorId: number, apiMovie: RadarrMovie): NewMov
 		monitored: apiMovie.monitored,
 		hasFile: apiMovie.hasFile,
 		quality: apiMovie.movieFile?.quality ?? null,
-		qualityCutoffNotMet: apiMovie.qualityCutoffNotMet,
+		// API returns null when no file exists; coerce to false for DB
+		qualityCutoffNotMet: apiMovie.qualityCutoffNotMet ?? false,
 		movieFileId: apiMovie.movieFileId ?? null
 	};
 }

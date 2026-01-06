@@ -46,8 +46,8 @@ export interface RadarrMovie {
 	hasFile: boolean;
 	/** Whether the movie is monitored for downloads */
 	monitored: boolean;
-	/** Whether current quality is below cutoff (upgrade candidate) */
-	qualityCutoffNotMet: boolean;
+	/** Whether current quality is below cutoff (upgrade candidate). Null when no file exists. */
+	qualityCutoffNotMet: boolean | null;
 	/** Movie file ID if hasFile is true */
 	movieFileId?: number;
 	/** Movie file details if hasFile is true */
