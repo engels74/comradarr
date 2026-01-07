@@ -1,9 +1,4 @@
 <script lang="ts">
-/**
- * Individual log entry display component.
- * Shows log details with expandable context.
- */
-
 import CheckIcon from '@lucide/svelte/icons/check';
 import ChevronDownIcon from '@lucide/svelte/icons/chevron-down';
 import ChevronRightIcon from '@lucide/svelte/icons/chevron-right';

@@ -15,9 +15,6 @@ interface Props {
 
 let { schedule, class: className }: Props = $props();
 
-/**
- * Sweep type badge colors
- */
 const typeColors: Record<string, string> = {
 	incremental: 'bg-blue-500/15 text-blue-500 border border-blue-500/30',
 	full_reconciliation: 'bg-purple-500/15 text-purple-500 border border-purple-500/30'
@@ -25,18 +22,11 @@ const typeColors: Record<string, string> = {
 
 const typeColor = $derived(typeColors[schedule.sweepType] ?? 'bg-gray-500/10 text-gray-600');
 
-/**
- * Format sweep type for display
- */
 const formattedType = $derived(
 	schedule.sweepType === 'incremental' ? 'Incremental Sync' : 'Full Reconciliation'
 );
 
-/**
- * Format cron expression to human-readable (simplified)
- */
 function getCronDescription(cron: string): string {
-	// Simple patterns - could use a library like cronstrue for full parsing
 	if (cron === '*/15 * * * *') return 'Every 15 minutes';
 	if (cron === '*/5 * * * *') return 'Every 5 minutes';
 	if (cron === '*/30 * * * *') return 'Every 30 minutes';
@@ -49,7 +39,6 @@ function getCronDescription(cron: string): string {
 	if (cron === '0 3 * * *') return 'Daily at 3:00 AM';
 	if (cron === '0 4 * * *') return 'Daily at 4:00 AM';
 
-	// Parse daily patterns like "0 5 * * *" -> "Daily at 5:00 AM"
 	const dailyMatch = cron.match(/^(\d+) (\d+) \* \* \*$/);
 	if (dailyMatch) {
 		const [, minute, hour] = dailyMatch;
@@ -61,7 +50,6 @@ function getCronDescription(cron: string): string {
 		return `Daily at ${displayHour}:${displayMin} ${period}`;
 	}
 
-	// Parse every N minutes patterns like "*/10 * * * *" -> "Every 10 minutes"
 	const minuteMatch = cron.match(/^\*\/(\d+) \* \* \* \*$/);
 	if (minuteMatch) {
 		return `Every ${minuteMatch[1]} minutes`;
@@ -72,9 +60,6 @@ function getCronDescription(cron: string): string {
 
 const cronDescription = $derived(getCronDescription(schedule.cronExpression));
 
-/**
- * Format next run time as relative
- */
 function getNextRunFormatted(): string {
 	if (!schedule.nextRunAt) return 'Not scheduled';
 	const date = new Date(schedule.nextRunAt);

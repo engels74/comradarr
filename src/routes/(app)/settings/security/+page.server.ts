@@ -37,23 +37,17 @@ export const load: PageServerLoad = async ({ locals }) => {
 };
 
 export const actions: Actions = {
-	/**
-	 * Update authentication mode.
-	 */
 	updateAuthMode: async ({ request }) => {
 		const formData = await request.formData();
 
-		// Parse form data
 		const data = {
 			authMode: formData.get('authMode')
 		};
 
-		// Preserve form values for error display
 		const formValues = {
 			authMode: data.authMode?.toString() ?? ''
 		};
 
-		// Validate form data
 		const result = v.safeParse(AuthModeSchema, data);
 		if (!result.success) {
 			const errors = result.issues.map((issue) => issue.message);
@@ -66,7 +60,6 @@ export const actions: Actions = {
 
 		const config = result.output;
 
-		// Update the setting
 		try {
 			await updateSecuritySettings({ authMode: config.authMode });
 		} catch (err) {
@@ -88,11 +81,7 @@ export const actions: Actions = {
 		};
 	},
 
-	/**
-	 * Change password for current user.
-	 */
 	changePassword: async ({ request, locals }) => {
-		// Cannot change password for bypass users
 		if (locals.isLocalBypass || !locals.user || locals.user.id === 0) {
 			return fail(403, {
 				action: 'changePassword',
@@ -102,14 +91,12 @@ export const actions: Actions = {
 
 		const formData = await request.formData();
 
-		// Parse form data
 		const data = {
 			currentPassword: formData.get('currentPassword')?.toString() ?? '',
 			newPassword: formData.get('newPassword')?.toString() ?? '',
 			confirmPassword: formData.get('confirmPassword')?.toString() ?? ''
 		};
 
-		// Validate form data
 		const result = v.safeParse(PasswordChangeSchema, data);
 		if (!result.success) {
 			const errors = result.issues.map((issue) => issue.message);
@@ -121,7 +108,6 @@ export const actions: Actions = {
 
 		const config = result.output;
 
-		// Get current user to verify password
 		const user = await getUserById(locals.user.id);
 		if (!user) {
 			return fail(400, {
@@ -130,7 +116,6 @@ export const actions: Actions = {
 			});
 		}
 
-		// Verify current password
 		const passwordValid = await verifyPassword(user.passwordHash, config.currentPassword);
 		if (!passwordValid) {
 			return fail(400, {
@@ -139,7 +124,6 @@ export const actions: Actions = {
 			});
 		}
 
-		// Hash and update new password
 		try {
 			const newPasswordHash = await hashPassword(config.newPassword);
 			await updateUserPassword(locals.user.id, newPasswordHash);
@@ -160,11 +144,7 @@ export const actions: Actions = {
 		};
 	},
 
-	/**
-	 * Revoke a specific session.
-	 */
 	revokeSession: async ({ request, locals }) => {
-		// Cannot revoke sessions for bypass users
 		if (locals.isLocalBypass || !locals.user || locals.user.id === 0) {
 			return fail(403, {
 				action: 'revokeSession',
@@ -182,7 +162,6 @@ export const actions: Actions = {
 			});
 		}
 
-		// Cannot revoke current session
 		if (sessionId === locals.sessionId) {
 			return fail(400, {
 				action: 'revokeSession',
@@ -215,11 +194,7 @@ export const actions: Actions = {
 		};
 	},
 
-	/**
-	 * Revoke all sessions except current.
-	 */
 	revokeAllSessions: async ({ locals }) => {
-		// Cannot revoke sessions for bypass users
 		if (locals.isLocalBypass || !locals.user || locals.user.id === 0 || !locals.sessionId) {
 			return fail(403, {
 				action: 'revokeAllSessions',

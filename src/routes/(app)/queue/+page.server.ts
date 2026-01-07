@@ -28,13 +28,9 @@ import {
 import type { Actions, PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ url, depends }) => {
-	// Register custom dependency for selective invalidation
 	depends('app:queue');
-
-	// Parse filters from URL params
 	const filters = parseQueueFilters(url.searchParams);
 
-	// Load data in parallel for efficiency
 	const [queueResult, connectors, statusCounts, throttleInfoMap, pauseStatus, recentCompletions] =
 		await Promise.all([
 			getQueueList(filters),
@@ -45,7 +41,6 @@ export const load: PageServerLoad = async ({ url, depends }) => {
 			getRecentCompletions(25)
 		]);
 
-	// Convert Map to serializable object
 	const throttleInfo: Record<
 		number,
 		{
@@ -108,8 +103,6 @@ function parseRegistryIds(formData: FormData): number[] {
 function parseConnectorIds(formData: FormData): number[] | undefined {
 	const idsJson = formData.get('connectorIds');
 	if (!idsJson || typeof idsJson !== 'string') return undefined;
-
-	// Empty string means "all connectors"
 	if (idsJson === '' || idsJson === '[]') return undefined;
 
 	try {
@@ -123,9 +116,6 @@ function parseConnectorIds(formData: FormData): number[] | undefined {
 }
 
 export const actions: Actions = {
-	/**
-	 * Pause queue processing for connector(s).
-	 */
 	pauseQueue: async ({ request }) => {
 		const formData = await request.formData();
 		const connectorIds = parseConnectorIds(formData);
@@ -141,9 +131,6 @@ export const actions: Actions = {
 		};
 	},
 
-	/**
-	 * Resume queue processing for connector(s).
-	 */
 	resumeQueue: async ({ request }) => {
 		const formData = await request.formData();
 		const connectorIds = parseConnectorIds(formData);
@@ -159,9 +146,6 @@ export const actions: Actions = {
 		};
 	},
 
-	/**
-	 * Clear queue items for connector(s).
-	 */
 	clearQueue: async ({ request }) => {
 		const formData = await request.formData();
 		const connectorIds = parseConnectorIds(formData);
@@ -175,9 +159,6 @@ export const actions: Actions = {
 		};
 	},
 
-	/**
-	 * Adjust priority for selected queue items.
-	 */
 	adjustPriority: async ({ request }) => {
 		const formData = await request.formData();
 		const registryIds = parseRegistryIds(formData);
@@ -205,9 +186,6 @@ export const actions: Actions = {
 		};
 	},
 
-	/**
-	 * Remove selected items from queue.
-	 */
 	removeFromQueue: async ({ request }) => {
 		const formData = await request.formData();
 		const registryIds = parseRegistryIds(formData);

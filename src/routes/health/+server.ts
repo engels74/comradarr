@@ -13,40 +13,24 @@ import { json } from '@sveltejs/kit';
 import { getHealthSummary, type HealthStatus } from '$lib/server/db/queries/health';
 import type { RequestHandler } from './$types';
 
-// =============================================================================
-// Types
-// =============================================================================
-
-/**
- * Application status information.
- */
 interface ApplicationStatus {
 	name: string;
 	version: string;
-	uptime: number; // seconds
+	uptime: number;
 }
 
-/**
- * Database status information.
- */
 interface DatabaseStatus {
 	status: 'connected' | 'disconnected';
 	latencyMs?: number;
 	error?: string;
 }
 
-/**
- * Memory usage information.
- */
 interface MemoryStatus {
-	heapUsed: number; // bytes
-	heapTotal: number; // bytes
-	rss: number; // bytes
+	heapUsed: number;
+	heapTotal: number;
+	rss: number;
 }
 
-/**
- * Per-connector health status.
- */
 interface ConnectorStatus {
 	id: number;
 	name: string;
@@ -56,17 +40,11 @@ interface ConnectorStatus {
 	queueDepth: number;
 }
 
-/**
- * Queue status summary.
- */
 interface QueueStatus {
 	totalDepth: number;
 	pausedConnectors: number;
 }
 
-/**
- * Complete health check response.
- */
 interface HealthResponse {
 	status: HealthStatus;
 	timestamp: string;
@@ -77,37 +55,13 @@ interface HealthResponse {
 	queue: QueueStatus;
 }
 
-// =============================================================================
-// Constants
-// =============================================================================
-
-/** Application name for health response */
 const APP_NAME = 'Comradarr';
-
-/** Application version from package.json */
 const APP_VERSION = '0.0.1';
 
-// =============================================================================
-// Handler
-// =============================================================================
-
-/**
- * GET /health
- *
- * Returns comprehensive health status for the application.
- *
- * Status codes:
- * - 200: healthy or degraded
- * - 503: unhealthy/database unreachable
- */
 export const GET: RequestHandler = async () => {
-	// Get health summary from database queries
 	const healthSummary = await getHealthSummary();
-
-	// Get memory usage
 	const memoryUsage = process.memoryUsage();
 
-	// Build response
 	const response: HealthResponse = {
 		status: healthSummary.overallStatus,
 		timestamp: new Date().toISOString(),
@@ -134,9 +88,6 @@ export const GET: RequestHandler = async () => {
 		queue: healthSummary.queue
 	};
 
-	// Return 503 for unhealthy status
-	// Return 200 for healthy or degraded
 	const httpStatus = healthSummary.overallStatus === 'unhealthy' ? 503 : 200;
-
 	return json(response, { status: httpStatus });
 };

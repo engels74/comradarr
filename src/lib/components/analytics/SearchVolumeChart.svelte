@@ -12,19 +12,16 @@ interface Props {
 
 let { metrics, period = '7d', class: className = '' }: Props = $props();
 
-// Status colors
 const statusColors = {
-	dispatched: 'rgb(59, 130, 246)', // blue-500
-	successful: 'rgb(34, 197, 94)', // green-500
-	failed: 'rgb(239, 68, 68)', // red-500
-	noResults: 'rgb(245, 158, 11)' // amber-500
+	dispatched: 'rgb(59, 130, 246)',
+	successful: 'rgb(34, 197, 94)',
+	failed: 'rgb(239, 68, 68)',
+	noResults: 'rgb(245, 158, 11)'
 };
 
-// Aggregate metrics across all connectors for total view
 const aggregatedDatasets = $derived(() => {
 	if (metrics.length === 0) return [];
 
-	// Find all unique timestamps across all connectors
 	const timestampMap = new Map<
 		string,
 		{ dispatched: number; successful: number; failed: number; noResults: number }
@@ -77,7 +74,6 @@ const aggregatedDatasets = $derived(() => {
 		}
 	}
 
-	// Sort by timestamp and create datasets
 	const sortedEntries = Array.from(timestampMap.entries()).sort(
 		([a], [b]) => new Date(a).getTime() - new Date(b).getTime()
 	);

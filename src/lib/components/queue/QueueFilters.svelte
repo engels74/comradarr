@@ -4,10 +4,6 @@ import { page } from '$app/stores';
 import { Input } from '$lib/components/ui/input';
 import type { QueueConnector, QueueStatusCounts } from '$lib/server/db/queries/queue';
 
-/**
- * Queue filter controls with URL-based state.
- */
-
 interface Props {
 	connectors: QueueConnector[];
 	statusCounts: QueueStatusCounts;
@@ -15,19 +11,14 @@ interface Props {
 
 let { connectors, statusCounts }: Props = $props();
 
-// Initialize from URL params
 let search = $state($page.url.searchParams.get('search') ?? '');
 let connectorId = $state($page.url.searchParams.get('connector') ?? '');
 let contentType = $state($page.url.searchParams.get('type') ?? 'all');
 let queueState = $state($page.url.searchParams.get('state') ?? 'all');
 let searchType = $state($page.url.searchParams.get('searchType') ?? 'all');
 
-// Debounced search
 let searchTimeout: ReturnType<typeof setTimeout>;
 
-/**
- * Updates URL with current filter state.
- */
 function updateFilters() {
 	const params = new URLSearchParams();
 
@@ -44,17 +35,11 @@ function updateFilters() {
 	goto(`/queue?${params.toString()}`, { replaceState: true, keepFocus: true });
 }
 
-/**
- * Handles search input with debounce.
- */
 function onSearchInput() {
 	clearTimeout(searchTimeout);
 	searchTimeout = setTimeout(updateFilters, 300);
 }
 
-/**
- * Handles filter dropdown changes.
- */
 function onFilterChange() {
 	updateFilters();
 }

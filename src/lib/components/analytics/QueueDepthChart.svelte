@@ -12,14 +12,12 @@ interface Props {
 
 let { metrics, period = '7d', class: className = '' }: Props = $props();
 
-// Color palette for connector types
 const connectorColors: Record<string, string> = {
-	sonarr: 'rgb(59, 130, 246)', // blue-500
-	radarr: 'rgb(249, 115, 22)', // orange-500
-	whisparr: 'rgb(168, 85, 247)' // purple-500
+	sonarr: 'rgb(59, 130, 246)',
+	radarr: 'rgb(249, 115, 22)',
+	whisparr: 'rgb(168, 85, 247)'
 };
 
-// Generate datasets from metrics
 const datasets = $derived(() => {
 	const result: {
 		label: string;
@@ -33,7 +31,6 @@ const datasets = $derived(() => {
 	for (const connector of metrics) {
 		const color = connectorColors[connector.connectorType] ?? 'rgb(107, 114, 128)';
 
-		// Average queue depth (filled area)
 		result.push({
 			label: `${connector.connectorName} - Avg`,
 			data: connector.avgQueueDepth,
@@ -42,7 +39,6 @@ const datasets = $derived(() => {
 			fill: true
 		});
 
-		// Peak queue depth (dashed line)
 		result.push({
 			label: `${connector.connectorName} - Peak`,
 			data: connector.peakQueueDepth,

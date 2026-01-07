@@ -5,7 +5,6 @@ import SunIcon from '@lucide/svelte/icons/sun';
 import { Button } from '$lib/components/ui/button';
 import { themeStore } from '$lib/stores/theme.svelte';
 
-// Get the appropriate icon based on current theme setting
 const getIcon = () => {
 	switch (themeStore.current) {
 		case 'light':
@@ -17,7 +16,6 @@ const getIcon = () => {
 	}
 };
 
-// Get tooltip text for current theme
 const getTooltip = () => {
 	switch (themeStore.current) {
 		case 'light':

@@ -23,22 +23,9 @@ import type { Actions, PageServerLoad } from './$types';
 
 const logger = createLogger('schedules');
 
-// =============================================================================
-// Constants
-// =============================================================================
-
-/** Number of minutes within which two sweeps are considered in conflict. */
 const CONFLICT_THRESHOLD_MINUTES = 5;
-
-/** Number of days to show in timeline. */
 const DAYS_TO_SHOW = 7;
-
-/** Maximum runs to calculate per schedule for the time period. */
 const MAX_RUNS_PER_SCHEDULE = 100;
-
-// =============================================================================
-// Timeline Data Computation
-// =============================================================================
 
 /**
  * Compute timeline data for the next 7 days.
@@ -54,7 +41,6 @@ function computeTimelineData(schedules: ScheduleWithRelations[]): TimelineData {
 	const endDate = new Date(todayMidnight);
 	endDate.setDate(endDate.getDate() + DAYS_TO_SHOW);
 
-	// 1. Calculate all scheduled runs for each enabled schedule
 	const allRuns: ScheduledRun[] = [];
 
 	for (const schedule of schedules) {
@@ -78,7 +64,6 @@ function computeTimelineData(schedules: ScheduleWithRelations[]): TimelineData {
 					conflictsWith: []
 				});
 
-				// Get next occurrence
 				nextRun = cron.nextRun(new Date(nextRun.getTime() + 1000));
 				runCount++;
 			}
@@ -90,10 +75,8 @@ function computeTimelineData(schedules: ScheduleWithRelations[]): TimelineData {
 		}
 	}
 
-	// 2. Sort all runs by time
 	allRuns.sort((a, b) => new Date(a.runAt).getTime() - new Date(b.runAt).getTime());
 
-	// 3. Detect conflicts (runs within CONFLICT_THRESHOLD_MINUTES of each other)
 	let conflictCount = 0;
 	for (let i = 0; i < allRuns.length; i++) {
 		const runA = allRuns[i];
@@ -127,7 +110,6 @@ function computeTimelineData(schedules: ScheduleWithRelations[]): TimelineData {
 		}
 	}
 
-	// 4. Build calendar days
 	const calendarDays: CalendarDay[] = [];
 	for (let d = 0; d < DAYS_TO_SHOW; d++) {
 		const dayStart = new Date(todayMidnight);
@@ -150,7 +132,6 @@ function computeTimelineData(schedules: ScheduleWithRelations[]): TimelineData {
 		});
 	}
 
-	// 5. Build day groups for list view (only days with runs)
 	const dayGroups: DayGroup[] = [];
 	const dayFormatter = new Intl.DateTimeFormat('en-US', {
 		weekday: 'long',
@@ -188,14 +169,8 @@ function computeTimelineData(schedules: ScheduleWithRelations[]): TimelineData {
 	};
 }
 
-// =============================================================================
-// Load Function
-// =============================================================================
-
 export const load: PageServerLoad = async () => {
 	const [schedules, connectors] = await Promise.all([getAllSchedules(), getAllConnectors()]);
-
-	// Compute timeline data for visualization
 	const timeline = computeTimelineData(schedules);
 
 	return {
@@ -205,14 +180,7 @@ export const load: PageServerLoad = async () => {
 	};
 };
 
-// =============================================================================
-// Form Actions
-// =============================================================================
-
 export const actions: Actions = {
-	/**
-	 * Toggle schedule enabled status.
-	 */
 	toggle: async ({ request }) => {
 		const data = await request.formData();
 		const id = Number(data.get('id'));
@@ -228,7 +196,6 @@ export const actions: Actions = {
 			return fail(404, { error: 'Schedule not found' });
 		}
 
-		// Refresh scheduler to pick up changes
 		await refreshDynamicSchedules();
 
 		return { success: true };

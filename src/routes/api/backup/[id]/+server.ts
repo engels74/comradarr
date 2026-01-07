@@ -66,8 +66,6 @@ export const DELETE: RequestHandler = async ({ params, locals }) => {
 	requireScope(locals, 'full');
 
 	const { id } = params;
-
-	// Check if backup exists first
 	const backupInfo = await getBackupInfo(id);
 
 	if (!backupInfo) {

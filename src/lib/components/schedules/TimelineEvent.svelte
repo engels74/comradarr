@@ -1,21 +1,13 @@
 <script lang="ts">
-/**
- * Timeline Event - reusable event block for calendar and list views.
- */
 import { cn } from '$lib/utils.js';
 import { ConflictIndicator } from './index';
 import { formatSweepType, formatTime, type ScheduledRun, sweepTypeColors } from './types';
 
 interface Props {
-	/** The scheduled run to display */
 	run: ScheduledRun;
-	/** All runs (for looking up conflict names) */
 	allRuns?: ScheduledRun[];
-	/** Display variant */
 	variant?: 'compact' | 'full';
-	/** Show time */
 	showTime?: boolean;
-	/** Additional CSS classes */
 	class?: string;
 }
 
@@ -30,7 +22,6 @@ let {
 const colors = $derived(sweepTypeColors[run.sweepType]);
 const hasConflicts = $derived(run.conflictsWith.length > 0);
 
-// Get names of conflicting schedules
 const conflictNames = $derived(
 	run.conflictsWith
 		.map((id) => {

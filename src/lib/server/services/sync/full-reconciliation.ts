@@ -49,14 +49,11 @@ export async function runFullReconciliation(
 		};
 	}
 
-	// Execute with or without retry wrapper
 	if (options?.skipRetry === true) {
-		// Direct execution without retry wrapper (for testing or forced sync)
 		return executeFullReconciliation(connector, options, startTime);
 	}
 
-	// Use retry wrapper for normal execution
-	// Fewer retries for full reconciliation since it's expensive
+	// Fewer retries than incremental sync since reconciliation is expensive
 	const retryResult = await withSyncRetry(
 		connector.id,
 		() => executeFullReconciliation(connector, options, startTime),
@@ -92,17 +89,13 @@ async function executeFullReconciliation(
 	startTime: number
 ): Promise<ReconciliationResult> {
 	try {
-		// Decrypt API key
 		const apiKey = await getDecryptedApiKey(connector);
-
-		// Create client configuration
 		const clientConfig = {
 			baseUrl: connector.url,
 			apiKey,
-			timeout: 120000 // 120s timeout for reconciliation operations (longer than sync)
+			timeout: 120000
 		};
 
-		// Execute reconciliation based on connector type
 		let itemsCreated: number;
 		let itemsUpdated: number;
 		let itemsDeleted: number;
@@ -140,10 +133,7 @@ async function executeFullReconciliation(
 				throw new Error(`Unknown connector type: ${connector.type}`);
 		}
 
-		// Update sync state with lastReconciliation timestamp
 		await updateReconciliationState(connector.id, true);
-
-		// Update connector's lastSync timestamp
 		await updateConnectorLastSync(connector.id);
 
 		const durationMs = Date.now() - startTime;
@@ -170,7 +160,6 @@ async function executeFullReconciliation(
 			durationMs
 		};
 	} catch (error) {
-		// Update sync state on failure
 		await updateReconciliationState(connector.id, false);
 
 		logger.error('Full reconciliation failed', {
@@ -180,8 +169,6 @@ async function executeFullReconciliation(
 			error: error instanceof Error ? error.message : String(error)
 		});
 
-		// Re-throw to let the retry wrapper handle it
-		// If skipRetry was used, the error will propagate up
 		throw error;
 	}
 }

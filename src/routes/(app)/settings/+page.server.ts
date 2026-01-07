@@ -20,13 +20,9 @@ export const load: PageServerLoad = async () => {
 };
 
 export const actions: Actions = {
-	/**
-	 * Update general settings.
-	 */
 	update: async ({ request }) => {
 		const formData = await request.formData();
 
-		// Parse form data
 		const data = {
 			appName: formData.get('appName'),
 			timezone: formData.get('timezone'),
@@ -34,7 +30,6 @@ export const actions: Actions = {
 			checkForUpdates: formData.get('checkForUpdates') === 'on'
 		};
 
-		// Preserve form values for error display
 		const formValues = {
 			appName: data.appName?.toString() ?? '',
 			timezone: data.timezone?.toString() ?? '',
@@ -42,7 +37,6 @@ export const actions: Actions = {
 			checkForUpdates: data.checkForUpdates
 		};
 
-		// Validate form data
 		const result = v.safeParse(GeneralSettingsSchema, data);
 		if (!result.success) {
 			const errors = result.issues.map((issue) => issue.message);
@@ -54,7 +48,6 @@ export const actions: Actions = {
 
 		const config = result.output;
 
-		// Validate timezone is valid (using Intl API)
 		try {
 			Intl.DateTimeFormat(undefined, { timeZone: config.timezone });
 		} catch {
@@ -64,7 +57,6 @@ export const actions: Actions = {
 			});
 		}
 
-		// Update the settings
 		try {
 			await updateGeneralSettings({
 				appName: config.appName,
@@ -73,7 +65,6 @@ export const actions: Actions = {
 				checkForUpdates: config.checkForUpdates
 			});
 
-			// Apply log level change immediately without restart
 			setLogLevel(config.logLevel as LogLevel);
 		} catch (err) {
 			logger.error('Failed to update settings', {
@@ -85,7 +76,6 @@ export const actions: Actions = {
 			});
 		}
 
-		// Return success
 		return {
 			success: true,
 			message: 'Settings saved successfully',

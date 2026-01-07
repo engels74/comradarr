@@ -8,10 +8,6 @@ import type { ContentItem } from '$lib/server/db/queries/content';
 import { cn } from '$lib/utils.js';
 import ContentStatusBadge from './ContentStatusBadge.svelte';
 
-/**
- * Content table with sortable columns and selection support.
- */
-
 interface Props {
 	items: ContentItem[];
 	selectedKeys?: Set<string> | undefined;
@@ -21,7 +17,6 @@ interface Props {
 
 let { items, selectedKeys, onToggleSelection, onToggleAll }: Props = $props();
 
-// Computed selection states
 const selectionEnabled = $derived(selectedKeys !== undefined && onToggleSelection !== undefined);
 const allSelected = $derived(
 	selectionEnabled && items.length > 0 && items.every((item) => selectedKeys!.has(getItemKey(item)))
@@ -30,29 +25,19 @@ const someSelected = $derived(
 	selectionEnabled && items.some((item) => selectedKeys!.has(getItemKey(item))) && !allSelected
 );
 
-/**
- * Gets the unique key for an item.
- */
 function getItemKey(item: ContentItem): string {
 	return `${item.type}-${item.id}`;
 }
 
-/**
- * Handles checkbox click for row selection.
- */
 function handleRowCheckboxClick(item: ContentItem, event: MouseEvent) {
 	if (onToggleSelection) {
 		onToggleSelection(getItemKey(item), event.shiftKey);
 	}
 }
 
-// Get current sort state from URL
 const currentSort = $derived($page.url.searchParams.get('sort') ?? 'title');
 const currentOrder = $derived($page.url.searchParams.get('order') ?? 'asc');
 
-/**
- * Toggles sort on a column.
- */
 function toggleSort(column: string) {
 	const params = new URLSearchParams($page.url.searchParams);
 
@@ -68,15 +53,11 @@ function toggleSort(column: string) {
 	goto(`/content?${params.toString()}`);
 }
 
-/**
- * Gets sort indicator for column header.
- */
 function getSortIndicator(column: string): string {
 	if (currentSort !== column) return '';
 	return currentOrder === 'asc' ? ' \u2191' : ' \u2193';
 }
 
-// Connector type colors (matching existing ConnectorCard pattern)
 const typeColors: Record<string, string> = {
 	sonarr: 'bg-blue-500/10 text-blue-600 dark:text-blue-400',
 	radarr: 'bg-orange-500/10 text-orange-600 dark:text-orange-400',
