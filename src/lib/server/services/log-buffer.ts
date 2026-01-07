@@ -1,111 +1,45 @@
-/**
- * In-memory log buffer service for the log viewer.
- * Captures structured log entries in a circular buffer with configurable size.
- * Provides filtering and pagination for the log viewer UI.
- */
+// Circular buffer for in-memory log storage with filtering and pagination
 
 import type { LogLevel } from '$lib/schemas/settings';
 
-// =============================================================================
-// Types
-// =============================================================================
-
-/**
- * Buffered log entry with unique ID.
- */
 export interface BufferedLogEntry {
-	/** Unique identifier for the log entry */
 	id: number;
-	/** ISO 8601 timestamp */
 	timestamp: string;
-	/** Log level */
 	level: LogLevel;
-	/** Module/component name */
 	module: string;
-	/** Log message */
 	message: string;
-	/** Request correlation ID for tracing */
 	correlationId?: string;
-	/** Additional context fields */
 	context?: Record<string, unknown>;
 }
 
-/**
- * Filter options for log queries.
- */
 export interface LogFilter {
-	/** Filter by log levels */
 	levels?: LogLevel[];
-	/** Filter by module name (partial match) */
 	module?: string;
-	/** Filter by message content (partial match) */
 	search?: string;
-	/** Filter by correlation ID */
 	correlationId?: string;
-	/** Filter entries after this timestamp */
 	since?: string;
-	/** Filter entries before this timestamp */
 	until?: string;
 }
 
-/**
- * Pagination options.
- */
 export interface LogPagination {
-	/** Number of entries to return */
 	limit: number;
-	/** Offset from the start */
 	offset: number;
 }
 
-/**
- * Log query result with pagination info.
- */
 export interface LogQueryResult {
-	/** Log entries matching the query */
 	entries: BufferedLogEntry[];
-	/** Total count of matching entries */
 	total: number;
-	/** Whether more entries are available */
 	hasMore: boolean;
 }
 
-// =============================================================================
-// Log Buffer Configuration
-// =============================================================================
-
-/** Maximum number of log entries to keep in buffer */
 const DEFAULT_BUFFER_SIZE = 10000;
-
-/** Current buffer size (can be configured) */
 let bufferSize = DEFAULT_BUFFER_SIZE;
-
-// =============================================================================
-// Log Buffer State
-// =============================================================================
-
-/** Circular buffer storage */
 let logBuffer: BufferedLogEntry[] = [];
-
-/** Current write position in the circular buffer */
 let writePosition = 0;
-
-/** Total entries written (for ID generation) */
 let totalEntriesWritten = 0;
-
-/** Whether the buffer has wrapped around */
 let hasWrapped = false;
 
-// =============================================================================
-// Buffer Management Functions
-// =============================================================================
-
-/**
- * Configures the log buffer size.
- * Clears existing entries if size is reduced.
- *
- * @param size - New buffer size
- */
+// Clears existing entries if size is reduced
 export function configureBufferSize(size: number): void {
 	if (size < 100) {
 		throw new Error('Buffer size must be at least 100 entries');
@@ -119,9 +53,6 @@ export function configureBufferSize(size: number): void {
 	bufferSize = size;
 }
 
-/**
- * Gets the current buffer configuration.
- */
 export function getBufferConfig(): { size: number; used: number; totalWritten: number } {
 	return {
 		size: bufferSize,
@@ -130,9 +61,6 @@ export function getBufferConfig(): { size: number; used: number; totalWritten: n
 	};
 }
 
-/**
- * Clears all entries from the log buffer.
- */
 export function clearLogBuffer(): void {
 	logBuffer = [];
 	writePosition = 0;
@@ -140,12 +68,6 @@ export function clearLogBuffer(): void {
 	hasWrapped = false;
 }
 
-/**
- * Adds a log entry to the buffer.
- * Called internally by the logger.
- *
- * @param entry - Log entry to add (without ID)
- */
 export function addLogEntry(entry: Omit<BufferedLogEntry, 'id'>): void {
 	const bufferedEntry: BufferedLogEntry = {
 		...entry,
@@ -161,14 +83,6 @@ export function addLogEntry(entry: Omit<BufferedLogEntry, 'id'>): void {
 	writePosition++;
 }
 
-// =============================================================================
-// Query Functions
-// =============================================================================
-
-/**
- * Gets all entries in chronological order.
- * Internal function for applying filters.
- */
 function getAllEntriesOrdered(): BufferedLogEntry[] {
 	if (!hasWrapped) {
 		return logBuffer.slice(0, writePosition);
@@ -181,9 +95,6 @@ function getAllEntriesOrdered(): BufferedLogEntry[] {
 	return [...olderEntries, ...newerEntries];
 }
 
-/**
- * Applies filters to log entries.
- */
 function applyFilters(entries: BufferedLogEntry[], filter: LogFilter): BufferedLogEntry[] {
 	return entries.filter((entry) => {
 		// Filter by log levels
@@ -238,14 +149,7 @@ function applyFilters(entries: BufferedLogEntry[], filter: LogFilter): BufferedL
 	});
 }
 
-/**
- * Queries log entries with optional filtering and pagination.
- * Returns entries in reverse chronological order (newest first).
- *
- * @param filter - Optional filter criteria
- * @param pagination - Optional pagination settings
- * @returns Query result with entries and pagination info
- */
+// Returns entries in reverse chronological order (newest first)
 export function queryLogs(filter?: LogFilter, pagination?: LogPagination): LogQueryResult {
 	// Get all entries in chronological order
 	let entries = getAllEntriesOrdered();
@@ -273,20 +177,10 @@ export function queryLogs(filter?: LogFilter, pagination?: LogPagination): LogQu
 	};
 }
 
-/**
- * Gets a single log entry by ID.
- *
- * @param id - Log entry ID
- * @returns Log entry or null if not found
- */
 export function getLogEntryById(id: number): BufferedLogEntry | null {
 	return logBuffer.find((entry) => entry?.id === id) ?? null;
 }
 
-/**
- * Gets unique module names from the buffer.
- * Useful for filter UI.
- */
 export function getUniqueModules(): string[] {
 	const modules = new Set<string>();
 

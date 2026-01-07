@@ -16,23 +16,9 @@ import type {
 	WebhookSensitiveConfig
 } from '../types';
 
-// =============================================================================
-// Constants
-// =============================================================================
-
-/** Default header name for the HMAC signature */
 const DEFAULT_SIGNATURE_HEADER = 'X-Comradarr-Signature';
-
-/** Default header name for the timestamp */
 const DEFAULT_TIMESTAMP_HEADER = 'X-Comradarr-Timestamp';
 
-// =============================================================================
-// Webhook Sender Implementation
-// =============================================================================
-
-/**
- * Sends notifications via generic webhooks with optional HMAC signature.
- */
 export class WebhookSender implements NotificationSender {
 	private readonly timeout: number;
 	private readonly userAgent: string;
@@ -42,9 +28,6 @@ export class WebhookSender implements NotificationSender {
 		this.userAgent = config?.userAgent ?? DEFAULT_SENDER_CONFIG.userAgent;
 	}
 
-	/**
-	 * Send a notification to a generic webhook.
-	 */
 	async send(
 		channel: NotificationChannel,
 		sensitiveConfig: Record<string, unknown>,
@@ -175,9 +158,6 @@ export class WebhookSender implements NotificationSender {
 		}
 	}
 
-	/**
-	 * Send a test notification to verify the webhook configuration.
-	 */
 	async test(
 		channel: NotificationChannel,
 		sensitiveConfig: Record<string, unknown>
@@ -195,13 +175,6 @@ export class WebhookSender implements NotificationSender {
 		});
 	}
 
-	/**
-	 * Generate HMAC-SHA256 signature using Web Crypto API.
-	 *
-	 * @param payload - The payload to sign
-	 * @param secret - The signing secret
-	 * @returns Hex-encoded signature
-	 */
 	private async generateHmacSignature(payload: string, secret: string): Promise<string> {
 		const encoder = new TextEncoder();
 		const keyData = encoder.encode(secret);
@@ -224,9 +197,6 @@ export class WebhookSender implements NotificationSender {
 		return hashArray.map((b) => b.toString(16).padStart(2, '0')).join('');
 	}
 
-	/**
-	 * Handle errors caught during fetch.
-	 */
 	private handleCatchError(error: unknown): string {
 		if (error instanceof Error) {
 			if (error.name === 'TimeoutError' || error.name === 'AbortError') {
@@ -244,10 +214,6 @@ export class WebhookSender implements NotificationSender {
 	}
 }
 
-// =============================================================================
-// Webhook Payload Type
-// =============================================================================
-
 interface WebhookPayload {
 	event_type: string;
 	title: string;
@@ -263,71 +229,4 @@ interface WebhookPayload {
 	event_data?: Record<string, unknown>;
 }
 
-// =============================================================================
-// Signature Verification Helper (for documentation)
-// =============================================================================
-
-/**
- * Example signature verification code for the receiving webhook endpoint.
- *
- * This is provided as documentation for users implementing webhook receivers.
- *
- * ```typescript
- * // In your SvelteKit webhook endpoint (+server.ts)
- * import type { RequestHandler } from './$types';
- *
- * const SIGNING_SECRET = process.env.COMRADARR_WEBHOOK_SECRET;
- *
- * export const POST: RequestHandler = async ({ request }) => {
- *   // 1. Get raw body - IMPORTANT: use text(), not json()
- *   const rawBody = await request.text();
- *
- *   // 2. Get headers
- *   const signature = request.headers.get('X-Comradarr-Signature');
- *   const timestamp = request.headers.get('X-Comradarr-Timestamp');
- *
- *   if (!signature || !timestamp) {
- *     return new Response('Missing signature headers', { status: 401 });
- *   }
- *
- *   // 3. Verify timestamp is recent (within 5 minutes)
- *   const timestampAge = Math.floor(Date.now() / 1000) - parseInt(timestamp, 10);
- *   if (timestampAge > 300) {
- *     return new Response('Timestamp too old', { status: 401 });
- *   }
- *
- *   // 4. Compute expected signature
- *   const encoder = new TextEncoder();
- *   const key = await crypto.subtle.importKey(
- *     'raw',
- *     encoder.encode(SIGNING_SECRET),
- *     { name: 'HMAC', hash: 'SHA-256' },
- *     false,
- *     ['sign']
- *   );
- *
- *   const signaturePayload = `${timestamp}.${rawBody}`;
- *   const expectedSignature = await crypto.subtle.sign(
- *     'HMAC',
- *     key,
- *     encoder.encode(signaturePayload)
- *   );
- *
- *   const expectedHex = Array.from(new Uint8Array(expectedSignature))
- *     .map(b => b.toString(16).padStart(2, '0'))
- *     .join('');
- *
- *   // 5. Compare signatures (timing-safe comparison recommended)
- *   if (signature !== expectedHex) {
- *     return new Response('Invalid signature', { status: 401 });
- *   }
- *
- *   // 6. Parse and process the notification
- *   const notification = JSON.parse(rawBody);
- *   // ... handle notification ...
- *
- *   return new Response('OK', { status: 200 });
- * };
- * ```
- */
-export const SIGNATURE_VERIFICATION_EXAMPLE = 'see-source-comment';
+// Example signature verification for webhook receivers - see top comment for format

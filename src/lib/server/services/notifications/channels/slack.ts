@@ -197,7 +197,6 @@ export class SlackSender implements NotificationSender {
 
 	// Slack webhook returns error codes as plain text (e.g., 'invalid_payload')
 	private handleErrorResponse(response: Response, responseText: string): Error {
-		// Slack webhook returns 'invalid_payload' etc as plain text
 		if (responseText === 'invalid_payload' || responseText === 'invalid_token') {
 			return new NotificationConfigurationError(
 				`Invalid Slack webhook configuration: ${responseText}`

@@ -1,17 +1,4 @@
-/**
- * ApiKeyRateLimiter service for external API rate limiting enforcement.
- *
- *
- * This service enforces rate limiting for external API requests:
- * - Checks if requests are allowed based on per-minute rate limits
- * - Tracks request counts per API key
- * - Provides rate limit status for response headers
- *
- * Unlike the connector ThrottleEnforcer, this service:
- * - Only enforces per-minute limits (no daily budget)
- * - Returns immediately (no pause states)
- * - Is designed for high-frequency, low-latency checks
- */
+// Per-minute rate limiting for external API keys (no daily budget, no pause states)
 
 import {
 	getOrCreateRateLimitState,
@@ -23,77 +10,21 @@ import {
 	resetMinuteWindow
 } from '$lib/server/db/queries/api-key-rate-limit';
 
-// =============================================================================
-// Types
-// =============================================================================
-
-/**
- * Result of a rate limit check.
- */
 export interface ApiKeyRateLimitResult {
-	/** Whether the request is allowed */
 	allowed: boolean;
-	/** Reason for denial (only set when allowed=false) */
 	reason?: 'rate_limit';
-	/** Milliseconds until rate limit resets (only set when allowed=false) */
 	retryAfterMs?: number;
 }
 
-/**
- * Rate limit status for response headers.
- */
 export interface RateLimitStatus {
-	/** API key ID */
 	apiKeyId: number;
-	/** Configured rate limit per minute (null = unlimited) */
 	limit: number | null;
-	/** Requests remaining in current window */
 	remaining: number | null;
-	/** Seconds until window resets */
 	resetInSeconds: number;
 }
 
-// =============================================================================
-// ApiKeyRateLimiter Class
-// =============================================================================
-
-/**
- * ApiKeyRateLimiter service for rate limiting enforcement.
- *
- * Usage:
- * ```typescript
- * import { apiKeyRateLimiter } from '$lib/server/services/api-rate-limit';
- *
- * // Before processing a request
- * const result = await apiKeyRateLimiter.canMakeRequest(apiKeyId, rateLimitPerMinute);
- * if (!result.allowed) {
- *   // Return HTTP 429 with Retry-After header
- *   return new Response('Too Many Requests', {
- *     status: 429,
- *     headers: { 'Retry-After': String(Math.ceil(result.retryAfterMs! / 1000)) }
- *   });
- * }
- *
- * // After successful response
- * await apiKeyRateLimiter.recordRequest(apiKeyId);
- *
- * // Get status for response headers
- * const status = await apiKeyRateLimiter.getRateLimitStatus(apiKeyId, rateLimitPerMinute);
- * ```
- */
 export class ApiKeyRateLimiter {
-	/**
-	 * Check if a request is allowed for an API key.
-	 *
-	 * Checks in order:
-	 * 1. If rate limit is null (unlimited), allow immediately
-	 * 2. Has minute window expired? If so, reset counter (implicitly allows)
-	 * 3. Is per-minute rate limit exceeded?
-	 *
-	 * @param apiKeyId - API key ID to check
-	 * @param rateLimitPerMinute - Configured rate limit (null = unlimited)
-	 * @returns Rate limit result indicating if request is allowed
-	 */
+	// null rateLimitPerMinute = unlimited
 	async canMakeRequest(
 		apiKeyId: number,
 		rateLimitPerMinute: number | null
@@ -129,23 +60,10 @@ export class ApiKeyRateLimiter {
 		return { allowed: true };
 	}
 
-	/**
-	 * Record a successful request for an API key.
-	 * Atomically increments the request counter.
-	 *
-	 * @param apiKeyId - API key ID
-	 */
 	async recordRequest(apiKeyId: number): Promise<void> {
 		await incrementRequestCounter(apiKeyId);
 	}
 
-	/**
-	 * Get rate limit status for response headers.
-	 *
-	 * @param apiKeyId - API key ID
-	 * @param rateLimitPerMinute - Configured rate limit (null = unlimited)
-	 * @returns Rate limit status for headers
-	 */
 	async getRateLimitStatus(
 		apiKeyId: number,
 		rateLimitPerMinute: number | null
@@ -179,22 +97,9 @@ export class ApiKeyRateLimiter {
 		};
 	}
 
-	/**
-	 * Reset expired minute windows for all API keys.
-	 * Should be called periodically by scheduler for cleanup.
-	 *
-	 * @returns Number of API keys reset
-	 */
 	async resetExpiredWindows(): Promise<number> {
 		return resetExpiredMinuteWindows();
 	}
 }
 
-// =============================================================================
-// Singleton Export
-// =============================================================================
-
-/**
- * Singleton instance of the API key rate limiter.
- */
 export const apiKeyRateLimiter = new ApiKeyRateLimiter();

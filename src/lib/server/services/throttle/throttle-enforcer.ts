@@ -1,15 +1,5 @@
-/**
- * ThrottleEnforcer service for rate limiting enforcement.
- *
- *
- * This service enforces rate limiting during search dispatch operations:
- * - Checks if dispatches are allowed based on per-minute rate limits
- * - Tracks daily budget usage and pauses when exhausted
- * - Handles pause states from rate limit responses (HTTP 429)
- * - Atomically tracks request counts
- *
- * Profile resolution follows: connector profile → default profile → Moderate preset
- */
+// Rate limiting for search dispatch: per-minute limits, daily budget, pause handling
+// Profile resolution: connector profile -> default profile -> Moderate preset
 
 import {
 	type EffectiveThrottleConfig,
@@ -31,98 +21,34 @@ import {
 	setPausedUntil
 } from '$lib/server/db/queries/throttle-state';
 
-// =============================================================================
-// Types
-// =============================================================================
-
-/**
- * Pause reason types for throttle state.
- */
 export type PauseReason = 'rate_limit' | 'daily_budget_exhausted' | 'manual';
 
-/**
- * Result of a throttle check.
- */
 export interface ThrottleResult {
-	/** Whether the dispatch is allowed */
 	allowed: boolean;
-	/** Reason for denial (if not allowed) */
 	reason?: PauseReason;
-	/** Milliseconds until retry is allowed (if not allowed) */
 	retryAfterMs?: number;
 }
 
-/**
- * Result of window reset operations.
- */
 export interface WindowResetResult {
-	/** Number of connectors with minute windows reset */
 	minuteResets: number;
-	/** Number of connectors with day windows reset */
 	dayResets: number;
-	/** Number of expired pauses cleared */
 	pausesCleared: number;
 }
 
-/**
- * Current throttle state summary for a connector.
- */
 export interface ThrottleStatus {
 	connectorId: number;
-	/** Effective throttle profile in use */
 	profile: EffectiveThrottleConfig;
-	/** Requests made in current minute window */
 	requestsThisMinute: number;
-	/** Requests made today */
 	requestsToday: number;
-	/** Remaining requests in current minute (0 if at limit) */
 	remainingThisMinute: number;
-	/** Remaining daily budget (null if unlimited) */
 	remainingToday: number | null;
-	/** Whether currently paused */
 	isPaused: boolean;
-	/** Pause reason if paused */
 	pauseReason: PauseReason | null;
-	/** Milliseconds until pause expires (if paused) */
 	pauseExpiresInMs: number | null;
 }
 
-// =============================================================================
-// ThrottleEnforcer Class
-// =============================================================================
-
-/**
- * ThrottleEnforcer service for rate limiting enforcement.
- *
- * Usage:
- * ```typescript
- * import { throttleEnforcer } from '$lib/server/services/throttle';
- *
- * // Before dispatching a request
- * const result = await throttleEnforcer.canDispatch(connectorId);
- * if (!result.allowed) {
- *   // Handle rate limit - retry after result.retryAfterMs
- *   return;
- * }
- *
- * // After successful dispatch
- * await throttleEnforcer.recordRequest(connectorId);
- * ```
- */
 export class ThrottleEnforcer {
-	/**
-	 * Check if dispatch is allowed for a connector.
-	 *
-	 * Checks in order:
-	 * 1. Is connector paused (pausedUntil > now)?
-	 * 2. Has minute window expired? If so, reset counter.
-	 * 3. Is per-minute rate limit exceeded?
-	 * 4. Has day window expired? If so, reset counter.
-	 * 5. Is daily budget exceeded?
-	 *
-	 * @param connectorId - Connector ID to check
-	 * @returns Throttle result indicating if dispatch is allowed
-	 */
+	// Check order: paused? -> minute window -> per-minute limit -> day window -> daily budget
 	async canDispatch(connectorId: number): Promise<ThrottleResult> {
 		const now = new Date();
 
@@ -186,24 +112,11 @@ export class ThrottleEnforcer {
 		return { allowed: true };
 	}
 
-	/**
-	 * Record a successful request dispatch.
-	 * Atomically increments both minute and daily counters.
-	 * Creates throttle state if it doesn't exist.
-	 *
-	 * @param connectorId - Connector ID
-	 */
 	async recordRequest(connectorId: number): Promise<void> {
 		await incrementRequestCounters(connectorId);
 	}
 
-	/**
-	 * Handle an HTTP 429 rate limit response from an *arr API.
-	 * Sets pausedUntil based on Retry-After header or profile's rateLimitPauseSeconds.
-	 *
-	 * @param connectorId - Connector ID
-	 * @param retryAfterSeconds - Optional Retry-After header value in seconds
-	 */
+	// Handle HTTP 429: uses Retry-After header or profile's rateLimitPauseSeconds
 	async handleRateLimitResponse(connectorId: number, retryAfterSeconds?: number): Promise<void> {
 		const profile = await getThrottleProfileForConnector(connectorId);
 
@@ -216,12 +129,7 @@ export class ThrottleEnforcer {
 		await setPausedUntil(connectorId, pauseUntil, 'rate_limit');
 	}
 
-	/**
-	 * Get available capacity (requests remaining) in current minute window.
-	 *
-	 * @param connectorId - Connector ID
-	 * @returns Number of requests remaining (0 if at limit, -1 if paused)
-	 */
+	// Returns remaining requests (0 if at limit, -1 if paused)
 	async getAvailableCapacity(connectorId: number): Promise<number> {
 		const now = new Date();
 		const state = await getThrottleState(connectorId);
@@ -246,12 +154,6 @@ export class ThrottleEnforcer {
 		return Math.max(0, profile.requestsPerMinute - state.requestsThisMinute);
 	}
 
-	/**
-	 * Get detailed throttle status for a connector.
-	 *
-	 * @param connectorId - Connector ID
-	 * @returns Detailed throttle status
-	 */
 	async getStatus(connectorId: number): Promise<ThrottleStatus> {
 		const now = new Date();
 		const state = await getOrCreateThrottleState(connectorId);
@@ -287,17 +189,7 @@ export class ThrottleEnforcer {
 		};
 	}
 
-	/**
-	 * Reset expired windows for all connectors.
-	 * Can be called periodically by a scheduled job.
-	 *
-	 * This resets:
-	 * - Minute windows that have expired (> 60 seconds old)
-	 * - Day windows that have expired (new UTC day)
-	 * - Pause states that have expired
-	 *
-	 * @returns Count of resets performed
-	 */
+	// Resets: expired minute windows, expired day windows, expired pauses
 	async resetExpiredWindows(): Promise<WindowResetResult> {
 		const [minuteResets, dayResets, pausesCleared] = await Promise.all([
 			resetExpiredMinuteWindows(),
@@ -312,22 +204,11 @@ export class ThrottleEnforcer {
 		};
 	}
 
-	/**
-	 * Manually pause dispatch for a connector.
-	 *
-	 * @param connectorId - Connector ID
-	 * @param durationSeconds - Duration of pause in seconds
-	 */
 	async pauseDispatch(connectorId: number, durationSeconds: number): Promise<void> {
 		const pauseUntil = new Date(Date.now() + durationSeconds * 1000);
 		await setPausedUntil(connectorId, pauseUntil, 'manual');
 	}
 
-	/**
-	 * Resume dispatch for a connector by clearing the pause state.
-	 *
-	 * @param connectorId - Connector ID
-	 */
 	async resumeDispatch(connectorId: number): Promise<void> {
 		await setPausedUntil(connectorId, null, null);
 	}
