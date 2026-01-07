@@ -1,21 +1,5 @@
-/**
- * Validation schemas for throttle profile forms.
- */
-
 import * as v from 'valibot';
 
-/**
- * Throttle profile form validation schema.
- *
- * - name: Required string, 1-50 characters
- * - description: Optional string, max 500 characters
- * - requestsPerMinute: Required number, 1-60 range
- * - dailyBudget: Optional number (null = unlimited), 10-10000 when set
- * - batchSize: Required number, 1-50 range
- * - batchCooldownSeconds: Required number, 10-3600 range
- * - rateLimitPauseSeconds: Required number, 60-3600 range
- * - isDefault: Optional boolean
- */
 export const ThrottleProfileSchema = v.object({
 	name: v.pipe(
 		v.string('Profile name is required'),
@@ -66,9 +50,6 @@ export const ThrottleProfileSchema = v.object({
 export type ThrottleProfileInput = v.InferInput<typeof ThrottleProfileSchema>;
 export type ThrottleProfileOutput = v.InferOutput<typeof ThrottleProfileSchema>;
 
-/**
- * Field labels for UI display.
- */
 export const throttleProfileLabels: Record<keyof ThrottleProfileOutput, string> = {
 	name: 'Profile Name',
 	description: 'Description',
@@ -80,9 +61,6 @@ export const throttleProfileLabels: Record<keyof ThrottleProfileOutput, string> 
 	isDefault: 'Set as Default'
 };
 
-/**
- * Field descriptions for UI help text.
- */
 export const throttleProfileDescriptions: Record<keyof ThrottleProfileOutput, string> = {
 	name: 'A unique name to identify this throttle profile',
 	description: 'Optional description of when to use this profile',

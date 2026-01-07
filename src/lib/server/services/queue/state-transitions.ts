@@ -20,7 +20,6 @@ export async function markSearchFailed(
 	const { searchRegistryId, failureCategory, wasSeasonPackSearch } = input;
 
 	try {
-		// Fetch current registry entry with content info for season pack fallback
 		const current = await db
 			.select({
 				id: searchRegistry.id,
@@ -47,7 +46,6 @@ export async function markSearchFailed(
 		const entry = current[0]!;
 		const previousState = entry.state as SearchState;
 
-		// Validate current state is 'searching'
 		if (previousState !== 'searching') {
 			return {
 				success: false,
@@ -58,12 +56,10 @@ export async function markSearchFailed(
 			};
 		}
 
-		// Increment attempt count
 		const newAttemptCount = entry.attemptCount + 1;
 		const now = new Date();
 
-		// If season pack search failed with no_results,
-		// mark all episodes in the season for EpisodeSearch fallback
+		// Season pack no_results triggers EpisodeSearch fallback
 		if (
 			wasSeasonPackSearch === true &&
 			failureCategory === 'no_results' &&
@@ -72,9 +68,7 @@ export async function markSearchFailed(
 			await markSeasonPackFailedForSeason(entry.contentId, entry.connectorId, now);
 		}
 
-		// Check if max attempts reached
 		if (shouldMarkExhausted(newAttemptCount)) {
-			// Transition to exhausted
 			await db
 				.update(searchRegistry)
 				.set({
@@ -95,7 +89,6 @@ export async function markSearchFailed(
 			};
 		}
 
-		// Transition to cooldown with calculated next eligible time
 		const nextEligible = calculateNextEligibleTime(newAttemptCount, now);
 
 		await db
@@ -133,7 +126,6 @@ async function markSeasonPackFailedForSeason(
 	connectorId: number,
 	now: Date
 ): Promise<void> {
-	// Look up the episode's seasonId
 	const episodeRecord = await db
 		.select({ seasonId: episodes.seasonId })
 		.from(episodes)
@@ -147,7 +139,6 @@ async function markSeasonPackFailedForSeason(
 
 	const seasonId = episodeRecord[0]!.seasonId;
 
-	// Find all episode IDs in the same season
 	const seasonEpisodes = await db
 		.select({ id: episodes.id })
 		.from(episodes)
@@ -159,7 +150,6 @@ async function markSeasonPackFailedForSeason(
 
 	const episodeIds = seasonEpisodes.map((e) => e.id);
 
-	// Update all search registry entries for these episodes to mark season pack failed
 	await db
 		.update(searchRegistry)
 		.set({
@@ -180,7 +170,6 @@ export async function markSearchExhausted(
 	searchRegistryId: number
 ): Promise<StateTransitionResult> {
 	try {
-		// Fetch current registry entry
 		const current = await db
 			.select({
 				id: searchRegistry.id,
@@ -204,7 +193,6 @@ export async function markSearchExhausted(
 		const entry = current[0]!;
 		const previousState = entry.state as SearchState;
 
-		// Validate current state is 'searching' or 'cooldown'
 		if (previousState !== 'searching' && previousState !== 'cooldown') {
 			return {
 				success: false,
@@ -215,7 +203,6 @@ export async function markSearchExhausted(
 			};
 		}
 
-		// Transition to exhausted
 		const now = new Date();
 		await db
 			.update(searchRegistry)
@@ -253,7 +240,6 @@ export async function reenqueueEligibleCooldownItems(
 	try {
 		const now = new Date();
 
-		// Build where conditions
 		const conditions = [
 			eq(searchRegistry.state, 'cooldown'),
 			lte(searchRegistry.nextEligible, now)
@@ -263,7 +249,6 @@ export async function reenqueueEligibleCooldownItems(
 			conditions.push(eq(searchRegistry.connectorId, connectorId));
 		}
 
-		// Count total items in cooldown (for skipped calculation)
 		const cooldownConditions = [eq(searchRegistry.state, 'cooldown')];
 		if (connectorId !== undefined) {
 			cooldownConditions.push(eq(searchRegistry.connectorId, connectorId));
@@ -276,7 +261,6 @@ export async function reenqueueEligibleCooldownItems(
 
 		const totalCount = totalInCooldown[0]?.count ?? 0;
 
-		// Update eligible items to 'pending'
 		const updated = await db
 			.update(searchRegistry)
 			.set({

@@ -1,16 +1,5 @@
-/**
- * Validation schemas for Prowlarr instance forms.
- */
-
 import * as v from 'valibot';
 
-/**
- * Add Prowlarr instance form validation schema.
- *
- * - name: Required string, 1-100 characters
- * - url: Required valid URL
- * - apiKey: Required string
- */
 export const ProwlarrInstanceSchema = v.object({
 	name: v.pipe(
 		v.string('Name is required'),
@@ -30,10 +19,7 @@ export const ProwlarrInstanceSchema = v.object({
 export type ProwlarrInstanceInput = v.InferInput<typeof ProwlarrInstanceSchema>;
 export type ProwlarrInstanceOutput = v.InferOutput<typeof ProwlarrInstanceSchema>;
 
-/**
- * Update Prowlarr instance form validation schema.
- * API key is optional - leave blank to keep existing.
- */
+// API key is optional on update - leave blank to keep existing
 export const ProwlarrInstanceUpdateSchema = v.object({
 	name: v.pipe(
 		v.string('Name is required'),

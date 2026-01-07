@@ -54,8 +54,12 @@ async function getBackupDirectory(): Promise<string> {
 
 	try {
 		await mkdir(backupDir, { recursive: true });
-	} catch {
-		// Directory may already exist
+	} catch (error) {
+		// mkdir with recursive:true won't throw for existing dirs, so log unexpected errors
+		logger.warn('Failed to create backup directory', {
+			backupDir,
+			error: error instanceof Error ? error.message : String(error)
+		});
 	}
 
 	return backupDir;
@@ -123,7 +127,6 @@ async function getSchemaVersion(): Promise<SchemaVersion> {
 			migrationIndex: lastEntry.idx
 		};
 	} catch {
-		// If journal doesn't exist, return defaults
 		return {
 			appVersion: APP_VERSION,
 			lastMigration: 'unknown',

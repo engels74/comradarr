@@ -43,7 +43,6 @@ async function parallelLimit<T, R>(
 		}
 	}
 
-	// Create workers up to the limit
 	const workerCount = Math.min(limit, items.length);
 	const workers = Array.from({ length: workerCount }, () => worker());
 	await Promise.all(workers);
@@ -59,20 +58,15 @@ export async function syncSonarrContent(
 	const concurrency = options?.concurrency ?? DEFAULT_CONCURRENCY;
 	const requestDelayMs = options?.requestDelayMs ?? DEFAULT_REQUEST_DELAY_MS;
 
-	// Phase 1: Fetch all series (single API call)
 	const apiSeriesList = await client.getSeries();
 
 	if (apiSeriesList.length === 0) {
 		return 0;
 	}
 
-	// Phase 2: Upsert series and build arrId → dbId map
 	const seriesIdMap = await upsertSeries(connectorId, apiSeriesList);
-
-	// Phase 3: Upsert seasons and build lookup map
 	const seasonIdMap = await upsertSeasons(apiSeriesList, seriesIdMap);
 
-	// Phase 4: Fetch episodes with parallelization
 	const episodeFetcher = async (apiSeries: SonarrSeries) => {
 		return {
 			seriesArrId: apiSeries.id,
@@ -87,7 +81,6 @@ export async function syncSonarrContent(
 		requestDelayMs
 	);
 
-	// Phase 5: Collect and upsert all episodes
 	const totalEpisodes = await upsertEpisodes(connectorId, episodeResults, seriesIdMap, seasonIdMap);
 
 	return totalEpisodes;
@@ -127,7 +120,6 @@ async function upsertSeasons(
 	apiSeriesList: SonarrSeries[],
 	seriesIdMap: Map<number, number>
 ): Promise<Map<string, number>> {
-	// Collect all seasons from all series
 	const seasonRecords: ReturnType<typeof mapSeasonToDb>[] = [];
 
 	for (const apiSeries of apiSeriesList) {
@@ -181,7 +173,6 @@ async function upsertEpisodes(
 	seriesIdMap: Map<number, number>,
 	seasonIdMap: Map<string, number>
 ): Promise<number> {
-	// Collect all episode records
 	const episodeRecords: ReturnType<typeof mapEpisodeToDb>[] = [];
 
 	for (const { seriesArrId, episodes: seriesEpisodes } of episodeResults) {
@@ -201,7 +192,6 @@ async function upsertEpisodes(
 		return 0;
 	}
 
-	// Upsert all episodes
 	await db
 		.insert(episodes)
 		.values(episodeRecords)

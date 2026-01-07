@@ -1,23 +1,8 @@
-/**
- * Validation schemas for connector forms.
- */
-
 import * as v from 'valibot';
 
-/**
- * Supported connector types.
- */
 export const connectorTypes = ['sonarr', 'radarr', 'whisparr'] as const;
 export type ConnectorType = (typeof connectorTypes)[number];
 
-/**
- * Add connector form validation schema.
- *
- * - name: Required string, 1-100 characters
- * - type: Required, one of 'sonarr' | 'radarr' | 'whisparr'
- * - url: Required valid URL
- * - apiKey: Required string
- */
 export const ConnectorSchema = v.object({
 	name: v.pipe(
 		v.string('Name is required'),
@@ -38,14 +23,7 @@ export const ConnectorSchema = v.object({
 export type ConnectorInput = v.InferInput<typeof ConnectorSchema>;
 export type ConnectorOutput = v.InferOutput<typeof ConnectorSchema>;
 
-/**
- * Test connection validation schema.
- * Type is optional - will be auto-detected from the *arr application.
- *
- * - url: Required valid URL
- * - apiKey: Required string
- * - type: Optional, one of 'sonarr' | 'radarr' | 'whisparr' (for manual override)
- */
+// Type is auto-detected from the *arr application when not provided
 export const TestConnectionSchema = v.object({
 	url: v.pipe(
 		v.string('URL is required'),
@@ -60,10 +38,7 @@ export const TestConnectionSchema = v.object({
 export type TestConnectionInput = v.InferInput<typeof TestConnectionSchema>;
 export type TestConnectionOutput = v.InferOutput<typeof TestConnectionSchema>;
 
-/**
- * Update connector form validation schema.
- * API key is optional - leave blank to keep existing.
- */
+// API key is optional on update - leave blank to keep existing
 export const ConnectorUpdateSchema = v.object({
 	name: v.pipe(
 		v.string('Name is required'),

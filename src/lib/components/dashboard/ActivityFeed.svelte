@@ -12,11 +12,6 @@ import { Badge } from '$lib/components/ui/badge';
 import * as Card from '$lib/components/ui/card';
 import type { SerializedActivity } from './types';
 
-/**
- * Activity feed component for the dashboard.
- * Displays recent discoveries, search outcomes, and system events.
- */
-
 interface Props {
 	activities: SerializedActivity[];
 	class?: string | undefined;
@@ -24,16 +19,12 @@ interface Props {
 
 let { activities, class: className }: Props = $props();
 
-// Connector type badge colors
 const typeColors: Record<string, string> = {
 	sonarr: 'bg-blue-500/10 text-blue-600 dark:text-blue-400',
 	radarr: 'bg-orange-500/10 text-orange-600 dark:text-orange-400',
 	whisparr: 'bg-purple-500/10 text-purple-600 dark:text-purple-400'
 };
 
-/**
- * Format relative time for display.
- */
 function formatRelativeTime(dateStr: string): string {
 	const date = new Date(dateStr);
 	const now = new Date();
@@ -49,9 +40,6 @@ function formatRelativeTime(dateStr: string): string {
 	return date.toLocaleDateString();
 }
 
-/**
- * Get the activity icon component based on type.
- */
 function getActivityIcon(activity: SerializedActivity) {
 	if (activity.type === 'search') {
 		return SearchIcon;
@@ -62,9 +50,6 @@ function getActivityIcon(activity: SerializedActivity) {
 	return RefreshCwIcon;
 }
 
-/**
- * Get the activity description text.
- */
 function getActivityDescription(activity: SerializedActivity): string {
 	if (activity.type === 'search') {
 		const title = formatContentTitle(activity);
@@ -79,9 +64,6 @@ function getActivityDescription(activity: SerializedActivity): string {
 	return `Synced ${activity.connectorName}`;
 }
 
-/**
- * Format content title for display.
- */
 function formatContentTitle(activity: SerializedActivity): string {
 	if (activity.contentType === 'episode') {
 		const episode =
@@ -97,9 +79,6 @@ function formatContentTitle(activity: SerializedActivity): string {
 	return activity.contentTitle ?? 'Unknown Movie';
 }
 
-/**
- * Get content type icon.
- */
 function getContentIcon(activity: SerializedActivity) {
 	if (activity.contentType === 'episode') {
 		return TvIcon;
@@ -110,9 +89,6 @@ function getContentIcon(activity: SerializedActivity) {
 	return null;
 }
 
-/**
- * Get discovery type color class.
- */
 function getDiscoveryColor(searchType: string | undefined): string {
 	if (searchType === 'gap') {
 		return 'bg-yellow-500/20 text-yellow-600 dark:text-yellow-400';
@@ -123,9 +99,6 @@ function getDiscoveryColor(searchType: string | undefined): string {
 	return 'bg-gray-500/20 text-gray-600 dark:text-gray-400';
 }
 
-/**
- * Get background color class for activity icon container.
- */
 function getIconBgClass(activity: SerializedActivity): string {
 	if (activity.type === 'search' && activity.outcome === 'success') {
 		return 'bg-green-500/10';
@@ -139,9 +112,6 @@ function getIconBgClass(activity: SerializedActivity): string {
 	return 'bg-muted';
 }
 
-/**
- * Get text color class for activity icon.
- */
 function getIconTextClass(activity: SerializedActivity): string {
 	if (activity.type === 'search' && activity.outcome === 'success') {
 		return 'text-green-600 dark:text-green-400';

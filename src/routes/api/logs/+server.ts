@@ -33,10 +33,8 @@ const MAX_LIMIT = 500;
 const DEFAULT_LIMIT = 100;
 
 export const GET: RequestHandler = async ({ url, locals }) => {
-	// Require read scope for log access
 	requireScope(locals, 'read');
 
-	// Parse query parameters
 	const limitParam = url.searchParams.get('limit');
 	const offsetParam = url.searchParams.get('offset');
 	const levelsParam = url.searchParams.get('levels');
@@ -45,9 +43,8 @@ export const GET: RequestHandler = async ({ url, locals }) => {
 	const correlationId = url.searchParams.get('correlationId') ?? undefined;
 	const since = url.searchParams.get('since') ?? undefined;
 	const until = url.searchParams.get('until') ?? undefined;
-	const format = url.searchParams.get('format'); // 'json' for export
+	const format = url.searchParams.get('format');
 
-	// Validate and parse limit
 	let limit = DEFAULT_LIMIT;
 	if (limitParam) {
 		const parsed = parseInt(limitParam, 10);
@@ -57,7 +54,6 @@ export const GET: RequestHandler = async ({ url, locals }) => {
 		limit = Math.min(parsed, MAX_LIMIT);
 	}
 
-	// Parse offset
 	let offset = 0;
 	if (offsetParam) {
 		const parsed = parseInt(offsetParam, 10);
@@ -67,7 +63,6 @@ export const GET: RequestHandler = async ({ url, locals }) => {
 		offset = parsed;
 	}
 
-	// Parse log levels
 	let levels: LogLevel[] | undefined;
 	if (levelsParam) {
 		const requestedLevels = levelsParam.split(',').map((l) => l.trim().toLowerCase());
@@ -77,7 +72,6 @@ export const GET: RequestHandler = async ({ url, locals }) => {
 		}
 	}
 
-	// Build filter
 	const filter: LogFilter = {
 		...(levels && { levels }),
 		...(module && { module }),
@@ -87,7 +81,6 @@ export const GET: RequestHandler = async ({ url, locals }) => {
 		...(until && { until })
 	};
 
-	// Handle export format
 	if (format === 'json') {
 		const exportData = exportLogsAsJson(filter);
 		return new Response(exportData, {
@@ -98,10 +91,7 @@ export const GET: RequestHandler = async ({ url, locals }) => {
 		});
 	}
 
-	// Query logs
 	const result = queryLogs(filter, { limit, offset });
-
-	// Get additional metadata
 	const bufferConfig = getBufferConfig();
 	const levelCounts = getLogLevelCounts();
 	const modules = getUniqueModules();
@@ -117,7 +107,6 @@ export const GET: RequestHandler = async ({ url, locals }) => {
 };
 
 export const DELETE: RequestHandler = async ({ locals }) => {
-	// Require full scope for clearing logs
 	requireScope(locals, 'full');
 
 	clearLogBuffer();

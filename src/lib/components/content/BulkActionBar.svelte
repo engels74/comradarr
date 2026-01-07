@@ -6,11 +6,6 @@ import { Button } from '$lib/components/ui/button';
 import * as DropdownMenu from '$lib/components/ui/dropdown-menu';
 import type { BulkActionTarget } from '$lib/server/db/queries/content';
 
-/**
- * Bulk action bar component for content browser.
- * Displays a sticky toolbar when items are selected.
- */
-
 interface Props {
 	selectedCount: number;
 	selectedTargets: BulkActionTarget[];
@@ -20,29 +15,22 @@ interface Props {
 
 let { selectedCount, selectedTargets, onClearSelection, onActionComplete }: Props = $props();
 
-// Serialize targets for form submission
 const targetsJson = $derived(JSON.stringify(selectedTargets));
 
-// Loading states
 let isQueueing = $state(false);
 let isSettingPriority = $state(false);
 let isMarkingExhausted = $state(false);
 let isClearingState = $state(false);
 
-// Dialog states
 let priorityDialogOpen = $state(false);
 let priorityValue = $state(50);
 let exhaustedDialogOpen = $state(false);
 let clearStateDialogOpen = $state(false);
 
-// Computed state
 const isAnyLoading = $derived(
 	isQueueing || isSettingPriority || isMarkingExhausted || isClearingState
 );
 
-/**
- * Creates an enhance handler for form submission.
- */
 function createEnhanceHandler(setLoading: (val: boolean) => void, closeDialog?: () => void) {
 	return () => {
 		setLoading(true);

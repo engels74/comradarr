@@ -8,11 +8,6 @@ import type { ContentItem } from '$lib/server/db/queries/content';
 import { cn } from '$lib/utils.js';
 import ContentStatusBadge from './ContentStatusBadge.svelte';
 
-/**
- * Virtualized content table for large datasets.
- * Uses TanStack Virtual to only render visible rows.
- */
-
 interface Props {
 	items: ContentItem[];
 	selectedKeys?: Set<string> | undefined;
@@ -23,14 +18,11 @@ interface Props {
 
 let { items, selectedKeys, onToggleSelection, onToggleAll, maxHeight = '70vh' }: Props = $props();
 
-// Scroll container reference
 let scrollContainer: HTMLDivElement | null = $state(null);
 
-// Virtualizer configuration
-const ROW_HEIGHT = 52; // Height of each table row in pixels
-const OVERSCAN = 5; // Number of rows to render outside visible area
+const ROW_HEIGHT = 52;
+const OVERSCAN = 5;
 
-// Create virtualizer - returns a Svelte store
 const virtualizerStore = $derived(
 	scrollContainer
 		? createVirtualizer({
@@ -42,8 +34,6 @@ const virtualizerStore = $derived(
 		: null
 );
 
-// Subscribe to the virtualizer store to get the current state
-// Use optional chaining as the store value may be null during initialization
 const virtualItems = $derived.by(() => {
 	if (!virtualizerStore) return [];
 	return $virtualizerStore?.getVirtualItems() ?? [];
@@ -53,7 +43,6 @@ const totalHeight = $derived.by(() => {
 	return $virtualizerStore?.getTotalSize() ?? 0;
 });
 
-// Computed selection states
 const selectionEnabled = $derived(selectedKeys !== undefined && onToggleSelection !== undefined);
 const allSelected = $derived(
 	selectionEnabled && items.length > 0 && items.every((item) => selectedKeys!.has(getItemKey(item)))
@@ -62,29 +51,19 @@ const someSelected = $derived(
 	selectionEnabled && items.some((item) => selectedKeys!.has(getItemKey(item))) && !allSelected
 );
 
-/**
- * Gets the unique key for an item.
- */
 function getItemKey(item: ContentItem): string {
 	return `${item.type}-${item.id}`;
 }
 
-/**
- * Handles checkbox click for row selection.
- */
 function handleRowCheckboxClick(item: ContentItem, event: MouseEvent) {
 	if (onToggleSelection) {
 		onToggleSelection(getItemKey(item), event.shiftKey);
 	}
 }
 
-// Get current sort state from URL
 const currentSort = $derived($page.url.searchParams.get('sort') ?? 'title');
 const currentOrder = $derived($page.url.searchParams.get('order') ?? 'asc');
 
-/**
- * Toggles sort on a column.
- */
 function toggleSort(column: string) {
 	const params = new URLSearchParams($page.url.searchParams);
 
@@ -98,15 +77,11 @@ function toggleSort(column: string) {
 	goto(`/content?${params.toString()}`);
 }
 
-/**
- * Gets sort indicator for column header.
- */
 function getSortIndicator(column: string): string {
 	if (currentSort !== column) return '';
 	return currentOrder === 'asc' ? ' \u2191' : ' \u2193';
 }
 
-// Connector type colors using OKLCH accent colors
 const typeColors: Record<string, string> = {
 	sonarr:
 		'bg-[oklch(var(--accent-sonarr)/0.15)] text-[oklch(var(--accent-sonarr))] border border-[oklch(var(--accent-sonarr)/0.3)]',

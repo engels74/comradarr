@@ -1,8 +1,3 @@
-/**
- * Toast notification store for managing application-wide notifications.
- * Uses Svelte 5 Runes for reactive state management.
- */
-
 export type ToastType = 'success' | 'error' | 'warning' | 'info';
 
 export interface Toast {
@@ -24,25 +19,16 @@ const ERROR_DURATION = 6000; // 6 seconds for errors
 const MAX_TOASTS = 5;
 
 class ToastStore {
-	/** Active toasts */
 	toasts = $state<Toast[]>([]);
-
-	/** Timeout handlers for auto-dismiss */
 	private timeouts = new Map<string, ReturnType<typeof setTimeout>>();
-
-	/** Whether we're in a browser environment */
 	private isBrowser = typeof window !== 'undefined';
 
-	/** Generate unique ID */
 	private generateId(): string {
 		return `toast-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
 	}
 
-	/** Add a new toast */
 	add(message: string, options: ToastOptions = {}): string {
 		const { type = 'info', duration, dismissible = true } = options;
-
-		// Use type-specific default duration if not specified
 		const finalDuration = duration ?? (type === 'error' ? ERROR_DURATION : DEFAULT_DURATION);
 
 		const id = this.generateId();
@@ -54,7 +40,6 @@ class ToastStore {
 			dismissible
 		};
 
-		// Limit max toasts (remove oldest if exceeded)
 		if (this.toasts.length >= MAX_TOASTS) {
 			const oldest = this.toasts[0];
 			if (oldest) this.dismiss(oldest.id);
@@ -62,7 +47,6 @@ class ToastStore {
 
 		this.toasts = [...this.toasts, toast];
 
-		// Set auto-dismiss timeout
 		if (finalDuration > 0 && this.isBrowser) {
 			const timeout = setTimeout(() => this.dismiss(id), finalDuration);
 			this.timeouts.set(id, timeout);
@@ -71,9 +55,7 @@ class ToastStore {
 		return id;
 	}
 
-	/** Dismiss a toast by ID */
 	dismiss(id: string): void {
-		// Clear timeout
 		const timeout = this.timeouts.get(id);
 		if (timeout) {
 			clearTimeout(timeout);
@@ -83,9 +65,7 @@ class ToastStore {
 		this.toasts = this.toasts.filter((t) => t.id !== id);
 	}
 
-	/** Clear all toasts */
 	clear(): void {
-		// Clear all timeouts
 		for (const timeout of this.timeouts.values()) {
 			clearTimeout(timeout);
 		}
@@ -93,7 +73,6 @@ class ToastStore {
 		this.toasts = [];
 	}
 
-	// Convenience methods
 	success(message: string, duration?: number): string {
 		const options: ToastOptions = { type: 'success' };
 		if (duration !== undefined) options.duration = duration;

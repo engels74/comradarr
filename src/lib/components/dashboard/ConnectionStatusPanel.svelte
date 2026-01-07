@@ -13,12 +13,10 @@ interface Props {
 
 let { connectors, stats, class: className = '' }: Props = $props();
 
-// Helper to get stats for a connector (with fallback)
 function getStatsForConnector(connectorId: number): ConnectorStats {
 	return stats[connectorId] ?? { connectorId, gapsCount: 0, queueDepth: 0 };
 }
 
-// Compute type badge and glow classes
 function getTypeStyles(type: string): { badge: string; glow: string; accent: string } {
 	switch (type) {
 		case 'sonarr':
@@ -51,7 +49,6 @@ function getTypeStyles(type: string): { badge: string; glow: string; accent: str
 	}
 }
 
-// Format connector type for display
 function formatType(type: string): string {
 	return type.charAt(0).toUpperCase() + type.slice(1);
 }

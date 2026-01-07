@@ -1,15 +1,5 @@
-/**
- * Validation schemas for authentication forms.
- */
-
 import * as v from 'valibot';
 
-/**
- * Login form validation schema.
- *
- * - username: Required string, 1-100 characters
- * - password: Required string, minimum 1 character
- */
 export const LoginSchema = v.object({
 	username: v.pipe(
 		v.string('Username is required'),

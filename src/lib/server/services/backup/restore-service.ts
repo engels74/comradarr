@@ -185,7 +185,6 @@ async function insertTableData(tableExport: TableExport): Promise<number> {
 		return 0;
 	}
 
-	// Get column names from first row
 	const columns = Object.keys(rows[0] as Record<string, unknown>);
 
 	if (columns.length === 0) {

@@ -1,7 +1,3 @@
-/**
- * Connector detail page server load and actions.
- */
-
 import { error, fail } from '@sveltejs/kit';
 import {
 	AuthenticationError,
@@ -31,9 +27,6 @@ import type { Actions, PageServerLoad } from './$types';
 
 const logger = createLogger('connectors');
 
-/**
- * Creates an appropriate client for the connector type.
- */
 function createClient(
 	connector: Connector,
 	apiKey: string
@@ -55,9 +48,6 @@ function createClient(
 	}
 }
 
-/**
- * Returns a user-friendly error message based on the error type.
- */
 function getErrorMessage(err: unknown): string {
 	if (err instanceof AuthenticationError) {
 		return 'Invalid API key. Check your API key in the *arr application settings.';
@@ -99,7 +89,6 @@ export const load: PageServerLoad = async ({ params }) => {
 		error(404, 'Connector not found');
 	}
 
-	// Load all data in parallel for efficiency
 	const [syncStateData, detailedStats, searchStateDistribution, recentSearchHistory] =
 		await Promise.all([
 			getSyncState(id),
@@ -118,10 +107,6 @@ export const load: PageServerLoad = async ({ params }) => {
 };
 
 export const actions: Actions = {
-	/**
-	 * Test connection to the *arr application.
-	 * Updates health status based on result.
-	 */
 	testConnection: async ({ params }) => {
 		const id = Number(params.id);
 
@@ -143,7 +128,6 @@ export const actions: Actions = {
 			const isConnected = await client.ping();
 
 			if (isConnected) {
-				// Update health status to healthy
 				await updateConnectorHealth(id, 'healthy');
 
 				logger.info('Connection test successful', {
@@ -158,7 +142,6 @@ export const actions: Actions = {
 					message: 'Connection successful!'
 				};
 			} else {
-				// Update health status to unhealthy
 				await updateConnectorHealth(id, 'unhealthy');
 
 				logger.warn('Connection test failed - no response', {
@@ -198,10 +181,6 @@ export const actions: Actions = {
 		}
 	},
 
-	/**
-	 * Trigger a manual sync for the connector.
-	 * Runs an incremental sync to update the content mirror from the *arr application.
-	 */
 	triggerSync: async ({ params }) => {
 		const id = Number(params.id);
 
@@ -255,10 +234,6 @@ export const actions: Actions = {
 		}
 	},
 
-	/**
-	 * Clear failed search entries (exhausted or cooldown) for the connector.
-	 * Resets them to pending state for retry.
-	 */
 	clearFailedSearches: async ({ params }) => {
 		const id = Number(params.id);
 
@@ -288,10 +263,6 @@ export const actions: Actions = {
 		};
 	},
 
-	/**
-	 * Delete the connector and all associated data.
-	 * Redirects to the connector list on success.
-	 */
 	delete: async ({ params }) => {
 		const id = Number(params.id);
 
@@ -315,7 +286,6 @@ export const actions: Actions = {
 
 		await deleteConnector(id);
 
-		// Return success with redirect target (client will handle navigation after showing toast)
 		return {
 			success: true,
 			message: 'Connector deleted successfully',

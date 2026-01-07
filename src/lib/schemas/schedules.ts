@@ -1,18 +1,8 @@
-/**
- * Validation schemas for schedule forms.
- */
-
 import * as v from 'valibot';
 
-/**
- * Supported sweep types.
- */
 export const sweepTypes = ['incremental', 'full_reconciliation'] as const;
 export type SweepType = (typeof sweepTypes)[number];
 
-/**
- * Common timezone options for schedule forms.
- */
 export const timezoneOptions = [
 	'UTC',
 	'America/New_York',
@@ -26,16 +16,6 @@ export const timezoneOptions = [
 	'Australia/Sydney'
 ] as const;
 
-/**
- * Create schedule form validation schema.
- *
- * - name: Required string, 1-100 characters
- * - sweepType: Required, one of 'incremental' | 'full_reconciliation'
- * - cronExpression: Required string (validated server-side via Croner)
- * - timezone: Required string, defaults to 'UTC'
- * - connectorId: Optional number or null (null = all connectors)
- * - throttleProfileId: Optional number or null (null = use default)
- */
 export const ScheduleSchema = v.object({
 	name: v.pipe(
 		v.string('Name is required'),
@@ -79,10 +59,6 @@ export const ScheduleSchema = v.object({
 export type ScheduleInput = v.InferInput<typeof ScheduleSchema>;
 export type ScheduleOutput = v.InferOutput<typeof ScheduleSchema>;
 
-/**
- * Update schedule form validation schema.
- * Same as create schema, all fields required for consistency.
- */
 export const ScheduleUpdateSchema = ScheduleSchema;
 
 export type ScheduleUpdateInput = v.InferInput<typeof ScheduleUpdateSchema>;

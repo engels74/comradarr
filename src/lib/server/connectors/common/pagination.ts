@@ -21,12 +21,10 @@ export async function* fetchAllPages<T>(
 	while (true) {
 		const response = await fetcher(page, pageSize);
 
-		// Yield each record from the current page
 		for (const record of response.records) {
 			yield record;
 		}
 
-		// Continue until all records fetched
 		if (page * pageSize >= response.totalRecords) {
 			break;
 		}
@@ -66,12 +64,10 @@ export async function collectAllPagesWithMetadata<T>(
 	while (true) {
 		const response = await fetcher(page, pageSize);
 
-		// Update metadata from first page (totalRecords is consistent across pages)
 		if (page === (options?.startPage ?? 1)) {
 			totalRecords = response.totalRecords;
 		}
 
-		// Collect records from current page
 		records.push(...response.records);
 
 		if (page * pageSize >= response.totalRecords) {

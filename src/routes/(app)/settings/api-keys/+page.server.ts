@@ -1,7 +1,3 @@
-/**
- * API Keys settings page server load and actions.
- */
-
 import { fail } from '@sveltejs/kit';
 import * as v from 'valibot';
 import {
@@ -36,9 +32,6 @@ export const load: PageServerLoad = async ({ locals }) => {
 	};
 };
 
-/**
- * Calculate expiration date from expiration option.
- */
 function calculateExpiration(expiresIn: string | undefined): Date | null {
 	if (!expiresIn || expiresIn === 'never') return null;
 
@@ -56,11 +49,7 @@ function calculateExpiration(expiresIn: string | undefined): Date | null {
 }
 
 export const actions: Actions = {
-	/**
-	 * Create a new API key.
-	 */
 	createKey: async ({ request, locals }) => {
-		// Cannot create keys for bypass users
 		if (locals.isLocalBypass || !locals.user || locals.user.id === 0) {
 			return fail(403, {
 				action: 'createKey' as const,
@@ -69,8 +58,6 @@ export const actions: Actions = {
 		}
 
 		const formData = await request.formData();
-
-		// Parse rateLimitCustom as number if present
 		const rateLimitCustomStr = formData.get('rateLimitCustom')?.toString();
 		const rateLimitCustom = rateLimitCustomStr ? parseInt(rateLimitCustomStr, 10) : undefined;
 
@@ -84,7 +71,6 @@ export const actions: Actions = {
 				rateLimitCustom && !Number.isNaN(rateLimitCustom) ? rateLimitCustom : undefined
 		};
 
-		// Validate form data
 		const result = v.safeParse(CreateApiKeySchema, data);
 		if (!result.success) {
 			const errors = result.issues.map((issue) => issue.message);
@@ -95,8 +81,6 @@ export const actions: Actions = {
 		}
 
 		const config = result.output;
-
-		// Check for duplicate names
 		const nameExists = await apiKeyNameExists(locals.user.id, config.name);
 		if (nameExists) {
 			return fail(400, {
@@ -138,9 +122,6 @@ export const actions: Actions = {
 		}
 	},
 
-	/**
-	 * Delete an API key.
-	 */
 	deleteKey: async ({ request, locals }) => {
 		if (locals.isLocalBypass || !locals.user || locals.user.id === 0) {
 			return fail(403, {
@@ -184,9 +165,6 @@ export const actions: Actions = {
 		};
 	},
 
-	/**
-	 * Update an API key's rate limit.
-	 */
 	updateRateLimit: async ({ request, locals }) => {
 		if (locals.isLocalBypass || !locals.user || locals.user.id === 0) {
 			return fail(403, {
@@ -205,7 +183,6 @@ export const actions: Actions = {
 			});
 		}
 
-		// Parse rateLimitCustom as number if present
 		const rateLimitCustomStr = formData.get('rateLimitCustom')?.toString();
 		const rateLimitCustom = rateLimitCustomStr ? parseInt(rateLimitCustomStr, 10) : undefined;
 
@@ -215,7 +192,6 @@ export const actions: Actions = {
 				rateLimitCustom && !Number.isNaN(rateLimitCustom) ? rateLimitCustom : undefined
 		};
 
-		// Validate form data
 		const result = v.safeParse(UpdateApiKeyRateLimitSchema, data);
 		if (!result.success) {
 			const errors = result.issues.map((issue) => issue.message);
@@ -257,9 +233,6 @@ export const actions: Actions = {
 		};
 	},
 
-	/**
-	 * Revoke an API key (soft delete).
-	 */
 	revokeKey: async ({ request, locals }) => {
 		if (locals.isLocalBypass || !locals.user || locals.user.id === 0) {
 			return fail(403, {
