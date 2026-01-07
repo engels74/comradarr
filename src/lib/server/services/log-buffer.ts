@@ -97,21 +97,18 @@ function getAllEntriesOrdered(): BufferedLogEntry[] {
 
 function applyFilters(entries: BufferedLogEntry[], filter: LogFilter): BufferedLogEntry[] {
 	return entries.filter((entry) => {
-		// Filter by log levels
 		if (filter.levels && filter.levels.length > 0) {
 			if (!filter.levels.includes(entry.level)) {
 				return false;
 			}
 		}
 
-		// Filter by module
 		if (filter.module) {
 			if (!entry.module.toLowerCase().includes(filter.module.toLowerCase())) {
 				return false;
 			}
 		}
 
-		// Filter by search term in message
 		if (filter.search) {
 			const searchLower = filter.search.toLowerCase();
 			const messageMatch = entry.message.toLowerCase().includes(searchLower);
@@ -125,14 +122,12 @@ function applyFilters(entries: BufferedLogEntry[], filter: LogFilter): BufferedL
 			}
 		}
 
-		// Filter by correlation ID
 		if (filter.correlationId) {
 			if (entry.correlationId !== filter.correlationId) {
 				return false;
 			}
 		}
 
-		// Filter by time range
 		if (filter.since) {
 			if (entry.timestamp < filter.since) {
 				return false;
@@ -151,23 +146,17 @@ function applyFilters(entries: BufferedLogEntry[], filter: LogFilter): BufferedL
 
 // Returns entries in reverse chronological order (newest first)
 export function queryLogs(filter?: LogFilter, pagination?: LogPagination): LogQueryResult {
-	// Get all entries in chronological order
 	let entries = getAllEntriesOrdered();
 
-	// Apply filters
 	if (filter) {
 		entries = applyFilters(entries, filter);
 	}
 
 	const total = entries.length;
-
-	// Reverse for newest-first order
 	entries = entries.reverse();
 
-	// Apply pagination
 	const limit = pagination?.limit ?? 100;
 	const offset = pagination?.offset ?? 0;
-
 	const paginatedEntries = entries.slice(offset, offset + limit);
 
 	return {
@@ -193,10 +182,6 @@ export function getUniqueModules(): string[] {
 	return Array.from(modules).sort();
 }
 
-/**
- * Gets log level counts from the buffer.
- * Useful for summary display.
- */
 export function getLogLevelCounts(): Record<LogLevel, number> {
 	const counts: Record<LogLevel, number> = {
 		error: 0,
@@ -215,12 +200,6 @@ export function getLogLevelCounts(): Record<LogLevel, number> {
 	return counts;
 }
 
-/**
- * Exports logs as JSON for download.
- *
- * @param filter - Optional filter criteria
- * @returns JSON string of log entries
- */
 export function exportLogsAsJson(filter?: LogFilter): string {
 	const result = queryLogs(filter, { limit: bufferSize, offset: 0 });
 	return JSON.stringify(result.entries, null, 2);

@@ -51,14 +51,9 @@ export class ThrottleEnforcer {
 	// Check order: paused? -> minute window -> per-minute limit -> day window -> daily budget
 	async canDispatch(connectorId: number): Promise<ThrottleResult> {
 		const now = new Date();
-
-		// Get or create throttle state
 		const state = await getOrCreateThrottleState(connectorId);
-
-		// Get effective throttle profile for this connector
 		const profile = await getThrottleProfileForConnector(connectorId);
 
-		// 1. Check if paused
 		if (state.pausedUntil && state.pausedUntil > now) {
 			return {
 				allowed: false,
@@ -67,35 +62,29 @@ export class ThrottleEnforcer {
 			};
 		}
 
-		// 2. Check minute window - reset if expired
 		let requestsThisMinute = state.requestsThisMinute;
 		if (isMinuteWindowExpired(state.minuteWindowStart, now)) {
 			await resetMinuteWindow(connectorId);
 			requestsThisMinute = 0;
 		}
 
-		// 3. Check per-minute rate limit
 		if (requestsThisMinute >= profile.requestsPerMinute) {
 			const retryAfterMs = msUntilMinuteWindowExpires(state.minuteWindowStart, now);
 			return {
 				allowed: false,
 				reason: 'rate_limit',
-				retryAfterMs: Math.max(retryAfterMs, 1000) // At least 1 second
+				retryAfterMs: Math.max(retryAfterMs, 1000)
 			};
 		}
 
-		// 4. Check day window - reset if expired (new UTC day)
 		let requestsToday = state.requestsToday;
 		if (isDayWindowExpired(state.dayWindowStart, now)) {
 			await resetDayWindow(connectorId);
 			requestsToday = 0;
 		}
 
-		// 5. Check daily budget (null = unlimited)
 		if (profile.dailyBudget !== null && requestsToday >= profile.dailyBudget) {
 			const retryAfterMs = msUntilMidnightUTC(now);
-
-			// Set paused state for daily budget exhaustion
 			const tomorrow = new Date(now);
 			tomorrow.setUTCDate(tomorrow.getUTCDate() + 1);
 			tomorrow.setUTCHours(0, 0, 0, 0);
@@ -108,7 +97,6 @@ export class ThrottleEnforcer {
 			};
 		}
 
-		// All checks passed
 		return { allowed: true };
 	}
 
@@ -119,13 +107,9 @@ export class ThrottleEnforcer {
 	// Handle HTTP 429: uses Retry-After header or profile's rateLimitPauseSeconds
 	async handleRateLimitResponse(connectorId: number, retryAfterSeconds?: number): Promise<void> {
 		const profile = await getThrottleProfileForConnector(connectorId);
-
-		// Use Retry-After if provided, otherwise use profile's rateLimitPauseSeconds
 		const pauseSeconds = retryAfterSeconds ?? profile.rateLimitPauseSeconds;
-
 		const now = new Date();
 		const pauseUntil = new Date(now.getTime() + pauseSeconds * 1000);
-
 		await setPausedUntil(connectorId, pauseUntil, 'rate_limit');
 	}
 
@@ -135,22 +119,18 @@ export class ThrottleEnforcer {
 		const state = await getThrottleState(connectorId);
 		const profile = await getThrottleProfileForConnector(connectorId);
 
-		// If no state, full capacity available
 		if (!state) {
 			return profile.requestsPerMinute;
 		}
 
-		// If paused, no capacity
 		if (state.pausedUntil && state.pausedUntil > now) {
 			return -1;
 		}
 
-		// If minute window expired, full capacity
 		if (isMinuteWindowExpired(state.minuteWindowStart, now)) {
 			return profile.requestsPerMinute;
 		}
 
-		// Calculate remaining capacity
 		return Math.max(0, profile.requestsPerMinute - state.requestsThisMinute);
 	}
 
@@ -159,7 +139,6 @@ export class ThrottleEnforcer {
 		const state = await getOrCreateThrottleState(connectorId);
 		const profile = await getThrottleProfileForConnector(connectorId);
 
-		// Calculate current counts (accounting for expired windows)
 		let requestsThisMinute = state.requestsThisMinute;
 		if (isMinuteWindowExpired(state.minuteWindowStart, now)) {
 			requestsThisMinute = 0;
@@ -170,7 +149,6 @@ export class ThrottleEnforcer {
 			requestsToday = 0;
 		}
 
-		// Check pause state
 		const isPaused = state.pausedUntil !== null && state.pausedUntil > now;
 		const pauseExpiresInMs =
 			isPaused && state.pausedUntil ? state.pausedUntil.getTime() - now.getTime() : null;
@@ -189,7 +167,6 @@ export class ThrottleEnforcer {
 		};
 	}
 
-	// Resets: expired minute windows, expired day windows, expired pauses
 	async resetExpiredWindows(): Promise<WindowResetResult> {
 		const [minuteResets, dayResets, pausesCleared] = await Promise.all([
 			resetExpiredMinuteWindows(),
@@ -214,5 +191,4 @@ export class ThrottleEnforcer {
 	}
 }
 
-// Export singleton instance
 export const throttleEnforcer = new ThrottleEnforcer();

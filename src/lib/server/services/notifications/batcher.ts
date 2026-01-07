@@ -68,14 +68,12 @@ export class NotificationBatcher {
 			channelResults: []
 		};
 
-		// Get all channels with batching enabled
 		const channels = await getBatchingEnabledChannels();
 
 		if (channels.length === 0) {
 			return result;
 		}
 
-		// Process each channel
 		for (const channel of channels) {
 			try {
 				const channelResult = await this.processBatchesForChannel(channel);
@@ -109,12 +107,10 @@ export class NotificationBatcher {
 			results: []
 		};
 
-		// Skip unsupported channel types
 		if (!isSupportedChannelType(channel.type)) {
 			return result;
 		}
 
-		// Process each event type
 		for (const eventType of BATCHABLE_EVENT_TYPES) {
 			try {
 				const batchResult = await this.processBatchForEventType(channel, eventType);
@@ -148,51 +144,36 @@ export class NotificationBatcher {
 	): Promise<BatchSendResult | null> {
 		const windowSeconds = channel.batchingWindowSeconds ?? 60;
 
-		// Get pending notifications for this channel/event type
+		// Fetch up to 10x the window to catch old pending items
 		const pending = await getPendingNotificationsForBatching(
 			channel.id,
 			eventType,
-			// Fetch notifications older than window to include everything eligible
-			// We use a large window to get all pending, then filter by age
-			windowSeconds * 10 // Fetch up to 10x the window to catch old pending items
+			windowSeconds * 10
 		);
 
 		if (pending.length === 0) {
 			return null;
 		}
 
-		// Check if the oldest notification has waited beyond the window
-		const oldest = pending[0]!; // Already sorted by createdAt ASC
+		const oldest = pending[0]!;
 		const oldestAgeMs = Date.now() - new Date(oldest.createdAt).getTime();
 
 		if (oldestAgeMs < windowSeconds * 1000) {
-			// Not ready yet - still within the batching window
 			return null;
 		}
 
-		// Check if currently in quiet hours
-		// If so, defer sending until quiet hours end
 		if (channel.quietHoursEnabled && isInQuietHours(channel)) {
-			// Skip this batch - notifications will be sent when quiet hours end
 			return null;
 		}
 
-		// Collect all pending notifications that should be included in this batch
-		// Include all pending notifications for this event type
 		const toBatch = pending;
-
-		// Generate a unique batch ID
 		const batchId = `batch_${channel.id}_${eventType}_${Date.now()}`;
 
 		try {
-			// Build aggregate payload
 			const payload = buildAggregatePayload(eventType, toBatch);
-
-			// Send the notification
 			const sendResult = await this.sendBatchedNotification(channel, payload);
 
 			if (sendResult.success) {
-				// Mark all entries as batched
 				const ids = toBatch.map((n) => n.id);
 				await markNotificationsAsBatched(ids, batchId);
 
@@ -204,7 +185,6 @@ export class NotificationBatcher {
 					success: true
 				};
 			} else {
-				// Mark notifications as failed (so they can be retried)
 				const errorMsg = sendResult.error ?? 'Unknown error';
 				for (const entry of toBatch) {
 					await updateNotificationHistoryStatus(entry.id, 'failed' as NotificationStatus, errorMsg);
@@ -222,7 +202,6 @@ export class NotificationBatcher {
 		} catch (error) {
 			const errorMessage = error instanceof Error ? error.message : String(error);
 
-			// Mark notifications as failed
 			for (const entry of toBatch) {
 				await updateNotificationHistoryStatus(
 					entry.id,
@@ -249,13 +228,8 @@ export class NotificationBatcher {
 		const startTime = Date.now();
 
 		try {
-			// Decrypt sensitive configuration
 			const sensitiveConfig = await getDecryptedSensitiveConfig(channel);
-
-			// Get the appropriate sender
 			const sender = getSender(channel.type);
-
-			// Send the notification
 			return await sender.send(channel, sensitiveConfig, payload);
 		} catch (error) {
 			return {

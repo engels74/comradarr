@@ -26,7 +26,6 @@ export async function runIncrementalSync(
 		skipRetry: options?.skipRetry ?? false
 	});
 
-	// Validate connector is enabled
 	if (!connector.enabled) {
 		logger.warn('Incremental sync skipped - connector disabled', {
 			connectorId: connector.id,
@@ -44,13 +43,10 @@ export async function runIncrementalSync(
 		};
 	}
 
-	// Execute with or without retry wrapper
 	if (options?.skipRetry === true) {
-		// Direct execution without retry wrapper (for testing or forced sync)
 		return executeIncrementalSync(connector, options, startTime);
 	}
 
-	// Use retry wrapper for normal execution
 	const retryResult = await withSyncRetry(connector.id, () =>
 		executeIncrementalSync(connector, options, startTime)
 	);
@@ -81,17 +77,13 @@ async function executeIncrementalSync(
 	startTime: number
 ): Promise<SyncResult> {
 	try {
-		// Decrypt API key
 		const apiKey = await getDecryptedApiKey(connector);
-
-		// Create client configuration
 		const clientConfig = {
 			baseUrl: connector.url,
 			apiKey,
-			timeout: 60000 // 60s timeout for sync operations
+			timeout: 60000
 		};
 
-		// Execute sync based on connector type
 		let itemsSynced: number;
 
 		switch (connector.type) {
@@ -114,10 +106,7 @@ async function executeIncrementalSync(
 				throw new Error(`Unknown connector type: ${connector.type}`);
 		}
 
-		// Update sync state on success
 		await updateSyncState(connector.id, true);
-
-		// Update connector's lastSync timestamp
 		await updateConnectorLastSync(connector.id);
 
 		const durationMs = Date.now() - startTime;
@@ -138,7 +127,6 @@ async function executeIncrementalSync(
 			durationMs
 		};
 	} catch (error) {
-		// Update sync state on failure
 		await updateSyncState(connector.id, false);
 
 		logger.error('Incremental sync failed', {
@@ -148,8 +136,6 @@ async function executeIncrementalSync(
 			error: error instanceof Error ? error.message : String(error)
 		});
 
-		// Re-throw to let the retry wrapper handle it
-		// If skipRetry was used, the error will propagate up
 		throw error;
 	}
 }
