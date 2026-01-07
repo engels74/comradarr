@@ -42,10 +42,7 @@ async function handleExport() {
 	errorMessage = null;
 
 	try {
-		// Build the export URL with date range parameters
 		const url = `/api/analytics/export?startDate=${startDate}&endDate=${endDate}`;
-
-		// Fetch the CSV file
 		const response = await fetch(url);
 
 		if (!response.ok) {
@@ -53,7 +50,6 @@ async function handleExport() {
 			throw new Error(text || `Export failed with status ${response.status}`);
 		}
 
-		// Get the filename from the Content-Disposition header or use a default
 		const contentDisposition = response.headers.get('Content-Disposition');
 		let filename = `comradarr-analytics-${startDate}-to-${endDate}.csv`;
 		if (contentDisposition) {
@@ -63,7 +59,6 @@ async function handleExport() {
 			}
 		}
 
-		// Create a blob and trigger download
 		const blob = await response.blob();
 		const downloadUrl = window.URL.createObjectURL(blob);
 		const link = document.createElement('a');
@@ -74,7 +69,6 @@ async function handleExport() {
 		document.body.removeChild(link);
 		window.URL.revokeObjectURL(downloadUrl);
 
-		// Close dialog on success
 		dialogOpen = false;
 	} catch (err) {
 		errorMessage = err instanceof Error ? err.message : 'An error occurred during export.';
@@ -87,7 +81,6 @@ function handleDialogChange(open: boolean) {
 	dialogOpen = open;
 	if (open) {
 		errorMessage = null;
-		// Reset to default date range
 		const now = new Date();
 		const thirtyDaysBack = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
 		startDate = formatDate(thirtyDaysBack);

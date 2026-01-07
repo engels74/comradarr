@@ -4,7 +4,6 @@ import ArrowUpIcon from '@lucide/svelte/icons/arrow-up';
 import EyeIcon from '@lucide/svelte/icons/eye';
 import FilmIcon from '@lucide/svelte/icons/film';
 import RefreshCwIcon from '@lucide/svelte/icons/refresh-cw';
-// Icons (direct imports for tree-shaking)
 import SearchIcon from '@lucide/svelte/icons/search';
 import TvIcon from '@lucide/svelte/icons/tv';
 import OutcomeBadge from '$lib/components/queue/OutcomeBadge.svelte';

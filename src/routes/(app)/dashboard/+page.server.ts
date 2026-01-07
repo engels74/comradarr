@@ -63,10 +63,8 @@ const JOB_METADATA: Record<string, { displayName: string; description: string }>
 export const load: PageServerLoad = async ({ parent }) => {
 	const parentData = await parent();
 
-	// Get scheduler status (synchronous, no Promise needed)
 	const schedulerStatus = getSchedulerStatus();
 
-	// Fetch all dashboard data in parallel
 	const [connectors, statsMap, contentStats, todayStats, recentActivity, completionData] =
 		await Promise.all([
 			getAllConnectors(),

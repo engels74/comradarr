@@ -156,7 +156,6 @@ export const actions: Actions = {
 				});
 			}
 		} catch (err) {
-			// Update health status based on error type
 			let healthStatus: string;
 			if (err instanceof AuthenticationError) {
 				healthStatus = 'unhealthy';
@@ -210,7 +209,6 @@ export const actions: Actions = {
 			type: connector.type
 		});
 
-		// Run incremental sync (skipRetry for immediate feedback on manual triggers)
 		const result = await runIncrementalSync(connector, { skipRetry: true });
 
 		if (result.success) {

@@ -1,8 +1,4 @@
 <script lang="ts">
-/**
- * Upcoming Schedule Panel - displays next scheduled sweeps and current sweep progress.
- */
-
 import CalendarClockIcon from '@lucide/svelte/icons/calendar-clock';
 import CameraIcon from '@lucide/svelte/icons/camera';
 import ChevronDownIcon from '@lucide/svelte/icons/chevron-down';
@@ -16,7 +12,6 @@ import { Badge } from '$lib/components/ui/badge';
 import * as Card from '$lib/components/ui/card';
 import type { SerializedScheduledJob } from './types';
 
-// State for collapsible secondary jobs section
 let showOtherJobs = $state(false);
 
 interface Props {
@@ -26,9 +21,6 @@ interface Props {
 
 let { scheduledJobs, class: className = '' }: Props = $props();
 
-/**
- * Get an appropriate icon for each job type.
- */
 function getJobIcon(jobName: string) {
 	switch (jobName) {
 		case 'incremental-sync-sweep':
@@ -49,10 +41,6 @@ function getJobIcon(jobName: string) {
 	}
 }
 
-/**
- * Get color classes based on job type.
- * Sweep jobs get more prominent colors.
- */
 function getJobColors(jobName: string) {
 	switch (jobName) {
 		case 'incremental-sync-sweep':
@@ -89,10 +77,6 @@ function getJobColors(jobName: string) {
 	}
 }
 
-/**
- * Format relative time from ISO timestamp.
- * Returns strings like "in 8 minutes", "in 2 hours", etc.
- */
 function formatRelativeTime(isoTimestamp: string | null): string {
 	if (!isoTimestamp) return 'Not scheduled';
 
@@ -117,25 +101,19 @@ function formatRelativeTime(isoTimestamp: string | null): string {
 	return `in ${days}d`;
 }
 
-/**
- * Check if job runs soon (within 5 minutes).
- */
 function isUpcomingSoon(isoTimestamp: string | null): boolean {
 	if (!isoTimestamp) return false;
 	const now = Date.now();
 	const target = new Date(isoTimestamp).getTime();
 	const diffMs = target - now;
-	return diffMs > 0 && diffMs < 5 * 60 * 1000; // 5 minutes
+	return diffMs > 0 && diffMs < 5 * 60 * 1000;
 }
 
-// Sort jobs: running first, then by next run time
 const sortedJobs = $derived(
 	[...scheduledJobs].sort((a, b) => {
-		// Running jobs first
 		if (a.isRunning && !b.isRunning) return -1;
 		if (!a.isRunning && b.isRunning) return 1;
 
-		// Then by next run time
 		if (!a.nextRun && !b.nextRun) return 0;
 		if (!a.nextRun) return 1;
 		if (!b.nextRun) return -1;
@@ -143,7 +121,6 @@ const sortedJobs = $derived(
 	})
 );
 
-// Filter to show only sweep-related jobs prominently
 const sweepJobs = $derived(
 	sortedJobs.filter(
 		(job) =>
@@ -153,7 +130,6 @@ const sweepJobs = $derived(
 	)
 );
 
-// Other background jobs
 const otherJobs = $derived(
 	sortedJobs.filter(
 		(job) =>

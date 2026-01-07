@@ -1,8 +1,4 @@
 <script lang="ts">
-/**
- * Schedule Timeline - main container with calendar and list views.
- */
-
 import AlertTriangleIcon from '@lucide/svelte/icons/alert-triangle';
 import CalendarDaysIcon from '@lucide/svelte/icons/calendar-days';
 import ListIcon from '@lucide/svelte/icons/list';
@@ -20,7 +16,6 @@ interface Props {
 
 let { timeline, class: className = '' }: Props = $props();
 
-// Flatten all runs for conflict lookup
 const allRuns = $derived<ScheduledRun[]>(timeline.calendarDays.flatMap((day) => day.runs));
 
 const hasConflicts = $derived(timeline.conflictCount > 0);

@@ -22,7 +22,6 @@ function handleThemeChange(value: string): void {
 	themeStore.setTheme(value as Theme);
 }
 
-// Get current icon based on resolved theme for the trigger
 const getCurrentIcon = () => {
 	return themeStore.resolved === 'dark' ? MoonIcon : SunIcon;
 };

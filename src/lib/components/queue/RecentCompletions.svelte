@@ -4,11 +4,6 @@ import * as Card from '$lib/components/ui/card';
 import OutcomeBadge from './OutcomeBadge.svelte';
 import type { SerializedCompletion } from './types';
 
-/**
- * Recent completions display component.
- * Shows the last N completed searches with outcome indicators.
- */
-
 interface Props {
 	completions: SerializedCompletion[];
 	class?: string | undefined;
@@ -16,16 +11,12 @@ interface Props {
 
 let { completions, class: className }: Props = $props();
 
-// Connector type badge colors using OKLCH accent colors
 const typeColors: Record<string, string> = {
 	sonarr: 'bg-[oklch(var(--accent-sonarr)/0.15)] text-[oklch(var(--accent-sonarr))]',
 	radarr: 'bg-[oklch(var(--accent-radarr)/0.15)] text-[oklch(var(--accent-radarr))]',
 	whisparr: 'bg-[oklch(var(--accent-whisparr)/0.15)] text-[oklch(var(--accent-whisparr))]'
 };
 
-/**
- * Format relative time for display.
- */
 function formatRelativeTime(dateStr: string): string {
 	const date = new Date(dateStr);
 	const now = new Date();
@@ -41,9 +32,6 @@ function formatRelativeTime(dateStr: string): string {
 	return date.toLocaleDateString();
 }
 
-/**
- * Get the content link URL.
- */
 function getContentLink(completion: SerializedCompletion): string {
 	if (completion.contentType === 'episode' && completion.seriesId) {
 		return `/content/series/${completion.seriesId}`;
@@ -54,9 +42,6 @@ function getContentLink(completion: SerializedCompletion): string {
 	return '#';
 }
 
-/**
- * Format content title for display.
- */
 function formatTitle(completion: SerializedCompletion): string {
 	if (completion.contentType === 'episode') {
 		const episode =

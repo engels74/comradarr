@@ -14,18 +14,12 @@ interface Props {
 
 let { summary, class: className = '' }: Props = $props();
 
-/**
- * Gets success rate background color class.
- */
 function getSuccessRateBg(rate: number): string {
 	if (rate >= 80) return 'bg-green-500/10';
 	if (rate >= 50) return 'bg-yellow-500/10';
 	return 'bg-red-500/10';
 }
 
-/**
- * Formats response time for display.
- */
 function formatResponseTime(ms: number | null): string {
 	if (ms === null) return '-';
 	if (ms < 1000) return `${ms}ms`;

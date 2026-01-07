@@ -4,10 +4,6 @@ import { page } from '$app/stores';
 import { Input } from '$lib/components/ui/input';
 import type { ContentStatusCounts } from '$lib/server/db/queries/content';
 
-/**
- * Content filter controls with URL-based state.
- */
-
 interface Props {
 	connectors: Array<{ id: number; name: string; type: string }>;
 	statusCounts: ContentStatusCounts;
@@ -15,18 +11,13 @@ interface Props {
 
 let { connectors, statusCounts }: Props = $props();
 
-// Initialize from URL params
 let search = $state($page.url.searchParams.get('search') ?? '');
 let connectorId = $state($page.url.searchParams.get('connector') ?? '');
 let contentType = $state($page.url.searchParams.get('type') ?? 'all');
 let status = $state($page.url.searchParams.get('status') ?? 'all');
 
-// Debounced search
 let searchTimeout: ReturnType<typeof setTimeout>;
 
-/**
- * Updates URL with current filter state.
- */
 function updateFilters() {
 	const params = new URLSearchParams();
 
@@ -44,17 +35,11 @@ function updateFilters() {
 	goto(`/content?${params.toString()}`, { replaceState: true, keepFocus: true });
 }
 
-/**
- * Handles search input with debounce for real-time updates.
- */
 function onSearchInput() {
 	clearTimeout(searchTimeout);
 	searchTimeout = setTimeout(updateFilters, 300);
 }
 
-/**
- * Handles filter dropdown changes.
- */
 function onFilterChange() {
 	updateFilters();
 }

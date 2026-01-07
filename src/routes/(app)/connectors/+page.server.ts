@@ -58,9 +58,6 @@ export const load: PageServerLoad = async () => {
 };
 
 export const actions: Actions = {
-	/**
-	 * Toggle connector enabled status.
-	 */
 	toggle: async ({ request }) => {
 		const data = await request.formData();
 		const id = Number(data.get('id'));
@@ -78,9 +75,6 @@ export const actions: Actions = {
 		return { success: true };
 	},
 
-	/**
-	 * Toggle Prowlarr instance enabled status.
-	 */
 	toggleProwlarr: async ({ request }) => {
 		const data = await request.formData();
 		const id = Number(data.get('id'));

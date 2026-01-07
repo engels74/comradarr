@@ -1,4 +1,3 @@
-// State transitions (pure functions)
 export { calculateNextEligibleTime, shouldMarkExhausted } from './backoff';
 export type {
 	BatchingConfigType,
@@ -6,7 +5,6 @@ export type {
 	QueueConfigType,
 	StateTransitionConfigType
 } from './config';
-// Configuration
 export {
 	BATCHING_CONFIG,
 	DEFAULT_PRIORITY_WEIGHTS,
@@ -14,7 +12,6 @@ export {
 	QUEUE_CONFIG,
 	STATE_TRANSITION_CONFIG
 } from './config';
-// Episode batching - Types
 export type {
 	BatchingConfig,
 	BatchingDecision,
@@ -26,7 +23,6 @@ export type {
 	MovieForBatching,
 	SeasonStatistics
 } from './episode-batcher';
-// Episode batching - Functions
 export {
 	calculateMissingCount,
 	calculateMissingPercent,
@@ -36,11 +32,7 @@ export {
 	groupEpisodesBySeries,
 	isSeasonFullyAired
 } from './episode-batcher';
-
-// Priority calculation
 export { calculatePriority, comparePriority } from './priority-calculator';
-
-// Queue management
 export {
 	clearQueue,
 	dequeuePriorityItems,
@@ -49,20 +41,14 @@ export {
 	pauseQueue,
 	resumeQueue
 } from './queue-service';
-// Search dispatcher - Types
 export type { DispatchFailureReason, DispatchOptions, DispatchResult } from './search-dispatcher';
-// Search dispatcher - Functions
 export { dispatchBatch, dispatchSearch } from './search-dispatcher';
-// State transitions (database operations)
 export {
 	getSearchState,
 	markSearchExhausted,
 	markSearchFailed,
 	reenqueueEligibleCooldownItems
 } from './state-transitions';
-// Types - Priority
-// Types - Queue Service
-// Types - State Transitions
 export type {
 	ContentType,
 	DequeueOptions,

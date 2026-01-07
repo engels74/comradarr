@@ -44,7 +44,6 @@ export interface ChannelWithStats extends NotificationChannel {
 export const load: PageServerLoad = async () => {
 	const channels = await getAllNotificationChannels();
 
-	// Get stats for each channel
 	const channelsWithStats: ChannelWithStats[] = await Promise.all(
 		channels.map(async (channel) => ({
 			...channel,
@@ -55,9 +54,6 @@ export const load: PageServerLoad = async () => {
 	return { channels: channelsWithStats };
 };
 
-/**
- * Parse base channel fields from form data.
- */
 function parseBaseFields(formData: FormData) {
 	const batchingWindowStr = formData.get('batchingWindowSeconds')?.toString();
 
@@ -74,9 +70,6 @@ function parseBaseFields(formData: FormData) {
 	};
 }
 
-/**
- * Parse Discord-specific fields from form data.
- */
 function parseDiscordFields(formData: FormData) {
 	return {
 		webhookUrl: formData.get('webhookUrl')?.toString() ?? '',
@@ -85,9 +78,6 @@ function parseDiscordFields(formData: FormData) {
 	};
 }
 
-/**
- * Parse Telegram-specific fields from form data.
- */
 function parseTelegramFields(formData: FormData) {
 	return {
 		botToken: formData.get('botToken')?.toString() ?? '',
@@ -99,9 +89,6 @@ function parseTelegramFields(formData: FormData) {
 	};
 }
 
-/**
- * Parse Slack-specific fields from form data.
- */
 function parseSlackFields(formData: FormData) {
 	return {
 		webhookUrl: formData.get('webhookUrl')?.toString() ?? '',
@@ -111,9 +98,6 @@ function parseSlackFields(formData: FormData) {
 	};
 }
 
-/**
- * Parse Email-specific fields from form data.
- */
 function parseEmailFields(formData: FormData) {
 	const portStr = formData.get('port')?.toString();
 
@@ -129,9 +113,6 @@ function parseEmailFields(formData: FormData) {
 	};
 }
 
-/**
- * Parse Webhook-specific fields from form data.
- */
 function parseWebhookFields(formData: FormData) {
 	return {
 		url: formData.get('url')?.toString() ?? '',
@@ -144,9 +125,6 @@ function parseWebhookFields(formData: FormData) {
 	};
 }
 
-/**
- * Get the validation schema for a channel type.
- */
 function getConfigSchema(type: string) {
 	switch (type) {
 		case 'discord':
@@ -164,9 +142,6 @@ function getConfigSchema(type: string) {
 	}
 }
 
-/**
- * Parse channel-specific fields from form data.
- */
 function parseChannelFields(formData: FormData, type: string) {
 	switch (type) {
 		case 'discord':
@@ -184,9 +159,6 @@ function parseChannelFields(formData: FormData, type: string) {
 	}
 }
 
-/**
- * Split channel fields into config (plain) and sensitiveConfig (encrypted).
- */
 function splitConfig(
 	type: string,
 	fields: Record<string, unknown>
@@ -208,9 +180,6 @@ function splitConfig(
 	return { config, sensitiveConfig };
 }
 
-/**
- * Validate timezone string.
- */
 function isValidTimezone(timezone: string): boolean {
 	try {
 		Intl.DateTimeFormat(undefined, { timeZone: timezone });
@@ -221,9 +190,6 @@ function isValidTimezone(timezone: string): boolean {
 }
 
 export const actions: Actions = {
-	/**
-	 * Create a new notification channel.
-	 */
 	create: async ({ request }) => {
 		const formData = await request.formData();
 		const type = formData.get('type')?.toString();
@@ -340,9 +306,6 @@ export const actions: Actions = {
 		return { success: true, message: 'Notification channel created successfully' };
 	},
 
-	/**
-	 * Update an existing notification channel.
-	 */
 	update: async ({ request }) => {
 		const formData = await request.formData();
 		const id = Number(formData.get('id'));
@@ -480,9 +443,6 @@ export const actions: Actions = {
 		return { success: true, message: 'Notification channel updated successfully' };
 	},
 
-	/**
-	 * Delete a notification channel.
-	 */
 	delete: async ({ request }) => {
 		const formData = await request.formData();
 		const id = Number(formData.get('id'));
@@ -515,9 +475,6 @@ export const actions: Actions = {
 		return { success: true, message: 'Notification channel deleted successfully' };
 	},
 
-	/**
-	 * Toggle enabled state.
-	 */
 	toggle: async ({ request }) => {
 		const formData = await request.formData();
 		const id = Number(formData.get('id'));
@@ -551,9 +508,6 @@ export const actions: Actions = {
 		return { success: true };
 	},
 
-	/**
-	 * Send a test notification.
-	 */
 	test: async ({ request }) => {
 		const formData = await request.formData();
 		const id = Number(formData.get('id'));

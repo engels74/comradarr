@@ -82,7 +82,6 @@ const chartData = $derived(() => ({
 			pointHoverRadius: 5
 		};
 
-		// Only add borderDash if defined
 		if (ds.borderDash) {
 			dataset.borderDash = ds.borderDash;
 		}
@@ -92,9 +91,8 @@ const chartData = $derived(() => ({
 }));
 
 onMount(async () => {
-	// Dynamically import Chart.js to avoid SSR issues
+	// Dynamic import avoids SSR issues with Chart.js
 	const { Chart, registerables } = await import('chart.js');
-	// Import date adapter for side effects (registers itself with Chart.js)
 	await import('chartjs-adapter-date-fns');
 
 	Chart.register(...registerables);

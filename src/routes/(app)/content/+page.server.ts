@@ -22,10 +22,8 @@ import {
 import type { Actions, PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ url }) => {
-	// Parse filters from URL params
 	const filters = parseContentFilters(url.searchParams);
 
-	// Load data in parallel for efficiency
 	const [contentResult, connectors, statusCounts] = await Promise.all([
 		getContentList(filters),
 		getConnectorsForFilter(),

@@ -1,13 +1,3 @@
-<!--
-	CronBuilder - Full Visual Builder for Cron Expressions
-
-	Provides a visual interface for building cron expressions with:
-	- Frequency mode selection (minutes, hourly, daily, weekly, monthly, custom)
-	- Dynamic input fields based on frequency mode
-	- Human-readable description
-	- Next run preview
-	- Error validation
--->
 <script lang="ts">
 import AlertCircleIcon from '@lucide/svelte/icons/alert-circle';
 import CalendarIcon from '@lucide/svelte/icons/calendar';
@@ -17,9 +7,6 @@ import { Input } from '$lib/components/ui/input';
 import { Label } from '$lib/components/ui/label';
 import { cn } from '$lib/utils.js';
 
-/**
- * Frequency modes for the cron builder.
- */
 type FrequencyMode = 'minutes' | 'hourly' | 'daily' | 'weekly' | 'monthly' | 'custom';
 
 interface Props {
@@ -36,16 +23,14 @@ let {
 	class: className
 }: Props = $props();
 
-// Internal state
 let frequency = $state<FrequencyMode>('daily');
 let minuteInterval = $state(15);
 let atMinute = $state(0);
 let atHour = $state(3);
-let selectedDaysOfWeek = $state<number[]>([1]); // 0=Sun, 1=Mon, etc.
+let selectedDaysOfWeek = $state<number[]>([1]);
 let selectedDaysOfMonth = $state<number[]>([1]);
 let customExpression = $state('0 3 * * *');
 
-// Days of week labels
 const daysOfWeek = [
 	{ value: 0, label: 'Sun' },
 	{ value: 1, label: 'Mon' },
@@ -56,28 +41,21 @@ const daysOfWeek = [
 	{ value: 6, label: 'Sat' }
 ];
 
-// Minute interval options
 const minuteIntervals = [5, 10, 15, 20, 30, 60];
 
-// Hour options (24h format with AM/PM display)
 const hourOptions = Array.from({ length: 24 }, (_, i) => {
 	const period = i >= 12 ? 'PM' : 'AM';
 	const displayHour = i === 0 ? 12 : i > 12 ? i - 12 : i;
 	return { value: i, label: `${displayHour}:00 ${period}` };
 });
 
-// Minute options
 const minuteOptions = Array.from({ length: 60 }, (_, i) => ({
 	value: i,
 	label: i.toString().padStart(2, '0')
 }));
 
-// Days of month (1-31)
 const daysOfMonth = Array.from({ length: 31 }, (_, i) => i + 1);
 
-/**
- * Build cron expression from internal state.
- */
 const cronExpression = $derived.by(() => {
 	switch (frequency) {
 		case 'minutes':
@@ -101,14 +79,10 @@ const cronExpression = $derived.by(() => {
 	}
 });
 
-// Update the bound value when expression changes
 $effect(() => {
 	value = cronExpression;
 });
 
-/**
- * Parse incoming value to set internal state (best effort).
- */
 function parseIncomingValue(val: string): void {
 	const parts = val.trim().split(/\s+/);
 	if (parts.length !== 5) {
@@ -125,8 +99,7 @@ function parseIncomingValue(val: string): void {
 		string
 	];
 
-	// Try to detect pattern
-	// Every N minutes: */N * * * *
+	// Pattern: */N * * * * (every N minutes)
 	const minuteMatch = minute.match(/^\*\/(\d+)$/);
 	if (minuteMatch && hour === '*' && dayOfMonth === '*' && month === '*' && dayOfWeek === '*') {
 		frequency = 'minutes';
@@ -134,7 +107,7 @@ function parseIncomingValue(val: string): void {
 		return;
 	}
 
-	// Hourly: N * * * *
+	// Pattern: N * * * * (hourly)
 	if (
 		/^\d+$/.test(minute) &&
 		hour === '*' &&
@@ -147,7 +120,7 @@ function parseIncomingValue(val: string): void {
 		return;
 	}
 
-	// Daily: N N * * *
+	// Pattern: N N * * * (daily)
 	if (
 		/^\d+$/.test(minute) &&
 		/^\d+$/.test(hour) &&
@@ -161,7 +134,7 @@ function parseIncomingValue(val: string): void {
 		return;
 	}
 
-	// Weekly: N N * * days
+	// Pattern: N N * * days (weekly)
 	if (
 		/^\d+$/.test(minute) &&
 		/^\d+$/.test(hour) &&
@@ -179,7 +152,7 @@ function parseIncomingValue(val: string): void {
 		return;
 	}
 
-	// Monthly: N N days * *
+	// Pattern: N N days * * (monthly)
 	if (
 		/^\d+$/.test(minute) &&
 		/^\d+$/.test(hour) &&
@@ -197,25 +170,14 @@ function parseIncomingValue(val: string): void {
 		return;
 	}
 
-	// Fallback to custom
 	frequency = 'custom';
 	customExpression = val;
 }
 
-// Parse initial value on mount
-$effect(() => {
-	// Only parse on initial mount, not on every value change
-	// This is a one-time initialization
-});
-
-// Run once on mount to parse initial value
 if (value) {
 	parseIncomingValue(value);
 }
 
-/**
- * Validate cron expression and get next runs.
- */
 const validation = $derived.by(() => {
 	try {
 		const cron = new Cron(cronExpression, { timezone });
@@ -235,9 +197,6 @@ const validation = $derived.by(() => {
 	}
 });
 
-/**
- * Get human-readable description of the cron expression.
- */
 const description = $derived.by(() => {
 	switch (frequency) {
 		case 'minutes':
@@ -274,20 +233,13 @@ const description = $derived.by(() => {
 	}
 });
 
-/**
- * Get ordinal suffix for a number (1st, 2nd, 3rd, etc.).
- */
 function getOrdinal(n: number): string {
 	const s = ['th', 'st', 'nd', 'rd'];
 	const v = n % 100;
 	return n + (s[(v - 20) % 10] || s[v] || s[0])!;
 }
 
-/**
- * Basic cron description for custom expressions (from ScheduleCard).
- */
 function getCronDescription(cron: string): string {
-	// Simple patterns
 	if (cron === '*/15 * * * *') return 'Every 15 minutes';
 	if (cron === '*/5 * * * *') return 'Every 5 minutes';
 	if (cron === '*/30 * * * *') return 'Every 30 minutes';
@@ -300,7 +252,6 @@ function getCronDescription(cron: string): string {
 	if (cron === '0 3 * * *') return 'Daily at 3:00 AM';
 	if (cron === '0 4 * * *') return 'Daily at 4:00 AM';
 
-	// Parse daily patterns like "0 5 * * *" -> "Daily at 5:00 AM"
 	const dailyMatch = cron.match(/^(\d+) (\d+) \* \* \*$/);
 	if (dailyMatch) {
 		const [, minute, hour] = dailyMatch;
@@ -312,18 +263,14 @@ function getCronDescription(cron: string): string {
 		return `Daily at ${displayHour}:${displayMin} ${period}`;
 	}
 
-	// Parse every N minutes patterns
 	const minuteMatch = cron.match(/^\*\/(\d+) \* \* \* \*$/);
 	if (minuteMatch) {
 		return `Every ${minuteMatch[1]} minutes`;
 	}
 
-	return cron; // Fallback to raw expression
+	return cron;
 }
 
-/**
- * Format date for next run display.
- */
 function formatNextRun(date: Date): string {
 	const now = new Date();
 	const diffMs = date.getTime() - now.getTime();
@@ -341,9 +288,6 @@ function formatNextRun(date: Date): string {
 	return date.toLocaleDateString();
 }
 
-/**
- * Toggle a day in a selection array.
- */
 function toggleDay(day: number, arr: number[]): number[] {
 	if (arr.includes(day)) {
 		return arr.filter((d) => d !== day);
@@ -351,21 +295,14 @@ function toggleDay(day: number, arr: number[]): number[] {
 	return [...arr, day];
 }
 
-/**
- * Handle day of week toggle.
- */
 function toggleDayOfWeek(day: number): void {
 	selectedDaysOfWeek = toggleDay(day, selectedDaysOfWeek);
 }
 
-/**
- * Handle day of month toggle.
- */
 function toggleDayOfMonth(day: number): void {
 	selectedDaysOfMonth = toggleDay(day, selectedDaysOfMonth);
 }
 
-// Select styling (matching the codebase pattern)
 const selectClass =
 	'flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 md:text-sm';
 </script>

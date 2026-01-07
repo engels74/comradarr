@@ -1,9 +1,4 @@
 <script lang="ts">
-/**
- * Library completion visualization panel.
- * Shows per-connector completion percentages with trend sparklines.
- */
-
 import LibraryBigIcon from '@lucide/svelte/icons/library-big';
 import MinusIcon from '@lucide/svelte/icons/minus';
 import TrendingDownIcon from '@lucide/svelte/icons/trending-down';
@@ -19,7 +14,6 @@ interface Props {
 
 let { completionData, class: className = '' }: Props = $props();
 
-// Connector type colors (matching existing patterns from ConnectionStatusPanel)
 const typeColors: Record<string, { bg: string; text: string; border: string }> = {
 	sonarr: {
 		bg: 'bg-blue-500',
@@ -38,9 +32,6 @@ const typeColors: Record<string, { bg: string; text: string; border: string }> =
 	}
 };
 
-/**
- * Get color class for completion percentage.
- */
 function getCompletionColor(percentage: number): string {
 	if (percentage >= 90) return 'text-green-600 dark:text-green-400';
 	if (percentage >= 70) return 'text-yellow-600 dark:text-yellow-400';
@@ -48,9 +39,6 @@ function getCompletionColor(percentage: number): string {
 	return 'text-red-600 dark:text-red-400';
 }
 
-/**
- * Get progress bar color class.
- */
 function getProgressBarColor(percentage: number): string {
 	if (percentage >= 90) return 'bg-green-500';
 	if (percentage >= 70) return 'bg-yellow-500';
@@ -58,9 +46,6 @@ function getProgressBarColor(percentage: number): string {
 	return 'bg-red-500';
 }
 
-/**
- * Generate SVG path for sparkline.
- */
 function generateSparklinePath(
 	data: SerializedCompletionDataPoint[],
 	width: number,
@@ -72,13 +57,11 @@ function generateSparklinePath(
 	const chartWidth = width - padding * 2;
 	const chartHeight = height - padding * 2;
 
-	// Find min/max for scaling
 	const values = data.map((d) => d.completionPercentage);
 	const min = Math.min(...values);
 	const max = Math.max(...values);
-	const range = max - min || 1; // Avoid division by zero
+	const range = max - min || 1;
 
-	// Generate points
 	const points = data.map((d, i) => {
 		const x = padding + (i / (data.length - 1)) * chartWidth;
 		const y = padding + chartHeight - ((d.completionPercentage - min) / range) * chartHeight;
@@ -88,9 +71,6 @@ function generateSparklinePath(
 	return `M ${points.join(' L ')}`;
 }
 
-/**
- * Get trend icon component and color.
- */
 function getTrendInfo(delta: number): {
 	icon: typeof TrendingUpIcon;
 	color: string;
@@ -105,16 +85,10 @@ function getTrendInfo(delta: number): {
 	return { icon: MinusIcon, color: 'text-muted-foreground', label: 'No change' };
 }
 
-/**
- * Format connector type for display.
- */
 function formatType(type: string): string {
 	return type.charAt(0).toUpperCase() + type.slice(1);
 }
 
-/**
- * Get colors for a connector type (with fallback).
- */
 function getTypeColors(type: string): { bg: string; text: string; border: string } {
 	return typeColors[type] ?? typeColors.sonarr!;
 }

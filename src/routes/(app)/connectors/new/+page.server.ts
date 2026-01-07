@@ -35,7 +35,6 @@ export const actions: Actions = {
 			type: formData.get('type') || undefined // Optional type for manual override
 		};
 
-		// Validate URL and API key (type is optional for auto-detection)
 		const result = v.safeParse(TestConnectionSchema, data);
 		if (!result.success) {
 			const errors = result.issues.map((issue) => issue.message);
@@ -49,11 +48,6 @@ export const actions: Actions = {
 
 		const config = result.output;
 
-		// Detect connector type via /api/v3/system/status
-		// This endpoint requires authentication and validates:
-		// - URL is reachable
-		// - API key is valid
-		// - Application responds with valid data
 		const detectionResult = await detectConnectorType(config.url, config.apiKey);
 
 		if (!detectionResult.success) {
@@ -103,7 +97,6 @@ export const actions: Actions = {
 			apiKey: formData.get('apiKey')
 		};
 
-		// Validate form data
 		const result = v.safeParse(ConnectorSchema, data);
 		if (!result.success) {
 			const errors = result.issues.map((issue) => issue.message);
@@ -117,7 +110,6 @@ export const actions: Actions = {
 
 		const config = result.output;
 
-		// Check for duplicate connector name
 		const nameExists = await connectorNameExists(config.name);
 		if (nameExists) {
 			logger.warn('Connector creation failed - duplicate name', {
@@ -132,7 +124,6 @@ export const actions: Actions = {
 			});
 		}
 
-		// Create the connector (API key is encrypted automatically)
 		try {
 			await createConnector({
 				type: config.type as ConnectorType,
@@ -162,7 +153,6 @@ export const actions: Actions = {
 			});
 		}
 
-		// Return success with redirect target (client will handle navigation after showing toast)
 		return {
 			success: true,
 			message: 'Connector created successfully',

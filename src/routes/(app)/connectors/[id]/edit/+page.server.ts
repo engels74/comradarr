@@ -27,9 +27,6 @@ import type { Actions, PageServerLoad } from './$types';
 
 const logger = createLogger('connectors');
 
-/**
- * Creates an appropriate client for the connector type.
- */
 function createClient(
 	connector: Connector,
 	apiKey: string
@@ -51,9 +48,6 @@ function createClient(
 	}
 }
 
-/**
- * Returns a user-friendly error message based on the error type.
- */
 function getErrorMessage(err: unknown): string {
 	if (err instanceof AuthenticationError) {
 		return 'Invalid API key. Check your API key in the *arr application settings.';
@@ -127,7 +121,6 @@ export const actions: Actions = {
 			enabled: formData.get('enabled') === 'true'
 		};
 
-		// Use provided API key if given, otherwise use existing
 		let apiKey: string;
 		if (data.apiKey) {
 			apiKey = data.apiKey;
@@ -145,7 +138,6 @@ export const actions: Actions = {
 			}
 		}
 
-		// Create a temporary connector object with the new URL for the client
 		const testConnector = {
 			...connector,
 			url: data.url.replace(/\/+$/, '') // Normalize URL
@@ -229,7 +221,6 @@ export const actions: Actions = {
 			enabled: formData.get('enabled') === 'true'
 		};
 
-		// Validate form data
 		const result = v.safeParse(ConnectorUpdateSchema, data);
 		if (!result.success) {
 			const errors = result.issues.map((issue) => issue.message);
@@ -244,7 +235,6 @@ export const actions: Actions = {
 
 		const config = result.output;
 
-		// Check for duplicate connector name (excluding self)
 		const nameExists = await connectorNameExists(config.name, id);
 		if (nameExists) {
 			logger.warn('Connector update failed - duplicate name', {
@@ -261,9 +251,7 @@ export const actions: Actions = {
 			});
 		}
 
-		// Update the connector
 		try {
-			// Build update object - only include optional fields if they are defined
 			const updateData: Parameters<typeof updateConnector>[1] = {
 				name: config.name,
 				url: config.url
@@ -298,7 +286,6 @@ export const actions: Actions = {
 			});
 		}
 
-		// Return success with redirect target (client will handle navigation after showing toast)
 		return {
 			success: true,
 			message: 'Connector updated successfully',

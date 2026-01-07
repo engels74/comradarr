@@ -34,7 +34,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
 		const body = await request.json().catch(() => ({}));
 		description = body.description;
 	} catch {
-		// Body is optional
+		// Ignore - .catch() above already provides fallback
 	}
 
 	const result = await createBackup({

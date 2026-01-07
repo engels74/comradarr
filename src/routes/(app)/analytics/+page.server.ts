@@ -32,16 +32,13 @@ function serializeTimeSeries(data: Array<{ timestamp: Date; value: number }>) {
 }
 
 export const load: PageServerLoad = async ({ url, depends }) => {
-	// Register dependency for selective invalidation
 	depends('app:analytics');
 
-	// Parse and validate period from URL
 	let period = (url.searchParams.get('period') as TimePeriod) || '7d';
 	if (!['24h', '7d', '30d'].includes(period)) {
 		period = '7d';
 	}
 
-	// Fetch all analytics data in parallel
 	const [
 		discoveryMetrics,
 		searchMetrics,
@@ -62,7 +59,6 @@ export const load: PageServerLoad = async ({ url, depends }) => {
 		getAnalyticsSummary(period)
 	]);
 
-	// Serialize discovery metrics
 	const serializedDiscoveryMetrics = discoveryMetrics.map((m) => ({
 		connectorId: m.connectorId,
 		connectorName: m.connectorName,
@@ -71,7 +67,6 @@ export const load: PageServerLoad = async ({ url, depends }) => {
 		upgradesDiscovered: serializeTimeSeries(m.upgradesDiscovered)
 	}));
 
-	// Serialize search metrics
 	const serializedSearchMetrics = searchMetrics.map((m) => ({
 		connectorId: m.connectorId,
 		connectorName: m.connectorName,
@@ -82,7 +77,6 @@ export const load: PageServerLoad = async ({ url, depends }) => {
 		searchesNoResults: serializeTimeSeries(m.searchesNoResults)
 	}));
 
-	// Serialize queue metrics
 	const serializedQueueMetrics = queueMetrics.map((m) => ({
 		connectorId: m.connectorId,
 		connectorName: m.connectorName,
@@ -91,7 +85,6 @@ export const load: PageServerLoad = async ({ url, depends }) => {
 		peakQueueDepth: serializeTimeSeries(m.peakQueueDepth)
 	}));
 
-	// Serialize most searched items
 	const serializedMostSearched = mostSearched.map((item) => ({
 		...item,
 		lastSearched: item.lastSearched.toISOString()

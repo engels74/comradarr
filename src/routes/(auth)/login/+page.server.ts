@@ -23,11 +23,7 @@ const SESSION_COOKIE_NAME = 'session';
 /** Session duration in seconds (7 days) */
 const SESSION_MAX_AGE = 7 * 24 * 60 * 60;
 
-/**
- * Load function - redirects authenticated users to dashboard.
- */
 export const load: PageServerLoad = async ({ locals }) => {
-	// If already authenticated, redirect to dashboard
 	if (locals.user) {
 		redirect(303, '/');
 	}
@@ -36,15 +32,6 @@ export const load: PageServerLoad = async ({ locals }) => {
 };
 
 export const actions: Actions = {
-	/**
-	 * Default login action.
-	 *
-	 * 1. Validates form data
-	 * 2. Looks up user by username
-	 * 3. Checks account lockout
-	 * 4. Verifies password
-	 * 5. Creates session on success
-	 */
 	default: async ({ request, cookies, getClientAddress }) => {
 		const formData = await request.formData();
 		const data = {
@@ -52,7 +39,6 @@ export const actions: Actions = {
 			password: formData.get('password')
 		};
 
-		// Validate form data
 		const result = v.safeParse(LoginSchema, data);
 		if (!result.success) {
 			const errors = result.issues.map((issue) => issue.message);
@@ -64,7 +50,6 @@ export const actions: Actions = {
 
 		const { username, password } = result.output;
 
-		// Look up user by username
 		const user = await getUserByUsername(username);
 
 		// Use generic error message to prevent username enumeration
@@ -75,7 +60,6 @@ export const actions: Actions = {
 			});
 		}
 
-		// Check if account is locked (with auto-reset for expired lockouts - Req 35.3, 35.4)
 		const isLocked = await checkAndResetLockout(user);
 		if (isLocked) {
 			const remainingSeconds = getRemainingLockoutTime(user);
@@ -86,13 +70,10 @@ export const actions: Actions = {
 			});
 		}
 
-		// Verify password
 		const isValid = await verifyPassword(user.passwordHash, password);
 		if (!isValid) {
-			// Record failed login attempt (may trigger lockout - Req 35.1, 35.2)
 			const loginResult = await recordFailedLogin(user.id);
 
-			// If account was just locked, inform the user
 			if (loginResult.isLocked) {
 				return fail(400, {
 					error: `Too many failed attempts. Account is locked for ${loginResult.lockoutMinutes} minutes.`,
@@ -100,7 +81,6 @@ export const actions: Actions = {
 				});
 			}
 
-			// Show remaining attempts warning
 			const remainingAttempts = MAX_FAILED_ATTEMPTS - loginResult.attemptCount;
 			const warningMessage =
 				remainingAttempts <= 2
@@ -113,15 +93,12 @@ export const actions: Actions = {
 			});
 		}
 
-		// Record successful login (resets failed attempts counter)
 		await recordSuccessfulLogin(user.id);
 
-		// Create session
 		const userAgent = request.headers.get('user-agent') ?? undefined;
 		const ipAddress = getClientAddress();
 		const sessionId = await createSession(user.id, userAgent, ipAddress);
 
-		// Set session cookie
 		cookies.set(SESSION_COOKIE_NAME, sessionId, {
 			path: '/',
 			httpOnly: true,
@@ -130,7 +107,6 @@ export const actions: Actions = {
 			maxAge: SESSION_MAX_AGE
 		});
 
-		// Redirect to dashboard
 		redirect(303, '/');
 	}
 };
