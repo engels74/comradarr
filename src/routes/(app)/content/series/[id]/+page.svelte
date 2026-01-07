@@ -1,12 +1,6 @@
 <!--
   Series detail page.
-
-  Requirement 17.3:
-  - Display series metadata
-  - Current quality status per episode
-  - Gap and upgrade status
-  - Search history
-
+  Displays series metadata, quality status per episode, gap/upgrade status, and search history.
   Episodes are lazy-loaded when seasons are expanded.
 -->
 <script lang="ts">

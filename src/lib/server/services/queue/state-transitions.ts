@@ -39,7 +39,7 @@ export { calculateNextEligibleTime, shouldMarkExhausted } from './backoff';
  * 3. If max attempts reached: transitions to 'exhausted'
  * 4. Otherwise: calculates next eligible time and transitions to 'cooldown'
  * 5. If wasSeasonPackSearch is true and failureCategory is 'no_results',
- *    marks all episodes in the same season for EpisodeSearch fallback (Requirement 6.5)
+ *    marks all episodes in the same season for EpisodeSearch fallback
  *
  * @param input - The search registry ID, failure category, and optional season pack flag
  * @returns State transition result with new state and timing info
@@ -111,7 +111,7 @@ export async function markSearchFailed(
 		const newAttemptCount = entry.attemptCount + 1;
 		const now = new Date();
 
-		// Requirement 6.5: If season pack search failed with no_results,
+		// If season pack search failed with no_results,
 		// mark all episodes in the season for EpisodeSearch fallback
 		if (
 			wasSeasonPackSearch === true &&

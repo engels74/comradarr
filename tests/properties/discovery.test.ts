@@ -5,12 +5,7 @@
  * database access for proper property-based testing:
  *
  * - tests/integration/gap-discovery.test.ts
- *   - Property 2: Gap Discovery Correctness (Requirements 3.1, 3.3)
- *   - Property 4: Gap Registry Cleanup on Success (Requirement 3.4)
- *
  * - tests/integration/upgrade-discovery.test.ts
- *   - Property 3: Upgrade Discovery Correctness (Requirements 4.1, 4.3)
- *   - Property 4: Upgrade Registry Cleanup on Success (Requirement 4.4)
  *
  * The property tests use fast-check with 50 iterations per property and verify:
  * - Gap discovery returns exactly items where monitored=true AND hasFile=false

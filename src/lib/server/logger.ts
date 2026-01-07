@@ -111,10 +111,7 @@ export function getCurrentLogLevel(): LogLevel {
 }
 
 /**
- * Sets the log level (for runtime changes).
- * This allows changing the log level without restart (Requirement 31.5 - task 47.3).
- *
- * @param level - New log level to set
+ * Sets the log level for runtime changes without restart.
  */
 export function setLogLevel(level: LogLevel): void {
 	cachedLogLevel = level;
@@ -132,10 +129,6 @@ export function clearLogLevelCache(): void {
  * Initializes the log level from database settings.
  * Should be called once at application startup.
  * Falls back to environment variable or default if database is unavailable.
- *
- * Requirement 31.5: Log level can be changed at runtime
- *
- * @returns Promise that resolves when initialization is complete
  */
 export async function initializeLogLevel(): Promise<void> {
 	try {
@@ -240,7 +233,6 @@ export class Logger {
 			return;
 		}
 
-		// Auto-include correlation ID from async context if not provided (Requirement 31.2)
 		const correlationId = (context?.correlationId as string | undefined) ?? getCorrelationId();
 
 		const timestamp = new Date().toISOString();
@@ -319,19 +311,12 @@ export class Logger {
 	}
 
 	/**
-	 * Logs an HTTP request.
-	 * - Logs at debug level with method, URL, and headers (redacted)
-	 * - Includes request body only at trace level (Requirement 31.4)
-	 * - Auto-includes correlation ID from async context if not provided (Requirement 31.2)
-	 *
-	 * @param method - HTTP method (GET, POST, etc.)
-	 * @param url - Request URL
-	 * @param options - Optional headers, body, and correlation ID
+	 * Logs an HTTP request at debug level with method, URL, and headers (redacted).
+	 * Request body is only included at trace level for security.
 	 */
 	logRequest(method: string, url: string, options?: RequestLogOptions): void {
 		const currentLevel = getCurrentLogLevel();
 
-		// Don't log at all if below debug level
 		if (!shouldLog('debug', currentLevel)) {
 			return;
 		}
@@ -341,7 +326,6 @@ export class Logger {
 			url
 		};
 
-		// Auto-include correlation ID from async context if not provided (Requirement 31.2)
 		const correlationId = options?.correlationId ?? getCorrelationId();
 		if (correlationId) {
 			context.correlationId = correlationId;
@@ -351,7 +335,7 @@ export class Logger {
 			context.headers = redactHeaders(options.headers);
 		}
 
-		// Include body only at trace level (Requirement 31.4)
+		// Body only at trace level to avoid logging sensitive data
 		if (options?.body !== undefined && shouldLog('trace', currentLevel)) {
 			context.body = options.body;
 		}
@@ -360,19 +344,12 @@ export class Logger {
 	}
 
 	/**
-	 * Logs an HTTP response.
-	 * - Logs at debug level with status code, URL, and duration
-	 * - Includes response body only at trace level (Requirement 31.4)
-	 * - Auto-includes correlation ID from async context if not provided (Requirement 31.2)
-	 *
-	 * @param statusCode - HTTP status code
-	 * @param url - Request URL
-	 * @param options - Optional headers, body, duration, and correlation ID
+	 * Logs an HTTP response at debug level with status code, URL, and duration.
+	 * Response body is only included at trace level for security.
 	 */
 	logResponse(statusCode: number, url: string, options?: ResponseLogOptions): void {
 		const currentLevel = getCurrentLogLevel();
 
-		// Don't log at all if below debug level
 		if (!shouldLog('debug', currentLevel)) {
 			return;
 		}
@@ -382,7 +359,6 @@ export class Logger {
 			url
 		};
 
-		// Auto-include correlation ID from async context if not provided (Requirement 31.2)
 		const correlationId = options?.correlationId ?? getCorrelationId();
 		if (correlationId) {
 			context.correlationId = correlationId;
@@ -396,7 +372,7 @@ export class Logger {
 			context.headers = options.headers;
 		}
 
-		// Include body only at trace level (Requirement 31.4)
+		// Body only at trace level to avoid logging sensitive data
 		if (options?.body !== undefined && shouldLog('trace', currentLevel)) {
 			context.body = options.body;
 		}

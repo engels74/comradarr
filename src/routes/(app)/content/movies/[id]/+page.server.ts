@@ -1,8 +1,6 @@
 /**
  * Movie detail page server load.
- *
- * Requirement 17.4: Display metadata, current quality,
- * search history, and lastSearchTime.
+ * Loads movie metadata, quality info, and search history.
  */
 
 import { error } from '@sveltejs/kit';

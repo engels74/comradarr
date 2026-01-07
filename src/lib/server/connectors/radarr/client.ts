@@ -194,7 +194,7 @@ export class RadarrClient extends BaseArrClient {
 	 * Fetch all paginated movies from a wanted endpoint
 	 *
 	 * Handles pagination automatically, fetching all pages until complete.
-	 * Uses pageSize of 1000 per Requirement 2.5 (pagination batches).
+	 * Uses pageSize of 1000 for efficient pagination batches.
 	 *
 	 * @param endpoint - The wanted endpoint ('wanted/missing' or 'wanted/cutoff')
 	 * @param options - Pagination and filter options
@@ -234,8 +234,7 @@ export class RadarrClient extends BaseArrClient {
 
 			allMovies.push(...result.data.records);
 
-			// Check if we've fetched all records (Requirement 29.2)
-			// Continue until page * pageSize >= totalRecords
+			// Continue until we've fetched all records
 			if (page * pageSize >= result.data.totalRecords) {
 				break;
 			}
@@ -309,11 +308,10 @@ export class RadarrClient extends BaseArrClient {
 	 * Sends a MoviesSearch command to Radarr to search for the specified movies.
 	 * The command is executed asynchronously - use getCommandStatus() to poll for completion.
 	 *
-	 * @param movieIds - Array of movie IDs to search for (max 10 per batch per Requirement 29.5)
+	 * @param movieIds - Array of movie IDs to search for
 	 * @returns Command response with initial execution status
 	 * @throws {ArrClientError} On API error (network, auth, rate limit, etc.)
 	 * @throws {Error} If response parsing fails
-
 	 *
 	 * @example
 	 * ```typescript

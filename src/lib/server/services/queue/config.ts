@@ -87,7 +87,7 @@ export const PRIORITY_CONSTANTS = {
 export type PriorityConstantsType = typeof PRIORITY_CONSTANTS;
 
 // =============================================================================
-// Queue Service Configuration (Requirement 5.2)
+// Queue Service Configuration
 // =============================================================================
 
 /**
@@ -125,7 +125,7 @@ export const QUEUE_CONFIG = {
 export type QueueConfigType = typeof QUEUE_CONFIG;
 
 // =============================================================================
-// State Transition Configuration (Requirement 5.5, 5.6)
+// State Transition Configuration
 // =============================================================================
 
 /**
@@ -173,7 +173,7 @@ export const STATE_TRANSITION_CONFIG = {
 export type StateTransitionConfigType = typeof STATE_TRANSITION_CONFIG;
 
 // =============================================================================
-// Episode Batching Configuration (Requirement 6.1, 6.2, 6.3)
+// Episode Batching Configuration
 // =============================================================================
 
 /**
@@ -222,7 +222,7 @@ export const BATCHING_CONFIG = {
 export type BatchingConfigType = typeof BATCHING_CONFIG;
 
 // =============================================================================
-// Runtime Configuration Loader (Requirement 21.4)
+// Runtime Configuration Loader
 // =============================================================================
 
 /**

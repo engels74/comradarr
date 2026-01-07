@@ -193,7 +193,7 @@ export function clearSenderCache(): void {
 }
 
 // =============================================================================
-// Dispatcher Exports (Task 36.3)
+// Dispatcher Exports
 // =============================================================================
 
 export {
@@ -205,7 +205,7 @@ export {
 } from './dispatcher';
 
 // =============================================================================
-// Template Exports (Task 36.3)
+// Template Exports
 // =============================================================================
 
 export {
@@ -223,7 +223,7 @@ export {
 } from './templates';
 
 // =============================================================================
-// Batching Exports (Task 36.4, Requirement 9.3)
+// Batching Exports
 // =============================================================================
 
 export { type AggregatedPayloadMetadata, buildAggregatePayload } from './aggregators';
@@ -237,7 +237,7 @@ export {
 } from './batcher';
 
 // =============================================================================
-// Quiet Hours Exports (Task 36.5, Requirement 9.4)
+// Quiet Hours Exports
 // =============================================================================
 
 export {

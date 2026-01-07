@@ -4,18 +4,14 @@
  * Supports customizable HTTP method, headers, and HMAC signature generation
  * for secure webhook verification.
  *
- * Requirement 9.5: The receiving webhook should use `request.text()` for raw body
- * access when verifying the signature (NOT request.json()).
- *
  * Signature Verification on Receiver Side:
- * 1. Get raw body: `const rawBody = await request.text()`
+ * 1. Get raw body: `const rawBody = await request.text()` (NOT request.json())
  * 2. Get timestamp: `const timestamp = request.headers.get('X-Comradarr-Timestamp')`
  * 3. Compute expected signature: `HMAC-SHA256(timestamp + '.' + rawBody, signingSecret)`
  * 4. Compare with header: `request.headers.get('X-Comradarr-Signature')`
  * 5. Optionally verify timestamp is recent (within 5 minutes)
  *
  * @module services/notifications/channels/webhook
-
  */
 
 import type { NotificationChannel } from '$lib/server/db/schema';

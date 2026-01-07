@@ -648,7 +648,7 @@ describe('Property 3: Upgrade Discovery Correctness - Property-Based Tests', () 
 });
 
 // ============================================================================
-// Registry Cleanup on Success Tests (Requirement 4.4)
+// Registry Cleanup on Success Tests
 // ============================================================================
 
 describe('Upgrade Registry Cleanup on Success', () => {

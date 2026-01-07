@@ -1,13 +1,7 @@
 /**
  * Property-based tests for exponential backoff calculation.
  *
- * Validates requirements:
- * - 5.5: Calculate the next eligible search time using exponential backoff
- *
- * Property 7: Exponential Backoff Calculation
- * "For any search failure, the next eligible search time should be calculated
- * using exponential backoff where the delay increases with each attempt.
- * Specifically, delay(n+1) >= delay(n) * backoffMultiplier for all attempts n < maxAttempts."
+ * Verifies that backoff delay increases with each attempt until reaching maxDelay.
  */
 
 import * as fc from 'fast-check';
@@ -63,7 +57,7 @@ const retryConfigWithJitterArbitrary: fc.Arbitrary<Required<RetryConfig>> = fc
  */
 const attemptArbitrary = fc.integer({ min: 0, max: 20 });
 
-describe('Exponential Backoff Calculation (Requirement 5.5)', () => {
+describe('Exponential Backoff Calculation', () => {
 	describe('Property: Exponential Growth', () => {
 		it('delay increases by at least multiplier factor for consecutive attempts before reaching maxDelay (without jitter)', () => {
 			fc.assert(

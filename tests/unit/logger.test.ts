@@ -59,7 +59,7 @@ describe('Logger', () => {
 		});
 	});
 
-	describe('log entry structure (Requirement 31.1)', () => {
+	describe('log entry structure', () => {
 		it('should output valid JSON with required fields', () => {
 			setLogLevel('info');
 			const logger = createLogger('test');
@@ -431,7 +431,7 @@ describe('HTTP logging methods', () => {
 			expect(entry.body).toBeUndefined();
 		});
 
-		it('should include body at trace level (Requirement 31.4)', () => {
+		it('should include body at trace level', () => {
 			setLogLevel('trace');
 			const logger = createLogger('http');
 
@@ -519,7 +519,7 @@ describe('HTTP logging methods', () => {
 			expect(entry.body).toBeUndefined();
 		});
 
-		it('should include body at trace level (Requirement 31.4)', () => {
+		it('should include body at trace level', () => {
 			setLogLevel('trace');
 			const logger = createLogger('http');
 
@@ -553,7 +553,7 @@ describe('HTTP logging methods', () => {
 	});
 });
 
-describe('Auto correlation ID from async context (Requirement 31.2)', () => {
+describe('Auto correlation ID from async context', () => {
 	let consoleSpy: ReturnType<typeof vi.spyOn>;
 
 	beforeEach(() => {
@@ -738,7 +738,7 @@ describe('Auto correlation ID from async context (Requirement 31.2)', () => {
 	});
 });
 
-describe('initializeLogLevel (Requirement 31.5)', () => {
+describe('initializeLogLevel', () => {
 	let originalEnv: string | undefined;
 
 	beforeEach(() => {
@@ -802,7 +802,7 @@ describe('initializeLogLevel (Requirement 31.5)', () => {
 	});
 });
 
-describe('Runtime log level change integration (Requirement 31.5)', () => {
+describe('Runtime log level change integration', () => {
 	let consoleSpy: ReturnType<typeof vi.spyOn>;
 	let originalEnv: string | undefined;
 

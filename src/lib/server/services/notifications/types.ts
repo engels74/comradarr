@@ -12,7 +12,7 @@ import type { NotificationEventType } from '$lib/server/db/queries/notifications
 // =============================================================================
 
 /**
- * Supported notification channel types for Task 36.2.
+ * Supported notification channel types.
  */
 export type ImplementedChannelType = 'discord' | 'telegram' | 'slack' | 'email' | 'webhook';
 

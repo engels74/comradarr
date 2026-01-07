@@ -540,12 +540,12 @@ describe('Schema exports', () => {
 });
 
 // =============================================================================
-// Lenient Parser Tests (Requirement 27.8)
+// Lenient Parser Tests
 // =============================================================================
 
 describe('parsePaginatedMoviesLenient', () => {
 	describe('valid inputs with mixed records', () => {
-		it('should parse valid records and skip malformed ones (Req 27.8)', () => {
+		it('should parse valid records and skip malformed ones', () => {
 			const input = {
 				page: 1,
 				pageSize: 10,

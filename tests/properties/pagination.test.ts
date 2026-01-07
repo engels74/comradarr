@@ -138,7 +138,7 @@ describe('Pagination Utilities - Property Tests', () => {
 		});
 	});
 
-	describe('Requirement 29.2: Correct Termination', () => {
+	describe('Correct Termination', () => {
 		it('stops fetching when page * pageSize >= totalRecords', async () => {
 			await fc.assert(
 				fc.asyncProperty(
@@ -231,7 +231,7 @@ describe('Pagination Utilities - Property Tests', () => {
 		});
 	});
 
-	describe('Requirement 29.1: Default Page Size', () => {
+	describe('Default Page Size', () => {
 		it('uses default pageSize of 1000 when not specified', async () => {
 			let capturedPageSize: number | undefined;
 
@@ -250,7 +250,7 @@ describe('Pagination Utilities - Property Tests', () => {
 			await collectAllPages(mockFetcher);
 
 			expect(capturedPageSize).toBe(DEFAULT_PAGE_SIZE);
-			expect(capturedPageSize).toBe(1000); // Explicit check per Requirement 29.1
+			expect(capturedPageSize).toBe(1000); // Default page size
 		});
 
 		it('allows custom pageSize override', async () => {

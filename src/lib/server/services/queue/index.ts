@@ -41,7 +41,6 @@ export type {
 	BatchingDecision,
 	BatchingReason,
 	EpisodeBatch,
-	// Episode grouping types (Requirements 6.4, 29.4, 29.5)
 	EpisodeForGrouping,
 	EpisodeSearchCommand,
 	MovieBatch,
@@ -55,7 +54,6 @@ export {
 	createEpisodeBatches,
 	createMovieBatches,
 	determineBatchingDecision,
-	// Episode grouping functions (Requirements 6.4, 29.4, 29.5)
 	groupEpisodesBySeries,
 	isSeasonFullyAired
 } from './episode-batcher';
@@ -72,9 +70,9 @@ export {
 	pauseQueue,
 	resumeQueue
 } from './queue-service';
-// Search dispatcher - Types (Requirement 7.3)
+// Search dispatcher - Types
 export type { DispatchFailureReason, DispatchOptions, DispatchResult } from './search-dispatcher';
-// Search dispatcher - Functions (Requirement 7.3)
+// Search dispatcher - Functions
 export { dispatchBatch, dispatchSearch } from './search-dispatcher';
 // State transitions (database operations)
 export {

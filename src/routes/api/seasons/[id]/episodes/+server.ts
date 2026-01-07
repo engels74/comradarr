@@ -11,7 +11,6 @@ import { getSeasonEpisodes } from '$lib/server/db/queries/content';
 import type { RequestHandler } from './$types';
 
 export const GET: RequestHandler = async ({ params, locals }) => {
-	// Require read scope for read operations (Requirement 34.2)
 	requireScope(locals, 'read');
 
 	const seasonId = Number(params.id);

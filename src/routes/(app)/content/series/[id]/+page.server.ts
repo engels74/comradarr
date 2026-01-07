@@ -1,8 +1,6 @@
 /**
  * Series detail page server load.
- *
- * Requirement 17.3: Display metadata, quality status per episode,
- * gap and upgrade status, and search history.
+ * Loads series metadata, quality status, gap/upgrade status, and search history.
  *
  * Uses lazy loading for episodes - only season summaries are loaded initially.
  * Episodes are fetched client-side when a season is expanded.

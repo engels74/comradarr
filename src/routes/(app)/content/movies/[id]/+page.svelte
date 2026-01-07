@@ -1,11 +1,6 @@
 <!--
   Movie detail page.
-
-  Requirement 17.4:
-  - Display movie metadata
-  - Current quality
-  - Search history
-  - lastSearchTime
+  Displays movie metadata, current quality, search history, and lastSearchTime.
 -->
 <script lang="ts">
 import { Badge } from '$lib/components/ui/badge';

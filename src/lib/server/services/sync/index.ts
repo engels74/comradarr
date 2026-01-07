@@ -4,7 +4,7 @@
  * @module services/sync
  */
 
-// Sync failure handling (Requirement 2.6)
+// Sync configuration
 export { SYNC_CONFIG, type SyncConfig } from './config';
 export { runFullReconciliation } from './full-reconciliation';
 // Re-export database-dependent functions

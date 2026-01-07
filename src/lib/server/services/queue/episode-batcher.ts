@@ -4,12 +4,11 @@
  * Determines whether to use SeasonSearch (season pack) or individual
  * EpisodeSearch commands based on season statistics and configurable thresholds.
  *
- * Decision rules (from Requirements 6.1, 6.2, 6.3):
+ * Decision rules:
  * - SeasonSearch: Season fully aired AND missing% >= threshold AND missingCount >= minCount
  * - EpisodeSearch: Season currently airing OR below threshold
  *
  * @module services/queue/episode-batcher
-
  */
 
 import { BATCHING_CONFIG, getBatchingConfig } from './config';
@@ -75,11 +74,11 @@ export interface BatchingConfig {
  * Reason codes for batching decisions.
  *
  * These codes indicate why a particular search command was chosen:
- * - `season_fully_aired_high_missing`: Requirement 6.1 - SeasonSearch
- * - `season_currently_airing`: Requirement 6.2 - EpisodeSearch
- * - `below_missing_threshold`: Requirement 6.3 - EpisodeSearch
+ * - `season_fully_aired_high_missing`: SeasonSearch for fully aired season with high missing %
+ * - `season_currently_airing`: EpisodeSearch for currently airing seasons
+ * - `below_missing_threshold`: EpisodeSearch when below missing threshold
  * - `no_missing_episodes`: Edge case - no search needed
- * - `season_pack_fallback`: Requirement 6.5 - EpisodeSearch fallback after season pack failure
+ * - `season_pack_fallback`: EpisodeSearch fallback after season pack failure
  */
 export type BatchingReason =
 	| 'season_fully_aired_high_missing'
@@ -106,7 +105,7 @@ export interface BatchingDecision {
 }
 
 // =============================================================================
-// Episode Grouping Types (Requirements 6.4, 29.4)
+// Episode Grouping Types
 // =============================================================================
 
 /**
@@ -244,10 +243,10 @@ const DEFAULT_BATCHING_CONFIG: BatchingConfig = {
  *
  * Decision logic (in order of priority):
  * 1. If no missing episodes → EpisodeSearch with 'no_missing_episodes' reason
- * 2. If season currently airing (nextAiring set) → EpisodeSearch (Requirement 6.2)
- * 3. If missing count < minimum threshold → EpisodeSearch (Requirement 6.3)
- * 4. If missing % < threshold → EpisodeSearch (Requirement 6.3)
- * 5. If season fully aired AND missing% >= threshold AND count >= min → SeasonSearch (Requirement 6.1)
+ * 2. If season currently airing (nextAiring set) → EpisodeSearch
+ * 3. If missing count < minimum threshold → EpisodeSearch
+ * 4. If missing % < threshold → EpisodeSearch
+ * 5. If season fully aired AND missing% >= threshold AND count >= min → SeasonSearch
  *
  * This function is pure (no side effects) and deterministic (same inputs = same output).
  *
@@ -302,7 +301,7 @@ export function determineBatchingDecision(
 		};
 	}
 
-	// Decision 2: Season currently airing (Requirement 6.2)
+	// Decision 2: Season currently airing
 	if (!fullyAired) {
 		return {
 			command: 'EpisodeSearch',
@@ -310,7 +309,7 @@ export function determineBatchingDecision(
 		};
 	}
 
-	// Decision 3 & 4: Below threshold (Requirement 6.3)
+	// Decision 3 & 4: Below threshold
 	// Check both missing count and missing percentage
 	if (
 		missingCount < seasonSearchMinMissingCount ||
@@ -322,7 +321,7 @@ export function determineBatchingDecision(
 		};
 	}
 
-	// Decision 5: Fully aired with high missing (Requirement 6.1)
+	// Decision 5: Fully aired with high missing
 	// At this point: fullyAired=true, missingCount>=min, missingPercent>=threshold
 	return {
 		command: 'SeasonSearch',
@@ -368,7 +367,7 @@ export function determineBatchingDecisionWithFallback(
 	seasonPackFailed: boolean,
 	config?: Partial<BatchingConfig>
 ): BatchingDecision {
-	// Requirement 6.5: If season pack search previously failed, fall back to individual episodes
+	// If season pack search previously failed, fall back to individual episodes
 	if (seasonPackFailed) {
 		return {
 			command: 'EpisodeSearch',
@@ -381,7 +380,7 @@ export function determineBatchingDecisionWithFallback(
 }
 
 // =============================================================================
-// Episode Grouping Functions (Requirements 6.4, 29.4, 29.5)
+// Episode Grouping Functions
 // =============================================================================
 
 /**
@@ -538,7 +537,7 @@ export function createMovieBatches(
 }
 
 // =============================================================================
-// Async versions using database configuration (Requirement 21.4)
+// Async versions using database configuration
 // =============================================================================
 
 /**

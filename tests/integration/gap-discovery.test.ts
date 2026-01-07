@@ -625,7 +625,7 @@ describe('Property 2: Gap Discovery Correctness - Property-Based Tests', () => {
 });
 
 // ============================================================================
-// Registry Cleanup on Success Tests (Requirement 3.4)
+// Registry Cleanup on Success Tests
 // ============================================================================
 
 describe('Gap Registry Cleanup on Success', () => {

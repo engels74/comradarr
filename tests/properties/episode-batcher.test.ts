@@ -210,8 +210,8 @@ describe('Helper Functions', () => {
 // Property 9: Episode Batching Decision
 // =============================================================================
 
-describe('Property 9: Episode Batching Decision (Requirements 6.1, 6.2, 6.3)', () => {
-	describe('Requirement 6.1: Fully aired + high missing → SeasonSearch', () => {
+describe('Property 9: Episode Batching Decision', () => {
+	describe('Fully aired + high missing → SeasonSearch', () => {
 		it('returns SeasonSearch when season fully aired and above thresholds', () => {
 			fc.assert(
 				fc.property(
@@ -261,7 +261,7 @@ describe('Property 9: Episode Batching Decision (Requirements 6.1, 6.2, 6.3)', (
 		});
 	});
 
-	describe('Requirement 6.2: Currently airing → EpisodeSearch', () => {
+	describe('Currently airing → EpisodeSearch', () => {
 		it('returns EpisodeSearch when nextAiring is set and episodes are missing', () => {
 			fc.assert(
 				fc.property(
@@ -305,7 +305,7 @@ describe('Property 9: Episode Batching Decision (Requirements 6.1, 6.2, 6.3)', (
 		});
 	});
 
-	describe('Requirement 6.3: Below threshold → EpisodeSearch', () => {
+	describe('Below threshold → EpisodeSearch', () => {
 		it('returns EpisodeSearch when missing count below threshold', () => {
 			fc.assert(
 				fc.property(
@@ -565,7 +565,7 @@ const batchSizeArbitrary = fc.integer({ min: 1, max: 20 });
 // Property 10: Episode Grouping by Series
 // =============================================================================
 
-describe('Property 10: Episode Grouping by Series (Requirement 6.4)', () => {
+describe('Property 10: Episode Grouping by Series', () => {
 	describe('groupEpisodesBySeries()', () => {
 		it('all episodes in each group belong to the same series', () => {
 			fc.assert(
@@ -890,10 +890,10 @@ describe('Property 17: Search Command Batch Size Limits (Requirements 29.4, 29.5
 });
 
 // =============================================================================
-// Requirement 6.5: Season Pack Fallback
+// Season Pack Fallback
 // =============================================================================
 
-describe('Requirement 6.5: Season Pack Fallback', () => {
+describe('Season Pack Fallback', () => {
 	/**
 	 * Arbitrary for stats that would normally trigger SeasonSearch.
 	 * These are fully aired seasons with high missing counts.

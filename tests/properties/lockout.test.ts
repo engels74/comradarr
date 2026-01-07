@@ -1,12 +1,6 @@
 /**
  * Tests for account lockout functionality.
- *
- * Validates requirements:
- * - 35.1: Increment failed attempt counter on failed login
- * - 35.2: Lock account after threshold failures (3 attempts)
- * - 35.3: Reject login and show remaining lockout time
- * - 35.4: Reset counter when lockout expires
- * - 35.5: Reset counter on successful login
+ * Verifies lockout after threshold failures, remaining time display, and counter resets.
  */
 
 import * as fc from 'fast-check';
@@ -18,7 +12,7 @@ import {
 	MAX_FAILED_ATTEMPTS
 } from '../../src/lib/server/auth/lockout';
 
-describe('Account Lockout (Requirements 35.1-35.5)', () => {
+describe('Account Lockout', () => {
 	describe('Configuration Constants', () => {
 		it('should have MAX_FAILED_ATTEMPTS set to 3', () => {
 			expect(MAX_FAILED_ATTEMPTS).toBe(3);
@@ -29,7 +23,7 @@ describe('Account Lockout (Requirements 35.1-35.5)', () => {
 		});
 	});
 
-	describe('isAccountLocked (Requirement 35.3)', () => {
+	describe('isAccountLocked', () => {
 		it('should return false when lockedUntil is null', () => {
 			const user = { lockedUntil: null };
 			expect(isAccountLocked(user)).toBe(false);
@@ -56,7 +50,7 @@ describe('Account Lockout (Requirements 35.1-35.5)', () => {
 		});
 	});
 
-	describe('getRemainingLockoutTime (Requirement 35.3)', () => {
+	describe('getRemainingLockoutTime', () => {
 		it('should return null when lockedUntil is null', () => {
 			const user = { lockedUntil: null };
 			expect(getRemainingLockoutTime(user)).toBeNull();

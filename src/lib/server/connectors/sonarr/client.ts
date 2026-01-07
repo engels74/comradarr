@@ -77,7 +77,7 @@ export class SonarrClient extends BaseArrClient {
 			if (result.success) {
 				series.push(result.data);
 			}
-			// Malformed records are skipped per Requirement 27.8
+			// Malformed records are skipped silently
 		}
 
 		return series;
@@ -110,7 +110,7 @@ export class SonarrClient extends BaseArrClient {
 			if (result.success) {
 				episodes.push(result.data);
 			}
-			// Malformed records are skipped per Requirement 27.8
+			// Malformed records are skipped silently
 		}
 
 		return episodes;
@@ -120,7 +120,7 @@ export class SonarrClient extends BaseArrClient {
 	 * Fetch all paginated episodes from a wanted endpoint
 	 *
 	 * Handles pagination automatically, fetching all pages until complete.
-	 * Uses pageSize of 1000 per Requirement 2.5 (pagination batches).
+	 * Uses pageSize of 1000 for efficient pagination batches.
 	 *
 	 * @param endpoint - The wanted endpoint ('wanted/missing' or 'wanted/cutoff')
 	 * @param options - Pagination and filter options
@@ -160,8 +160,7 @@ export class SonarrClient extends BaseArrClient {
 
 			allEpisodes.push(...result.data.records);
 
-			// Check if we've fetched all records (Requirement 29.2)
-			// Continue until page * pageSize >= totalRecords
+			// Continue until we've fetched all records
 			if (page * pageSize >= result.data.totalRecords) {
 				break;
 			}
@@ -235,11 +234,10 @@ export class SonarrClient extends BaseArrClient {
 	 * Sends an EpisodeSearch command to Sonarr to search for the specified episodes.
 	 * The command is executed asynchronously - use getCommandStatus() to poll for completion.
 	 *
-	 * @param episodeIds - Array of episode IDs to search for (max 10 per batch per Requirement 29.4)
+	 * @param episodeIds - Array of episode IDs to search for
 	 * @returns Command response with initial execution status
 	 * @throws {ArrClientError} On API error (network, auth, rate limit, etc.)
 	 * @throws {Error} If response parsing fails
-
 	 *
 	 * @example
 	 * ```typescript

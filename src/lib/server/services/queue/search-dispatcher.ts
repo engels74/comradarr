@@ -165,7 +165,7 @@ async function checkProwlarrHealth(): Promise<void> {
 			});
 		}
 	} catch (error) {
-		// Requirement 38.6: Continue normal operation if Prowlarr unreachable
+		// Continue normal operation if Prowlarr unreachable
 		// Log error but do not throw - this check is purely informational
 		logger.warn('Prowlarr health check failed (continuing dispatch)', {
 			error: error instanceof Error ? error.message : 'Unknown error'
@@ -239,7 +239,6 @@ export async function dispatchSearch(
 	}
 
 	// 1.5. Optional Prowlarr health check (informational only, does NOT block dispatch)
-	// Requirements 38.5, 38.6
 	await checkProwlarrHealth();
 
 	// 2. Create connector client
@@ -270,8 +269,8 @@ export async function dispatchSearch(
 		};
 	} catch (error) {
 		// 5. Handle HTTP 429 - catch RateLimitError and pause connector
-		// Requirement 7.3: WHEN an HTTP 429 response is received THEN the System
-		// SHALL pause all searches for the affected connector and apply extended cooldown
+		// When an HTTP 429 response is received, pause all searches for the affected
+		// connector and apply extended cooldown
 		if (error instanceof RateLimitError) {
 			// Call handleRateLimitResponse to set pausedUntil in throttle_state
 			// This respects Retry-After header when present, otherwise uses profile's rateLimitPauseSeconds

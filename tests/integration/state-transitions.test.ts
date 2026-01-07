@@ -295,7 +295,7 @@ describe('State Transitions - markSearchFailed', () => {
 		});
 	});
 
-	describe('Exhaustion Transition (Requirement 5.6)', () => {
+	describe('Exhaustion Transition', () => {
 		it('should transition to exhausted at exactly max attempts', async () => {
 			const episodeId = await createTestEpisode(testConnectorId);
 			// attemptCount = MAX_ATTEMPTS - 1, so after failure it becomes MAX_ATTEMPTS

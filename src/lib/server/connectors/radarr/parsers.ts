@@ -1,15 +1,10 @@
 /**
  * API response parsers for Radarr using Valibot for runtime validation.
  *
- * Provides type-safe parsing with graceful error handling for:
- * - Movie responses (Requirement 27.4)
- *
- * Design:
- * - Unknown fields are ignored (Requirement 27.7)
- * - Malformed records return errors instead of throwing (Requirement 27.8)
+ * Provides type-safe parsing with graceful error handling for movie responses.
+ * Unknown fields are ignored and malformed records return errors instead of throwing.
  *
  * @module connectors/radarr/parsers
-
  */
 
 import * as v from 'valibot';
@@ -38,13 +33,8 @@ export const RadarrMovieFileSchema = v.object({
 });
 
 /**
- * Valibot schema for Radarr movie response
- * GET /api/v3/movie
- *
- * Required fields per Requirement 27.4:
- * - id, title, tmdbId, imdbId, year, hasFile, qualityCutoffNotMet
- *
-
+ * Valibot schema for Radarr movie response (GET /api/v3/movie).
+ * Required: id, title, tmdbId, imdbId, year, hasFile, qualityCutoffNotMet
  */
 export const RadarrMovieSchema = v.object({
 	id: v.number(),
@@ -179,7 +169,7 @@ export function parsePaginatedMovies(data: unknown): ParseResult<PaginatedRespon
 }
 
 // =============================================================================
-// Lenient Parser Functions (Requirement 27.8)
+// Lenient Parser Functions
 // =============================================================================
 
 /**

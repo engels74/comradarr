@@ -2,7 +2,7 @@
  * API response parsers for Prowlarr using Valibot for runtime validation.
  *
  * Provides type-safe parsing with graceful error handling for:
- * - Indexer status responses (Requirement 38.2)
+ * - Indexer status responses
  * - Indexer definition responses
  *
  * Design:
@@ -10,7 +10,6 @@
  * - Malformed records return errors instead of throwing
  *
  * @module services/prowlarr/parsers
-
  */
 
 import * as v from 'valibot';

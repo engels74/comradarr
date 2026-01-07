@@ -91,10 +91,10 @@ beforeEach(async () => {
 });
 
 // ============================================================================
-// HTTP 429 Handling Integration Tests (Requirement 7.3)
+// HTTP 429 Handling Integration Tests
 // ============================================================================
 
-describe('HTTP 429 Rate Limit Handling (Requirement 7.3)', () => {
+describe('HTTP 429 Rate Limit Handling', () => {
 	describe('handleRateLimitResponse database effects', () => {
 		it('should set pausedUntil in throttle_state with Retry-After value', async () => {
 			await getOrCreateThrottleState(testConnectorId);
@@ -265,7 +265,7 @@ describe('HTTP 429 Rate Limit Handling (Requirement 7.3)', () => {
 });
 
 // ============================================================================
-// Extended Cooldown Tests (Requirement 7.3)
+// Extended Cooldown Tests
 // ============================================================================
 
 describe('Extended Cooldown Application', () => {

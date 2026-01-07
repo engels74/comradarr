@@ -1,16 +1,8 @@
 /**
  * Property-based tests for priority calculation.
  *
- * Validates requirements:
- * - 5.1: Calculate priority based on content age, missing duration,
- *        user priority, failure penalty, and search type factor
- *
- * Property 5: Priority Calculation Determinism
- * "For any queue item with fixed attributes (content age, missing duration,
- * user priority, failure count, search type), the priority calculation should
- * always produce the same score. Additionally, newer content should score
- * higher than older content, and items with fewer failures should score
- * higher than items with more failures."
+ * Verifies that priority calculation is deterministic and follows expected ordering:
+ * newer content > older content, fewer failures > more failures.
  */
 
 import * as fc from 'fast-check';
@@ -86,7 +78,7 @@ const priorityWeightsArbitrary: fc.Arbitrary<PriorityWeights> = fc.record({
  */
 const nowArbitrary = validDateArbitrary(new Date('2020-01-01'), new Date('2030-12-31'));
 
-describe('Priority Calculation Properties (Requirement 5.1)', () => {
+describe('Priority Calculation Properties', () => {
 	describe('Property: Determinism', () => {
 		it('same inputs always produce same output', () => {
 			fc.assert(
