@@ -20,19 +20,14 @@ interface Props {
 let { selectedCount, selectedIds, onClearSelection, onActionStart, onActionComplete }: Props =
 	$props();
 
-// Serialize IDs for form submission
 const registryIdsJson = $derived(JSON.stringify([...selectedIds]));
 
-// Loading states
 let isAdjustingPriority = $state(false);
 let isRemoving = $state(false);
-
-// Dialog states
 let priorityDialogOpen = $state(false);
 let priorityValue = $state(50);
 let removeDialogOpen = $state(false);
 
-// Computed state
 const isAnyLoading = $derived(isAdjustingPriority || isRemoving);
 
 /**
@@ -69,7 +64,6 @@ function createEnhanceHandler(setLoading: (val: boolean) => void, closeDialog?: 
 {#if selectedCount > 0}
 	<div class="sticky top-0 z-10 bg-background/95 backdrop-blur border-b shadow-sm mb-4">
 		<div class="flex items-center justify-between px-4 py-3">
-			<!-- Selection info -->
 			<div class="flex items-center gap-3">
 				<Button
 					variant="ghost"
@@ -92,9 +86,7 @@ function createEnhanceHandler(setLoading: (val: boolean) => void, closeDialog?: 
 				</span>
 			</div>
 
-			<!-- Actions -->
 			<div class="flex items-center gap-2">
-				<!-- Adjust Priority -->
 				<AlertDialog.Root bind:open={priorityDialogOpen}>
 					<AlertDialog.Trigger>
 						{#snippet child({ props })}
@@ -160,7 +152,6 @@ function createEnhanceHandler(setLoading: (val: boolean) => void, closeDialog?: 
 					</AlertDialog.Portal>
 				</AlertDialog.Root>
 
-				<!-- Remove from Queue -->
 				<AlertDialog.Root bind:open={removeDialogOpen}>
 					<AlertDialog.Trigger>
 						{#snippet child({ props })}

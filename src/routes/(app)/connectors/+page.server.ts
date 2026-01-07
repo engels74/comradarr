@@ -34,13 +34,11 @@ export const load: PageServerLoad = async () => {
 		getAllProwlarrInstances()
 	]);
 
-	// Convert Map to plain object for serialization
 	const stats: Record<number, ConnectorStats> = {};
 	for (const [id, stat] of statsMap) {
 		stats[id] = stat;
 	}
 
-	// Get Prowlarr instance stats
 	const prowlarrStats: Record<number, ProwlarrInstanceStats> = {};
 	for (const instance of prowlarrInstances) {
 		const summary = await getIndexerHealthSummary(instance.id);
