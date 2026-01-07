@@ -211,7 +211,6 @@ async function enqueueMovies(
 	}> = [];
 
 	for (const registry of pendingRegistries) {
-		// Convert year to a Date (January 1st of that year)
 		const contentDate = registry.year ? new Date(registry.year, 0, 1) : null;
 
 		const priorityInput: PriorityInput = {

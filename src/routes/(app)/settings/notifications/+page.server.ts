@@ -208,11 +208,9 @@ export const actions: Actions = {
 			});
 		}
 
-		// Parse base and channel-specific fields
 		const baseData = parseBaseFields(formData);
 		const channelData = parseChannelFields(formData, type);
 
-		// Validate base fields
 		const baseResult = v.safeParse(BaseChannelSchema, baseData);
 		if (!baseResult.success) {
 			const errors = baseResult.issues.map((issue) => issue.message);
@@ -223,7 +221,6 @@ export const actions: Actions = {
 			});
 		}
 
-		// Validate channel-specific fields
 		const configSchema = getConfigSchema(type);
 		if (configSchema) {
 			const configResult = v.safeParse(configSchema, channelData);
@@ -237,7 +234,6 @@ export const actions: Actions = {
 			}
 		}
 
-		// Validate quiet hours if enabled
 		if (baseData.quietHoursEnabled) {
 			if (!baseData.quietHoursStart || !baseData.quietHoursEnd) {
 				return fail(400, {
@@ -255,7 +251,6 @@ export const actions: Actions = {
 			}
 		}
 
-		// Check name uniqueness
 		const nameExists = await notificationChannelNameExists(baseData.name);
 		if (nameExists) {
 			return fail(400, {
@@ -265,10 +260,8 @@ export const actions: Actions = {
 			});
 		}
 
-		// Split config into plain and sensitive
 		const { config, sensitiveConfig } = splitConfig(type, channelData);
 
-		// Build channel input, only including optional fields when defined
 		const channelInput: Parameters<typeof createNotificationChannel>[0] = {
 			name: baseData.name,
 			type: type as NotificationChannelType,
@@ -289,7 +282,6 @@ export const actions: Actions = {
 			channelInput.quietHoursEnd = baseData.quietHoursEnd;
 		}
 
-		// Create the channel
 		try {
 			await createNotificationChannel(channelInput);
 		} catch (err) {
@@ -325,11 +317,9 @@ export const actions: Actions = {
 			});
 		}
 
-		// Parse base and channel-specific fields
 		const baseData = parseBaseFields(formData);
 		const channelData = parseChannelFields(formData, type);
 
-		// Validate base fields
 		const baseResult = v.safeParse(BaseChannelSchema, baseData);
 		if (!baseResult.success) {
 			const errors = baseResult.issues.map((issue) => issue.message);
@@ -365,7 +355,6 @@ export const actions: Actions = {
 			}
 		}
 
-		// Validate quiet hours if enabled
 		if (baseData.quietHoursEnabled) {
 			if (!baseData.quietHoursStart || !baseData.quietHoursEnd) {
 				return fail(400, {
@@ -383,7 +372,6 @@ export const actions: Actions = {
 			}
 		}
 
-		// Check name uniqueness (excluding current channel)
 		const nameExists = await notificationChannelNameExists(baseData.name, id);
 		if (nameExists) {
 			return fail(400, {
@@ -393,10 +381,8 @@ export const actions: Actions = {
 			});
 		}
 
-		// Split config into plain and sensitive
 		const { config, sensitiveConfig } = splitConfig(type, channelData);
 
-		// Build update data, only including optional fields when defined
 		const updateData: Parameters<typeof updateNotificationChannel>[1] = {
 			name: baseData.name,
 			config,
@@ -415,12 +401,10 @@ export const actions: Actions = {
 			updateData.quietHoursEnd = baseData.quietHoursEnd;
 		}
 
-		// Only update sensitive config if new values were provided
 		if (Object.keys(sensitiveConfig).length > 0) {
 			updateData.sensitiveConfig = sensitiveConfig;
 		}
 
-		// Update the channel
 		try {
 			const updated = await updateNotificationChannel(id, updateData);
 			if (!updated) {
@@ -520,7 +504,6 @@ export const actions: Actions = {
 			});
 		}
 
-		// Get channel
 		const channel = await getNotificationChannel(id);
 		if (!channel) {
 			return fail(404, {
@@ -530,7 +513,6 @@ export const actions: Actions = {
 			});
 		}
 
-		// Check if channel type is supported
 		if (!isSupportedChannelType(channel.type)) {
 			return fail(400, {
 				action: 'test',
@@ -539,7 +521,6 @@ export const actions: Actions = {
 			});
 		}
 
-		// Get decrypted sensitive config
 		let sensitiveConfig: Record<string, unknown>;
 		try {
 			sensitiveConfig = await getDecryptedSensitiveConfig(channel);
@@ -554,7 +535,6 @@ export const actions: Actions = {
 			});
 		}
 
-		// Get sender and send test
 		const sender = getSender(channel.type);
 		const startTime = Date.now();
 

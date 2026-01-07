@@ -107,7 +107,6 @@ export async function reconcileSonarrContent(
 
 		const episodeIdsToDelete = episodesToDelete.map((e) => e.id);
 
-		// Delete search registry entries for episodes being removed
 		if (episodeIdsToDelete.length > 0) {
 			result.searchStateDeleted += await deleteSearchRegistryForEpisodes(
 				connectorId,
@@ -290,13 +289,11 @@ async function reconcileEpisodesForSeries(
 	if (episodesToDelete.length > 0) {
 		const episodeIdsToDelete = episodesToDelete.map((e) => e.id);
 
-		// Delete search registry entries first
 		result.searchStateDeleted = await deleteSearchRegistryForEpisodes(
 			connectorId,
 			episodeIdsToDelete
 		);
 
-		// Delete the episodes
 		await db
 			.delete(episodes)
 			.where(and(eq(episodes.connectorId, connectorId), inArray(episodes.id, episodeIdsToDelete)));
@@ -304,7 +301,6 @@ async function reconcileEpisodesForSeries(
 		result.deleted = episodesToDelete.length;
 	}
 
-	// Upsert remaining episodes
 	if (apiEpisodes.length > 0) {
 		const episodeRecords: ReturnType<typeof mapEpisodeToDb>[] = [];
 
@@ -337,7 +333,6 @@ async function reconcileEpisodesForSeries(
 					}
 				});
 
-			// Count created vs updated
 			for (const apiEpisode of apiEpisodes) {
 				if (existingEpisodeMap.has(apiEpisode.id)) {
 					result.updated++;

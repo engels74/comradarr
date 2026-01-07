@@ -1,26 +1,10 @@
-/**
- * API authentication and scope enforcement utilities.
- *
- * Provides utilities for enforcing authentication and scope restrictions
- * on API routes. Works with both session and API key authentication.
- */
+/** API authentication and scope enforcement utilities. */
 
 import { error } from '@sveltejs/kit';
 
-/**
- * API key scope types.
- * - 'read': Read-only access (GET requests only)
- * - 'full': Full access to all API operations
- */
 export type ApiKeyScope = 'read' | 'full';
 
-/**
- * Ensures the request is authenticated (via session or API key).
- * Throws 401 Unauthorized if not authenticated.
- *
- * @param locals - The event.locals object from SvelteKit
- * @throws 401 if not authenticated
- */
+/** Ensures the request is authenticated. Throws 401 if not. */
 export function requireAuth(locals: App.Locals): void {
 	if (!locals.user) {
 		error(401, {
@@ -31,19 +15,8 @@ export function requireAuth(locals: App.Locals): void {
 }
 
 /**
- * Ensures the request has the required scope for the operation.
- *
- * For session and local bypass auth: always allowed (they have full access)
- * For API key auth: checks if the key's scope matches the required scope
- *
- * Scope hierarchy:
- * - 'read' allows only read operations (GET)
- * - 'full' allows all operations
- *
- * @param locals - The event.locals object from SvelteKit
- * @param required - The required scope for the operation
- * @throws 401 if not authenticated
- * @throws 403 if API key scope is insufficient
+ * Ensures the request has the required scope.
+ * Session/local bypass auth have full access. API keys are checked against scope hierarchy.
  */
 export function requireScope(locals: App.Locals, required: ApiKeyScope): void {
 	// First ensure authenticated
@@ -71,21 +44,7 @@ export function requireScope(locals: App.Locals, required: ApiKeyScope): void {
 	}
 }
 
-/**
- * Checks if the current authentication allows write operations.
- *
- * Returns true for:
- * - Session authentication (full access)
- * - Local bypass authentication (full access)
- * - API key with 'full' scope
- *
- * Returns false for:
- * - API key with 'read' scope
- * - No authentication
- *
- * @param locals - The event.locals object from SvelteKit
- * @returns true if write operations are allowed
- */
+/** Checks if the current authentication allows write operations. */
 export function canWrite(locals: App.Locals): boolean {
 	// Not authenticated
 	if (!locals.user) {
@@ -101,14 +60,7 @@ export function canWrite(locals: App.Locals): boolean {
 	return locals.apiKeyScope === 'full';
 }
 
-/**
- * Checks if the current authentication allows read operations.
- *
- * Returns true for any authenticated request (API keys with 'read' or 'full' scope).
- *
- * @param locals - The event.locals object from SvelteKit
- * @returns true if read operations are allowed
- */
+/** Checks if the current authentication allows read operations. */
 export function canRead(locals: App.Locals): boolean {
 	return locals.user !== null;
 }
