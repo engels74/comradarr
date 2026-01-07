@@ -41,7 +41,6 @@ export function createPollingController(config: PollingConfig): PollingControlle
 		if (document.hidden) {
 			clearPollingInterval();
 		} else if (isActive && !isPaused) {
-			// Tab became visible - refresh immediately and restart polling
 			refresh();
 			startPollingInterval();
 		}
@@ -66,11 +65,9 @@ export function createPollingController(config: PollingConfig): PollingControlle
 			isActive = true;
 			isPaused = false;
 
-			// Add visibility listener
 			if (typeof document !== 'undefined') {
 				document.addEventListener('visibilitychange', handleVisibilityChange);
 
-				// Only start if tab is visible
 				if (!document.hidden) {
 					if (immediate) {
 						refresh();

@@ -58,7 +58,6 @@ export function getCurrentTimeInTimezone(timezone: string, now: Date = new Date(
 
 		return { hours, minutes };
 	} catch {
-		// Invalid timezone - fall back to UTC
 		logger.warn('Invalid timezone, falling back to UTC', { timezone });
 		return getCurrentTimeInTimezone('UTC', now);
 	}
@@ -87,29 +86,21 @@ export function isTimeInRange(current: TimeOfDay, start: TimeOfDay, end: TimeOfD
 
 // Returns false if quiet hours disabled, unconfigured, or invalid
 export function isInQuietHours(channel: NotificationChannel, now: Date = new Date()): boolean {
-	// Check if quiet hours are enabled
 	if (!channel.quietHoursEnabled) {
 		return false;
 	}
 
-	// Check if start and end times are configured
 	if (!channel.quietHoursStart || !channel.quietHoursEnd) {
 		return false;
 	}
 
 	try {
-		// Parse the configured times
 		const start = parseTimeString(channel.quietHoursStart);
 		const end = parseTimeString(channel.quietHoursEnd);
-
-		// Get current time in the channel's timezone
 		const timezone = channel.quietHoursTimezone ?? 'UTC';
 		const current = getCurrentTimeInTimezone(timezone, now);
-
-		// Check if current time is within the range
 		return isTimeInRange(current, start, end);
 	} catch (error) {
-		// Invalid configuration - treat as not in quiet hours
 		logger.warn('Invalid quiet hours configuration for channel', {
 			channelId: channel.id,
 			error: error instanceof Error ? error.message : String(error)

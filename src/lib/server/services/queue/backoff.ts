@@ -12,7 +12,6 @@ export function calculateNextEligibleTime(attemptCount: number, now: Date = new 
 		jitter: STATE_TRANSITION_CONFIG.COOLDOWN_JITTER
 	};
 
-	// calculateBackoffDelay expects 0-based attempt index
 	const delayMs = calculateBackoffDelay(Math.max(0, attemptCount - 1), config);
 	return new Date(now.getTime() + delayMs);
 }

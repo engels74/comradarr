@@ -66,7 +66,6 @@ async function executeSearchCommand(
 	connectorType: string,
 	options: DispatchOptions
 ): Promise<CommandResponse> {
-	// Radarr - movie search
 	if (connectorType === 'radarr') {
 		if (!options.movieIds || options.movieIds.length === 0) {
 			throw new Error('movieIds required for Radarr search');
@@ -74,15 +73,12 @@ async function executeSearchCommand(
 		return (client as RadarrClient).sendMoviesSearch(options.movieIds);
 	}
 
-	// Sonarr/Whisparr - episode or season search
 	const sonarrClient = client as SonarrClient | WhisparrClient;
 
-	// Season search
 	if (options.seriesId !== undefined && options.seasonNumber !== undefined) {
 		return sonarrClient.sendSeasonSearch(options.seriesId, options.seasonNumber);
 	}
 
-	// Episode search
 	if (options.episodeIds && options.episodeIds.length > 0) {
 		return sonarrClient.sendEpisodeSearch(options.episodeIds);
 	}
@@ -96,7 +92,6 @@ async function checkProwlarrHealth(): Promise<void> {
 		const cachedHealth = await prowlarrHealthMonitor.getAllCachedHealth();
 
 		if (cachedHealth.length === 0) {
-			// No Prowlarr instances configured, skip check
 			return;
 		}
 
@@ -112,8 +107,6 @@ async function checkProwlarrHealth(): Promise<void> {
 			});
 		}
 	} catch (error) {
-		// Continue normal operation if Prowlarr unreachable
-		// Log error but do not throw - this check is purely informational
 		logger.warn('Prowlarr health check failed (continuing dispatch)', {
 			error: error instanceof Error ? error.message : 'Unknown error'
 		});
@@ -128,7 +121,6 @@ export async function dispatchSearch(
 	_searchType: SearchType,
 	options: DispatchOptions
 ): Promise<DispatchResult> {
-	// 1. Check if dispatch is allowed by throttle enforcer
 	const throttleResult = await throttleEnforcer.canDispatch(connectorId);
 	if (!throttleResult.allowed) {
 		return {
@@ -140,10 +132,8 @@ export async function dispatchSearch(
 		};
 	}
 
-	// 1.5. Optional Prowlarr health check (informational only, does NOT block dispatch)
 	await checkProwlarrHealth();
 
-	// 2. Create connector client
 	const connectorResult = await createConnectorClient(connectorId);
 	if (!connectorResult) {
 		return {
@@ -157,10 +147,7 @@ export async function dispatchSearch(
 	const { client, type: connectorType } = connectorResult;
 
 	try {
-		// 3. Execute search command
 		const commandResponse = await executeSearchCommand(client, connectorType, options);
-
-		// 4. Record successful request for rate limiting
 		await throttleEnforcer.recordRequest(connectorId);
 
 		return {
@@ -170,7 +157,6 @@ export async function dispatchSearch(
 			commandId: commandResponse.id
 		};
 	} catch (error) {
-		// HTTP 429: pause connector, respects Retry-After or uses profile's rateLimitPauseSeconds
 		if (error instanceof RateLimitError) {
 			await throttleEnforcer.handleRateLimitResponse(connectorId, error.retryAfter);
 
@@ -184,7 +170,6 @@ export async function dispatchSearch(
 			};
 		}
 
-		// Handle other API errors
 		if (isArrClientError(error)) {
 			return {
 				success: false,
@@ -194,7 +179,6 @@ export async function dispatchSearch(
 			};
 		}
 
-		// Re-throw unknown errors
 		throw error;
 	}
 }
@@ -222,9 +206,7 @@ export async function dispatchBatch(
 
 		results.push(result);
 
-		// Stop processing if we hit a rate limit
 		if (result.rateLimited && result.connectorPaused) {
-			// Add remaining dispatches as skipped due to rate limit
 			const remainingIndex = dispatches.indexOf(dispatch) + 1;
 			for (let i = remainingIndex; i < dispatches.length; i++) {
 				const remaining = dispatches[i]!;

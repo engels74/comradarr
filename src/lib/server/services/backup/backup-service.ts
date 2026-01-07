@@ -72,7 +72,6 @@ async function exportTable(tableName: string): Promise<TableExport> {
 		throw new BackupError(`Unknown table: ${tableName}`, 'EXPORT_FAILED', false);
 	}
 
-	// Export all rows from the table
 	// biome-ignore lint/suspicious/noExplicitAny: dynamic table selection requires type assertion
 	const rows = await db.select().from(schemaTable as any);
 

@@ -29,34 +29,28 @@ export class ApiKeyRateLimiter {
 		apiKeyId: number,
 		rateLimitPerMinute: number | null
 	): Promise<ApiKeyRateLimitResult> {
-		// Unlimited - always allow
 		if (rateLimitPerMinute === null) {
 			return { allowed: true };
 		}
 
 		const now = new Date();
-
-		// Get or create rate limit state
 		const state = await getOrCreateRateLimitState(apiKeyId);
 
-		// Check minute window - reset if expired
 		let requestsThisMinute = state.requestsThisMinute;
 		if (isMinuteWindowExpired(state.minuteWindowStart, now)) {
 			await resetMinuteWindow(apiKeyId);
 			requestsThisMinute = 0;
 		}
 
-		// Check per-minute rate limit
 		if (requestsThisMinute >= rateLimitPerMinute) {
 			const retryAfterMs = msUntilMinuteWindowExpires(state.minuteWindowStart, now);
 			return {
 				allowed: false,
 				reason: 'rate_limit',
-				retryAfterMs: Math.max(retryAfterMs, 1000) // At least 1 second
+				retryAfterMs: Math.max(retryAfterMs, 1000)
 			};
 		}
 
-		// All checks passed
 		return { allowed: true };
 	}
 
@@ -71,9 +65,8 @@ export class ApiKeyRateLimiter {
 		const now = new Date();
 		const state = await getRateLimitState(apiKeyId);
 
-		// Calculate current request count (accounting for expired window)
 		let requestsThisMinute = 0;
-		let resetInSeconds = 60; // Default to 60 seconds
+		let resetInSeconds = 60;
 
 		if (state) {
 			if (isMinuteWindowExpired(state.minuteWindowStart, now)) {
@@ -85,7 +78,6 @@ export class ApiKeyRateLimiter {
 			}
 		}
 
-		// Calculate remaining requests
 		const remaining =
 			rateLimitPerMinute !== null ? Math.max(0, rateLimitPerMinute - requestsThisMinute) : null;
 
