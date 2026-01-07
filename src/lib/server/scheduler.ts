@@ -1058,17 +1058,10 @@ async function initializeScheduledBackup(): Promise<void> {
 	}
 }
 
-/**
- * Creates the scheduled backup cron job.
- *
- * @param cronExpression - Cron expression for backup schedule
- * @param retentionCount - Number of scheduled backups to retain
- */
 async function createScheduledBackupJob(
 	cronExpression: string,
 	retentionCount: number
 ): Promise<void> {
-	// Stop existing job if any
 	if (scheduledBackupJob) {
 		scheduledBackupJob.stop();
 		scheduledBackupJob = null;
@@ -1079,7 +1072,7 @@ async function createScheduledBackupJob(
 			cronExpression,
 			{
 				name: 'scheduled-backup',
-				protect: true, // Prevent overlapping executions
+				protect: true,
 				catch: (err) => {
 					logger.error('Scheduled backup failed', {
 						error: err instanceof Error ? err.message : String(err)
@@ -1090,7 +1083,6 @@ async function createScheduledBackupJob(
 				const startTime = Date.now();
 				logger.info('Starting scheduled backup');
 
-				// Create the backup
 				const backupResult = await createBackup({
 					type: 'scheduled',
 					description: 'Scheduled automatic backup'
@@ -1104,7 +1096,6 @@ async function createScheduledBackupJob(
 						durationMs: backupResult.durationMs
 					});
 
-					// Clean up old scheduled backups
 					const cleanupResult = await cleanupOldScheduledBackups(retentionCount);
 
 					if (cleanupResult.success && cleanupResult.deletedCount > 0) {
@@ -1138,10 +1129,7 @@ async function createScheduledBackupJob(
 	}
 }
 
-/**
- * Refresh the scheduled backup job from database settings.
- * Called when backup settings are updated.
- */
+/** Refresh the scheduled backup job from database settings. */
 export async function refreshScheduledBackup(): Promise<void> {
 	logger.info('Refreshing scheduled backup configuration');
 
@@ -1149,7 +1137,6 @@ export async function refreshScheduledBackup(): Promise<void> {
 		const settings = await getBackupSettings();
 
 		if (!settings.scheduledEnabled) {
-			// Disable scheduled backups
 			if (scheduledBackupJob) {
 				scheduledBackupJob.stop();
 				scheduledBackupJob = null;
@@ -1158,7 +1145,6 @@ export async function refreshScheduledBackup(): Promise<void> {
 			return;
 		}
 
-		// Create or recreate the job with new settings
 		await createScheduledBackupJob(settings.scheduledCron, settings.retentionCount);
 	} catch (error) {
 		logger.error('Failed to refresh scheduled backup', {

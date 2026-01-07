@@ -1,12 +1,6 @@
 /**
  * Gap detector service for identifying missing content.
- *
- * Queries the content mirror for monitored items with hasFile=false
- * and creates search registry entries for new gaps. Also cleans up
- * gap registries when content has been successfully downloaded.
- *
  * @module services/discovery/gap-detector
-
  */
 
 import { and, eq, isNull, sql } from 'drizzle-orm';
@@ -15,32 +9,11 @@ import { connectors, episodes, movies, searchRegistry } from '$lib/server/db/sch
 import { cleanupResolvedGapRegistries } from '../sync/search-state-cleanup';
 import type { DiscoveryOptions, DiscoveryStats, GapDiscoveryResult } from './types';
 
-/**
- * Default batch size for inserting search registry entries.
- */
 const DEFAULT_BATCH_SIZE = 1000;
 
 /**
  * Discovers content gaps for a connector and creates search registry entries.
- *
- * Gap discovery:
- * 1. Queries episodes/movies where monitored=true AND hasFile=false
- * 2. Excludes items that already have a search registry entry
- * 3. Creates new search registry entries with state='pending' and searchType='gap'
- *
- * The function is idempotent - running it multiple times won't create duplicate entries.
- *
- * @param connectorId - The connector ID to discover gaps for
- * @param options - Optional configuration for discovery behavior
- * @returns Discovery result with statistics about gaps found and registries created
- *
- * @example
- * ```typescript
- * const result = await discoverGaps(1);
- * console.log(`Found ${result.gapsFound} gaps, created ${result.registriesCreated} registries`);
- * ```
- *
-
+ * Idempotent - running multiple times won't create duplicate entries.
  */
 export async function discoverGaps(
 	connectorId: number,
@@ -50,7 +23,6 @@ export async function discoverGaps(
 	const batchSize = options.batchSize ?? DEFAULT_BATCH_SIZE;
 
 	try {
-		// Get connector to verify it exists and get its type
 		const connector = await db
 			.select({ id: connectors.id, type: connectors.type })
 			.from(connectors)
@@ -73,17 +45,12 @@ export async function discoverGaps(
 
 		const connectorType = connector[0]!.type as 'sonarr' | 'radarr' | 'whisparr';
 
-		// Clean up gap registries where content now has hasFile=true
-		// This handles requirement 3.4: delete registry when hasFile becomes true
 		const registriesResolved = await cleanupResolvedGapRegistries(connectorId);
 
-		// Discover gaps based on connector type
 		let stats: DiscoveryStats;
 		if (connectorType === 'radarr') {
-			// Radarr only has movies
 			stats = await discoverMovieGaps(connectorId, batchSize);
 		} else {
-			// Sonarr and Whisparr have episodes (and could potentially have movies in future)
 			stats = await discoverEpisodeGaps(connectorId, batchSize);
 		}
 
@@ -116,26 +83,10 @@ export async function discoverGaps(
 	}
 }
 
-/**
- * Discovers episode gaps and creates search registry entries.
- *
- * Uses a LEFT JOIN to efficiently find episodes that:
- * - Are monitored (monitored=true)
- * - Don't have a file (hasFile=false)
- * - Don't already have a search registry entry
- *
- * @param connectorId - The connector ID to discover episode gaps for
- * @param batchSize - Batch size for inserting registries
- * @returns Statistics about discovered gaps
- *
-
- */
 async function discoverEpisodeGaps(
 	connectorId: number,
 	batchSize: number
 ): Promise<DiscoveryStats> {
-	// Find all episode gaps (monitored=true AND hasFile=false)
-	// Uses LEFT JOIN to check for existing search registry entries
 	const episodeGaps = await db
 		.select({
 			id: episodes.id,
@@ -155,11 +106,10 @@ async function discoverEpisodeGaps(
 				eq(episodes.connectorId, connectorId),
 				eq(episodes.monitored, true),
 				eq(episodes.hasFile, false),
-				isNull(searchRegistry.id) // No existing registry entry
+				isNull(searchRegistry.id)
 			)
 		);
 
-	// Count total episode gaps for statistics (including those with existing registries)
 	const totalEpisodeGapsResult = await db
 		.select({ count: sql<number>`count(*)::int` })
 		.from(episodes)
@@ -173,7 +123,6 @@ async function discoverEpisodeGaps(
 
 	const totalEpisodeGaps = totalEpisodeGapsResult[0]?.count ?? 0;
 
-	// Create search registry entries in batches
 	let registriesCreated = 0;
 
 	for (let i = 0; i < episodeGaps.length; i += batchSize) {
@@ -209,23 +158,7 @@ async function discoverEpisodeGaps(
 	};
 }
 
-/**
- * Discovers movie gaps and creates search registry entries.
- *
- * Uses a LEFT JOIN to efficiently find movies that:
- * - Are monitored (monitored=true)
- * - Don't have a file (hasFile=false)
- * - Don't already have a search registry entry
- *
- * @param connectorId - The connector ID to discover movie gaps for
- * @param batchSize - Batch size for inserting registries
- * @returns Statistics about discovered gaps
- *
-
- */
 async function discoverMovieGaps(connectorId: number, batchSize: number): Promise<DiscoveryStats> {
-	// Find all movie gaps (monitored=true AND hasFile=false)
-	// Uses LEFT JOIN to check for existing search registry entries
 	const movieGaps = await db
 		.select({
 			id: movies.id,
@@ -245,11 +178,10 @@ async function discoverMovieGaps(connectorId: number, batchSize: number): Promis
 				eq(movies.connectorId, connectorId),
 				eq(movies.monitored, true),
 				eq(movies.hasFile, false),
-				isNull(searchRegistry.id) // No existing registry entry
+				isNull(searchRegistry.id)
 			)
 		);
 
-	// Count total movie gaps for statistics (including those with existing registries)
 	const totalMovieGapsResult = await db
 		.select({ count: sql<number>`count(*)::int` })
 		.from(movies)
@@ -263,7 +195,6 @@ async function discoverMovieGaps(connectorId: number, batchSize: number): Promis
 
 	const totalMovieGaps = totalMovieGapsResult[0]?.count ?? 0;
 
-	// Create search registry entries in batches
 	let registriesCreated = 0;
 
 	for (let i = 0; i < movieGaps.length; i += batchSize) {
@@ -299,18 +230,10 @@ async function discoverMovieGaps(connectorId: number, batchSize: number): Promis
 	};
 }
 
-/**
- * Gets gap statistics for a connector without creating registry entries.
- *
- * Useful for reporting and dashboard display without triggering discovery.
- *
- * @param connectorId - The connector ID to get gap stats for
- * @returns Object with episode and movie gap counts
- */
+/** Gets gap statistics for a connector without creating registry entries. */
 export async function getGapStats(
 	connectorId: number
 ): Promise<{ episodeGaps: number; movieGaps: number }> {
-	// Count episode gaps
 	const episodeGapsResult = await db
 		.select({ count: sql<number>`count(*)::int` })
 		.from(episodes)
@@ -322,7 +245,6 @@ export async function getGapStats(
 			)
 		);
 
-	// Count movie gaps
 	const movieGapsResult = await db
 		.select({ count: sql<number>`count(*)::int` })
 		.from(movies)
