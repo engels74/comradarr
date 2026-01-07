@@ -77,19 +77,16 @@ export const load: PageServerLoad = async ({ parent }) => {
 			getAllConnectorCompletionWithTrends(14) // 14 days of trend data
 		]);
 
-	// Convert Map to plain object for serialization
 	const stats: Record<number, ConnectorStats> = {};
 	for (const [id, stat] of statsMap) {
 		stats[id] = stat;
 	}
 
-	// Serialize activity timestamps to ISO strings
 	const activities = recentActivity.map((activity) => ({
 		...activity,
 		timestamp: activity.timestamp.toISOString()
 	}));
 
-	// Serialize completion trend timestamps to ISO strings
 	const completionWithSerializedTrends = completionData.map((data) => ({
 		...data,
 		trend: data.trend.map((point) => ({

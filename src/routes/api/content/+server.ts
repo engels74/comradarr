@@ -34,7 +34,6 @@ const DEFAULT_LIMIT = 50;
 export const GET: RequestHandler = async ({ url, locals }) => {
 	requireScope(locals, 'read');
 
-	// Parse query parameters
 	const cursor = url.searchParams.get('cursor') ?? undefined;
 	const limitParam = url.searchParams.get('limit');
 	const connectorIdParam = url.searchParams.get('connectorId');

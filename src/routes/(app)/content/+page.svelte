@@ -66,7 +66,7 @@ const currentPage = $derived(Math.floor((data.filters.offset ?? 0) / pageSize) +
 function jumpToPage() {
 	const targetPage = parseInt(jumpPageInput, 10);
 	if (Number.isNaN(targetPage) || targetPage < 1 || targetPage > totalPages) {
-		return; // Invalid page number
+		return;
 	}
 
 	// Navigate to the target page
@@ -188,18 +188,15 @@ function handleActionComplete(message: string) {
 </svelte:head>
 
 <div class="container mx-auto p-6 lg:p-8">
-	<!-- Header -->
 	<header class="mb-8 animate-float-up" style="animation-delay: 0ms;">
 		<h1 class="font-display text-3xl font-semibold tracking-tight md:text-4xl">Content Browser</h1>
 		<p class="text-muted-foreground mt-2">Browse and manage your library content</p>
 	</header>
 
-	<!-- Filters -->
 	<div class="animate-float-up" style="animation-delay: 50ms;">
 		<ContentFilters connectors={data.connectors} statusCounts={data.statusCounts} />
 	</div>
 
-	<!-- Bulk Action Bar (shown when items selected) -->
 	<BulkActionBar
 		{selectedCount}
 		{selectedTargets}
@@ -207,7 +204,6 @@ function handleActionComplete(message: string) {
 		onActionComplete={handleActionComplete}
 	/>
 
-	<!-- Content -->
 	{#if loadedItems.length === 0}
 		<div class="glass-panel p-8 text-center animate-float-up" style="animation-delay: 100ms;">
 			<div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-glass/50 mb-4">
