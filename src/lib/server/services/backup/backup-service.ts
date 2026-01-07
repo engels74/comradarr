@@ -54,8 +54,12 @@ async function getBackupDirectory(): Promise<string> {
 
 	try {
 		await mkdir(backupDir, { recursive: true });
-	} catch {
-		// Ignore if already exists
+	} catch (error) {
+		// mkdir with recursive:true won't throw for existing dirs, so log unexpected errors
+		logger.warn('Failed to create backup directory', {
+			backupDir,
+			error: error instanceof Error ? error.message : String(error)
+		});
 	}
 
 	return backupDir;

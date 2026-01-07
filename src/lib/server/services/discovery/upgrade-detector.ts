@@ -8,6 +8,7 @@ import type { DiscoveryOptions, DiscoveryStats, UpgradeDiscoveryResult } from '.
 
 const DEFAULT_BATCH_SIZE = 1000;
 
+/** Idempotent - uses onConflictDoNothing so running multiple times won't create duplicates. */
 export async function discoverUpgrades(
 	connectorId: number,
 	options: DiscoveryOptions = {}

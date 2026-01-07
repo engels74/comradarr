@@ -1,3 +1,8 @@
+/**
+ * Throttle profile presets that match the DB-seeded throttle_profiles defaults.
+ * Used as fallback when no database profile is available.
+ */
+
 export interface ThrottlePreset {
 	readonly name: string;
 	readonly description: string;
