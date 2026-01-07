@@ -1,13 +1,3 @@
-/**
- * Database queries for queue management operations.
- *
- *
- * Provides queue queries for:
- * - Queue items in priority order with content joins
- * - Status counts for filter badges
- * - Throttle info for dispatch time estimation
- */
-
 import { and, asc, count, eq, ilike, inArray, or, type SQL, sql } from 'drizzle-orm';
 import { db } from '$lib/server/db';
 import {
@@ -23,28 +13,10 @@ import {
 	throttleState
 } from '$lib/server/db/schema';
 
-// =============================================================================
-// Types
-// =============================================================================
-
-/**
- * Queue state filter values.
- */
 export type QueueState = 'all' | 'queued' | 'searching' | 'cooldown' | 'pending' | 'exhausted';
-
-/**
- * Content type filter values.
- */
 export type QueueContentType = 'all' | 'episode' | 'movie';
-
-/**
- * Search type filter values.
- */
 export type QueueSearchType = 'all' | 'gap' | 'upgrade';
 
-/**
- * Filter options for queue queries.
- */
 export interface QueueFilters {
 	connectorId?: number | undefined;
 	state?: QueueState | undefined;
@@ -55,9 +27,6 @@ export interface QueueFilters {
 	offset?: number | undefined;
 }
 
-/**
- * Queue item with joined content data for display.
- */
 export interface QueueItemWithContent {
 	id: number;
 	searchRegistryId: number;
@@ -79,17 +48,11 @@ export interface QueueItemWithContent {
 	createdAt: Date;
 }
 
-/**
- * Result from queue list query with pagination info.
- */
 export interface QueueListResult {
 	items: QueueItemWithContent[];
 	total: number;
 }
 
-/**
- * Status counts for filter badges.
- */
 export interface QueueStatusCounts {
 	all: number;
 	pending: number;
@@ -99,9 +62,6 @@ export interface QueueStatusCounts {
 	exhausted: number;
 }
 
-/**
- * Connector info for filter dropdown.
- */
 export interface QueueConnector {
 	id: number;
 	name: string;
@@ -109,9 +69,6 @@ export interface QueueConnector {
 	queueCount: number;
 }
 
-/**
- * Throttle info for dispatch time estimation.
- */
 export interface QueueThrottleInfo {
 	connectorId: number;
 	isPaused: boolean;
@@ -123,13 +80,6 @@ export interface QueueThrottleInfo {
 	requestsToday: number;
 }
 
-// =============================================================================
-// Helper Functions
-// =============================================================================
-
-/**
- * Parse and validate queue filters with defaults.
- */
 export function parseQueueFilters(searchParams: URLSearchParams): QueueFilters {
 	const connectorParam = searchParams.get('connector');
 	const pageParam = searchParams.get('page');
@@ -148,36 +98,18 @@ export function parseQueueFilters(searchParams: URLSearchParams): QueueFilters {
 	};
 }
 
-// =============================================================================
-// Queue List Query
-// =============================================================================
-
-/**
- * Gets queue items with content data, sorted by priority (highest first).
- *
- * Query approach:
- * - UNION episode queue items and movie queue items
- * - For episodes: join through seasons -> series for full title
- * - For movies: direct join
- * - Sort by priority DESC, then scheduled time ASC
- *
- */
 export async function getQueueList(filters: QueueFilters): Promise<QueueListResult> {
-	// Build base conditions for search registry
 	const buildConditions = (): SQL[] => {
 		const conditions: SQL[] = [];
 
-		// Connector filter
 		if (filters.connectorId !== undefined) {
 			conditions.push(eq(searchRegistry.connectorId, filters.connectorId));
 		}
 
-		// State filter - default to showing active queue items (queued, searching)
 		if (filters.state && filters.state !== 'all') {
 			conditions.push(eq(searchRegistry.state, filters.state));
 		}
 
-		// Search type filter
 		if (filters.searchType && filters.searchType !== 'all') {
 			conditions.push(eq(searchRegistry.searchType, filters.searchType));
 		}
@@ -185,16 +117,13 @@ export async function getQueueList(filters: QueueFilters): Promise<QueueListResu
 		return conditions;
 	};
 
-	// Episode query
 	const episodeConditions = buildConditions();
 	episodeConditions.push(eq(searchRegistry.contentType, 'episode'));
 
 	if (filters.contentType && filters.contentType !== 'all' && filters.contentType !== 'episode') {
-		// If filtering for movies only, skip episodes
 		episodeConditions.push(sql`false`);
 	}
 
-	// Apply search filter to episode titles and series titles
 	if (filters.search) {
 		episodeConditions.push(
 			or(ilike(episodes.title, `%${filters.search}%`), ilike(series.title, `%${filters.search}%`))!
@@ -235,16 +164,13 @@ export async function getQueueList(filters: QueueFilters): Promise<QueueListResu
 		.leftJoin(requestQueue, eq(searchRegistry.id, requestQueue.searchRegistryId))
 		.where(episodeConditions.length > 0 ? and(...episodeConditions) : undefined);
 
-	// Movie query
 	const movieConditions = buildConditions();
 	movieConditions.push(eq(searchRegistry.contentType, 'movie'));
 
 	if (filters.contentType && filters.contentType !== 'all' && filters.contentType !== 'movie') {
-		// If filtering for episodes only, skip movies
 		movieConditions.push(sql`false`);
 	}
 
-	// Apply search filter to movie titles
 	if (filters.search) {
 		movieConditions.push(ilike(movies.title, `%${filters.search}%`));
 	}
@@ -278,7 +204,6 @@ export async function getQueueList(filters: QueueFilters): Promise<QueueListResu
 		.leftJoin(requestQueue, eq(searchRegistry.id, requestQueue.searchRegistryId))
 		.where(movieConditions.length > 0 ? and(...movieConditions) : undefined);
 
-	// Combine with UNION ALL and sort
 	const unionQuery = sql`
 		(${episodeQuery})
 		UNION ALL
@@ -290,10 +215,8 @@ export async function getQueueList(filters: QueueFilters): Promise<QueueListResu
 
 	const items = await db.execute(unionQuery);
 
-	// Get total count
 	const countConditions = buildConditions();
 
-	// For content type filter on count
 	if (filters.contentType && filters.contentType !== 'all') {
 		countConditions.push(eq(searchRegistry.contentType, filters.contentType));
 	}
@@ -303,7 +226,6 @@ export async function getQueueList(filters: QueueFilters): Promise<QueueListResu
 		.from(searchRegistry)
 		.where(countConditions.length > 0 ? and(...countConditions) : undefined);
 
-	// Map rows to typed items
 	const mappedItems: QueueItemWithContent[] = (items as Record<string, unknown>[]).map((row) => ({
 		id: row.id as number,
 		searchRegistryId: row.searchregistryid as number,
@@ -331,13 +253,6 @@ export async function getQueueList(filters: QueueFilters): Promise<QueueListResu
 	};
 }
 
-// =============================================================================
-// Status Counts Query
-// =============================================================================
-
-/**
- * Gets counts of queue items by state for filter badges.
- */
 export async function getQueueStatusCounts(connectorId?: number): Promise<QueueStatusCounts> {
 	const conditions: SQL[] = [];
 
@@ -374,13 +289,6 @@ export async function getQueueStatusCounts(connectorId?: number): Promise<QueueS
 	return counts;
 }
 
-// =============================================================================
-// Connectors for Filter Query
-// =============================================================================
-
-/**
- * Gets connectors with queue item counts for filter dropdown.
- */
 export async function getConnectorsForQueueFilter(): Promise<QueueConnector[]> {
 	const result = await db
 		.select({
@@ -410,13 +318,6 @@ export async function getConnectorsForQueueFilter(): Promise<QueueConnector[]> {
 	}));
 }
 
-// =============================================================================
-// Throttle Info Query
-// =============================================================================
-
-/**
- * Gets throttle information for dispatch time estimation.
- */
 export async function getThrottleInfo(connectorId: number): Promise<QueueThrottleInfo | null> {
 	const result = await db
 		.select({
@@ -426,7 +327,6 @@ export async function getThrottleInfo(connectorId: number): Promise<QueueThrottl
 			pauseReason: throttleState.pauseReason,
 			requestsThisMinute: throttleState.requestsThisMinute,
 			requestsToday: throttleState.requestsToday,
-			// Join throttle profile (or use defaults)
 			requestsPerMinute: sql<number>`COALESCE(${throttleProfiles.requestsPerMinute}, 5)`.as(
 				'requests_per_minute'
 			),
@@ -458,9 +358,6 @@ export async function getThrottleInfo(connectorId: number): Promise<QueueThrottl
 	};
 }
 
-/**
- * Gets throttle info for all connectors (for global view).
- */
 export async function getAllThrottleInfo(): Promise<Map<number, QueueThrottleInfo>> {
 	const result = await db
 		.select({
@@ -500,13 +397,6 @@ export async function getAllThrottleInfo(): Promise<Map<number, QueueThrottleInf
 	return map;
 }
 
-// =============================================================================
-// Queue Control Operations
-// =============================================================================
-
-/**
- * Pause status for a connector.
- */
 export interface ConnectorPauseStatus {
 	id: number;
 	name: string;
@@ -515,9 +405,6 @@ export interface ConnectorPauseStatus {
 	queueCount: number;
 }
 
-/**
- * Gets pause status for all enabled connectors.
- */
 export async function getQueuePauseStatus(): Promise<ConnectorPauseStatus[]> {
 	const result = await db
 		.select({
@@ -549,15 +436,6 @@ export async function getQueuePauseStatus(): Promise<ConnectorPauseStatus[]> {
 	}));
 }
 
-/**
- * Updates priority for queue items.
- *
- * Updates both the search_registry.priority and request_queue.priority fields.
- *
- * @param registryIds - Search registry IDs to update
- * @param priority - New priority value (0-100 user override, will be added to calculated priority)
- * @returns Number of items updated
- */
 export async function updateQueueItemPriority(
 	registryIds: number[],
 	priority: number
@@ -566,7 +444,6 @@ export async function updateQueueItemPriority(
 
 	const now = new Date();
 
-	// Update search_registry priority
 	const updated = await db
 		.update(searchRegistry)
 		.set({
@@ -576,7 +453,6 @@ export async function updateQueueItemPriority(
 		.where(inArray(searchRegistry.id, registryIds))
 		.returning({ id: searchRegistry.id });
 
-	// Also update request_queue if items are in queue
 	await db
 		.update(requestQueue)
 		.set({ priority })
@@ -585,26 +461,16 @@ export async function updateQueueItemPriority(
 	return updated.length;
 }
 
-/**
- * Removes items from the queue and resets their state.
- *
- * Deletes from request_queue and resets search_registry state to 'pending'.
- *
- * @param registryIds - Search registry IDs to remove from queue
- * @returns Number of items removed
- */
 export async function removeFromQueueByIds(registryIds: number[]): Promise<number> {
 	if (registryIds.length === 0) return 0;
 
 	const now = new Date();
 
-	// Delete from request_queue
 	const deleted = await db
 		.delete(requestQueue)
 		.where(inArray(requestQueue.searchRegistryId, registryIds))
 		.returning({ id: requestQueue.id });
 
-	// Reset search_registry state to 'pending' for items that were queued
 	await db
 		.update(searchRegistry)
 		.set({
@@ -616,12 +482,6 @@ export async function removeFromQueueByIds(registryIds: number[]): Promise<numbe
 	return deleted.length;
 }
 
-/**
- * Pauses queue processing for specified connectors.
- *
- * @param connectorIds - Connector IDs to pause (empty array = all connectors)
- * @returns Number of connectors updated
- */
 export async function pauseQueueForConnectors(connectorIds?: number[]): Promise<number> {
 	const now = new Date();
 
@@ -636,7 +496,6 @@ export async function pauseQueueForConnectors(connectorIds?: number[]): Promise<
 			.returning({ id: connectors.id });
 		return updated.length;
 	} else {
-		// Pause all enabled connectors
 		const updated = await db
 			.update(connectors)
 			.set({
@@ -649,12 +508,6 @@ export async function pauseQueueForConnectors(connectorIds?: number[]): Promise<
 	}
 }
 
-/**
- * Resumes queue processing for specified connectors.
- *
- * @param connectorIds - Connector IDs to resume (empty array = all connectors)
- * @returns Number of connectors updated
- */
 export async function resumeQueueForConnectors(connectorIds?: number[]): Promise<number> {
 	const now = new Date();
 
@@ -682,14 +535,6 @@ export async function resumeQueueForConnectors(connectorIds?: number[]): Promise
 	}
 }
 
-/**
- * Clears queue items for specified connectors.
- *
- * Deletes from request_queue and resets search_registry state to 'pending'.
- *
- * @param connectorIds - Connector IDs to clear (empty array = all connectors)
- * @returns Number of items cleared
- */
 export async function clearQueueForConnectors(connectorIds?: number[]): Promise<number> {
 	const now = new Date();
 
@@ -697,7 +542,6 @@ export async function clearQueueForConnectors(connectorIds?: number[]): Promise<
 	let registryIds: number[];
 
 	if (connectorIds && connectorIds.length > 0) {
-		// Get registry IDs before deletion
 		const toDelete = await db
 			.select({ searchRegistryId: requestQueue.searchRegistryId })
 			.from(requestQueue)
@@ -705,7 +549,6 @@ export async function clearQueueForConnectors(connectorIds?: number[]): Promise<
 
 		registryIds = toDelete.map((item) => item.searchRegistryId);
 
-		// Delete from request_queue
 		const deleted = await db
 			.delete(requestQueue)
 			.where(inArray(requestQueue.connectorId, connectorIds))
@@ -713,7 +556,6 @@ export async function clearQueueForConnectors(connectorIds?: number[]): Promise<
 
 		deletedCount = deleted.length;
 	} else {
-		// Clear all queues
 		const toDelete = await db
 			.select({ searchRegistryId: requestQueue.searchRegistryId })
 			.from(requestQueue);
@@ -725,7 +567,6 @@ export async function clearQueueForConnectors(connectorIds?: number[]): Promise<
 		deletedCount = deleted.length;
 	}
 
-	// Reset search_registry state to 'pending'
 	if (registryIds.length > 0) {
 		await db
 			.update(searchRegistry)
@@ -739,13 +580,6 @@ export async function clearQueueForConnectors(connectorIds?: number[]): Promise<
 	return deletedCount;
 }
 
-// =============================================================================
-// Recent Completions Query
-// =============================================================================
-
-/**
- * Recent completion entry with content and connector info.
- */
 export interface RecentCompletion {
 	id: number;
 	contentType: 'episode' | 'movie';
@@ -762,18 +596,7 @@ export interface RecentCompletion {
 	createdAt: Date;
 }
 
-/**
- * Gets recent completed searches (from search_history) for display.
- *
- * Fetches recent entries from search_history table, joined with content
- * tables to get titles and connector info for display.
- *
- *
- * @param limit - Maximum number of entries to return (default 25)
- * @returns Recent completion entries with content and connector info
- */
 export async function getRecentCompletions(limit: number = 25): Promise<RecentCompletion[]> {
-	// Episode completions query
 	const episodeCompletions = db
 		.select({
 			id: searchHistory.id,
@@ -797,7 +620,6 @@ export async function getRecentCompletions(limit: number = 25): Promise<RecentCo
 		.innerJoin(series, eq(seasons.seriesId, series.id))
 		.where(eq(searchHistory.contentType, 'episode'));
 
-	// Movie completions query
 	const movieCompletions = db
 		.select({
 			id: searchHistory.id,
@@ -819,7 +641,6 @@ export async function getRecentCompletions(limit: number = 25): Promise<RecentCo
 		.innerJoin(movies, eq(searchHistory.contentId, movies.id))
 		.where(eq(searchHistory.contentType, 'movie'));
 
-	// Combine with UNION ALL and sort by created_at DESC
 	const unionQuery = sql`
 		(${episodeCompletions})
 		UNION ALL
@@ -830,7 +651,6 @@ export async function getRecentCompletions(limit: number = 25): Promise<RecentCo
 
 	const results = await db.execute(unionQuery);
 
-	// Map rows to typed items
 	return (results as Record<string, unknown>[]).map((row) => ({
 		id: row.id as number,
 		contentType: row.content_type as 'episode' | 'movie',
@@ -848,34 +668,16 @@ export async function getRecentCompletions(limit: number = 25): Promise<RecentCo
 	}));
 }
 
-// =============================================================================
-// Today's Search Statistics
-// =============================================================================
-
-/**
- * Statistics for searches completed today.
- */
 export interface TodaySearchStats {
 	completedToday: number;
 	successfulToday: number;
 	successRate: number;
 }
 
-/**
- * Gets search statistics for today (UTC).
- *
- * Returns:
- * - completedToday: Total searches completed today
- * - successfulToday: Searches with outcome='success' today
- * - successRate: Percentage (0-100), 0 if no searches
- *
- */
 export async function getTodaySearchStats(): Promise<TodaySearchStats> {
-	// Get start of today in UTC
 	const todayStart = new Date();
 	todayStart.setUTCHours(0, 0, 0, 0);
 
-	// Query for total and successful counts in one query
 	const result = await db
 		.select({
 			total: count(),
