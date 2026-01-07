@@ -1,20 +1,4 @@
-/**
- * Search state transition functions.
- *
- * Handles transitions between search states in the state machine:
- * - searching → cooldown (on failure, with exponential backoff)
- * - searching → exhausted (on max attempts reached)
- * - cooldown → pending (when eligible time passes, for re-enqueue)
- *
- * State Machine:
- * ```
- * pending → queued → searching → cooldown → pending (retry)
- *                              ↘ exhausted (max attempts)
- * ```
- *
- * @module services/queue/state-transitions
-
- */
+// State machine: pending → queued → searching → cooldown → pending (retry) or exhausted
 
 import { and, eq, inArray, lte, sql } from 'drizzle-orm';
 import { db } from '$lib/server/db';
@@ -27,42 +11,9 @@ import type {
 	StateTransitionResult
 } from './types';
 
-// Re-export for convenience
 export { calculateNextEligibleTime, shouldMarkExhausted } from './backoff';
 
-/**
- * Mark a search as failed and transition to cooldown or exhausted state.
- *
- * This function:
- * 1. Validates the current state is 'searching'
- * 2. Increments the attempt count
- * 3. If max attempts reached: transitions to 'exhausted'
- * 4. Otherwise: calculates next eligible time and transitions to 'cooldown'
- * 5. If wasSeasonPackSearch is true and failureCategory is 'no_results',
- *    marks all episodes in the same season for EpisodeSearch fallback
- *
- * @param input - The search registry ID, failure category, and optional season pack flag
- * @returns State transition result with new state and timing info
- *
- * @example
- * ```typescript
- * const result = await markSearchFailed({
- *   searchRegistryId: 123,
- *   failureCategory: 'no_results',
- *   wasSeasonPackSearch: true  // Triggers fallback for all season episodes
- * });
- *
- * if (result.success) {
- *   if (result.newState === 'exhausted') {
- *     console.log('Item exhausted after', result.attemptCount, 'attempts');
- *   } else {
- *     console.log('Item in cooldown until', result.nextEligible);
- *   }
- * }
- * ```
- *
-
- */
+// Season pack failure with no_results triggers EpisodeSearch fallback for all episodes in the season
 export async function markSearchFailed(
 	input: MarkSearchFailedInput
 ): Promise<StateTransitionResult> {
@@ -177,20 +128,6 @@ export async function markSearchFailed(
 	}
 }
 
-/**
- * Mark all episodes in a season as having failed season pack search.
- *
- * When a SeasonSearch fails with 'no_results', this function sets
- * seasonPackFailed=true for all search registry entries associated
- * with episodes in the same season. This ensures future batching
- * decisions will use EpisodeSearch instead of SeasonSearch.
- *
- * @param episodeContentId - The content ID of the episode whose season pack search failed
- * @param connectorId - The connector ID for filtering search registry entries
- * @param now - Current timestamp for updatedAt
- *
-
- */
 async function markSeasonPackFailedForSeason(
 	episodeContentId: number,
 	connectorId: number,
@@ -238,20 +175,7 @@ async function markSeasonPackFailedForSeason(
 		);
 }
 
-/**
- * Mark a search as exhausted (terminal state).
- *
- * This function manually transitions an item to the exhausted state,
- * typically used when an item should no longer be retried regardless
- * of attempt count.
- *
- * Valid source states: 'searching', 'cooldown'
- *
- * @param searchRegistryId - ID of the search registry entry
- * @returns State transition result
- *
-
- */
+// Valid from 'searching' or 'cooldown' states only
 export async function markSearchExhausted(
 	searchRegistryId: number
 ): Promise<StateTransitionResult> {
@@ -320,27 +244,7 @@ export async function markSearchExhausted(
 	}
 }
 
-/**
- * Re-enqueue items whose cooldown period has expired.
- *
- * This function finds all items in 'cooldown' state where nextEligible <= now
- * and transitions them back to 'pending' so they can be picked up by
- * enqueuePendingItems() on the next queue processing cycle.
- *
- * @param connectorId - Optional connector ID to filter (undefined for all connectors)
- * @returns Result with count of items re-enqueued
- *
- * @example
- * ```typescript
- * // Re-enqueue all eligible cooldown items
- * const result = await reenqueueEligibleCooldownItems();
- *
- * // Re-enqueue only for a specific connector
- * const result = await reenqueueEligibleCooldownItems(1);
- * ```
- *
-
- */
+// Transitions cooldown items back to pending when nextEligible <= now
 export async function reenqueueEligibleCooldownItems(
 	connectorId?: number
 ): Promise<ReenqueueCooldownResult> {
@@ -415,14 +319,6 @@ export async function reenqueueEligibleCooldownItems(
 	}
 }
 
-/**
- * Get the current state of a search registry entry.
- *
- * Utility function for checking state before operations.
- *
- * @param searchRegistryId - ID of the search registry entry
- * @returns Current state or null if not found
- */
 export async function getSearchState(searchRegistryId: number): Promise<SearchState | null> {
 	const result = await db
 		.select({ state: searchRegistry.state })

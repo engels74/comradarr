@@ -1,13 +1,4 @@
-/**
- * Sync operation retry wrapper with exponential backoff.
- *
- * Provides sync-level retry logic that is separate from HTTP-level retries.
- * HTTP retries handle transient network issues for individual requests,
- * while sync retries handle failures of the entire sync operation.
- *
- * @module services/sync/with-sync-retry
-
- */
+// Sync-level retries (entire operation) vs HTTP-level retries (individual requests)
 
 import { getSyncState } from '$lib/server/db/queries/connectors';
 import { createLogger } from '$lib/server/logger';
@@ -21,17 +12,11 @@ import {
 
 const logger = createLogger('sync');
 
-/**
- * Options for sync retry behavior.
- */
 export interface SyncRetryOptions {
 	/** Override the default max retries (default: SYNC_CONFIG.MAX_SYNC_RETRIES) */
 	maxRetries?: number;
 }
 
-/**
- * Result of a sync operation with retry handling.
- */
 export interface SyncAttemptResult<T> {
 	/** Whether the sync ultimately succeeded */
 	success: boolean;
@@ -45,49 +30,10 @@ export interface SyncAttemptResult<T> {
 	finalHealthStatus: HealthStatus;
 }
 
-/**
- * Sleep for a specified duration.
- * @param ms - Duration in milliseconds
- */
 function sleep(ms: number): Promise<void> {
 	return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-/**
- * Wraps a sync operation with retry logic and health status updates.
- *
- * This function:
- * 1. Executes the sync function
- * 2. On success: Updates health to 'healthy', returns result
- * 3. On failure: Checks if error is retryable
- * 4. If retryable and attempts remain: Waits with backoff, retries
- * 5. After all attempts: Updates consecutive failures, updates health status
- *
- * The retry logic is separate from HTTP-level retries:
- * - HTTP retries (in base-client): Handle transient network issues per request
- * - Sync retries (this function): Handle entire sync operation failures
- *
- * @param connectorId - ID of the connector being synced
- * @param syncFn - The async function that performs the sync
- * @param options - Optional retry configuration
- * @returns Result with success status, data, attempts, and health status
- *
- * @example
- * ```typescript
- * const result = await withSyncRetry(
- *   connector.id,
- *   () => executeSyncLogic(connector)
- * );
- *
- * if (result.success) {
- *   console.log(`Sync succeeded in ${result.attempts} attempt(s)`);
- *   console.log(`Items synced: ${result.data.itemsSynced}`);
- * } else {
- *   console.error(`Sync failed after ${result.attempts} attempts`);
- *   console.log(`Connector health: ${result.finalHealthStatus}`);
- * }
- * ```
- */
 export async function withSyncRetry<T>(
 	connectorId: number,
 	syncFn: () => Promise<T>,

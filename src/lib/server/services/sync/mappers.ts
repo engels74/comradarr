@@ -1,13 +1,3 @@
-/**
- * Mappers for transforming *arr API responses to database records.
- *
- * These functions convert the API response types (SonarrSeries, RadarrMovie, etc.)
- * to the database insert types (NewSeries, NewMovie, etc.) for upsert operations.
- *
- * @module services/sync/mappers
-
- */
-
 import type { RadarrMovie } from '$lib/server/connectors/radarr/types';
 import type {
 	SonarrEpisode,
@@ -16,15 +6,6 @@ import type {
 } from '$lib/server/connectors/sonarr/types';
 import type { NewEpisode, NewMovie, NewSeason, NewSeries } from '$lib/server/db/schema';
 
-/**
- * Map Sonarr/Whisparr series API response to database record.
- *
- * @param connectorId - The connector ID this series belongs to
- * @param apiSeries - Series data from the Sonarr API
- * @returns Database insert record for series table
- *
-
- */
 export function mapSeriesToDb(connectorId: number, apiSeries: SonarrSeries): NewSeries {
 	return {
 		connectorId,
@@ -37,15 +18,6 @@ export function mapSeriesToDb(connectorId: number, apiSeries: SonarrSeries): New
 	};
 }
 
-/**
- * Map Sonarr/Whisparr season to database record.
- *
- * @param seriesId - The database ID of the parent series
- * @param apiSeason - Season data from the Sonarr API (embedded in series response)
- * @returns Database insert record for seasons table
- *
-
- */
 export function mapSeasonToDb(seriesId: number, apiSeason: SonarrSeason): NewSeason {
 	return {
 		seriesId,
@@ -56,16 +28,6 @@ export function mapSeasonToDb(seriesId: number, apiSeason: SonarrSeason): NewSea
 	};
 }
 
-/**
- * Map Sonarr/Whisparr episode API response to database record.
- *
- * @param connectorId - The connector ID this episode belongs to
- * @param seasonId - The database ID of the parent season
- * @param apiEpisode - Episode data from the Sonarr API
- * @returns Database insert record for episodes table
- *
-
- */
 export function mapEpisodeToDb(
 	connectorId: number,
 	seasonId: number,
@@ -88,15 +50,6 @@ export function mapEpisodeToDb(
 	};
 }
 
-/**
- * Map Radarr movie API response to database record.
- *
- * @param connectorId - The connector ID this movie belongs to
- * @param apiMovie - Movie data from the Radarr API
- * @returns Database insert record for movies table
- *
-
- */
 export function mapMovieToDb(connectorId: number, apiMovie: RadarrMovie): NewMovie {
 	return {
 		connectorId,

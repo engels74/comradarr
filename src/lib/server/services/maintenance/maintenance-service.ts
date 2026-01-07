@@ -1,15 +1,3 @@
-/**
- * Database maintenance service.
- *
- * Provides VACUUM and ANALYZE operations for PostgreSQL database optimization.
- *
- * VACUUM reclaims storage occupied by dead tuples and makes it available for reuse.
- * ANALYZE collects statistics about table contents for the query planner.
- *
- * @module services/maintenance/maintenance-service
-
- */
-
 import { sql } from 'drizzle-orm';
 import { db } from '$lib/server/db';
 import { createLogger } from '$lib/server/logger';
@@ -17,33 +5,7 @@ import type { MaintenanceOptions, MaintenanceResult } from './types';
 
 const logger = createLogger('maintenance');
 
-// =============================================================================
-// Public API
-// =============================================================================
-
-/**
- * Run database maintenance operations (VACUUM and ANALYZE).
- *
- * This function executes:
- * 1. VACUUM - Reclaims storage from dead tuples
- * 2. ANALYZE - Updates statistics for the query planner
- *
- * Uses regular VACUUM by default (not VACUUM FULL) because:
- * - Regular VACUUM doesn't lock tables
- * - Can run concurrently with normal database operations
- * - Sufficient for routine maintenance
- *
- * @param options - Optional configuration for maintenance operations
- * @returns Result with success status and timing metrics
- *
- * @example
- * ```typescript
- * const result = await runDatabaseMaintenance();
- * if (result.success) {
- *   console.log('Maintenance completed in', result.totalDurationMs, 'ms');
- * }
- * ```
- */
+// Regular VACUUM (default) doesn't lock tables and runs concurrently with normal operations
 export async function runDatabaseMaintenance(
 	options?: MaintenanceOptions
 ): Promise<MaintenanceResult> {

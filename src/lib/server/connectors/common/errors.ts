@@ -1,22 +1,3 @@
-/**
- * Typed error classes for *arr API client error handling
- *
- * Error categories and their retry behavior:
- * - NetworkError: connection_refused, dns_failure, timeout (retryable)
- * - AuthenticationError: HTTP 401 (not retryable)
- * - RateLimitError: HTTP 429 with optional Retry-After (retryable)
- * - ServerError: HTTP 5xx (retryable)
- * - TimeoutError: Request timeout (retryable)
- * - NotFoundError: HTTP 404 (not retryable)
- * - SSLError: SSL certificate validation failure (not retryable)
- *
- * @module connectors/common/errors
-
- */
-
-/**
- * Error categories for classification and handling decisions
- */
 export type ErrorCategory =
 	| 'network'
 	| 'authentication'
@@ -27,23 +8,11 @@ export type ErrorCategory =
 	| 'not_found'
 	| 'ssl';
 
-/**
- * Network error cause types
- */
 export type NetworkErrorCause = 'connection_refused' | 'dns_failure' | 'timeout' | 'unknown';
 
-/**
- * Base class for all *arr API client errors
- * Provides consistent error structure with category and retry behavior
- */
 export abstract class ArrClientError extends Error {
-	/** Error category for classification */
 	abstract readonly category: ErrorCategory;
-
-	/** Whether this error type can be retried */
 	abstract readonly retryable: boolean;
-
-	/** Timestamp when the error occurred */
 	readonly timestamp: Date = new Date();
 
 	constructor(message: string) {
@@ -53,15 +22,9 @@ export abstract class ArrClientError extends Error {
 	}
 }
 
-/**
- * Network-related errors (connection failures, DNS issues, etc.)
- * These are generally retryable as they may be transient
- */
 export class NetworkError extends ArrClientError {
 	readonly category = 'network' as const;
 	readonly retryable = true;
-
-	/** The underlying cause of the network error */
 	readonly errorCause: NetworkErrorCause;
 
 	constructor(message: string, errorCause: NetworkErrorCause) {
@@ -71,12 +34,6 @@ export class NetworkError extends ArrClientError {
 	}
 }
 
-/**
- * Authentication errors (HTTP 401)
- * These are NOT retryable as they indicate invalid credentials
- *
-
- */
 export class AuthenticationError extends ArrClientError {
 	readonly category = 'authentication' as const;
 	readonly retryable = false;
@@ -87,31 +44,16 @@ export class AuthenticationError extends ArrClientError {
 	}
 }
 
-/**
- * Rate limit errors (HTTP 429)
- * These are retryable after the specified delay
- *
-
- */
 export class RateLimitError extends ArrClientError {
 	readonly category = 'rate_limit' as const;
 	readonly retryable = true;
 
-	constructor(
-		/** Retry-After header value in seconds, if provided */
-		public readonly retryAfter?: number
-	) {
+	constructor(public readonly retryAfter?: number) {
 		super('Rate limit exceeded');
 		this.name = 'RateLimitError';
 	}
 }
 
-/**
- * Server errors (HTTP 5xx)
- * These are generally retryable as they indicate server-side issues
- *
-
- */
 export class ServerError extends ArrClientError {
 	readonly category = 'server' as const;
 	readonly retryable = true;
@@ -125,36 +67,22 @@ export class ServerError extends ArrClientError {
 	}
 }
 
-/**
- * Request timeout errors
- * These are retryable as they may be due to temporary network issues
- *
-
- */
 export class TimeoutError extends ArrClientError {
 	readonly category = 'timeout' as const;
 	readonly retryable = true;
 
-	constructor(
-		/** The timeout duration in milliseconds that was exceeded */
-		public readonly timeoutMs: number
-	) {
+	constructor(public readonly timeoutMs: number) {
 		super(`Request timed out after ${timeoutMs}ms`);
 		this.name = 'TimeoutError';
 	}
 }
 
-/**
- * Validation errors for malformed responses or invalid data
- * These are NOT retryable as the issue is with the data itself
- */
 export class ValidationError extends ArrClientError {
 	readonly category = 'validation' as const;
 	readonly retryable = false;
 
 	constructor(
 		message: string,
-		/** The field or path that failed validation */
 		public readonly field?: string
 	) {
 		super(message);
@@ -162,18 +90,11 @@ export class ValidationError extends ArrClientError {
 	}
 }
 
-/**
- * Not found errors (HTTP 404)
- * NOT retryable - the resource does not exist
- *
-
- */
 export class NotFoundError extends ArrClientError {
 	readonly category = 'not_found' as const;
 	readonly retryable = false;
 
 	constructor(
-		/** The resource that was not found */
 		public readonly resource: string,
 		message?: string
 	) {
@@ -182,12 +103,6 @@ export class NotFoundError extends ArrClientError {
 	}
 }
 
-/**
- * SSL certificate validation errors
- * NOT retryable by default - indicates configuration issue
- *
-
- */
 export class SSLError extends ArrClientError {
 	readonly category = 'ssl' as const;
 	readonly retryable = false;
@@ -198,16 +113,10 @@ export class SSLError extends ArrClientError {
 	}
 }
 
-/**
- * Type guard to check if an error is an ArrClientError
- */
 export function isArrClientError(error: unknown): error is ArrClientError {
 	return error instanceof ArrClientError;
 }
 
-/**
- * Type guard to check if an error is retryable
- */
 export function isRetryableError(error: unknown): boolean {
 	if (isArrClientError(error)) {
 		return error.retryable;

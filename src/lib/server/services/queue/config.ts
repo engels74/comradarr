@@ -1,13 +1,3 @@
-/**
- * Queue service configuration constants.
- *
- * Defines default priority weights and constants used for
- * priority score calculation.
- *
- * @module services/queue/config
-
- */
-
 import type { PriorityWeights } from './types';
 
 // Note: Database imports are done dynamically to avoid breaking unit tests
@@ -16,18 +6,6 @@ type SearchSettings = Awaited<
 	ReturnType<typeof import('$lib/server/db/queries/settings').getSearchSettings>
 >;
 
-/**
- * Default priority weights for score calculation.
- *
- * These values provide a balanced starting point that:
- * - Prioritizes newer content slightly (recency bias)
- * - Rewards items missing longer (fairness)
- * - Respects user manual overrides strongly
- * - Penalizes repeated failures moderately
- * - Prioritizes gaps over upgrades
- *
-
- */
 export const DEFAULT_PRIORITY_WEIGHTS: Readonly<PriorityWeights> = {
 	/** Weight for content age factor */
 	contentAge: 30,
@@ -45,12 +23,6 @@ export const DEFAULT_PRIORITY_WEIGHTS: Readonly<PriorityWeights> = {
 	gapBonus: 20
 } as const;
 
-/**
- * Priority calculation constants.
- *
- * These constants define boundaries and scaling factors
- * for the priority calculation algorithm.
- */
 export const PRIORITY_CONSTANTS = {
 	/**
 	 * Maximum content age in days for scoring (10 years).
@@ -83,20 +55,8 @@ export const PRIORITY_CONSTANTS = {
 	FACTOR_SCALE: 100
 } as const;
 
-/** Type for the priority constants */
 export type PriorityConstantsType = typeof PRIORITY_CONSTANTS;
 
-// =============================================================================
-// Queue Service Configuration
-// =============================================================================
-
-/**
- * Queue service configuration constants.
- *
- * Defines batch sizes and limits for queue operations.
- *
-
- */
 export const QUEUE_CONFIG = {
 	/**
 	 * Default batch size for database operations.
@@ -121,21 +81,8 @@ export const QUEUE_CONFIG = {
 	MAX_DEQUEUE_LIMIT: 100
 } as const;
 
-/** Type for the queue config constants */
 export type QueueConfigType = typeof QUEUE_CONFIG;
 
-// =============================================================================
-// State Transition Configuration
-// =============================================================================
-
-/**
- * State transition configuration constants.
- *
- * Defines cooldown timing and exhaustion thresholds for
- * the search state machine transitions.
- *
-
- */
 export const STATE_TRANSITION_CONFIG = {
 	/**
 	 * Maximum search attempts before marking exhausted.
@@ -169,25 +116,9 @@ export const STATE_TRANSITION_CONFIG = {
 	COOLDOWN_JITTER: true
 } as const;
 
-/** Type for the state transition config constants */
 export type StateTransitionConfigType = typeof STATE_TRANSITION_CONFIG;
 
-// =============================================================================
-// Episode Batching Configuration
-// =============================================================================
-
-/**
- * Episode batching configuration constants.
- *
- * Defines thresholds for determining when to use SeasonSearch (season pack)
- * versus individual EpisodeSearch commands.
- *
- * Decision logic:
- * - SeasonSearch: Season fully aired AND missing% >= threshold AND missingCount >= minCount
- * - EpisodeSearch: Season currently airing OR below threshold
- *
-
- */
+// SeasonSearch: fully aired AND missing% >= threshold AND count >= min; else EpisodeSearch
 export const BATCHING_CONFIG = {
 	/**
 	 * Minimum missing percentage to qualify for SeasonSearch (0-100).
@@ -218,32 +149,12 @@ export const BATCHING_CONFIG = {
 	MAX_MOVIES_PER_SEARCH: 10
 } as const;
 
-/** Type for the batching config constants */
 export type BatchingConfigType = typeof BATCHING_CONFIG;
 
-// =============================================================================
-// Runtime Configuration Loader
-// =============================================================================
-
-/**
- * Cached search settings for runtime use.
- * Uses a short-lived cache to avoid excessive database queries.
- */
 let cachedSettings: SearchSettings | null = null;
 let cacheTimestamp: number = 0;
-
-/**
- * Cache TTL in milliseconds (1 minute).
- * Settings changes will be reflected within this time.
- */
 const CACHE_TTL_MS = 60000;
 
-/**
- * Get current search settings from database.
- * Uses a short-lived cache to avoid excessive database queries.
- *
- * @returns Cached or fresh search settings
- */
 export async function getSearchConfig(): Promise<SearchSettings> {
 	const now = Date.now();
 	if (cachedSettings && now - cacheTimestamp < CACHE_TTL_MS) {
@@ -257,29 +168,16 @@ export async function getSearchConfig(): Promise<SearchSettings> {
 	return cachedSettings;
 }
 
-/**
- * Invalidate the settings cache.
- * Call this after settings are updated to ensure fresh values are used.
- */
 export function invalidateSearchConfigCache(): void {
 	cachedSettings = null;
 	cacheTimestamp = 0;
 }
 
-/**
- * Get priority weights from database settings.
- * Uses cached settings when available.
- *
- * @returns Priority weights for score calculation
- */
 export async function getPriorityWeights(): Promise<PriorityWeights> {
 	const config = await getSearchConfig();
 	return config.priorityWeights;
 }
 
-/**
- * Mutable batching configuration type for runtime values.
- */
 export interface RuntimeBatchingConfig {
 	SEASON_SEARCH_MIN_MISSING_PERCENT: number;
 	SEASON_SEARCH_MIN_MISSING_COUNT: number;
@@ -287,12 +185,6 @@ export interface RuntimeBatchingConfig {
 	MAX_MOVIES_PER_SEARCH: number;
 }
 
-/**
- * Get batching configuration from database settings.
- * Combines configurable thresholds with fixed API limits.
- *
- * @returns Batching configuration for episode/season search decisions
- */
 export async function getBatchingConfig(): Promise<RuntimeBatchingConfig> {
 	const config = await getSearchConfig();
 	return {
@@ -304,9 +196,6 @@ export async function getBatchingConfig(): Promise<RuntimeBatchingConfig> {
 	};
 }
 
-/**
- * Mutable state transition configuration type for runtime values.
- */
 export interface RuntimeStateTransitionConfig {
 	MAX_ATTEMPTS: number;
 	COOLDOWN_BASE_DELAY: number;
@@ -315,12 +204,6 @@ export interface RuntimeStateTransitionConfig {
 	COOLDOWN_JITTER: boolean;
 }
 
-/**
- * Get state transition configuration from database settings.
- * Converts hours to milliseconds for internal use.
- *
- * @returns State transition configuration for cooldown/retry logic
- */
 export async function getStateTransitionConfig(): Promise<RuntimeStateTransitionConfig> {
 	const config = await getSearchConfig();
 	return {

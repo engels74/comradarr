@@ -1,16 +1,3 @@
-/**
- * Restore service for database import from backup.
- *
- * Restores database state from backup files with:
- * - Integrity validation (checksum, SECRET_KEY)
- * - Schema compatibility checking
- * - Atomic transaction-based restore
- * - Migration support for older backups
- *
- * @module services/backup/restore-service
-
- */
-
 import { readFile } from 'node:fs/promises';
 import { sql } from 'drizzle-orm';
 import { DecryptionError, decrypt } from '$lib/server/crypto';
@@ -32,14 +19,6 @@ import {
 
 const logger = createLogger('restore');
 
-// =============================================================================
-// Table Name to Schema Mapping
-// =============================================================================
-
-/**
- * Maps table names to Drizzle schema table objects.
- * Uses snake_case table names as stored in the database.
- */
 const tableNameToSchema: Record<string, (typeof schema)[keyof typeof schema]> = {
 	throttle_profiles: schema.throttleProfiles,
 	app_settings: schema.appSettings,
@@ -66,24 +45,10 @@ const tableNameToSchema: Record<string, (typeof schema)[keyof typeof schema]> = 
 	notification_history: schema.notificationHistory
 };
 
-// =============================================================================
-// Validation Functions
-// =============================================================================
-
-/**
- * Validates backup format version.
- */
 function validateFormatVersion(backup: BackupFile): boolean {
 	return backup.formatVersion === 1;
 }
 
-/**
- * Validates backup checksum to detect corruption.
-
- *
- * @param backup - The backup file to validate
- * @returns True if checksum matches
- */
 async function validateChecksum(backup: BackupFile): Promise<boolean> {
 	const encoder = new TextEncoder();
 	const data = encoder.encode(JSON.stringify(backup.tables));
@@ -95,13 +60,6 @@ async function validateChecksum(backup: BackupFile): Promise<boolean> {
 	return backup.metadata.checksum === `sha256:${hashHex}`;
 }
 
-/**
- * Validates that the SECRET_KEY matches the one used during backup.
-
- *
- * @param secretKeyVerifier - The encrypted verifier from backup metadata
- * @returns True if SECRET_KEY matches
- */
 async function validateSecretKeyMatch(secretKeyVerifier: string): Promise<boolean> {
 	try {
 		const decrypted = await decrypt(secretKeyVerifier);
@@ -114,9 +72,6 @@ async function validateSecretKeyMatch(secretKeyVerifier: string): Promise<boolea
 	}
 }
 
-/**
- * Gets the current schema version from Drizzle migration journal.
- */
 async function _getCurrentSchemaVersion(): Promise<SchemaVersion> {
 	try {
 		const journalPath = './drizzle/meta/_journal.json';
@@ -149,13 +104,6 @@ async function _getCurrentSchemaVersion(): Promise<SchemaVersion> {
 	}
 }
 
-/**
- * Gets pending migrations that need to be applied after restore.
-
- *
- * @param backupSchemaVersion - Schema version from backup
- * @returns List of pending migration tags
- */
 async function getPendingMigrations(backupSchemaVersion: SchemaVersion): Promise<string[]> {
 	try {
 		const journalPath = './drizzle/meta/_journal.json';
@@ -172,14 +120,6 @@ async function getPendingMigrations(backupSchemaVersion: SchemaVersion): Promise
 	}
 }
 
-// =============================================================================
-// Data Operations
-// =============================================================================
-
-/**
- * Clears all tables using TRUNCATE with CASCADE.
- * Uses reverse dependency order to handle foreign keys.
- */
 async function clearAllTables(): Promise<void> {
 	logger.info('Clearing all tables');
 
@@ -192,10 +132,6 @@ async function clearAllTables(): Promise<void> {
 	logger.info('All tables cleared');
 }
 
-/**
- * Escapes a string value for SQL insertion.
- * Handles NULL values, strings with quotes, and other special cases.
- */
 function escapeSqlValue(value: unknown): string {
 	if (value === null || value === undefined) {
 		return 'NULL';
@@ -235,12 +171,6 @@ function escapeSqlValue(value: unknown): string {
 	return `'${escaped}'`;
 }
 
-/**
- * Inserts data for a single table from backup.
- *
- * @param tableExport - The table data to insert
- * @returns Number of rows inserted
- */
 async function insertTableData(tableExport: TableExport): Promise<number> {
 	const { tableName, rows } = tableExport;
 
@@ -314,12 +244,6 @@ async function insertTableData(tableExport: TableExport): Promise<number> {
 	return insertedCount;
 }
 
-/**
- * Applies pending database migrations.
-
- *
- * @returns Number of migrations applied
- */
 async function applyPendingMigrations(): Promise<number> {
 	logger.info('Applying pending migrations');
 
@@ -371,38 +295,11 @@ async function applyPendingMigrations(): Promise<number> {
 	});
 }
 
-/**
- * Clears all sessions from the database.
- * Used to invalidate all user logins after restore.
- */
 async function clearSessions(): Promise<void> {
 	logger.info('Clearing sessions');
 	await db.delete(schema.sessions);
 }
 
-// =============================================================================
-// Public API
-// =============================================================================
-
-/**
- * Validates a backup before restore without modifying any data.
- * Use this to check if a backup can be safely restored.
- *
- * @param backupId - The backup ID to validate
- * @returns Validation result with errors and warnings
- *
-
- *
- * @example
- * ```typescript
- * const validation = await validateBackup('550e8400-e29b-41d4-a716-446655440000');
- * if (validation.isValid) {
- *   console.log('Backup is valid for restore');
- * } else {
- *   console.log('Errors:', validation.errors);
- * }
- * ```
- */
 export async function validateBackup(backupId: string): Promise<RestoreValidation> {
 	const errors: string[] = [];
 	const warnings: string[] = [];
@@ -486,34 +383,6 @@ export async function validateBackup(backupId: string): Promise<RestoreValidatio
 	};
 }
 
-/**
- * Restores the database from a backup.
- *
- * Process:
- * 1. Load and validate backup
- * 2. Optionally create pre-restore backup
- * 3. Clear all existing data
- * 4. Insert backup data
- * 5. Apply pending migrations if needed
- * 6. Clear sessions if requested
- *
- * @param backupId - The backup ID to restore
- * @param options - Restore options
- * @returns Restore result with success status
- *
-
- *
- * @example
- * ```typescript
- * const result = await restoreBackup('550e8400-e29b-41d4-a716-446655440000', {
- *   createBackupBeforeRestore: true,
- *   clearSessionsAfterRestore: true
- * });
- * if (result.success) {
- *   console.log('Restore completed successfully');
- * }
- * ```
- */
 export async function restoreBackup(
 	backupId: string,
 	options: RestoreOptions = {}

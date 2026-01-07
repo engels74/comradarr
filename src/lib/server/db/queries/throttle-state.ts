@@ -1,22 +1,8 @@
-/**
- * Database queries for throttle state operations.
- *
- *
- * Throttle state tracks runtime rate-limiting counters per connector:
- * - requestsThisMinute: Counter for per-minute rate limit
- * - requestsToday: Counter for daily budget
- * - minuteWindowStart: Start of current minute window
- * - dayWindowStart: Start of current day window (midnight UTC)
- * - pausedUntil: Timestamp until which dispatch is paused
- * - pauseReason: Reason for pause (rate_limit, daily_budget_exhausted, manual)
- */
-
 import { eq, isNull, lt, or, sql } from 'drizzle-orm';
 import { db } from '$lib/server/db';
 import { type ThrottleState, throttleState } from '$lib/server/db/schema';
 import { getStartOfDayUTC } from '$lib/server/services/throttle/time-utils';
 
-// Re-export pure utility functions for convenience
 export {
 	getStartOfDayUTC,
 	getStartOfNextDayUTC,
@@ -26,16 +12,6 @@ export {
 	msUntilMinuteWindowExpires
 } from '$lib/server/services/throttle/time-utils';
 
-// =============================================================================
-// Core CRUD Operations
-// =============================================================================
-
-/**
- * Gets the throttle state for a connector.
- *
- * @param connectorId - Connector ID
- * @returns Throttle state if found, null otherwise
- */
 export async function getThrottleState(connectorId: number): Promise<ThrottleState | null> {
 	const result = await db
 		.select()
@@ -46,13 +22,6 @@ export async function getThrottleState(connectorId: number): Promise<ThrottleSta
 	return result[0] ?? null;
 }
 
-/**
- * Gets or creates throttle state for a connector.
- * Creates a new state with zero counters if one doesn't exist.
- *
- * @param connectorId - Connector ID
- * @returns Throttle state (existing or newly created)
- */
 export async function getOrCreateThrottleState(connectorId: number): Promise<ThrottleState> {
 	const existing = await getThrottleState(connectorId);
 	if (existing) {
@@ -84,13 +53,6 @@ export async function getOrCreateThrottleState(connectorId: number): Promise<Thr
 	return result[0]!;
 }
 
-/**
- * Updates throttle state for a connector.
- *
- * @param connectorId - Connector ID
- * @param updates - Fields to update
- * @returns Updated throttle state, or null if not found
- */
 export async function updateThrottleState(
 	connectorId: number,
 	updates: Partial<Omit<ThrottleState, 'id' | 'connectorId' | 'createdAt'>>
@@ -107,17 +69,6 @@ export async function updateThrottleState(
 	return result[0] ?? null;
 }
 
-// =============================================================================
-// Counter Operations (Atomic)
-// =============================================================================
-
-/**
- * Atomically increments both request counters and updates lastRequestAt.
- * Creates throttle state if it doesn't exist.
- *
- * @param connectorId - Connector ID
- * @returns Updated throttle state
- */
 export async function incrementRequestCounters(connectorId: number): Promise<ThrottleState> {
 	// Ensure state exists
 	await getOrCreateThrottleState(connectorId);
@@ -141,16 +92,6 @@ export async function incrementRequestCounters(connectorId: number): Promise<Thr
 	return result[0]!;
 }
 
-// =============================================================================
-// Window Reset Operations
-// =============================================================================
-
-/**
- * Resets the minute window counter for a connector.
- * Sets requestsThisMinute to 0 and updates minuteWindowStart to now.
- *
- * @param connectorId - Connector ID
- */
 export async function resetMinuteWindow(connectorId: number): Promise<void> {
 	const now = new Date();
 	await db
@@ -163,13 +104,6 @@ export async function resetMinuteWindow(connectorId: number): Promise<void> {
 		.where(eq(throttleState.connectorId, connectorId));
 }
 
-/**
- * Resets the day window counter for a connector.
- * Sets requestsToday to 0 and updates dayWindowStart to start of current day UTC.
- * Also clears pausedUntil if the pause reason was daily_budget_exhausted.
- *
- * @param connectorId - Connector ID
- */
 export async function resetDayWindow(connectorId: number): Promise<void> {
 	const now = new Date();
 	await db
@@ -185,12 +119,6 @@ export async function resetDayWindow(connectorId: number): Promise<void> {
 		.where(eq(throttleState.connectorId, connectorId));
 }
 
-/**
- * Resets minute window for all connectors where the window has expired.
- * A window is expired if minuteWindowStart + 60 seconds < now.
- *
- * @returns Number of connectors reset
- */
 export async function resetExpiredMinuteWindows(): Promise<number> {
 	const now = new Date();
 	const oneMinuteAgo = new Date(now.getTime() - 60 * 1000);
@@ -210,12 +138,6 @@ export async function resetExpiredMinuteWindows(): Promise<number> {
 	return result.length;
 }
 
-/**
- * Resets day window for all connectors where the window has expired (new UTC day).
- * Also clears daily_budget_exhausted pauses.
- *
- * @returns Number of connectors reset
- */
 export async function resetExpiredDayWindows(): Promise<number> {
 	const now = new Date();
 	const startOfToday = getStartOfDayUTC(now);
@@ -235,17 +157,6 @@ export async function resetExpiredDayWindows(): Promise<number> {
 	return result.length;
 }
 
-// =============================================================================
-// Pause Operations
-// =============================================================================
-
-/**
- * Sets or clears the pause state for a connector.
- *
- * @param connectorId - Connector ID
- * @param until - Timestamp until which to pause (null to unpause)
- * @param reason - Reason for pause ('rate_limit' | 'daily_budget_exhausted' | 'manual')
- */
 export async function setPausedUntil(
 	connectorId: number,
 	until: Date | null,
@@ -261,12 +172,6 @@ export async function setPausedUntil(
 		.where(eq(throttleState.connectorId, connectorId));
 }
 
-/**
- * Clears expired pause states for all connectors.
- * A pause is expired if pausedUntil < now.
- *
- * @returns Number of connectors unpaused
- */
 export async function clearExpiredPauses(): Promise<number> {
 	const now = new Date();
 

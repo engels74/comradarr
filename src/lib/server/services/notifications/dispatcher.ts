@@ -1,8 +1,3 @@
-/**
- * Notification dispatcher service.
- * @module services/notifications/dispatcher
- */
-
 import type { NotificationEventType } from '$lib/server/db/queries/notifications';
 import {
 	createNotificationHistory,
@@ -22,34 +17,21 @@ import type { NotificationPayload, NotificationResult } from './types';
 const logger = createLogger('notifications');
 
 export interface DispatchResult {
-	/** The event type that was dispatched */
 	eventType: NotificationEventType;
-	/** Results from each channel */
 	channelResults: NotificationResult[];
-	/** Total number of channels that were targeted */
 	totalChannels: number;
-	/** Number of channels that received the notification successfully */
 	successCount: number;
-	/** Number of channels that failed to receive the notification */
 	failureCount: number;
-	/** Number of channels that were skipped (unsupported type) */
 	skippedCount: number;
-	/** Number of channels where notification was queued for batching */
 	batchedCount: number;
-	/** Number of channels where notification was suppressed due to quiet hours */
 	quietHoursSuppressedCount: number;
 }
 
-/**
- * Options for the dispatch operation.
- */
 export interface DispatchOptions {
-	/** Skip recording history entries (for testing) */
 	skipHistory?: boolean;
 }
 
 export class NotificationDispatcher {
-	/** Dispatch a notification to all enabled channels configured for the event type. */
 	async dispatch<T extends NotificationEventType>(
 		eventType: T,
 		eventData: EventDataMap[T],
@@ -120,7 +102,6 @@ export class NotificationDispatcher {
 		return result;
 	}
 
-	/** Store a notification for later batching instead of sending immediately. */
 	private async storeForBatching<T extends NotificationEventType>(
 		channel: NotificationChannel,
 		eventType: T,
@@ -145,7 +126,6 @@ export class NotificationDispatcher {
 		}
 	}
 
-	/** Send a notification to a specific channel by ID. */
 	async sendToChannel(
 		channelId: number,
 		payload: NotificationPayload,
@@ -247,9 +227,6 @@ export class NotificationDispatcher {
 		}
 	}
 
-	/**
-	 * Update history entry with send result.
-	 */
 	private async updateHistory(historyId: number, result: NotificationResult): Promise<void> {
 		try {
 			await updateNotificationHistoryStatus(
@@ -266,7 +243,6 @@ export class NotificationDispatcher {
 
 let dispatcherInstance: NotificationDispatcher | null = null;
 
-/** Get the singleton NotificationDispatcher instance. */
 export function getNotificationDispatcher(): NotificationDispatcher {
 	if (!dispatcherInstance) {
 		dispatcherInstance = new NotificationDispatcher();
@@ -274,7 +250,6 @@ export function getNotificationDispatcher(): NotificationDispatcher {
 	return dispatcherInstance;
 }
 
-/** Send a notification for an event to all configured channels. */
 export async function notify<T extends NotificationEventType>(
 	eventType: T,
 	eventData: EventDataMap[T]

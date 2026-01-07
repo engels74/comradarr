@@ -1,22 +1,3 @@
-/**
- * TypeScript interfaces for Prowlarr API responses and client configuration.
- *
- * Prowlarr is an indexer manager that tracks indexer health and rate-limiting status.
- * These types represent data from Prowlarr's API v1.
- *
- * @module services/prowlarr/types
-
- */
-
-/**
- * Indexer status response from Prowlarr API.
- * Retrieved via GET /api/v1/indexerstatus
- *
- * This endpoint returns the current operational status of indexers,
- * including rate-limiting information.
- *
-
- */
 export interface ProwlarrIndexerStatus {
 	/** Internal status ID */
 	readonly id: number;
@@ -30,12 +11,6 @@ export interface ProwlarrIndexerStatus {
 	readonly initialFailure: string | null;
 }
 
-/**
- * Indexer definition from Prowlarr API.
- * Retrieved via GET /api/v1/indexer
- *
- * Contains the indexer configuration and metadata.
- */
 export interface ProwlarrIndexer {
 	/** Indexer ID */
 	readonly id: number;
@@ -51,14 +26,6 @@ export interface ProwlarrIndexer {
 	readonly priority: number;
 }
 
-/**
- * Combined indexer health information for Comradarr consumption.
- *
- * Joins indexer definitions with status to provide a unified view
- * of indexer availability and rate-limiting.
- *
-
- */
 export interface IndexerHealth {
 	/** Indexer ID */
 	readonly indexerId: number;
@@ -74,11 +41,6 @@ export interface IndexerHealth {
 	readonly enabled: boolean;
 }
 
-/**
- * Configuration for ProwlarrClient.
- *
-
- */
 export interface ProwlarrClientConfig {
 	/** Base URL of the Prowlarr instance (e.g., http://localhost:9696) */
 	readonly baseUrl: string;
@@ -90,20 +52,8 @@ export interface ProwlarrClientConfig {
 	readonly userAgent?: string;
 }
 
-/**
- * Health status values for Prowlarr instances in Comradarr.
- */
 export type ProwlarrHealthStatus = 'healthy' | 'degraded' | 'unhealthy' | 'offline' | 'unknown';
 
-// =============================================================================
-// Health Monitor Types (Requirements 38.2, 38.4)
-// =============================================================================
-
-/**
- * Result of a health check for a single Prowlarr instance.
- *
-
- */
 export interface HealthCheckResult {
 	/** Prowlarr instance ID */
 	readonly instanceId: number;
@@ -121,12 +71,6 @@ export interface HealthCheckResult {
 	readonly checkedAt: Date;
 }
 
-/**
- * Cached indexer health with stale indicator.
- * Used when retrieving health data for display.
- *
-
- */
 export interface CachedIndexerHealth {
 	/** Prowlarr instance ID */
 	readonly instanceId: number;
@@ -148,11 +92,6 @@ export interface CachedIndexerHealth {
 	readonly isStale: boolean;
 }
 
-/**
- * Summary of health status across all Prowlarr instances.
- *
-
- */
 export interface HealthSummary {
 	/** Total number of Prowlarr instances configured */
 	readonly totalInstances: number;
@@ -164,9 +103,6 @@ export interface HealthSummary {
 	readonly rateLimitedIndexers: number;
 }
 
-/**
- * Configuration for the health monitor.
- */
 export interface HealthMonitorConfig {
 	/** Health check interval in milliseconds (default: 5 minutes) */
 	readonly checkIntervalMs?: number;

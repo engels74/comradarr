@@ -1,13 +1,3 @@
-/**
- * Analytics Aggregator for hourly/daily statistics rollup.
- *
- * Aggregates raw events from analytics_events into pre-computed
- * statistics in analytics_hourly_stats and analytics_daily_stats.
- *
- * @module services/analytics/aggregator
-
- */
-
 import { and, eq, gte, lt, sql } from 'drizzle-orm';
 import { db } from '$lib/server/db';
 import {
@@ -21,48 +11,19 @@ import type { AggregationResult } from './types';
 
 const logger = createLogger('analytics');
 
-// =============================================================================
-// Helper Functions
-// =============================================================================
-
-/**
- * Truncates a date to the start of the hour (UTC).
- *
- * @param date - Date to truncate
- * @returns New Date object truncated to hour
- */
 function truncateToHour(date: Date): Date {
 	const result = new Date(date);
 	result.setUTCMinutes(0, 0, 0);
 	return result;
 }
 
-/**
- * Truncates a date to the start of the day (midnight UTC).
- *
- * @param date - Date to truncate
- * @returns New Date object truncated to day
- */
 function truncateToDay(date: Date): Date {
 	const result = new Date(date);
 	result.setUTCHours(0, 0, 0, 0);
 	return result;
 }
 
-// =============================================================================
-// Aggregation Functions
-// =============================================================================
-
-/**
- * Aggregates raw events for a specific hour into analytics_hourly_stats.
- *
- * Queries analytics_events for the specified hour window and computes
- * aggregate statistics for each connector. Uses UPSERT to handle
- * idempotent re-aggregation.
- *
- * @param hourBucket - The hour to aggregate (will be truncated to hour)
- * @returns Aggregation result with statistics
- */
+// Uses UPSERT to handle idempotent re-aggregation
 export async function aggregateHourlyStats(hourBucket: Date): Promise<AggregationResult> {
 	const startTime = Date.now();
 	const hourStart = truncateToHour(hourBucket);
@@ -189,16 +150,7 @@ export async function aggregateHourlyStats(hourBucket: Date): Promise<Aggregatio
 	}
 }
 
-/**
- * Aggregates hourly stats for a specific day into analytics_daily_stats.
- *
- * Queries analytics_hourly_stats for the specified day and computes
- * rolled-up daily statistics for each connector. Uses UPSERT to handle
- * idempotent re-aggregation.
- *
- * @param dateBucket - The day to aggregate (will be truncated to midnight UTC)
- * @returns Aggregation result with statistics
- */
+// Uses UPSERT to handle idempotent re-aggregation
 export async function aggregateDailyStats(dateBucket: Date): Promise<AggregationResult> {
 	const startTime = Date.now();
 	const dayStart = truncateToDay(dateBucket);
@@ -305,15 +257,7 @@ export async function aggregateDailyStats(dateBucket: Date): Promise<Aggregation
 	}
 }
 
-/**
- * Cleans up old analytics events older than the retention period.
- *
- * Raw events in analytics_events are cleaned up to save space.
- * Aggregated statistics in hourly/daily tables are kept for long-term analysis.
- *
- * @param retentionDays - Number of days to retain raw events (default: 7)
- * @returns Number of events deleted
- */
+// Raw events are cleaned up; aggregated statistics are kept for long-term analysis
 export async function cleanupOldEvents(retentionDays: number = 7): Promise<number> {
 	try {
 		const cutoff = new Date();

@@ -1,8 +1,3 @@
-/**
- * Gap detector service for identifying missing content.
- * @module services/discovery/gap-detector
- */
-
 import { and, eq, isNull, sql } from 'drizzle-orm';
 import { db } from '$lib/server/db';
 import { connectors, episodes, movies, searchRegistry } from '$lib/server/db/schema';
@@ -11,10 +6,7 @@ import type { DiscoveryOptions, DiscoveryStats, GapDiscoveryResult } from './typ
 
 const DEFAULT_BATCH_SIZE = 1000;
 
-/**
- * Discovers content gaps for a connector and creates search registry entries.
- * Idempotent - running multiple times won't create duplicate entries.
- */
+/** Idempotent - running multiple times won't create duplicate entries. */
 export async function discoverGaps(
 	connectorId: number,
 	options: DiscoveryOptions = {}
@@ -230,7 +222,6 @@ async function discoverMovieGaps(connectorId: number, batchSize: number): Promis
 	};
 }
 
-/** Gets gap statistics for a connector without creating registry entries. */
 export async function getGapStats(
 	connectorId: number
 ): Promise<{ episodeGaps: number; movieGaps: number }> {

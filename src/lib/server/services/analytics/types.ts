@@ -1,25 +1,3 @@
-/**
- * Type definitions for the analytics service.
- *
- * Defines event types and payload interfaces for tracking:
- * - Gap discovery rate
- * - Search volume and success rate
- * - Queue depth over time
- *
- * @module services/analytics/types
-
- */
-
-// =============================================================================
-// Event Types
-// =============================================================================
-
-/**
- * All supported analytics event types.
- *
- * Events are recorded to the analytics_events table and later aggregated
- * into hourly/daily statistics.
- */
 export type AnalyticsEventType =
 	| 'gap_discovered'
 	| 'upgrade_discovered'
@@ -31,14 +9,6 @@ export type AnalyticsEventType =
 	| 'sync_completed'
 	| 'sync_failed';
 
-// =============================================================================
-// Event Payloads
-// =============================================================================
-
-/**
- * Payload for gap_discovered events.
- * Recorded after discoverGaps() completes successfully.
- */
 export interface GapDiscoveredPayload {
 	/** Total gaps found in content mirror */
 	gapsFound: number;
@@ -52,10 +22,6 @@ export interface GapDiscoveredPayload {
 	durationMs: number;
 }
 
-/**
- * Payload for upgrade_discovered events.
- * Recorded after discoverUpgrades() completes successfully.
- */
 export interface UpgradeDiscoveredPayload {
 	/** Total upgrade candidates found */
 	upgradesFound: number;
@@ -69,10 +35,6 @@ export interface UpgradeDiscoveredPayload {
 	durationMs: number;
 }
 
-/**
- * Payload for search_dispatched events.
- * Recorded after dispatchSearch() returns successfully.
- */
 export interface SearchDispatchedPayload {
 	/** ID of the search registry entry */
 	searchRegistryId: number;
@@ -86,10 +48,6 @@ export interface SearchDispatchedPayload {
 	responseTimeMs?: number | undefined;
 }
 
-/**
- * Payload for search_completed events.
- * Recorded when a search command finishes successfully (content found).
- */
 export interface SearchCompletedPayload {
 	/** ID of the search registry entry */
 	searchRegistryId: number;
@@ -101,10 +59,6 @@ export interface SearchCompletedPayload {
 	responseTimeMs?: number | undefined;
 }
 
-/**
- * Payload for search_failed and search_no_results events.
- * Recorded when dispatchSearch() fails or returns no results.
- */
 export interface SearchFailedPayload {
 	/** ID of the search registry entry */
 	searchRegistryId: number;
@@ -120,10 +74,6 @@ export interface SearchFailedPayload {
 	responseTimeMs?: number | undefined;
 }
 
-/**
- * Payload for queue_depth_sampled events.
- * Recorded periodically to track queue depth over time.
- */
 export interface QueueDepthSampledPayload {
 	/** Total items in queue (pending + queued + searching + cooldown) */
 	queueDepth: number;
@@ -135,10 +85,6 @@ export interface QueueDepthSampledPayload {
 	cooldownCount: number;
 }
 
-/**
- * Payload for sync_completed events.
- * Recorded after a successful sync operation.
- */
 export interface SyncCompletedPayload {
 	/** Number of items synced */
 	itemsSynced: number;
@@ -148,10 +94,6 @@ export interface SyncCompletedPayload {
 	durationMs: number;
 }
 
-/**
- * Payload for sync_failed events.
- * Recorded when a sync operation fails.
- */
 export interface SyncFailedPayload {
 	/** Type of sync operation that failed */
 	syncType: 'incremental' | 'full';
@@ -161,10 +103,6 @@ export interface SyncFailedPayload {
 	durationMs: number;
 }
 
-/**
- * Union type for all event payloads.
- * Used for type-safe event data handling.
- */
 export type AnalyticsEventPayload =
 	| GapDiscoveredPayload
 	| UpgradeDiscoveredPayload
@@ -175,13 +113,6 @@ export type AnalyticsEventPayload =
 	| SyncCompletedPayload
 	| SyncFailedPayload;
 
-// =============================================================================
-// Result Types
-// =============================================================================
-
-/**
- * Result of recording an analytics event.
- */
 export interface RecordEventResult {
 	/** Whether the event was recorded successfully */
 	success: boolean;
@@ -191,9 +122,6 @@ export interface RecordEventResult {
 	error?: string | undefined;
 }
 
-/**
- * Result of an aggregation operation.
- */
 export interface AggregationResult {
 	/** Whether the aggregation completed successfully */
 	success: boolean;
@@ -209,10 +137,6 @@ export interface AggregationResult {
 	error?: string | undefined;
 }
 
-/**
- * Queue depth sample for a single connector.
- * Used when sampling queue depth for all connectors.
- */
 export interface QueueDepthSample {
 	/** Connector ID */
 	connectorId: number;

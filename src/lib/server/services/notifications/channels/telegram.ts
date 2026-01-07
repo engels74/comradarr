@@ -1,13 +1,5 @@
-/**
- * Telegram Bot API notification sender.
- *
- * Uses the sendMessage endpoint: POST https://api.telegram.org/bot{token}/sendMessage
- *
- * Reference: https://core.telegram.org/bots/api#sendmessage
- *
- * @module services/notifications/channels/telegram
-
- */
+// Telegram Bot API: POST https://api.telegram.org/bot{token}/sendMessage
+// Reference: https://core.telegram.org/bots/api#sendmessage
 
 import type { NotificationChannel } from '$lib/server/db/schema';
 import type { NotificationSender } from '../base-channel';
@@ -27,19 +19,8 @@ import type {
 	TelegramSensitiveConfig
 } from '../types';
 
-// =============================================================================
-// Constants
-// =============================================================================
-
 const TELEGRAM_API_BASE = 'https://api.telegram.org';
 
-// =============================================================================
-// Telegram Sender Implementation
-// =============================================================================
-
-/**
- * Sends notifications via Telegram Bot API.
- */
 export class TelegramSender implements NotificationSender {
 	private readonly timeout: number;
 	private readonly userAgent: string;
@@ -49,9 +30,6 @@ export class TelegramSender implements NotificationSender {
 		this.userAgent = config?.userAgent ?? DEFAULT_SENDER_CONFIG.userAgent;
 	}
 
-	/**
-	 * Send a notification via Telegram.
-	 */
 	async send(
 		channel: NotificationChannel,
 		sensitiveConfig: Record<string, unknown>,
@@ -133,9 +111,6 @@ export class TelegramSender implements NotificationSender {
 		}
 	}
 
-	/**
-	 * Send a test notification to verify the Telegram configuration.
-	 */
 	async test(
 		channel: NotificationChannel,
 		sensitiveConfig: Record<string, unknown>
@@ -153,9 +128,6 @@ export class TelegramSender implements NotificationSender {
 		});
 	}
 
-	/**
-	 * Format the notification message based on parse mode.
-	 */
 	private formatMessage(payload: NotificationPayload, parseMode: string): string {
 		if (parseMode === 'HTML') {
 			return this.formatHtmlMessage(payload);
@@ -169,9 +141,7 @@ export class TelegramSender implements NotificationSender {
 		return this.formatMarkdownMessage(payload);
 	}
 
-	/**
-	 * Format message as HTML (recommended for Telegram).
-	 */
+	// HTML is recommended for Telegram - fewer escaping issues than Markdown
 	private formatHtmlMessage(payload: NotificationPayload): string {
 		let text = `<b>${this.escapeHtml(payload.title)}</b>\n\n${this.escapeHtml(payload.message)}`;
 
@@ -189,9 +159,6 @@ export class TelegramSender implements NotificationSender {
 		return text;
 	}
 
-	/**
-	 * Format message as MarkdownV2.
-	 */
 	private formatMarkdownV2Message(payload: NotificationPayload): string {
 		let text = `*${this.escapeMarkdownV2(payload.title)}*\n\n${this.escapeMarkdownV2(payload.message)}`;
 
@@ -209,9 +176,6 @@ export class TelegramSender implements NotificationSender {
 		return text;
 	}
 
-	/**
-	 * Format message as legacy Markdown.
-	 */
 	private formatMarkdownMessage(payload: NotificationPayload): string {
 		let text = `*${payload.title}*\n\n${payload.message}`;
 
@@ -229,16 +193,11 @@ export class TelegramSender implements NotificationSender {
 		return text;
 	}
 
-	/**
-	 * Escape HTML special characters.
-	 */
 	private escapeHtml(text: string): string {
 		return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 	}
 
-	/**
-	 * Escape MarkdownV2 special characters.
-	 */
+	// MarkdownV2 requires escaping many special characters
 	private escapeMarkdownV2(text: string): string {
 		// Characters that need escaping in MarkdownV2
 		const specialChars = [
@@ -268,9 +227,6 @@ export class TelegramSender implements NotificationSender {
 		return escaped;
 	}
 
-	/**
-	 * Handle HTTP error responses from Telegram API.
-	 */
 	private handleErrorResponse(response: Response, description?: string): Error {
 		if (response.status === 401) {
 			return new NotificationAuthenticationError('Invalid Telegram bot token');
@@ -300,9 +256,6 @@ export class TelegramSender implements NotificationSender {
 		);
 	}
 
-	/**
-	 * Handle errors caught during fetch.
-	 */
 	private handleCatchError(error: unknown): string {
 		if (error instanceof Error) {
 			if (error.name === 'TimeoutError' || error.name === 'AbortError') {
@@ -320,10 +273,6 @@ export class TelegramSender implements NotificationSender {
 		return 'Unknown error occurred';
 	}
 }
-
-// =============================================================================
-// Telegram API Types
-// =============================================================================
 
 interface TelegramSendMessageRequest {
 	chat_id: string;

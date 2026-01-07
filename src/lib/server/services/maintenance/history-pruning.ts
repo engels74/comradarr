@@ -1,14 +1,3 @@
-/**
- * History pruning service for search history maintenance.
- *
- * Deletes search_history entries older than the configured retention period.
- * Aggregated statistics in analytics_hourly_stats and analytics_daily_stats
- * are preserved (stored in separate tables).
- *
- * @module services/maintenance/history-pruning
-
- */
-
 import { sql } from 'drizzle-orm';
 import { db } from '$lib/server/db';
 import { getSettingWithDefault } from '$lib/server/db/queries/settings';
@@ -17,47 +6,10 @@ import type { HistoryPruningResult } from './types';
 
 const logger = createLogger('history-pruning');
 
-// =============================================================================
-// Constants
-// =============================================================================
-
-/** Default retention period in days for search history */
 const DEFAULT_RETENTION_DAYS = 90;
-
-/** Maximum records to delete per batch to avoid long locks */
 const BATCH_SIZE = 10000;
 
-// =============================================================================
-// Public API
-// =============================================================================
-
-/**
- * Prune search history entries older than the retention period.
- *
- * Deletes search_history entries where createdAt < (now - retentionDays).
- * Uses batched deletion to avoid long locks on large tables.
- *
- * Aggregated statistics in analytics_hourly_stats and analytics_daily_stats
- * are NOT affected - they live in separate tables.
- *
- * @param retentionDays - Number of days to retain history. If not provided,
- *                        uses the 'history_retention_days_search' setting or
- *                        DEFAULT_RETENTION_DAYS (90).
- * @returns Result with count of deleted entries and timing metrics
- *
- * @example
- * ```typescript
- * // Use configured retention period
- * const result = await pruneSearchHistory();
- *
- * // Override with specific retention period
- * const result = await pruneSearchHistory(30);
- *
- * if (result.success) {
- *   console.log(`Pruned ${result.searchHistoryDeleted} history entries`);
- * }
- * ```
- */
+// Uses batched deletion to avoid long locks; analytics tables are not affected
 export async function pruneSearchHistory(retentionDays?: number): Promise<HistoryPruningResult> {
 	const startTime = Date.now();
 	let totalDeleted = 0;
@@ -136,15 +88,6 @@ export async function pruneSearchHistory(retentionDays?: number): Promise<Histor
 	}
 }
 
-// =============================================================================
-// Internal Functions
-// =============================================================================
-
-/**
- * Get retention days from application settings.
- *
- * @returns Retention period in days from settings or DEFAULT_RETENTION_DAYS
- */
 async function getRetentionDaysFromSettings(): Promise<number> {
 	const value = await getSettingWithDefault('history_retention_days_search');
 	const parsed = parseInt(value, 10);

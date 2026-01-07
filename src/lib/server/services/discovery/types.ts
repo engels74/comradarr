@@ -1,25 +1,3 @@
-/**
- * Type definitions for the discovery service.
- *
- * The discovery service identifies content gaps (missing files) and upgrade
- * candidates (items below quality cutoff) in the content mirror and creates
- * search registry entries for them.
- *
- * Also handles cleanup of resolved registries:
- * - Gap registries cleaned when hasFile becomes true
- * - Upgrade registries cleaned when qualityCutoffNotMet becomes false
- *
- * @module services/discovery/types
- */
-
-/**
- * Result of a gap discovery operation.
- *
- * Gap discovery identifies monitored content items that have `hasFile=false`
- * and creates search registry entries with state "pending" and searchType "gap".
- *
-
- */
 export interface GapDiscoveryResult {
 	/** Whether the discovery completed successfully */
 	success: boolean;
@@ -33,10 +11,7 @@ export interface GapDiscoveryResult {
 	registriesCreated: number;
 	/** Number of gaps that already had search registry entries (skipped) */
 	registriesSkipped: number;
-	/**
-	 * Number of gap registries deleted because content now has hasFile=true.
-
-	 */
+	/** Number of gap registries deleted because content now has hasFile=true */
 	registriesResolved: number;
 	/** Duration of the discovery operation in milliseconds */
 	durationMs: number;
@@ -44,15 +19,6 @@ export interface GapDiscoveryResult {
 	error?: string;
 }
 
-/**
- * Result of an upgrade candidate discovery operation.
- *
- * Upgrade discovery identifies monitored content items that have
- * `qualityCutoffNotMet=true` and creates search registry entries
- * with state "pending" and searchType "upgrade".
- *
-
- */
 export interface UpgradeDiscoveryResult {
 	/** Whether the discovery completed successfully */
 	success: boolean;
@@ -66,10 +32,7 @@ export interface UpgradeDiscoveryResult {
 	registriesCreated: number;
 	/** Number of upgrades that already had search registry entries (skipped) */
 	registriesSkipped: number;
-	/**
-	 * Number of upgrade registries deleted because content now has qualityCutoffNotMet=false.
-
-	 */
+	/** Number of upgrade registries deleted because content now has qualityCutoffNotMet=false */
 	registriesResolved: number;
 	/** Duration of the discovery operation in milliseconds */
 	durationMs: number;
@@ -77,18 +40,11 @@ export interface UpgradeDiscoveryResult {
 	error?: string;
 }
 
-/**
- * Options for configuring discovery behavior.
- */
 export interface DiscoveryOptions {
 	/** Batch size for processing large result sets (default: 1000) */
 	batchSize?: number;
 }
 
-/**
- * Internal representation of a content gap.
- * Used during gap detection to collect items before creating registries.
- */
 export interface ContentGap {
 	/** Database ID (episodes.id or movies.id) */
 	id: number;
@@ -98,9 +54,6 @@ export interface ContentGap {
 	contentType: 'episode' | 'movie';
 }
 
-/**
- * Statistics tracked during discovery for both episodes and movies.
- */
 export interface DiscoveryStats {
 	/** Number of episode gaps/upgrades found */
 	episodeCount: number;

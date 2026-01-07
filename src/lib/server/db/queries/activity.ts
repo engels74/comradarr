@@ -1,8 +1,3 @@
-/**
- * Activity feed query functions.
- * Display recent discoveries, search outcomes, and system events.
- */
-
 import { and, eq, gte, sql } from 'drizzle-orm';
 import { db } from '../index';
 import {
@@ -16,13 +11,6 @@ import {
 	syncState
 } from '../schema';
 
-// =============================================================================
-// Types
-// =============================================================================
-
-/**
- * Activity item returned from the database.
- */
 export interface ActivityItem {
 	/** Unique identifier with type prefix (e.g., 'search-1', 'discovery-2', 'sync-3') */
 	id: string;
@@ -58,17 +46,6 @@ export interface ActivityItem {
 	connectorType?: string | undefined;
 }
 
-// =============================================================================
-// Activity Feed Query
-// =============================================================================
-
-/**
- * Get recent activity for the dashboard feed.
- * Combines search outcomes, discoveries, and sync events.
- *
- * @param limit - Maximum number of activity items to return
- * @returns Array of activity items sorted by timestamp descending
- */
 export async function getRecentActivity(limit: number = 20): Promise<ActivityItem[]> {
 	// Time threshold for recent activity (last 24 hours for discoveries/syncs)
 	const recentThreshold = new Date(Date.now() - 24 * 60 * 60 * 1000);

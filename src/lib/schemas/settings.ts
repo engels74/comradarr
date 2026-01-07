@@ -1,18 +1,8 @@
-/**
- * Validation schemas for settings forms.
- */
-
 import * as v from 'valibot';
 
-/**
- * Supported log levels.
- */
 export const logLevels = ['error', 'warn', 'info', 'debug', 'trace'] as const;
 export type LogLevel = (typeof logLevels)[number];
 
-/**
- * Log level display names for UI.
- */
 export const logLevelLabels: Record<LogLevel, string> = {
 	error: 'Error',
 	warn: 'Warning',
@@ -21,9 +11,6 @@ export const logLevelLabels: Record<LogLevel, string> = {
 	trace: 'Trace'
 };
 
-/**
- * Log level descriptions for UI.
- */
 export const logLevelDescriptions: Record<LogLevel, string> = {
 	error: 'Only show errors',
 	warn: 'Show warnings and errors',
@@ -32,14 +19,6 @@ export const logLevelDescriptions: Record<LogLevel, string> = {
 	trace: 'Show all log messages including detailed traces'
 };
 
-/**
- * General settings form validation schema.
- *
- * - appName: Required string, 1-100 characters
- * - timezone: Required string (valid IANA timezone)
- * - logLevel: Required, one of 'error' | 'warn' | 'info' | 'debug' | 'trace'
- * - checkForUpdates: Required boolean
- */
 export const GeneralSettingsSchema = v.object({
 	appName: v.pipe(
 		v.string('Application name is required'),
@@ -59,39 +38,20 @@ export const GeneralSettingsSchema = v.object({
 export type GeneralSettingsInput = v.InferInput<typeof GeneralSettingsSchema>;
 export type GeneralSettingsOutput = v.InferOutput<typeof GeneralSettingsSchema>;
 
-// =============================================================================
-// Security Settings
-// =============================================================================
-
-/**
- * Supported authentication modes.
- *
- * - full: Always require authentication for all access
- * - local_bypass: Allow unauthenticated access from RFC1918 addresses
- */
 export const authModes = ['full', 'local_bypass'] as const;
 export type AuthMode = (typeof authModes)[number];
 
-/**
- * Authentication mode display names for UI.
- */
 export const authModeLabels: Record<AuthMode, string> = {
 	full: 'Full Authentication',
 	local_bypass: 'Local Network Bypass'
 };
 
-/**
- * Authentication mode descriptions for UI.
- */
 export const authModeDescriptions: Record<AuthMode, string> = {
 	full: 'Always require authentication for all access',
 	local_bypass:
 		'Allow unauthenticated access from local network (RFC1918 addresses: 10.x.x.x, 172.16-31.x.x, 192.168.x.x)'
 };
 
-/**
- * Authentication mode update validation schema.
- */
 export const AuthModeSchema = v.object({
 	authMode: v.pipe(
 		v.string('Authentication mode is required'),
@@ -102,14 +62,6 @@ export const AuthModeSchema = v.object({
 export type AuthModeInput = v.InferInput<typeof AuthModeSchema>;
 export type AuthModeOutput = v.InferOutput<typeof AuthModeSchema>;
 
-/**
- * Password change validation schema.
- *
- * Validates:
- * - Current password is provided
- * - New password is at least 8 characters
- * - Confirm password matches new password
- */
 export const PasswordChangeSchema = v.pipe(
 	v.object({
 		currentPassword: v.pipe(
@@ -138,18 +90,6 @@ export const PasswordChangeSchema = v.pipe(
 export type PasswordChangeInput = v.InferInput<typeof PasswordChangeSchema>;
 export type PasswordChangeOutput = v.InferOutput<typeof PasswordChangeSchema>;
 
-// =============================================================================
-// Backup Settings
-// =============================================================================
-
-/**
- * Backup settings form validation schema.
- *
- * Validates:
- * - scheduledEnabled: boolean to enable/disable scheduled backups
- * - scheduledCron: valid cron expression (basic validation)
- * - retentionCount: number of scheduled backups to retain (1-100)
- */
 export const BackupSettingsSchema = v.object({
 	scheduledEnabled: v.boolean('Scheduled enabled must be a boolean'),
 	scheduledCron: v.pipe(
@@ -168,44 +108,22 @@ export const BackupSettingsSchema = v.object({
 export type BackupSettingsInput = v.InferInput<typeof BackupSettingsSchema>;
 export type BackupSettingsOutput = v.InferOutput<typeof BackupSettingsSchema>;
 
-// =============================================================================
-// API Key Settings
-// =============================================================================
-
-/**
- * Supported API key scopes.
- *
- * - read: Read-only access (GET requests)
- * - full: Full access to all API operations
- */
 export const apiKeyScopes = ['read', 'full'] as const;
 export type ApiKeyScope = (typeof apiKeyScopes)[number];
 
-/**
- * API key scope display names for UI.
- */
 export const apiKeyScopeLabels: Record<ApiKeyScope, string> = {
 	read: 'Read Only',
 	full: 'Full Access'
 };
 
-/**
- * API key scope descriptions for UI.
- */
 export const apiKeyScopeDescriptions: Record<ApiKeyScope, string> = {
 	read: 'Can only read data (GET requests)',
 	full: 'Full access to all API operations'
 };
 
-/**
- * API key expiration options.
- */
 export const apiKeyExpirations = ['never', '30d', '90d', '365d'] as const;
 export type ApiKeyExpiration = (typeof apiKeyExpirations)[number];
 
-/**
- * API key expiration display names for UI.
- */
 export const apiKeyExpirationLabels: Record<ApiKeyExpiration, string> = {
 	never: 'Never',
 	'30d': '30 days',
@@ -213,20 +131,9 @@ export const apiKeyExpirationLabels: Record<ApiKeyExpiration, string> = {
 	'365d': '1 year'
 };
 
-/**
- * API key rate limit preset options.
- *
- * - unlimited: No rate limit
- * - 60: Standard rate limit (60 requests/minute)
- * - 120: Elevated rate limit (120 requests/minute)
- * - custom: User-defined rate limit
- */
 export const apiKeyRateLimitPresets = ['unlimited', '60', '120', 'custom'] as const;
 export type ApiKeyRateLimitPreset = (typeof apiKeyRateLimitPresets)[number];
 
-/**
- * API key rate limit preset display names for UI.
- */
 export const apiKeyRateLimitPresetLabels: Record<ApiKeyRateLimitPreset, string> = {
 	unlimited: 'Unlimited',
 	'60': '60/minute (Standard)',
@@ -234,9 +141,6 @@ export const apiKeyRateLimitPresetLabels: Record<ApiKeyRateLimitPreset, string> 
 	custom: 'Custom'
 };
 
-/**
- * API key rate limit preset descriptions for UI.
- */
 export const apiKeyRateLimitPresetDescriptions: Record<ApiKeyRateLimitPreset, string> = {
 	unlimited: 'No rate limit applied',
 	'60': 'Standard rate limit for most use cases',
@@ -244,17 +148,6 @@ export const apiKeyRateLimitPresetDescriptions: Record<ApiKeyRateLimitPreset, st
 	custom: 'Set a custom rate limit'
 };
 
-/**
- * Create API key validation schema.
- *
- * Validates:
- * - name: Required string, 1-100 characters
- * - description: Optional string, max 500 characters
- * - scope: Required, one of 'read' | 'full'
- * - expiresIn: Optional, one of 'never' | '30d' | '90d' | '365d'
- * - rateLimitPreset: Optional, one of 'unlimited' | '60' | '120' | 'custom'
- * - rateLimitCustom: Optional, number 1-1000 (only used when rateLimitPreset is 'custom')
- */
 export const CreateApiKeySchema = v.object({
 	name: v.pipe(
 		v.string('Name is required'),
@@ -282,13 +175,6 @@ export const CreateApiKeySchema = v.object({
 export type CreateApiKeyInput = v.InferInput<typeof CreateApiKeySchema>;
 export type CreateApiKeyOutput = v.InferOutput<typeof CreateApiKeySchema>;
 
-/**
- * Update API key rate limit validation schema.
- *
- * Validates:
- * - rateLimitPreset: Required, one of 'unlimited' | '60' | '120' | 'custom'
- * - rateLimitCustom: Optional, number 1-1000 (only used when rateLimitPreset is 'custom')
- */
 export const UpdateApiKeyRateLimitSchema = v.object({
 	rateLimitPreset: v.pipe(
 		v.string('Rate limit preset is required'),
@@ -306,13 +192,6 @@ export const UpdateApiKeyRateLimitSchema = v.object({
 export type UpdateApiKeyRateLimitInput = v.InferInput<typeof UpdateApiKeyRateLimitSchema>;
 export type UpdateApiKeyRateLimitOutput = v.InferOutput<typeof UpdateApiKeyRateLimitSchema>;
 
-/**
- * Converts a rate limit preset/custom value to the actual rate limit.
- *
- * @param preset - Rate limit preset selection
- * @param custom - Custom rate limit value (only used when preset is 'custom')
- * @returns Rate limit per minute, or null for unlimited
- */
 export function parseRateLimitValue(
 	preset: ApiKeyRateLimitPreset | undefined,
 	custom: number | undefined
@@ -326,12 +205,6 @@ export function parseRateLimitValue(
 	return parseInt(preset, 10);
 }
 
-/**
- * Converts a rate limit value to preset/custom values for the form.
- *
- * @param rateLimitPerMinute - Rate limit per minute, or null for unlimited
- * @returns Object with preset and optional custom value
- */
 export function toRateLimitFormValues(rateLimitPerMinute: number | null): {
 	preset: ApiKeyRateLimitPreset;
 	custom?: number;

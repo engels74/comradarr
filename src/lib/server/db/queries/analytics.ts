@@ -1,12 +1,3 @@
-/**
- * Database queries for analytics dashboard.
- *
- * Provides queries for:
- * - Time series metrics (discovery, search volume, queue depth)
- * - Connector comparison (success rate, response time, errors)
- * - Content analysis (most searched, hardest to find, quality distribution)
- */
-
 import { and, count, eq, gte, lte, sql } from 'drizzle-orm';
 import { db } from '$lib/server/db';
 import {
@@ -20,10 +11,6 @@ import {
 	seasons,
 	series
 } from '$lib/server/db/schema';
-
-// =============================================================================
-// Types
-// =============================================================================
 
 export type TimePeriod = '24h' | '7d' | '30d';
 
@@ -103,13 +90,6 @@ export interface QualityDistribution {
 	percentage: number;
 }
 
-// =============================================================================
-// Helper Functions
-// =============================================================================
-
-/**
- * Gets the start date for a time period.
- */
 function getStartDate(period: TimePeriod): Date {
 	const now = new Date();
 	switch (period) {
@@ -122,21 +102,10 @@ function getStartDate(period: TimePeriod): Date {
 	}
 }
 
-/**
- * Determines whether to use hourly or daily stats based on period.
- */
 function useHourlyStats(period: TimePeriod): boolean {
 	return period === '24h' || period === '7d';
 }
 
-// =============================================================================
-// Discovery Metrics Query
-// =============================================================================
-
-/**
- * Gets discovery metrics (gaps and upgrades discovered) over time.
- *
- */
 export async function getDiscoveryMetrics(period: TimePeriod): Promise<DiscoveryMetrics[]> {
 	const startDate = getStartDate(period);
 
@@ -183,9 +152,6 @@ export async function getDiscoveryMetrics(period: TimePeriod): Promise<Discovery
 	}
 }
 
-/**
- * Helper to group time series data by connector.
- */
 function groupByConnector<
 	T extends { connectorId: number; connectorName: string; connectorType: string }
 >(
@@ -218,14 +184,6 @@ function groupByConnector<
 	return Array.from(map.values());
 }
 
-// =============================================================================
-// Search Metrics Query
-// =============================================================================
-
-/**
- * Gets search volume metrics over time.
- *
- */
 export async function getSearchMetrics(period: TimePeriod): Promise<SearchMetrics[]> {
 	const startDate = getStartDate(period);
 
@@ -306,14 +264,6 @@ function groupSearchMetrics<
 	return Array.from(map.values());
 }
 
-// =============================================================================
-// Queue Metrics Query
-// =============================================================================
-
-/**
- * Gets queue depth metrics over time.
- *
- */
 export async function getQueueMetrics(period: TimePeriod): Promise<QueueMetrics[]> {
 	const startDate = getStartDate(period);
 
@@ -384,14 +334,6 @@ function groupQueueMetrics<
 	return Array.from(map.values());
 }
 
-// =============================================================================
-// Connector Comparison Query
-// =============================================================================
-
-/**
- * Gets aggregated statistics per connector for comparison.
- *
- */
 export async function getConnectorComparison(period: TimePeriod): Promise<ConnectorStats[]> {
 	const startDate = getStartDate(period);
 
@@ -467,14 +409,6 @@ function calculateRates(row: {
 	};
 }
 
-// =============================================================================
-// Content Analysis Queries
-// =============================================================================
-
-/**
- * Gets the most searched content items.
- *
- */
 export async function getMostSearchedItems(limit: number = 10): Promise<MostSearchedItem[]> {
 	// Episode query
 	const episodeQuery = db
@@ -550,10 +484,6 @@ export async function getMostSearchedItems(limit: number = 10): Promise<MostSear
 	}));
 }
 
-/**
- * Gets the hardest to find content (highest attempt count, still not found).
- *
- */
 export async function getHardestToFindItems(limit: number = 10): Promise<HardestToFindItem[]> {
 	// Episode query for items still being searched
 	const episodeQuery = db
@@ -627,10 +557,6 @@ export async function getHardestToFindItems(limit: number = 10): Promise<Hardest
 	}));
 }
 
-/**
- * Gets the quality distribution for acquired content.
- *
- */
 export async function getQualityDistribution(): Promise<QualityDistribution[]> {
 	// Get quality distribution from episodes and movies that have files
 	const episodeQuality = db
@@ -680,13 +606,6 @@ export async function getQualityDistribution(): Promise<QualityDistribution[]> {
 	}));
 }
 
-// =============================================================================
-// Summary Statistics
-// =============================================================================
-
-/**
- * Gets summary statistics for the analytics dashboard.
- */
 export async function getAnalyticsSummary(period: TimePeriod): Promise<{
 	totalSearches: number;
 	successfulSearches: number;
@@ -756,13 +675,6 @@ export async function getAnalyticsSummary(period: TimePeriod): Promise<{
 	}
 }
 
-// =============================================================================
-// CSV Export Query
-// =============================================================================
-
-/**
- * Row structure for CSV export.
- */
 export interface ExportRow {
 	date: string;
 	connector: string;
@@ -780,14 +692,6 @@ export interface ExportRow {
 	successRate: number;
 }
 
-/**
- * Gets daily statistics for CSV export within a date range.
- *
- *
- * @param startDate - Start of date range (inclusive)
- * @param endDate - End of date range (inclusive)
- * @returns Array of export rows ordered by date ascending, then connector name
- */
 export async function getDailyStatsForExport(startDate: Date, endDate: Date): Promise<ExportRow[]> {
 	const results = await db
 		.select({

@@ -1,13 +1,4 @@
-/**
- * TypeScript interfaces for Whisparr API responses
- *
- * Whisparr is a fork of Sonarr and uses the same API structure.
- * These types are aliases to Sonarr types for clarity and future extensibility.
- *
- * @module connectors/whisparr/types
-
- */
-
+// Whisparr is a Sonarr fork with identical API structure - type aliases for clarity
 import type {
 	SonarrEpisode,
 	SonarrEpisodeFile,
@@ -17,42 +8,9 @@ import type {
 	SonarrSeriesStatistics
 } from '../sonarr/types.js';
 
-/**
- * Season statistics from Whisparr API
- * Identical to Sonarr's structure
- */
 export type WhisparrSeasonStatistics = SonarrSeasonStatistics;
-
-/**
- * Season within a series response
- * Identical to Sonarr's structure
- */
 export type WhisparrSeason = SonarrSeason;
-
-/**
- * Series statistics from Whisparr API
- * Identical to Sonarr's structure
- */
 export type WhisparrSeriesStatistics = SonarrSeriesStatistics;
-
-/**
- * Series response from Whisparr API
- * GET /api/v3/series
- *
-
- */
 export type WhisparrSeries = SonarrSeries;
-
-/**
- * Episode file information from Whisparr API
- * Identical to Sonarr's structure
- */
 export type WhisparrEpisodeFile = SonarrEpisodeFile;
-
-/**
- * Episode response from Whisparr API
- * GET /api/v3/episode or GET /api/v3/wanted/missing
- *
-
- */
 export type WhisparrEpisode = SonarrEpisode;

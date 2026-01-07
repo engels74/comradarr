@@ -1,13 +1,3 @@
-/**
- * Analytics Collector for recording raw events.
- *
- * Records analytics events to the analytics_events table for later aggregation.
- * Events are recorded with error handling to avoid blocking main operations.
- *
- * @module services/analytics/collector
-
- */
-
 import { inArray, sql } from 'drizzle-orm';
 import { db } from '$lib/server/db';
 import { analyticsEvents, searchRegistry } from '$lib/server/db/schema';
@@ -27,37 +17,7 @@ import type {
 
 const logger = createLogger('analytics');
 
-// =============================================================================
-// Analytics Collector Class
-// =============================================================================
-
-/**
- * Analytics Collector singleton class.
- *
- * Provides methods to record various analytics events to the database.
- * All recording operations are wrapped in try/catch to prevent blocking
- * main application flow on analytics failures.
- *
- * @example
- * ```typescript
- * import { analyticsCollector } from '$lib/server/services/analytics';
- *
- * // Record gap discovery
- * await analyticsCollector.recordGapDiscovery(connectorId, gapResult);
- *
- * // Sample queue depth
- * const samples = await analyticsCollector.sampleQueueDepth();
- * ```
- */
 class AnalyticsCollector {
-	/**
-	 * Records a raw analytics event to the database.
-	 *
-	 * @param connectorId - Connector ID (null for system-wide events)
-	 * @param eventType - Type of analytics event
-	 * @param eventData - Event-specific payload data
-	 * @returns Result indicating success or failure
-	 */
 	async recordEvent(
 		connectorId: number | null,
 		eventType: AnalyticsEventType,
@@ -90,15 +50,6 @@ class AnalyticsCollector {
 		}
 	}
 
-	/**
-	 * Records a gap discovery event from discoverGaps() result.
-	 *
-	 * Only records if the discovery was successful.
-	 *
-	 * @param connectorId - ID of the connector that was scanned
-	 * @param result - Result from discoverGaps()
-	 * @returns Result indicating success or failure
-	 */
 	async recordGapDiscovery(
 		connectorId: number,
 		result: GapDiscoveryResult
@@ -119,15 +70,6 @@ class AnalyticsCollector {
 		return this.recordEvent(connectorId, 'gap_discovered', payload);
 	}
 
-	/**
-	 * Records an upgrade discovery event from discoverUpgrades() result.
-	 *
-	 * Only records if the discovery was successful.
-	 *
-	 * @param connectorId - ID of the connector that was scanned
-	 * @param result - Result from discoverUpgrades()
-	 * @returns Result indicating success or failure
-	 */
 	async recordUpgradeDiscovery(
 		connectorId: number,
 		result: UpgradeDiscoveryResult
@@ -148,17 +90,6 @@ class AnalyticsCollector {
 		return this.recordEvent(connectorId, 'upgrade_discovered', payload);
 	}
 
-	/**
-	 * Records a successful search dispatch event.
-	 *
-	 * @param connectorId - ID of the connector used
-	 * @param searchRegistryId - ID of the search registry entry
-	 * @param contentType - Type of content searched
-	 * @param searchType - Type of search (gap or upgrade)
-	 * @param commandId - Command ID returned by *arr API
-	 * @param responseTimeMs - Optional response time in milliseconds
-	 * @returns Result indicating success or failure
-	 */
 	async recordSearchDispatched(
 		connectorId: number,
 		searchRegistryId: number,
@@ -178,22 +109,7 @@ class AnalyticsCollector {
 		return this.recordEvent(connectorId, 'search_dispatched', payload);
 	}
 
-	/**
-	 * Records a search failure event.
-	 *
-	 * Determines the appropriate event type based on failure category:
-	 * - 'no_results' → search_no_results event
-	 * - Other failures → search_failed event
-	 *
-	 * @param connectorId - ID of the connector used
-	 * @param searchRegistryId - ID of the search registry entry
-	 * @param contentType - Type of content searched
-	 * @param searchType - Type of search (gap or upgrade)
-	 * @param failureCategory - Category of failure
-	 * @param error - Optional error message
-	 * @param responseTimeMs - Optional response time in milliseconds
-	 * @returns Result indicating success or failure
-	 */
+	// Determines event type based on failure category: 'no_results' -> search_no_results, others -> search_failed
 	async recordSearchFailed(
 		connectorId: number,
 		searchRegistryId: number,
@@ -219,15 +135,6 @@ class AnalyticsCollector {
 		return this.recordEvent(connectorId, eventType, payload);
 	}
 
-	/**
-	 * Samples queue depth for all connectors.
-	 *
-	 * Queries the search_registry table to count items in each state,
-	 * grouped by connector. Records a queue_depth_sampled event for
-	 * each connector with items in the queue.
-	 *
-	 * @returns Array of queue depth samples, one per connector
-	 */
 	async sampleQueueDepth(): Promise<QueueDepthSample[]> {
 		const samples: QueueDepthSample[] = [];
 
@@ -295,15 +202,6 @@ class AnalyticsCollector {
 		return samples;
 	}
 
-	/**
-	 * Records a successful sync completion event.
-	 *
-	 * @param connectorId - ID of the connector that was synced
-	 * @param itemsSynced - Number of items synced
-	 * @param syncType - Type of sync operation
-	 * @param durationMs - Duration of sync in milliseconds
-	 * @returns Result indicating success or failure
-	 */
 	async recordSyncCompleted(
 		connectorId: number,
 		itemsSynced: number,
@@ -317,15 +215,6 @@ class AnalyticsCollector {
 		});
 	}
 
-	/**
-	 * Records a sync failure event.
-	 *
-	 * @param connectorId - ID of the connector that failed to sync
-	 * @param syncType - Type of sync operation that failed
-	 * @param error - Error message
-	 * @param durationMs - Duration before failure in milliseconds
-	 * @returns Result indicating success or failure
-	 */
 	async recordSyncFailed(
 		connectorId: number,
 		syncType: 'incremental' | 'full',
@@ -340,14 +229,4 @@ class AnalyticsCollector {
 	}
 }
 
-// =============================================================================
-// Singleton Export
-// =============================================================================
-
-/**
- * Singleton instance of the AnalyticsCollector.
- *
- * Use this exported instance throughout the application to record
- * analytics events.
- */
 export const analyticsCollector = new AnalyticsCollector();

@@ -1,35 +1,15 @@
-/**
- * Connector type detection utility
- *
- * Detects the type of *arr application (Sonarr, Radarr, Whisparr)
- * by querying the system status endpoint.
- *
- * @module connectors/common/detect
- */
-
 import type { ConnectorType, SystemStatus } from './types.js';
 
-/** Detection timeout in milliseconds */
 const DETECTION_TIMEOUT = 5000;
-
-/** API version for system status endpoint */
 const API_VERSION = 'v3';
-
-/** User-Agent header value */
 const USER_AGENT = 'Comradarr/1.0';
 
-/**
- * Supported application names and their connector types
- */
 const APP_NAME_MAP: Record<string, ConnectorType> = {
 	radarr: 'radarr',
 	sonarr: 'sonarr',
 	whisparr: 'whisparr'
 };
 
-/**
- * Result of connector type detection
- */
 export type DetectionResult =
 	| {
 			success: true;
@@ -42,27 +22,6 @@ export type DetectionResult =
 			error: string;
 	  };
 
-/**
- * Detect the connector type by querying the system status endpoint
- *
- * Makes a request to /api/v3/system/status and parses the appName field
- * to determine what type of *arr application is running.
- *
- * @param baseUrl - Base URL of the *arr application (e.g., http://localhost:8989)
- * @param apiKey - API key for authentication
- * @returns Detection result with type info or error message
- *
- * @example
- * ```typescript
- * const result = await detectConnectorType('http://localhost:7878', 'my-api-key');
- * if (result.success) {
- *   console.log(`Detected ${result.appName} v${result.version}`);
- *   // result.type will be 'radarr', 'sonarr', or 'whisparr'
- * } else {
- *   console.error(result.error);
- * }
- * ```
- */
 export async function detectConnectorType(
 	baseUrl: string,
 	apiKey: string
@@ -119,9 +78,6 @@ export async function detectConnectorType(
 	}
 }
 
-/**
- * Convert HTTP error responses to user-friendly messages
- */
 function handleErrorResponse(response: Response): DetectionResult {
 	switch (response.status) {
 		case 401:
@@ -142,9 +98,6 @@ function handleErrorResponse(response: Response): DetectionResult {
 	}
 }
 
-/**
- * Categorize fetch errors into user-friendly messages
- */
 function categorizeError(error: unknown): DetectionResult {
 	// Timeout error
 	if (error instanceof DOMException && error.name === 'AbortError') {

@@ -1,15 +1,5 @@
-/**
- * Type definitions for the sync service.
- *
- * @module services/sync/types
-
- */
-
 import type { HealthStatus } from './health';
 
-/**
- * Result of an incremental sync operation.
- */
 export interface SyncResult {
 	/** Whether the sync completed successfully */
 	success: boolean;
@@ -29,15 +19,6 @@ export interface SyncResult {
 	healthStatus?: HealthStatus;
 }
 
-/**
- * Result of a full reconciliation operation.
- *
- * Full reconciliation differs from incremental sync by also deleting
- * items that no longer exist in the *arr application and cleaning up
- * associated search state.
- *
-
- */
 export interface ReconciliationResult {
 	/** Whether the reconciliation completed successfully */
 	success: boolean;
@@ -63,9 +44,6 @@ export interface ReconciliationResult {
 	healthStatus?: HealthStatus;
 }
 
-/**
- * Options for configuring sync behavior.
- */
 export interface SyncOptions {
 	/** Concurrency limit for parallel episode fetching (default: 5) */
 	concurrency?: number;
@@ -75,9 +53,6 @@ export interface SyncOptions {
 	skipRetry?: boolean;
 }
 
-/**
- * Internal statistics tracked during sync.
- */
 export interface SyncStats {
 	seriesCount: number;
 	seasonCount: number;

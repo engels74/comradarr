@@ -1,41 +1,15 @@
-/**
- * API response parsers for *arr applications using Valibot for runtime validation.
- *
- * Provides type-safe parsing with graceful error handling for paginated responses,
- * quality models, and command responses. Unknown fields are ignored and malformed
- * records return errors instead of throwing.
- *
- * @module connectors/common/parsers
- */
-
 import * as v from 'valibot';
 import type { QualityModel } from '$lib/utils/quality';
 import type { CommandResponse, CommandStatus, PaginatedResponse } from './types';
 
-/**
- * Result type for parser functions.
- * Enables graceful degradation - callers can log warnings and skip malformed records.
- */
 export type ParseResult<T> =
 	| { success: true; data: T }
 	| { success: false; error: string; issues?: v.BaseIssue<unknown>[] };
 
-/**
- * Result type for lenient parser functions that skip malformed records.
- * Includes a count of skipped records for transparency.
- *
-
- */
 export type LenientParseResult<T> =
 	| { success: true; data: T; skipped: number }
 	| { success: false; error: string; issues?: v.BaseIssue<unknown>[] };
 
-/**
- * Valibot schema for QualityModel from *arr API responses.
- * Matches the structure in $lib/utils/quality.ts
- *
-
- */
 export const QualityModelSchema = v.object({
 	quality: v.object({
 		id: v.number(),
@@ -50,15 +24,8 @@ export const QualityModelSchema = v.object({
 	})
 });
 
-/**
- * Command status enum schema
- */
 export const CommandStatusSchema = v.picklist(['queued', 'started', 'completed', 'failed']);
 
-/**
- * Valibot schema for CommandResponse from *arr API (POST /api/v3/command).
- * Required: id, name, status, started, ended, message
- */
 export const CommandResponseSchema = v.object({
 	id: v.number(),
 	name: v.string(),
@@ -78,10 +45,6 @@ export const CommandResponseSchema = v.object({
 	lastExecutionTime: v.optional(v.string())
 });
 
-/**
- * Creates a Valibot schema for paginated responses with a specific record type.
- * Required: page, pageSize, totalRecords, records array
- */
 export function createPaginatedResponseSchema<T extends v.GenericSchema>(recordSchema: T) {
 	return v.object({
 		page: v.number(),
@@ -93,24 +56,6 @@ export function createPaginatedResponseSchema<T extends v.GenericSchema>(recordS
 	});
 }
 
-/**
- * Parses a QualityModel from an unknown API response value.
- *
- * @param data - Unknown data from API response
- * @returns ParseResult with typed QualityModel or error details
- *
-
- *
- * @example
- * ```typescript
- * const result = parseQualityModel(apiResponse.quality);
- * if (result.success) {
- *   console.log(result.data.quality.name);
- * } else {
- *   console.warn('Malformed quality model:', result.error);
- * }
- * ```
- */
 export function parseQualityModel(data: unknown): ParseResult<QualityModel> {
 	const result = v.safeParse(QualityModelSchema, data);
 
@@ -125,31 +70,11 @@ export function parseQualityModel(data: unknown): ParseResult<QualityModel> {
 	};
 }
 
-/**
- * Parses a CommandResponse from an unknown API response value.
- *
- * @param data - Unknown data from API response
- * @returns ParseResult with typed CommandResponse or error details
- *
-
- *
- * @example
- * ```typescript
- * const result = parseCommandResponse(apiResponse);
- * if (result.success) {
- *   console.log(`Command ${result.data.name} status: ${result.data.status}`);
- * } else {
- *   console.warn('Malformed command response:', result.error);
- * }
- * ```
- */
 export function parseCommandResponse(data: unknown): ParseResult<CommandResponse> {
 	const result = v.safeParse(CommandResponseSchema, data);
 
 	if (result.success) {
-		// Map to CommandResponse type, ensuring all required fields
-		// Use object spreading to conditionally include optional properties
-		// (required for exactOptionalPropertyTypes TypeScript setting)
+		// Spread optional properties only when defined (required for exactOptionalPropertyTypes)
 		const output = result.output;
 		const commandResponse: CommandResponse = {
 			id: output.id,
@@ -163,7 +88,6 @@ export function parseCommandResponse(data: unknown): ParseResult<CommandResponse
 			stateChangeTime: output.stateChangeTime ?? output.queued,
 			sendUpdatesToClient: output.sendUpdatesToClient ?? false,
 			updateScheduledTask: output.updateScheduledTask ?? false,
-			// Conditionally include optional properties only when defined
 			...(output.message !== undefined && { message: output.message }),
 			...(output.started !== undefined && { started: output.started }),
 			...(output.ended !== undefined && { ended: output.ended }),
@@ -182,29 +106,6 @@ export function parseCommandResponse(data: unknown): ParseResult<CommandResponse
 	};
 }
 
-/**
- * Parses a paginated response from an unknown API response value.
- *
- * @param data - Unknown data from API response
- * @param recordSchema - Valibot schema for validating individual records
- * @returns ParseResult with typed PaginatedResponse or error details
- *
-
- *
- * @example
- * ```typescript
- * const MovieSchema = v.object({ id: v.number(), title: v.string() });
- * const result = parsePaginatedResponse(apiResponse, MovieSchema);
- * if (result.success) {
- *   console.log(`Found ${result.data.totalRecords} movies`);
- *   for (const movie of result.data.records) {
- *     console.log(movie.title);
- *   }
- * } else {
- *   console.warn('Malformed paginated response:', result.error);
- * }
- * ```
- */
 export function parsePaginatedResponse<T extends v.GenericSchema>(
 	data: unknown,
 	recordSchema: T
@@ -232,26 +133,7 @@ export function parsePaginatedResponse<T extends v.GenericSchema>(
 	};
 }
 
-/**
- * Helper to parse an array of records, filtering out invalid entries with warnings.
- * Useful for processing API responses where some records may be malformed.
- *
- * @param records - Array of unknown records from API
- * @param recordSchema - Valibot schema for validating records
- * @param onInvalid - Optional callback for invalid records (for logging)
- * @returns Array of valid parsed records
- *
-
- *
- * @example
- * ```typescript
- * const validMovies = parseRecordsWithWarnings(
- *   apiResponse.records,
- *   MovieSchema,
- *   (record, error) => console.warn('Skipping malformed movie:', error)
- * );
- * ```
- */
+/** Filters out invalid records, calling onInvalid callback for skipped items. */
 export function parseRecordsWithWarnings<T extends v.GenericSchema>(
 	records: unknown[],
 	recordSchema: T,
@@ -272,10 +154,6 @@ export function parseRecordsWithWarnings<T extends v.GenericSchema>(
 	return validRecords;
 }
 
-/**
- * Schema for paginated response metadata (without records validation).
- * Used by lenient parser to validate structure before processing records individually.
- */
 const PaginatedMetadataSchema = v.object({
 	page: v.number(),
 	pageSize: v.number(),
@@ -285,36 +163,12 @@ const PaginatedMetadataSchema = v.object({
 	records: v.array(v.unknown())
 });
 
-/**
- * Parses a paginated response leniently, skipping malformed records with warnings.
- * Unlike parsePaginatedResponse(), this function will return valid records even
- * if some records in the response are malformed.
- *
- * @param data - Unknown data from API response
- * @param recordSchema - Valibot schema for validating individual records
- * @param onInvalid - Optional callback for invalid records (for logging warnings)
- * @returns LenientParseResult with typed PaginatedResponse, skipped count, or error
- *
-
- *
- * @example
- * ```typescript
- * const result = parsePaginatedResponseLenient(
- *   apiResponse,
- *   MovieSchema,
- *   (record, error) => console.warn('Skipping malformed movie:', error)
- * );
- * if (result.success) {
- *   console.log(`Parsed ${result.data.records.length} movies, skipped ${result.skipped}`);
- * }
- * ```
- */
+/** Skips malformed records instead of failing the entire parse. */
 export function parsePaginatedResponseLenient<T extends v.GenericSchema>(
 	data: unknown,
 	recordSchema: T,
 	onInvalid?: (record: unknown, error: string) => void
 ): LenientParseResult<PaginatedResponse<v.InferOutput<T>>> {
-	// First, validate the paginated structure (without strict record validation)
 	const metadataResult = v.safeParse(PaginatedMetadataSchema, data);
 
 	if (!metadataResult.success) {
@@ -329,7 +183,6 @@ export function parsePaginatedResponseLenient<T extends v.GenericSchema>(
 	const rawRecords = metadata.records;
 	let skippedCount = 0;
 
-	// Parse each record individually, collecting valid ones and counting skipped
 	const validRecords = parseRecordsWithWarnings(rawRecords, recordSchema, (record, error) => {
 		skippedCount++;
 		if (onInvalid) {

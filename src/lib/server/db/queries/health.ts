@@ -1,38 +1,15 @@
-/**
- * Database queries for health check operations.
- *
- *
- * Provides queries for the /health endpoint including:
- * - Database connection check with latency measurement
- * - Per-connector health summary with queue status
- * - Global queue aggregation
- */
-
 import { count, eq, sql } from 'drizzle-orm';
 import { db } from '$lib/server/db';
 import { connectors, requestQueue } from '$lib/server/db/schema';
 
-// =============================================================================
-// Types
-// =============================================================================
-
-/**
- * Overall health status for the application.
- */
 export type HealthStatus = 'healthy' | 'degraded' | 'unhealthy';
 
-/**
- * Database connection status result.
- */
 export interface DatabaseHealthResult {
 	status: 'connected' | 'disconnected';
 	latencyMs?: number;
 	error?: string;
 }
 
-/**
- * Per-connector health summary for health check endpoint.
- */
 export interface ConnectorHealthSummary {
 	id: number;
 	name: string;
@@ -42,17 +19,11 @@ export interface ConnectorHealthSummary {
 	queueDepth: number;
 }
 
-/**
- * Global queue status aggregation.
- */
 export interface QueueHealthSummary {
 	totalDepth: number;
 	pausedConnectors: number;
 }
 
-/**
- * Complete health summary from database.
- */
 export interface HealthSummary {
 	database: DatabaseHealthResult;
 	connectors: ConnectorHealthSummary[];
@@ -60,17 +31,6 @@ export interface HealthSummary {
 	overallStatus: HealthStatus;
 }
 
-// =============================================================================
-// Database Health Check
-// =============================================================================
-
-/**
- * Checks database connection by executing a simple query.
- * Measures round-trip latency in milliseconds.
- *
- *
- * @returns Database connection status with latency
- */
 export async function checkDatabaseConnection(): Promise<DatabaseHealthResult> {
 	const startTime = performance.now();
 
@@ -92,16 +52,6 @@ export async function checkDatabaseConnection(): Promise<DatabaseHealthResult> {
 	}
 }
 
-// =============================================================================
-// Connector Health Summary
-// =============================================================================
-
-/**
- * Gets health summary for all connectors including queue depth per connector.
- *
- *
- * @returns Array of connector health summaries
- */
 export async function getConnectorHealthSummary(): Promise<ConnectorHealthSummary[]> {
 	const result = await db
 		.select({
@@ -133,16 +83,6 @@ export async function getConnectorHealthSummary(): Promise<ConnectorHealthSummar
 	}));
 }
 
-// =============================================================================
-// Queue Health Summary
-// =============================================================================
-
-/**
- * Gets global queue health summary.
- *
- *
- * @returns Queue status including total depth and paused connector count
- */
 export async function getQueueHealthSummary(): Promise<QueueHealthSummary> {
 	// Run both queries in parallel
 	const [totalDepthResult, pausedCountResult] = await Promise.all([
@@ -164,20 +104,6 @@ export async function getQueueHealthSummary(): Promise<QueueHealthSummary> {
 	};
 }
 
-// =============================================================================
-// Combined Health Summary
-// =============================================================================
-
-/**
- * Gets complete health summary for the /health endpoint.
- *
- * Determines overall status based on:
- * - Database connection (unreachable = unhealthy)
- * - Connector health (any unhealthy/offline = degraded)
- *
- *
- * @returns Complete health summary including overall status
- */
 export async function getHealthSummary(): Promise<HealthSummary> {
 	// Check database connection first
 	const database = await checkDatabaseConnection();

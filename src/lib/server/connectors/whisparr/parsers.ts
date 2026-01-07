@@ -1,15 +1,4 @@
-/**
- * API response parsers for Whisparr using Valibot for runtime validation.
- *
- * Whisparr is a fork of Sonarr and uses the same API structure, so we
- * re-export Sonarr parsers with Whisparr-specific names for clarity.
- *
- * @module connectors/whisparr/parsers
-
- */
-
-// Re-export Sonarr schemas as Whisparr schemas (identical API structure)
-// Re-export Sonarr parser functions as Whisparr parser functions
+// Whisparr is a Sonarr fork with identical API structure - re-export Sonarr parsers
 export {
 	parsePaginatedEpisodes as parsePaginatedWhisparrEpisodes,
 	parsePaginatedEpisodesLenient as parsePaginatedWhisparrEpisodesLenient,

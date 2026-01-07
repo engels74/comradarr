@@ -1,58 +1,8 @@
-/**
- * Priority calculator for queue items.
- *
- * Calculates priority scores based on multiple factors:
- * - Content age (newer content scores higher)
- * - Missing duration (longer missing scores higher)
- * - User priority override (manual adjustments)
- * - Failure penalty (fewer failures scores higher)
- * - Search type (gaps prioritized over upgrades)
- *
- * Properties guaranteed:
- * - Deterministic: Same inputs always produce same output
- * - Newer content >= older content (all else equal)
- * - Fewer failures >= more failures (all else equal)
- * - Output is always a finite integer
- *
- * @module services/queue/priority-calculator
-
- */
+// Deterministic priority scoring: newer content, longer missing, fewer failures = higher priority
 
 import { DEFAULT_PRIORITY_WEIGHTS, getPriorityWeights, PRIORITY_CONSTANTS } from './config';
 import type { PriorityBreakdown, PriorityInput, PriorityResult, PriorityWeights } from './types';
 
-/**
- * Calculate the priority score for a queue item.
- *
- * The scoring formula is:
- * ```
- * score = BASE_SCORE
- *       + contentAgeScore * (contentAgeWeight / WEIGHT_SCALE)
- *       + missingDurationScore * (missingDurationWeight / WEIGHT_SCALE)
- *       + userPriorityOverride * (userPriorityWeight / WEIGHT_SCALE)
- *       - (attemptCount * failurePenalty)
- *       + (searchType === 'gap' ? gapBonus : 0)
- * ```
- *
- * @param input - Priority calculation input data
- * @param weights - Configurable priority weights (defaults used if not provided)
- * @param now - Current time for age calculations (defaults to current time)
- * @returns Priority result with score and breakdown
- *
- * @example
- * ```typescript
- * const result = calculatePriority({
- *   searchType: 'gap',
- *   contentDate: new Date('2024-01-15'),
- *   discoveredAt: new Date('2024-06-01'),
- *   userPriorityOverride: 0,
- *   attemptCount: 0
- * });
- * console.log(`Priority: ${result.score}`);
- * ```
- *
-
- */
 export function calculatePriority(
 	input: PriorityInput,
 	weights: PriorityWeights = DEFAULT_PRIORITY_WEIGHTS,
@@ -94,16 +44,7 @@ export function calculatePriority(
 	return { score, breakdown };
 }
 
-/**
- * Calculate content age score (0 to FACTOR_SCALE).
- *
- * Newer content receives higher scores. The score decreases linearly
- * with age up to MAX_CONTENT_AGE_DAYS, after which it remains at 0.
- *
- * @param contentDate - Content release/air date (null returns 0)
- * @param now - Current time for age calculation
- * @returns Score from 0 to FACTOR_SCALE (100)
- */
+// Newer content scores higher; unknown date gets neutral score
 function calculateContentAgeScore(contentDate: Date | null, now: Date): number {
 	if (contentDate === null) {
 		// Unknown date gets neutral score (middle of range)
@@ -117,16 +58,7 @@ function calculateContentAgeScore(contentDate: Date | null, now: Date): number {
 	return PRIORITY_CONSTANTS.FACTOR_SCALE * (1 - normalizedAge);
 }
 
-/**
- * Calculate missing duration score (0 to FACTOR_SCALE).
- *
- * Items missing longer receive higher scores. The score increases linearly
- * with duration up to MAX_MISSING_DURATION_DAYS, after which it caps at max.
- *
- * @param discoveredAt - When item was first found missing
- * @param now - Current time for duration calculation
- * @returns Score from 0 to FACTOR_SCALE (100)
- */
+// Items missing longer score higher
 function calculateMissingDurationScore(discoveredAt: Date, now: Date): number {
 	const durationDays = Math.max(
 		0,
@@ -141,41 +73,11 @@ function calculateMissingDurationScore(discoveredAt: Date, now: Date): number {
 	return PRIORITY_CONSTANTS.FACTOR_SCALE * normalizedDuration;
 }
 
-/**
- * Compare two priority results for sorting.
- *
- * Returns a negative value if `a` should come before `b` (higher priority),
- * positive if `b` should come before `a`, or 0 if equal.
- *
- * @param a - First priority result
- * @param b - Second priority result
- * @returns Comparison result for Array.sort()
- *
- * @example
- * ```typescript
- * const items = [...];
- * const results = items.map(i => ({ item: i, priority: calculatePriority(i) }));
- * results.sort((a, b) => comparePriority(a.priority, b.priority));
- * // results[0] has highest priority
- * ```
- */
+// Higher score = higher priority = comes first
 export function comparePriority(a: PriorityResult, b: PriorityResult): number {
-	// Higher score = higher priority = comes first
 	return b.score - a.score;
 }
 
-/**
- * Calculate priority using database-configured weights.
- *
- * This is an async wrapper around calculatePriority that automatically
- * fetches the current priority weights from the database settings.
- *
- * @param input - Priority calculation input data
- * @param now - Current time for age calculations (defaults to current time)
- * @returns Promise resolving to priority result with score and breakdown
- *
-
- */
 export async function calculatePriorityWithConfig(
 	input: PriorityInput,
 	now: Date = new Date()

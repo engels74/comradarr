@@ -1,50 +1,15 @@
-/**
- * Quiet hours utility functions for notification suppression.
- *
- * Provides functions to check if the current time falls within a channel's
- * configured quiet hours period, with support for:
- * - Timezone-aware time checking
- * - Midnight-spanning ranges (e.g., 22:00-08:00)
- * - Same-day ranges (e.g., 13:00-15:00)
- *
- * @module services/notifications/quiet-hours
-
- */
+// Supports timezone-aware checking and midnight-spanning ranges (e.g., 22:00-08:00)
 
 import type { NotificationChannel } from '$lib/server/db/schema';
 import { createLogger } from '$lib/server/logger';
 
 const logger = createLogger('quiet-hours');
 
-// =============================================================================
-// Types
-// =============================================================================
-
-/**
- * Represents a time of day as hours and minutes.
- */
 export interface TimeOfDay {
 	hours: number;
 	minutes: number;
 }
 
-// =============================================================================
-// Pure Utility Functions
-// =============================================================================
-
-/**
- * Parses a time string in HH:MM format to hours and minutes.
- *
- * @param timeStr - Time string in HH:MM format (e.g., "22:00", "08:30")
- * @returns Parsed hours and minutes
- * @throws Error if format is invalid
- *
- * @example
- * ```typescript
- * parseTimeString("22:30") // { hours: 22, minutes: 30 }
- * parseTimeString("08:00") // { hours: 8, minutes: 0 }
- * ```
- */
 export function parseTimeString(timeStr: string): TimeOfDay {
 	if (!timeStr || typeof timeStr !== 'string') {
 		throw new Error('Time string is required');
@@ -69,22 +34,7 @@ export function parseTimeString(timeStr: string): TimeOfDay {
 	return { hours, minutes };
 }
 
-/**
- * Gets the current time in a specified timezone as hours and minutes.
- *
- * Uses JavaScript's Intl.DateTimeFormat for timezone conversion.
- * Falls back to UTC if the timezone is invalid.
- *
- * @param timezone - IANA timezone string (e.g., "America/New_York", "Europe/London", "UTC")
- * @param now - Optional Date object for testing (defaults to current time)
- * @returns Current time in the specified timezone
- *
- * @example
- * ```typescript
- * getCurrentTimeInTimezone("America/New_York") // { hours: 14, minutes: 30 }
- * getCurrentTimeInTimezone("Europe/London")    // { hours: 19, minutes: 30 }
- * ```
- */
+// Falls back to UTC if timezone is invalid
 export function getCurrentTimeInTimezone(timezone: string, now: Date = new Date()): TimeOfDay {
 	try {
 		const formatter = new Intl.DateTimeFormat('en-US', {
@@ -114,42 +64,11 @@ export function getCurrentTimeInTimezone(timezone: string, now: Date = new Date(
 	}
 }
 
-/**
- * Converts a TimeOfDay to minutes since midnight for comparison.
- *
- * @param time - Time of day
- * @returns Minutes since midnight (0-1439)
- */
 export function timeToMinutes(time: TimeOfDay): number {
 	return time.hours * 60 + time.minutes;
 }
 
-/**
- * Checks if a time is within a range, handling midnight-spanning ranges.
- *
- * Boundary behavior:
- * - At exactly start time: IN quiet hours
- * - At exactly end time: NOT in quiet hours (end is exclusive)
- *
- * @param current - Current time to check
- * @param start - Start of the range (inclusive)
- * @param end - End of the range (exclusive)
- * @returns true if current time is within the range
- *
- * @example
- * ```typescript
- * // Same-day range (13:00-15:00)
- * isTimeInRange({ hours: 14, minutes: 0 }, { hours: 13, minutes: 0 }, { hours: 15, minutes: 0 })
- * // => true
- *
- * // Midnight-spanning range (22:00-08:00)
- * isTimeInRange({ hours: 23, minutes: 0 }, { hours: 22, minutes: 0 }, { hours: 8, minutes: 0 })
- * // => true (23:00 is after 22:00)
- *
- * isTimeInRange({ hours: 3, minutes: 0 }, { hours: 22, minutes: 0 }, { hours: 8, minutes: 0 })
- * // => true (03:00 is before 08:00)
- * ```
- */
+// Start is inclusive, end is exclusive; handles midnight-spanning ranges
 export function isTimeInRange(current: TimeOfDay, start: TimeOfDay, end: TimeOfDay): boolean {
 	const currentMinutes = timeToMinutes(current);
 	const startMinutes = timeToMinutes(start);
@@ -166,38 +85,7 @@ export function isTimeInRange(current: TimeOfDay, start: TimeOfDay, end: TimeOfD
 	}
 }
 
-// =============================================================================
-// Main Function
-// =============================================================================
-
-/**
- * Checks if the current time is within quiet hours for a notification channel.
- *
- * Returns false (not in quiet hours) if:
- * - quietHoursEnabled is false
- * - quietHoursStart or quietHoursEnd is not configured
- * - Time strings are invalid
- *
- * @param channel - Notification channel with quiet hours configuration
- * @param now - Optional Date object for testing (defaults to current time)
- * @returns true if notifications should be suppressed
- *
- * @example
- * ```typescript
- * const channel = {
- *   quietHoursEnabled: true,
- *   quietHoursStart: "22:00",
- *   quietHoursEnd: "08:00",
- *   quietHoursTimezone: "America/New_York"
- * };
- *
- * // At 23:00 New York time
- * isInQuietHours(channel) // true
- *
- * // At 12:00 New York time
- * isInQuietHours(channel) // false
- * ```
- */
+// Returns false if quiet hours disabled, unconfigured, or invalid
 export function isInQuietHours(channel: NotificationChannel, now: Date = new Date()): boolean {
 	// Check if quiet hours are enabled
 	if (!channel.quietHoursEnabled) {

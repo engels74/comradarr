@@ -1,8 +1,3 @@
-/**
- * Queue service for managing search request queue operations.
- * @module services/queue/queue-service
- */
-
 import { and, asc, desc, eq, inArray, isNull, sql } from 'drizzle-orm';
 import { db } from '$lib/server/db';
 import { connectors, episodes, movies, requestQueue, searchRegistry } from '$lib/server/db/schema';
@@ -21,10 +16,7 @@ import type {
 	SearchType
 } from './types';
 
-/**
- * Enqueues all pending search registry items for a connector.
- * Idempotent - running multiple times won't create duplicates.
- */
+/** Idempotent - running multiple times won't create duplicates. */
 export async function enqueuePendingItems(
 	connectorId: number,
 	options: EnqueueOptions = {}
@@ -85,9 +77,6 @@ export async function enqueuePendingItems(
 	}
 }
 
-/**
- * Enqueues pending episode search registry items.
- */
 async function enqueueEpisodes(
 	connectorId: number,
 	batchSize: number,
@@ -182,15 +171,11 @@ async function enqueueEpisodes(
 	};
 }
 
-/**
- * Enqueues pending movie search registry items.
- */
 async function enqueueMovies(
 	connectorId: number,
 	batchSize: number,
 	scheduledAt: Date
 ): Promise<{ enqueued: number; skipped: number }> {
-	// Get pending movie registries with content data for priority calculation
 	const pendingRegistries = await db
 		.select({
 			registryId: searchRegistry.id,
@@ -200,7 +185,6 @@ async function enqueueMovies(
 			searchType: searchRegistry.searchType,
 			attemptCount: searchRegistry.attemptCount,
 			createdAt: searchRegistry.createdAt,
-			// Movie data for priority calculation
 			year: movies.year
 		})
 		.from(searchRegistry)
@@ -211,7 +195,7 @@ async function enqueueMovies(
 				eq(searchRegistry.connectorId, connectorId),
 				eq(searchRegistry.contentType, 'movie'),
 				eq(searchRegistry.state, 'pending'),
-				isNull(requestQueue.id) // Not already in queue
+				isNull(requestQueue.id)
 			)
 		);
 
@@ -219,7 +203,6 @@ async function enqueueMovies(
 		return { enqueued: 0, skipped: 0 };
 	}
 
-	// Calculate priorities and prepare batch inserts
 	const now = new Date();
 	const itemsToEnqueue: Array<{
 		registryId: number;
@@ -285,10 +268,7 @@ async function enqueueMovies(
 	};
 }
 
-/**
- * Dequeues items from the request queue in priority order.
- * Atomic operation - concurrent calls will get different items.
- */
+/** Atomic operation - concurrent calls will get different items. */
 export async function dequeuePriorityItems(
 	connectorId: number,
 	options: DequeueOptions = {}
@@ -400,7 +380,6 @@ export async function dequeuePriorityItems(
 	}
 }
 
-/** Pauses queue processing for a connector. */
 export async function pauseQueue(connectorId: number): Promise<QueueControlResult> {
 	const startTime = Date.now();
 
@@ -441,7 +420,6 @@ export async function pauseQueue(connectorId: number): Promise<QueueControlResul
 	}
 }
 
-/** Resumes queue processing for a connector. */
 export async function resumeQueue(connectorId: number): Promise<QueueControlResult> {
 	const startTime = Date.now();
 
@@ -482,7 +460,6 @@ export async function resumeQueue(connectorId: number): Promise<QueueControlResu
 	}
 }
 
-/** Clears queue items and resets search registry state back to 'pending'. */
 export async function clearQueue(connectorId?: number): Promise<QueueControlResult> {
 	const startTime = Date.now();
 
@@ -543,7 +520,6 @@ export async function clearQueue(connectorId?: number): Promise<QueueControlResu
 	}
 }
 
-/** Gets queue status for a connector. */
 export async function getQueueStatus(connectorId: number): Promise<QueueStatus | null> {
 	const connector = await db
 		.select({ id: connectors.id, queuePaused: connectors.queuePaused })

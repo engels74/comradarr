@@ -1,17 +1,3 @@
-/**
- * Types for the backup service.
- *
- * @module services/backup/types
-
- */
-
-// =============================================================================
-// Schema Version Types
-// =============================================================================
-
-/**
- * Schema version tracking for migrations during restore.
- */
 export interface SchemaVersion {
 	/** Application version at backup time (e.g., "0.0.1") */
 	appVersion: string;
@@ -23,13 +9,6 @@ export interface SchemaVersion {
 	migrationIndex: number;
 }
 
-// =============================================================================
-// Backup Metadata Types
-// =============================================================================
-
-/**
- * Backup file metadata stored in the backup header.
- */
 export interface BackupMetadata {
 	/** Unique backup identifier (UUID) */
 	id: string;
@@ -56,14 +35,6 @@ export interface BackupMetadata {
 	tableCount: number;
 }
 
-// =============================================================================
-// Table Export Types
-// =============================================================================
-
-/**
- * Table data export format.
- * Each table's data is stored as an array of row objects.
- */
 export interface TableExport {
 	/** Table name (e.g., "connectors", "users") */
 	tableName: string;
@@ -75,13 +46,6 @@ export interface TableExport {
 	rows: Record<string, unknown>[];
 }
 
-// =============================================================================
-// Backup File Structure
-// =============================================================================
-
-/**
- * Complete backup file structure.
- */
 export interface BackupFile {
 	/** Format version for backward compatibility */
 	formatVersion: 1;
@@ -93,13 +57,6 @@ export interface BackupFile {
 	tables: TableExport[];
 }
 
-// =============================================================================
-// Result Types
-// =============================================================================
-
-/**
- * Result of a backup creation operation.
- */
 export interface BackupResult {
 	/** Whether the backup completed successfully */
 	success: boolean;
@@ -120,9 +77,6 @@ export interface BackupResult {
 	error?: string;
 }
 
-/**
- * Information about an existing backup file.
- */
 export interface BackupInfo {
 	/** Backup ID (from metadata) */
 	id: string;
@@ -137,9 +91,6 @@ export interface BackupInfo {
 	fileSizeBytes: number;
 }
 
-/**
- * Options for creating a backup.
- */
 export interface BackupOptions {
 	/** Human-readable description of the backup */
 	description?: string | undefined;
@@ -148,13 +99,6 @@ export interface BackupOptions {
 	type?: 'manual' | 'scheduled' | undefined;
 }
 
-// =============================================================================
-// Error Types
-// =============================================================================
-
-/**
- * Backup-specific error codes.
- */
 export type BackupErrorCode =
 	| 'EXPORT_FAILED'
 	| 'CHECKSUM_FAILED'
@@ -163,9 +107,6 @@ export type BackupErrorCode =
 	| 'SCHEMA_VERSION_FAILED'
 	| 'NOT_FOUND';
 
-/**
- * Backup-specific error class.
- */
 export class BackupError extends Error {
 	constructor(
 		message: string,
@@ -177,18 +118,7 @@ export class BackupError extends Error {
 	}
 }
 
-// =============================================================================
-// Table Export Order
-// =============================================================================
-
-/**
- * Tables to export in dependency order.
- * Tables with foreign keys are exported after their dependencies.
- *
- * This order ensures that when importing:
- * 1. Independent tables are imported first
- * 2. Tables with foreign keys are imported after their referenced tables
- */
+// Tables are ordered by dependency: independent tables first, dependent tables after their references
 export const TABLE_EXPORT_ORDER = [
 	// Independent tables (no foreign keys)
 	'throttle_profiles',
@@ -234,27 +164,11 @@ export const TABLE_EXPORT_ORDER = [
 	'notification_history'
 ] as const;
 
-/**
- * Known value used for SECRET_KEY verification.
- * This value is encrypted during backup and decrypted during restore
- * to verify that the same SECRET_KEY is being used.
- */
+// Encrypted during backup and decrypted during restore to verify SECRET_KEY match
 export const SECRET_KEY_VERIFIER_PLAINTEXT = 'comradarr-backup-verify';
 
-/**
- * Tables to delete in reverse dependency order (for clearing before restore).
- * This is the reverse of TABLE_EXPORT_ORDER.
- */
 export const TABLE_DELETE_ORDER = [...TABLE_EXPORT_ORDER].reverse();
 
-// =============================================================================
-// Restore Types
-// =============================================================================
-
-/**
- * Restore-specific error codes.
-
- */
 export type RestoreErrorCode =
 	| 'BACKUP_NOT_FOUND'
 	| 'INVALID_FORMAT'
@@ -267,9 +181,6 @@ export type RestoreErrorCode =
 	| 'INSERT_DATA_FAILED'
 	| 'VALIDATION_FAILED';
 
-/**
- * Restore-specific error class.
- */
 export class RestoreError extends Error {
 	constructor(
 		message: string,
@@ -282,9 +193,6 @@ export class RestoreError extends Error {
 	}
 }
 
-/**
- * Options for restore operation.
- */
 export interface RestoreOptions {
 	/** Skip SECRET_KEY verification (not recommended, for recovery scenarios only) */
 	skipSecretKeyVerification?: boolean;
@@ -299,10 +207,6 @@ export interface RestoreOptions {
 	clearSessionsAfterRestore?: boolean;
 }
 
-/**
- * Result of backup validation before restore.
-
- */
 export interface RestoreValidation {
 	/** Whether the backup is valid for restore */
 	isValid: boolean;
@@ -332,9 +236,6 @@ export interface RestoreValidation {
 	warnings: string[];
 }
 
-/**
- * Result of a restore operation.
- */
 export interface RestoreResult {
 	/** Whether the restore completed successfully */
 	success: boolean;

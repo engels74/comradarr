@@ -1,8 +1,3 @@
-/**
- * Notification channels service.
- * @module services/notifications
- */
-
 export type { NotificationSender } from './base-channel';
 export { DEFAULT_SENDER_CONFIG, EVENT_COLORS, getEventColor, hexColorToInt } from './base-channel';
 export { DiscordSender } from './channels/discord';
