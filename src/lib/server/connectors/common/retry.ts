@@ -14,8 +14,7 @@ export function calculateBackoffDelay(attempt: number, config: Required<RetryCon
 	const clampedDelay = Math.min(exponentialDelay, config.maxDelay);
 
 	if (config.jitter) {
-		// Add random jitter of ±25% to prevent thundering herd
-		// Range: [0.75 * delay, 1.25 * delay]
+		// ±25% jitter to prevent thundering herd
 		const jitterFactor = 0.75 + Math.random() * 0.5;
 		return Math.floor(clampedDelay * jitterFactor);
 	}
@@ -41,9 +40,6 @@ export async function withRetry<T>(fn: () => Promise<T>, config?: RetryConfig): 
 		} catch (error) {
 			lastError = error;
 
-			// Don't retry if:
-			// 1. This was the last attempt
-			// 2. The error is not retryable
 			const isLastAttempt = attempt === resolvedConfig.maxRetries;
 			const shouldRetry = isRetryableError(error);
 
@@ -51,12 +47,8 @@ export async function withRetry<T>(fn: () => Promise<T>, config?: RetryConfig): 
 				throw error;
 			}
 
-			// Calculate delay for next retry
 			let delay: number;
-
-			// Handle RateLimitError with Retry-After header specially
 			if (error instanceof RateLimitError && error.retryAfter !== undefined) {
-				// Retry-After is in seconds, convert to milliseconds
 				delay = error.retryAfter * 1000;
 			} else {
 				delay = calculateBackoffDelay(attempt, resolvedConfig);
@@ -66,7 +58,5 @@ export async function withRetry<T>(fn: () => Promise<T>, config?: RetryConfig): 
 		}
 	}
 
-	// This should never be reached due to the throw in the loop,
-	// but TypeScript needs this for type safety
 	throw lastError;
 }
