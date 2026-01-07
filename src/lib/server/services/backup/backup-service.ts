@@ -2,7 +2,6 @@ import { mkdir, readdir, readFile, rm, stat, writeFile } from 'node:fs/promises'
 import { join } from 'node:path';
 import { encrypt } from '$lib/server/crypto';
 import { db } from '$lib/server/db';
-// Import schema tables for dynamic querying
 import * as schema from '$lib/server/db/schema';
 import { createLogger } from '$lib/server/logger';
 import {
@@ -141,7 +140,6 @@ export async function createBackup(options?: BackupOptions): Promise<BackupResul
 	logger.info('Starting database backup', { backupId });
 
 	try {
-		// 1. Export all tables in dependency order
 		logger.info('Exporting tables');
 		const tables: TableExport[] = [];
 
@@ -151,18 +149,10 @@ export async function createBackup(options?: BackupOptions): Promise<BackupResul
 			logger.info('Exported table', { tableName, rowCount: tableExport.rowCount });
 		}
 
-		// 2. Generate checksum
-		logger.info('Generating checksum');
 		const checksum = await generateChecksum(tables);
-
-		// 3. Create SECRET_KEY verifier
-		logger.info('Creating SECRET_KEY verifier');
 		const secretKeyVerifier = await createSecretKeyVerifier();
-
-		// 4. Get schema version
 		const schemaVersion = await getSchemaVersion();
 
-		// 5. Create backup file structure
 		const metadata: BackupMetadata = {
 			id: backupId,
 			createdAt: new Date().toISOString(),
@@ -180,7 +170,6 @@ export async function createBackup(options?: BackupOptions): Promise<BackupResul
 			tables
 		};
 
-		// 6. Save to file
 		const backupDir = await getBackupDirectory();
 		const filename = getBackupFilename(backupId);
 		const filePath = join(backupDir, filename);
@@ -189,7 +178,6 @@ export async function createBackup(options?: BackupOptions): Promise<BackupResul
 		const backupJson = JSON.stringify(backupFile, null, 2);
 		await writeFile(filePath, backupJson, 'utf-8');
 
-		// Get file size
 		const fileStats = await stat(filePath);
 		const fileSizeBytes = fileStats.size;
 
@@ -320,24 +308,17 @@ export async function getBackupInfo(backupId: string): Promise<BackupInfo | null
 }
 
 export interface CleanupResult {
-	/** Whether the cleanup completed successfully */
 	success: boolean;
-	/** Number of scheduled backups deleted */
 	deletedCount: number;
-	/** Error message if cleanup failed */
 	error?: string;
 }
 
-// Only deletes scheduled backups; manual backups are preserved
+/** Only deletes scheduled backups; manual backups are preserved. */
 export async function cleanupOldScheduledBackups(retentionCount: number): Promise<CleanupResult> {
 	try {
-		// Get all backups
 		const allBackups = await listBackups();
-
-		// Filter to only scheduled backups
 		const scheduledBackups = allBackups.filter((backup) => backup.metadata.type === 'scheduled');
 
-		// If we have fewer or equal to retention count, nothing to delete
 		if (scheduledBackups.length <= retentionCount) {
 			return {
 				success: true,
@@ -345,8 +326,6 @@ export async function cleanupOldScheduledBackups(retentionCount: number): Promis
 			};
 		}
 
-		// Backups are already sorted by creation date (newest first)
-		// Delete backups beyond the retention count
 		const backupsToDelete = scheduledBackups.slice(retentionCount);
 		let deletedCount = 0;
 

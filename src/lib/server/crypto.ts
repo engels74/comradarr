@@ -1,24 +1,13 @@
 /**
- * API key encryption utilities using AES-256-GCM.
- *
- * Uses AES-256-GCM for authenticated encryption with:
- * - 256-bit key from SECRET_KEY environment variable
- * - Random 16-byte IV per encryption
- * - 16-byte authentication tag for integrity verification
- *
+ * AES-256-GCM encryption utilities.
  * Encrypted format: iv:authTag:ciphertext (hex encoded)
  */
 
-/** AES-256-GCM algorithm configuration */
 const ALGORITHM = 'AES-GCM';
 const _KEY_LENGTH = 256;
-const IV_LENGTH = 16; // 128 bits
-const AUTH_TAG_LENGTH = 128; // bits
+const IV_LENGTH = 16;
+const AUTH_TAG_LENGTH = 128;
 
-/**
- * Custom error for decryption failures.
- * Thrown when ciphertext is invalid, tampered, or uses wrong key.
- */
 export class DecryptionError extends Error {
 	constructor(message: string) {
 		super(message);
@@ -26,9 +15,6 @@ export class DecryptionError extends Error {
 	}
 }
 
-/**
- * Custom error for invalid SECRET_KEY configuration.
- */
 export class SecretKeyError extends Error {
 	constructor(message: string) {
 		super(message);
@@ -36,17 +22,9 @@ export class SecretKeyError extends Error {
 	}
 }
 
-/** Cached CryptoKey instance for performance */
 let cachedKey: CryptoKey | null = null;
 let cachedKeyHex: string | null = null;
 
-/**
- * Gets and validates the SECRET_KEY from environment.
- * Throws SecretKeyError if missing or invalid format.
- *
- * @returns The validated SECRET_KEY hex string
- * @throws SecretKeyError if SECRET_KEY is missing or invalid
- */
 export function getSecretKey(): string {
 	const key = process.env.SECRET_KEY;
 
@@ -67,9 +45,6 @@ export function getSecretKey(): string {
 	return key;
 }
 
-/**
- * Converts a hex string to Uint8Array.
- */
 function hexToBytes(hex: string): Uint8Array {
 	const bytes = new Uint8Array(hex.length / 2);
 	for (let i = 0; i < bytes.length; i++) {
@@ -78,21 +53,13 @@ function hexToBytes(hex: string): Uint8Array {
 	return bytes;
 }
 
-/**
- * Converts Uint8Array to hex string.
- */
 function bytesToHex(bytes: Uint8Array): string {
 	return Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('');
 }
 
-/**
- * Gets or creates the CryptoKey from SECRET_KEY.
- * Caches the key for performance.
- */
 async function getCryptoKey(): Promise<CryptoKey> {
 	const keyHex = getSecretKey();
 
-	// Return cached key if SECRET_KEY hasn't changed
 	if (cachedKey && cachedKeyHex === keyHex) {
 		return cachedKey;
 	}
@@ -111,28 +78,12 @@ async function getCryptoKey(): Promise<CryptoKey> {
 	return cachedKey;
 }
 
-/**
- * Encrypts a plaintext string using AES-256-GCM.
- *
- * Uses a random IV for each encryption, making identical plaintexts
- * produce different ciphertexts. The IV and auth tag are prepended
- * to the ciphertext in the format: iv:authTag:ciphertext
- *
- * @param plaintext - The string to encrypt
- * @returns Encrypted string in format iv:authTag:ciphertext (hex encoded)
- * @throws SecretKeyError if SECRET_KEY is missing or invalid
- */
 export async function encrypt(plaintext: string): Promise<string> {
 	const key = await getCryptoKey();
-
-	// Generate random IV for each encryption
 	const iv = crypto.getRandomValues(new Uint8Array(IV_LENGTH));
-
-	// Encode plaintext to bytes
 	const encoder = new TextEncoder();
 	const plaintextBytes = encoder.encode(plaintext);
 
-	// Encrypt with AES-256-GCM
 	const encrypted = await crypto.subtle.encrypt(
 		{
 			name: ALGORITHM,
@@ -143,31 +94,17 @@ export async function encrypt(plaintext: string): Promise<string> {
 		plaintextBytes
 	);
 
-	// Web Crypto API appends auth tag to ciphertext
-	// Extract them separately for our format
+	// Web Crypto API appends auth tag to ciphertext - extract separately for our format
 	const encryptedArray = new Uint8Array(encrypted);
 	const authTagStart = encryptedArray.length - AUTH_TAG_LENGTH / 8;
 	const ciphertext = encryptedArray.slice(0, authTagStart);
 	const authTag = encryptedArray.slice(authTagStart);
 
-	// Format: iv:authTag:ciphertext
 	return `${bytesToHex(iv)}:${bytesToHex(authTag)}:${bytesToHex(ciphertext)}`;
 }
 
-/**
- * Decrypts an encrypted string using AES-256-GCM.
- *
- * Validates the authentication tag to detect tampering.
- *
- * @param encrypted - Encrypted string in format iv:authTag:ciphertext
- * @returns The decrypted plaintext string
- * @throws DecryptionError if ciphertext is invalid, tampered, or uses wrong key
- * @throws SecretKeyError if SECRET_KEY is missing or invalid
- */
 export async function decrypt(encrypted: string): Promise<string> {
 	const key = await getCryptoKey();
-
-	// Parse the encrypted format
 	const parts = encrypted.split(':');
 	if (parts.length !== 3) {
 		throw new DecryptionError('Invalid encrypted format: expected iv:authTag:ciphertext');
@@ -175,7 +112,6 @@ export async function decrypt(encrypted: string): Promise<string> {
 
 	const [ivHex, authTagHex, ciphertextHex] = parts;
 
-	// Validate component lengths
 	if (!ivHex || ivHex.length !== IV_LENGTH * 2) {
 		throw new DecryptionError(`Invalid IV length: expected ${IV_LENGTH * 2} hex characters`);
 	}
@@ -188,7 +124,6 @@ export async function decrypt(encrypted: string): Promise<string> {
 		throw new DecryptionError('Ciphertext cannot be empty');
 	}
 
-	// Validate hex format
 	if (!/^[0-9a-fA-F]+$/.test(ivHex + authTagHex + ciphertextHex)) {
 		throw new DecryptionError('Invalid hex encoding in encrypted data');
 	}
@@ -197,7 +132,7 @@ export async function decrypt(encrypted: string): Promise<string> {
 	const authTag = hexToBytes(authTagHex);
 	const ciphertext = hexToBytes(ciphertextHex);
 
-	// Web Crypto expects auth tag appended to ciphertext
+	// Web Crypto API expects auth tag appended to ciphertext
 	const combined = new Uint8Array(ciphertext.length + authTag.length);
 	combined.set(ciphertext);
 	combined.set(authTag, ciphertext.length);
@@ -216,7 +151,6 @@ export async function decrypt(encrypted: string): Promise<string> {
 		const decoder = new TextDecoder();
 		return decoder.decode(decrypted);
 	} catch {
-		// Crypto errors indicate tampering, wrong key, or corrupted data
 		throw new DecryptionError(
 			'Decryption failed: data may be tampered or encrypted with a different key'
 		);

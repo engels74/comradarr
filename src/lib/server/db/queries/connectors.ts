@@ -35,7 +35,6 @@ export interface UpdateConnectorInput {
 }
 
 export async function createConnector(input: CreateConnectorInput): Promise<Connector> {
-	// Encrypt API key before storage (Req 1.1)
 	const apiKeyEncrypted = await encrypt(input.apiKey);
 
 	const result = await db
@@ -97,7 +96,6 @@ export async function updateConnector(
 	}
 
 	if (input.apiKey !== undefined) {
-		// Re-encrypt new API key (Req 36.1)
 		updateData.apiKeyEncrypted = await encrypt(input.apiKey);
 	}
 
@@ -169,12 +167,11 @@ function normalizeUrl(url: string): string {
 
 export interface ConnectorStats {
 	connectorId: number;
-	gapsCount: number; // Episodes/movies with hasFile=false, monitored=true
+	gapsCount: number;
 	queueDepth: number;
 }
 
 export async function getConnectorStats(connectorId: number): Promise<ConnectorStats> {
-	// Count episode gaps (hasFile=false, monitored=true)
 	const episodeGapsResult = await db
 		.select({ count: count() })
 		.from(episodes)
@@ -186,7 +183,6 @@ export async function getConnectorStats(connectorId: number): Promise<ConnectorS
 			)
 		);
 
-	// Count movie gaps (hasFile=false, monitored=true)
 	const movieGapsResult = await db
 		.select({ count: count() })
 		.from(movies)
@@ -198,7 +194,6 @@ export async function getConnectorStats(connectorId: number): Promise<ConnectorS
 			)
 		);
 
-	// Count queue depth
 	const queueResult = await db
 		.select({ count: count() })
 		.from(requestQueue)
@@ -216,17 +211,14 @@ export async function getConnectorStats(connectorId: number): Promise<ConnectorS
 }
 
 export async function getAllConnectorStats(): Promise<Map<number, ConnectorStats>> {
-	// Get all connector IDs first
 	const allConnectors = await db.select({ id: connectors.id }).from(connectors);
 	const connectorIds = allConnectors.map((c) => c.id);
 
-	// Initialize stats map with zeros
 	const statsMap = new Map<number, ConnectorStats>();
 	for (const id of connectorIds) {
 		statsMap.set(id, { connectorId: id, gapsCount: 0, queueDepth: 0 });
 	}
 
-	// Count episode gaps grouped by connector
 	const episodeGaps = await db
 		.select({
 			connectorId: episodes.connectorId,
@@ -243,7 +235,6 @@ export async function getAllConnectorStats(): Promise<Map<number, ConnectorStats
 		}
 	}
 
-	// Count movie gaps grouped by connector
 	const movieGaps = await db
 		.select({
 			connectorId: movies.connectorId,
@@ -260,7 +251,6 @@ export async function getAllConnectorStats(): Promise<Map<number, ConnectorStats
 		}
 	}
 
-	// Count queue depth grouped by connector
 	const queueCounts = await db
 		.select({
 			connectorId: requestQueue.connectorId,
@@ -291,10 +281,10 @@ export async function getSyncState(connectorId: number): Promise<SyncState | nul
 
 export interface ConnectorDetailedStats {
 	connectorId: number;
-	episodeGapsCount: number; // Episodes with hasFile=false, monitored=true
-	episodeUpgradesCount: number; // Episodes with qualityCutoffNotMet=true, monitored=true, hasFile=true
-	movieGapsCount: number; // Movies with hasFile=false, monitored=true
-	movieUpgradesCount: number; // Movies with qualityCutoffNotMet=true, monitored=true, hasFile=true
+	episodeGapsCount: number;
+	episodeUpgradesCount: number;
+	movieGapsCount: number;
+	movieUpgradesCount: number;
 	totalEpisodes: number;
 	totalMovies: number;
 	queueDepth: number;
@@ -303,7 +293,6 @@ export interface ConnectorDetailedStats {
 export async function getConnectorDetailedStats(
 	connectorId: number
 ): Promise<ConnectorDetailedStats> {
-	// Run all queries in parallel for efficiency
 	const [
 		episodeGapsResult,
 		episodeUpgradesResult,
@@ -313,7 +302,6 @@ export async function getConnectorDetailedStats(
 		totalMoviesResult,
 		queueResult
 	] = await Promise.all([
-		// Episode gaps (hasFile=false, monitored=true)
 		db
 			.select({ count: count() })
 			.from(episodes)
@@ -324,7 +312,6 @@ export async function getConnectorDetailedStats(
 					eq(episodes.monitored, true)
 				)
 			),
-		// Episode upgrades (qualityCutoffNotMet=true, monitored=true, hasFile=true)
 		db
 			.select({ count: count() })
 			.from(episodes)
@@ -336,7 +323,6 @@ export async function getConnectorDetailedStats(
 					eq(episodes.hasFile, true)
 				)
 			),
-		// Movie gaps (hasFile=false, monitored=true)
 		db
 			.select({ count: count() })
 			.from(movies)
@@ -347,7 +333,6 @@ export async function getConnectorDetailedStats(
 					eq(movies.monitored, true)
 				)
 			),
-		// Movie upgrades (qualityCutoffNotMet=true, monitored=true, hasFile=true)
 		db
 			.select({ count: count() })
 			.from(movies)
@@ -359,17 +344,8 @@ export async function getConnectorDetailedStats(
 					eq(movies.hasFile, true)
 				)
 			),
-		// Total episodes for connector
-		db
-			.select({ count: count() })
-			.from(episodes)
-			.where(eq(episodes.connectorId, connectorId)),
-		// Total movies for connector
-		db
-			.select({ count: count() })
-			.from(movies)
-			.where(eq(movies.connectorId, connectorId)),
-		// Queue depth
+		db.select({ count: count() }).from(episodes).where(eq(episodes.connectorId, connectorId)),
+		db.select({ count: count() }).from(movies).where(eq(movies.connectorId, connectorId)),
 		db
 			.select({ count: count() })
 			.from(requestQueue)
@@ -408,7 +384,6 @@ export async function getSearchStateDistribution(
 		.where(eq(searchRegistry.connectorId, connectorId))
 		.groupBy(searchRegistry.state);
 
-	// Initialize all states to 0
 	const distribution: SearchStateDistribution = {
 		pending: 0,
 		queued: 0,
@@ -417,7 +392,6 @@ export async function getSearchStateDistribution(
 		exhausted: 0
 	};
 
-	// Fill in counts from query results
 	for (const row of result) {
 		const state = row.state as keyof SearchStateDistribution;
 		if (state in distribution) {
@@ -441,7 +415,6 @@ export async function getRecentSearchHistory(
 	connectorId: number,
 	limit: number = 15
 ): Promise<SearchHistoryEntry[]> {
-	// Get recent search history entries
 	const historyEntries = await db
 		.select({
 			id: searchHistory.id,
@@ -459,7 +432,6 @@ export async function getRecentSearchHistory(
 		return [];
 	}
 
-	// Collect content IDs by type for batch lookups
 	const episodeIds: number[] = [];
 	const movieIds: number[] = [];
 	for (const entry of historyEntries) {
@@ -470,7 +442,6 @@ export async function getRecentSearchHistory(
 		}
 	}
 
-	// Batch lookup titles
 	const titleMap = new Map<string, string>();
 
 	if (episodeIds.length > 0) {
@@ -493,7 +464,6 @@ export async function getRecentSearchHistory(
 		}
 	}
 
-	// Map entries with titles
 	return historyEntries.map((entry) => ({
 		id: entry.id,
 		contentType: entry.contentType,
