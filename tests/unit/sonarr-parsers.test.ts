@@ -440,10 +440,14 @@ describe('parseSonarrEpisode', () => {
 			expect(result.success).toBe(false);
 		});
 
-		it('should return error for missing required qualityCutoffNotMet field', () => {
+		it('should succeed with null qualityCutoffNotMet when field is missing', () => {
+			// qualityCutoffNotMet is optional because Sonarr omits it when episode has no file
 			const { qualityCutoffNotMet: _qcnm, ...withoutQCNM } = validEpisode;
 			const result = parseSonarrEpisode(withoutQCNM);
-			expect(result.success).toBe(false);
+			expect(result.success).toBe(true);
+			if (result.success) {
+				expect(result.data.qualityCutoffNotMet).toBe(null);
+			}
 		});
 
 		it('should return error for wrong type on seasonNumber', () => {

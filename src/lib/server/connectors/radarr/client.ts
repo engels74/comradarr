@@ -8,11 +8,14 @@
 
  */
 
+import { createLogger } from '$lib/server/logger';
 import { BaseArrClient } from '../common/base-client.js';
 import { parseCommandResponse } from '../common/parsers.js';
 import type { CommandResponse, PaginationOptions } from '../common/types.js';
 import { parsePaginatedMoviesLenient, parseRadarrMovie } from './parsers.js';
 import type { RadarrMovie } from './types.js';
+
+const logger = createLogger('radarr-client');
 
 /**
  * Options for fetching wanted movies (missing or cutoff unmet)
@@ -127,14 +130,62 @@ export class RadarrClient extends BaseArrClient {
 	async getMovies(): Promise<RadarrMovie[]> {
 		const response = await this.requestWithRetry<unknown[]>('movie');
 
+		logger.debug('API response received', {
+			responseLength: Array.isArray(response) ? response.length : 'not an array',
+			responseType: typeof response
+		});
+
+		// Guard against non-array responses (e.g., error objects)
+		if (!Array.isArray(response)) {
+			throw new Error(`Expected array response from /movie endpoint, got ${typeof response}`);
+		}
+
 		const movies: RadarrMovie[] = [];
+		let skipped = 0;
 		for (const item of response) {
 			const result = parseRadarrMovie(item);
 			if (result.success) {
 				movies.push(result.data);
+			} else {
+				skipped++;
+				// Log first few parsing failures for debugging
+				// Only log non-sensitive fields to avoid leaking filesystem paths
+				if (skipped <= 3) {
+					const safeItem =
+						item && typeof item === 'object'
+							? {
+									id: (item as Record<string, unknown>).id,
+									title: (item as Record<string, unknown>).title,
+									tmdbId: (item as Record<string, unknown>).tmdbId,
+									year: (item as Record<string, unknown>).year
+								}
+							: { type: typeof item };
+					logger.warn('Failed to parse movie record', {
+						error: result.error,
+						sample: safeItem
+					});
+				}
 			}
-			// Malformed records are skipped per Requirement 27.8
 		}
+
+		if (skipped > 0) {
+			logger.warn('Skipped malformed movie records', {
+				skipped,
+				total: response.length,
+				parsed: movies.length
+			});
+		}
+
+		// If ALL records failed, throw an error to surface schema mismatch
+		if (movies.length === 0 && response.length > 0) {
+			throw new Error(
+				`All ${response.length} movies failed parsing - possible API schema mismatch`
+			);
+		}
+
+		logger.info('Movies fetched successfully', {
+			total: movies.length
+		});
 
 		return movies;
 	}

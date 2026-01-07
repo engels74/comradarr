@@ -54,7 +54,7 @@ export const RadarrMovieSchema = v.object({
 	year: v.number(),
 	hasFile: v.boolean(),
 	monitored: v.boolean(),
-	qualityCutoffNotMet: v.boolean(),
+	qualityCutoffNotMet: v.optional(v.nullable(v.boolean())),
 	movieFileId: v.optional(v.number()),
 	movieFile: v.optional(RadarrMovieFileSchema),
 	status: v.optional(v.string())
@@ -95,7 +95,8 @@ export function parseRadarrMovie(data: unknown): ParseResult<RadarrMovie> {
 			year: output.year,
 			hasFile: output.hasFile,
 			monitored: output.monitored,
-			qualityCutoffNotMet: output.qualityCutoffNotMet,
+			// qualityCutoffNotMet may be undefined (missing) or null (no file)
+			qualityCutoffNotMet: output.qualityCutoffNotMet ?? null,
 			// Conditionally include optional properties only when defined
 			...(output.imdbId !== undefined && { imdbId: output.imdbId }),
 			...(output.movieFileId !== undefined && { movieFileId: output.movieFileId }),
@@ -155,7 +156,8 @@ export function parsePaginatedMovies(data: unknown): ParseResult<PaginatedRespon
 					year: record.year,
 					hasFile: record.hasFile,
 					monitored: record.monitored,
-					qualityCutoffNotMet: record.qualityCutoffNotMet,
+					// qualityCutoffNotMet may be undefined (missing) or null (no file)
+					qualityCutoffNotMet: record.qualityCutoffNotMet ?? null,
 					...(record.imdbId !== undefined && { imdbId: record.imdbId }),
 					...(record.movieFileId !== undefined && { movieFileId: record.movieFileId }),
 					...(record.movieFile !== undefined && {

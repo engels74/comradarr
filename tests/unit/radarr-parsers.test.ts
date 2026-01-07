@@ -228,10 +228,14 @@ describe('parseRadarrMovie', () => {
 			expect(result.success).toBe(false);
 		});
 
-		it('should return error for missing required qualityCutoffNotMet field', () => {
+		it('should succeed with null qualityCutoffNotMet when field is missing', () => {
+			// qualityCutoffNotMet is optional because Radarr omits it when movie has no file
 			const { qualityCutoffNotMet: _qcnm, ...withoutQCNM } = validMovie;
 			const result = parseRadarrMovie(withoutQCNM);
-			expect(result.success).toBe(false);
+			expect(result.success).toBe(true);
+			if (result.success) {
+				expect(result.data.qualityCutoffNotMet).toBe(null);
+			}
 		});
 
 		it('should return error for wrong type on id', () => {
