@@ -1,7 +1,3 @@
-/**
- * New schedule page server load and actions.
- */
-
 import { fail } from '@sveltejs/kit';
 import { Cron } from 'croner';
 import * as v from 'valibot';
@@ -28,13 +24,8 @@ export const load: PageServerLoad = async () => {
 };
 
 export const actions: Actions = {
-	/**
-	 * Create a new schedule.
-	 */
 	create: async ({ request }) => {
 		const formData = await request.formData();
-
-		// Parse form data
 		const rawConnectorId = formData.get('connectorId');
 		const rawThrottleProfileId = formData.get('throttleProfileId');
 
@@ -53,7 +44,6 @@ export const actions: Actions = {
 					: parseInt(rawThrottleProfileId.toString(), 10)
 		};
 
-		// Preserve form values for error display
 		const formValues = {
 			name: data.name?.toString() ?? '',
 			sweepType: data.sweepType?.toString() ?? '',
@@ -63,7 +53,6 @@ export const actions: Actions = {
 			throttleProfileId: rawThrottleProfileId?.toString() ?? ''
 		};
 
-		// Validate form data
 		const result = v.safeParse(ScheduleSchema, data);
 		if (!result.success) {
 			const errors = result.issues.map((issue) => issue.message);
@@ -75,7 +64,6 @@ export const actions: Actions = {
 
 		const config = result.output;
 
-		// Validate cron expression with Croner
 		try {
 			new Cron(config.cronExpression, { timezone: config.timezone });
 		} catch (err) {
@@ -85,7 +73,6 @@ export const actions: Actions = {
 			});
 		}
 
-		// Validate connectorId exists if provided
 		if (config.connectorId !== null && config.connectorId !== undefined) {
 			const connectors = await getAllConnectors();
 			const connectorExists = connectors.some((c) => c.id === config.connectorId);
@@ -97,7 +84,6 @@ export const actions: Actions = {
 			}
 		}
 
-		// Validate throttleProfileId exists if provided
 		if (config.throttleProfileId !== null && config.throttleProfileId !== undefined) {
 			const profiles = await getAllThrottleProfiles();
 			const profileExists = profiles.some((p) => p.id === config.throttleProfileId);
@@ -109,7 +95,6 @@ export const actions: Actions = {
 			}
 		}
 
-		// Create the schedule
 		try {
 			await createSchedule({
 				name: config.name,
@@ -121,7 +106,6 @@ export const actions: Actions = {
 				enabled: true
 			});
 
-			// Refresh scheduler to pick up new schedule
 			await refreshDynamicSchedules();
 		} catch (err) {
 			logger.error('Failed to create schedule', {
@@ -133,7 +117,6 @@ export const actions: Actions = {
 			});
 		}
 
-		// Return success with redirect target (client will handle navigation after showing toast)
 		return {
 			success: true,
 			message: 'Schedule created successfully',

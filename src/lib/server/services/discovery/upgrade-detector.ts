@@ -8,7 +8,6 @@ import type { DiscoveryOptions, DiscoveryStats, UpgradeDiscoveryResult } from '.
 
 const DEFAULT_BATCH_SIZE = 1000;
 
-// Idempotent - running multiple times won't create duplicate entries
 export async function discoverUpgrades(
 	connectorId: number,
 	options: DiscoveryOptions = {}
@@ -17,7 +16,6 @@ export async function discoverUpgrades(
 	const batchSize = options.batchSize ?? DEFAULT_BATCH_SIZE;
 
 	try {
-		// Get connector to verify it exists and get its type
 		const connector = await db
 			.select({ id: connectors.id, type: connectors.type })
 			.from(connectors)
@@ -40,17 +38,13 @@ export async function discoverUpgrades(
 
 		const connectorType = connector[0]!.type as 'sonarr' | 'radarr' | 'whisparr';
 
-		// Clean up upgrade registries where content now has qualityCutoffNotMet=false
-		// This handles requirement 4.4: delete registry when qualityCutoffNotMet becomes false
+		// Clean up registries where qualityCutoffNotMet became false (requirement 4.4)
 		const registriesResolved = await cleanupResolvedUpgradeRegistries(connectorId);
 
-		// Discover upgrades based on connector type
 		let stats: DiscoveryStats;
 		if (connectorType === 'radarr') {
-			// Radarr only has movies
 			stats = await discoverMovieUpgrades(connectorId, batchSize);
 		} else {
-			// Sonarr and Whisparr have episodes
 			stats = await discoverEpisodeUpgrades(connectorId, batchSize);
 		}
 
@@ -87,8 +81,6 @@ async function discoverEpisodeUpgrades(
 	connectorId: number,
 	batchSize: number
 ): Promise<DiscoveryStats> {
-	// Find all episode upgrade candidates (monitored=true AND hasFile=true AND qualityCutoffNotMet=true)
-	// Uses LEFT JOIN to check for existing search registry entries
 	const episodeUpgrades = await db
 		.select({
 			id: episodes.id,
@@ -113,7 +105,6 @@ async function discoverEpisodeUpgrades(
 			)
 		);
 
-	// Count total episode upgrade candidates for statistics (including those with existing registries)
 	const totalEpisodeUpgradesResult = await db
 		.select({ count: sql<number>`count(*)::int` })
 		.from(episodes)
@@ -127,8 +118,6 @@ async function discoverEpisodeUpgrades(
 		);
 
 	const totalEpisodeUpgrades = totalEpisodeUpgradesResult[0]?.count ?? 0;
-
-	// Create search registry entries in batches
 	let registriesCreated = 0;
 
 	for (let i = 0; i < episodeUpgrades.length; i += batchSize) {
@@ -168,8 +157,6 @@ async function discoverMovieUpgrades(
 	connectorId: number,
 	batchSize: number
 ): Promise<DiscoveryStats> {
-	// Find all movie upgrade candidates (monitored=true AND hasFile=true AND qualityCutoffNotMet=true)
-	// Uses LEFT JOIN to check for existing search registry entries
 	const movieUpgrades = await db
 		.select({
 			id: movies.id,
@@ -194,7 +181,6 @@ async function discoverMovieUpgrades(
 			)
 		);
 
-	// Count total movie upgrade candidates for statistics (including those with existing registries)
 	const totalMovieUpgradesResult = await db
 		.select({ count: sql<number>`count(*)::int` })
 		.from(movies)
@@ -208,8 +194,6 @@ async function discoverMovieUpgrades(
 		);
 
 	const totalMovieUpgrades = totalMovieUpgradesResult[0]?.count ?? 0;
-
-	// Create search registry entries in batches
 	let registriesCreated = 0;
 
 	for (let i = 0; i < movieUpgrades.length; i += batchSize) {
@@ -248,7 +232,6 @@ async function discoverMovieUpgrades(
 export async function getUpgradeStats(
 	connectorId: number
 ): Promise<{ episodeUpgrades: number; movieUpgrades: number }> {
-	// Count episode upgrade candidates
 	const episodeUpgradesResult = await db
 		.select({ count: sql<number>`count(*)::int` })
 		.from(episodes)
@@ -261,7 +244,6 @@ export async function getUpgradeStats(
 			)
 		);
 
-	// Count movie upgrade candidates
 	const movieUpgradesResult = await db
 		.select({ count: sql<number>`count(*)::int` })
 		.from(movies)

@@ -1,12 +1,4 @@
-/**
- * Validation schemas for search behavior settings forms.
- */
-
 import * as v from 'valibot';
-
-// =============================================================================
-// Priority Weights Schema
-// =============================================================================
 
 export const PriorityWeightsSchema = v.object({
 	contentAge: v.pipe(
@@ -44,10 +36,6 @@ export const PriorityWeightsSchema = v.object({
 export type PriorityWeightsInput = v.InferInput<typeof PriorityWeightsSchema>;
 export type PriorityWeightsOutput = v.InferOutput<typeof PriorityWeightsSchema>;
 
-// =============================================================================
-// Season Pack Thresholds Schema
-// =============================================================================
-
 export const SeasonPackThresholdsSchema = v.object({
 	minMissingPercent: v.pipe(
 		v.number('Minimum missing percent must be a number'),
@@ -65,10 +53,6 @@ export const SeasonPackThresholdsSchema = v.object({
 
 export type SeasonPackThresholdsInput = v.InferInput<typeof SeasonPackThresholdsSchema>;
 export type SeasonPackThresholdsOutput = v.InferOutput<typeof SeasonPackThresholdsSchema>;
-
-// =============================================================================
-// Cooldown Configuration Schema
-// =============================================================================
 
 export const CooldownConfigSchema = v.object({
 	baseDelayHours: v.pipe(
@@ -92,10 +76,6 @@ export const CooldownConfigSchema = v.object({
 export type CooldownConfigInput = v.InferInput<typeof CooldownConfigSchema>;
 export type CooldownConfigOutput = v.InferOutput<typeof CooldownConfigSchema>;
 
-// =============================================================================
-// Retry Configuration Schema
-// =============================================================================
-
 export const RetryConfigSchema = v.object({
 	maxAttempts: v.pipe(
 		v.number('Max attempts must be a number'),
@@ -108,10 +88,6 @@ export const RetryConfigSchema = v.object({
 export type RetryConfigInput = v.InferInput<typeof RetryConfigSchema>;
 export type RetryConfigOutput = v.InferOutput<typeof RetryConfigSchema>;
 
-// =============================================================================
-// Combined Search Settings Schema
-// =============================================================================
-
 export const SearchSettingsSchema = v.object({
 	priorityWeights: PriorityWeightsSchema,
 	seasonPackThresholds: SeasonPackThresholdsSchema,
@@ -121,10 +97,6 @@ export const SearchSettingsSchema = v.object({
 
 export type SearchSettingsInput = v.InferInput<typeof SearchSettingsSchema>;
 export type SearchSettingsOutput = v.InferOutput<typeof SearchSettingsSchema>;
-
-// =============================================================================
-// Field Labels for UI
-// =============================================================================
 
 export const priorityWeightLabels: Record<keyof PriorityWeightsOutput, string> = {
 	contentAge: 'Content Age Weight',
@@ -174,10 +146,6 @@ export const retryLabels: Record<keyof RetryConfigOutput, string> = {
 export const retryDescriptions: Record<keyof RetryConfigOutput, string> = {
 	maxAttempts: 'Number of failed attempts before marking item as exhausted.'
 };
-
-// =============================================================================
-// Default Values
-// =============================================================================
 
 export const SEARCH_SETTINGS_DEFAULTS: SearchSettingsOutput = {
 	priorityWeights: {

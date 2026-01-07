@@ -1,16 +1,5 @@
-/**
- * Validation schemas for notification channel forms.
- */
-
 import * as v from 'valibot';
 
-// =============================================================================
-// Constants
-// =============================================================================
-
-/**
- * Supported notification channel types.
- */
 export const NOTIFICATION_CHANNEL_TYPES = [
 	'discord',
 	'telegram',
@@ -24,9 +13,7 @@ export const NOTIFICATION_CHANNEL_TYPES = [
 
 export type NotificationChannelType = (typeof NOTIFICATION_CHANNEL_TYPES)[number];
 
-/**
- * Channel types that are currently implemented.
- */
+// Subset of types that are fully implemented (others are coming soon)
 export const IMPLEMENTED_CHANNEL_TYPES = [
 	'discord',
 	'telegram',
@@ -37,9 +24,6 @@ export const IMPLEMENTED_CHANNEL_TYPES = [
 
 export type ImplementedChannelType = (typeof IMPLEMENTED_CHANNEL_TYPES)[number];
 
-/**
- * Notification event types.
- */
 export const NOTIFICATION_EVENT_TYPES = [
 	'sweep_started',
 	'sweep_completed',
@@ -54,13 +38,6 @@ export const NOTIFICATION_EVENT_TYPES = [
 
 export type NotificationEventType = (typeof NOTIFICATION_EVENT_TYPES)[number];
 
-// =============================================================================
-// Base Schema (common fields)
-// =============================================================================
-
-/**
- * Base fields common to all notification channels.
- */
 export const BaseChannelSchema = v.object({
 	name: v.pipe(
 		v.string('Channel name is required'),
@@ -95,13 +72,6 @@ export const BaseChannelSchema = v.object({
 export type BaseChannelInput = v.InferInput<typeof BaseChannelSchema>;
 export type BaseChannelOutput = v.InferOutput<typeof BaseChannelSchema>;
 
-// =============================================================================
-// Discord Schema
-// =============================================================================
-
-/**
- * Discord channel configuration schema.
- */
 export const DiscordConfigSchema = v.object({
 	webhookUrl: v.pipe(
 		v.string('Webhook URL is required'),
@@ -118,13 +88,6 @@ export const DiscordConfigSchema = v.object({
 export type DiscordConfigInput = v.InferInput<typeof DiscordConfigSchema>;
 export type DiscordConfigOutput = v.InferOutput<typeof DiscordConfigSchema>;
 
-// =============================================================================
-// Telegram Schema
-// =============================================================================
-
-/**
- * Telegram channel configuration schema.
- */
 export const TelegramConfigSchema = v.object({
 	botToken: v.pipe(
 		v.string('Bot token is required'),
@@ -140,13 +103,6 @@ export const TelegramConfigSchema = v.object({
 export type TelegramConfigInput = v.InferInput<typeof TelegramConfigSchema>;
 export type TelegramConfigOutput = v.InferOutput<typeof TelegramConfigSchema>;
 
-// =============================================================================
-// Slack Schema
-// =============================================================================
-
-/**
- * Slack channel configuration schema.
- */
 export const SlackConfigSchema = v.object({
 	webhookUrl: v.pipe(
 		v.string('Webhook URL is required'),
@@ -168,13 +124,6 @@ export const SlackConfigSchema = v.object({
 export type SlackConfigInput = v.InferInput<typeof SlackConfigSchema>;
 export type SlackConfigOutput = v.InferOutput<typeof SlackConfigSchema>;
 
-// =============================================================================
-// Email Schema
-// =============================================================================
-
-/**
- * Email (SMTP) channel configuration schema.
- */
 export const EmailConfigSchema = v.object({
 	host: v.pipe(
 		v.string('SMTP host is required'),
@@ -201,13 +150,6 @@ export const EmailConfigSchema = v.object({
 export type EmailConfigInput = v.InferInput<typeof EmailConfigSchema>;
 export type EmailConfigOutput = v.InferOutput<typeof EmailConfigSchema>;
 
-// =============================================================================
-// Webhook Schema
-// =============================================================================
-
-/**
- * Generic webhook channel configuration schema.
- */
 export const WebhookConfigSchema = v.object({
 	url: v.pipe(v.string('Webhook URL is required'), v.trim(), v.url('Invalid webhook URL')),
 	method: v.optional(v.picklist(['POST', 'PUT']), 'POST'),
@@ -221,13 +163,6 @@ export const WebhookConfigSchema = v.object({
 export type WebhookConfigInput = v.InferInput<typeof WebhookConfigSchema>;
 export type WebhookConfigOutput = v.InferOutput<typeof WebhookConfigSchema>;
 
-// =============================================================================
-// Labels and Descriptions
-// =============================================================================
-
-/**
- * Human-readable labels for channel types.
- */
 export const channelTypeLabels: Record<NotificationChannelType, string> = {
 	discord: 'Discord',
 	telegram: 'Telegram',
@@ -239,9 +174,6 @@ export const channelTypeLabels: Record<NotificationChannelType, string> = {
 	ntfy: 'ntfy'
 };
 
-/**
- * Descriptions for channel types.
- */
 export const channelTypeDescriptions: Record<NotificationChannelType, string> = {
 	discord: 'Send notifications to a Discord channel via webhook',
 	telegram: 'Send notifications via Telegram bot',
@@ -253,9 +185,6 @@ export const channelTypeDescriptions: Record<NotificationChannelType, string> = 
 	ntfy: 'Send notifications via ntfy.sh (coming soon)'
 };
 
-/**
- * Human-readable labels for event types.
- */
 export const eventTypeLabels: Record<NotificationEventType, string> = {
 	sweep_started: 'Sweep Started',
 	sweep_completed: 'Sweep Completed',
@@ -268,9 +197,6 @@ export const eventTypeLabels: Record<NotificationEventType, string> = {
 	update_available: 'Update Available'
 };
 
-/**
- * Descriptions for event types.
- */
 export const eventTypeDescriptions: Record<NotificationEventType, string> = {
 	sweep_started: 'When a sweep cycle begins scanning a connector',
 	sweep_completed: 'When a sweep cycle finishes with discovered items',
@@ -283,9 +209,6 @@ export const eventTypeDescriptions: Record<NotificationEventType, string> = {
 	update_available: 'When a new version is available'
 };
 
-/**
- * Labels for base channel fields.
- */
 export const baseChannelLabels = {
 	name: 'Channel Name',
 	enabled: 'Enabled',
@@ -298,9 +221,6 @@ export const baseChannelLabels = {
 	quietHoursTimezone: 'Timezone'
 };
 
-/**
- * Descriptions for base channel fields.
- */
 export const baseChannelDescriptions = {
 	name: 'A friendly name to identify this notification channel',
 	enabled: 'Whether this channel should receive notifications',
@@ -313,27 +233,18 @@ export const baseChannelDescriptions = {
 	quietHoursTimezone: 'Timezone for quiet hours schedule'
 };
 
-/**
- * Labels for Discord fields.
- */
 export const discordFieldLabels = {
 	webhookUrl: 'Webhook URL',
 	username: 'Bot Username',
 	avatarUrl: 'Avatar URL'
 };
 
-/**
- * Descriptions for Discord fields.
- */
 export const discordFieldDescriptions = {
 	webhookUrl: 'Discord webhook URL from channel settings',
 	username: 'Custom username for the bot (optional)',
 	avatarUrl: 'Custom avatar image URL (optional)'
 };
 
-/**
- * Labels for Telegram fields.
- */
 export const telegramFieldLabels = {
 	botToken: 'Bot Token',
 	chatId: 'Chat ID',
@@ -342,9 +253,6 @@ export const telegramFieldLabels = {
 	disableNotification: 'Silent Notifications'
 };
 
-/**
- * Descriptions for Telegram fields.
- */
 export const telegramFieldDescriptions = {
 	botToken: 'Bot token from @BotFather',
 	chatId: 'Chat, group, or channel ID to send messages to',
@@ -353,9 +261,6 @@ export const telegramFieldDescriptions = {
 	disableNotification: 'Send without notification sound'
 };
 
-/**
- * Labels for Slack fields.
- */
 export const slackFieldLabels = {
 	webhookUrl: 'Webhook URL',
 	channel: 'Channel Override',
@@ -363,9 +268,6 @@ export const slackFieldLabels = {
 	iconEmoji: 'Icon Emoji'
 };
 
-/**
- * Descriptions for Slack fields.
- */
 export const slackFieldDescriptions = {
 	webhookUrl: 'Slack incoming webhook URL',
 	channel: 'Override the default channel (e.g., #alerts)',
@@ -373,9 +275,6 @@ export const slackFieldDescriptions = {
 	iconEmoji: 'Custom emoji icon (e.g., :robot:)'
 };
 
-/**
- * Labels for Email fields.
- */
 export const emailFieldLabels = {
 	host: 'SMTP Host',
 	port: 'Port',
@@ -387,9 +286,6 @@ export const emailFieldLabels = {
 	subjectPrefix: 'Subject Prefix'
 };
 
-/**
- * Descriptions for Email fields.
- */
 export const emailFieldDescriptions = {
 	host: 'SMTP server hostname',
 	port: 'SMTP server port (usually 587 for TLS or 465 for SSL)',
@@ -401,9 +297,6 @@ export const emailFieldDescriptions = {
 	subjectPrefix: 'Prefix for email subject lines'
 };
 
-/**
- * Labels for Webhook fields.
- */
 export const webhookFieldLabels = {
 	url: 'Webhook URL',
 	method: 'HTTP Method',
@@ -414,9 +307,6 @@ export const webhookFieldLabels = {
 	timestampHeader: 'Timestamp Header'
 };
 
-/**
- * Descriptions for Webhook fields.
- */
 export const webhookFieldDescriptions = {
 	url: 'URL to send webhook requests to',
 	method: 'HTTP method for the request',
@@ -427,20 +317,10 @@ export const webhookFieldDescriptions = {
 	timestampHeader: 'Name of the timestamp header'
 };
 
-// =============================================================================
-// Helper Functions
-// =============================================================================
-
-/**
- * Check if a channel type is currently implemented.
- */
 export function isImplementedChannelType(type: string): type is ImplementedChannelType {
 	return IMPLEMENTED_CHANNEL_TYPES.includes(type as ImplementedChannelType);
 }
 
-/**
- * Get the schema for a specific channel type.
- */
 export function getChannelConfigSchema(type: NotificationChannelType) {
 	switch (type) {
 		case 'discord':
@@ -458,9 +338,6 @@ export function getChannelConfigSchema(type: NotificationChannelType) {
 	}
 }
 
-/**
- * Get the field labels for a specific channel type.
- */
 export function getChannelFieldLabels(type: NotificationChannelType): Record<string, string> {
 	switch (type) {
 		case 'discord':
@@ -478,9 +355,6 @@ export function getChannelFieldLabels(type: NotificationChannelType): Record<str
 	}
 }
 
-/**
- * Get the field descriptions for a specific channel type.
- */
 export function getChannelFieldDescriptions(type: NotificationChannelType): Record<string, string> {
 	switch (type) {
 		case 'discord':
@@ -498,9 +372,7 @@ export function getChannelFieldDescriptions(type: NotificationChannelType): Reco
 	}
 }
 
-/**
- * Sensitive fields that should be encrypted, by channel type.
- */
+// Fields requiring encryption for security
 export const sensitiveFields: Record<ImplementedChannelType, string[]> = {
 	discord: ['webhookUrl'],
 	telegram: ['botToken'],
@@ -509,9 +381,6 @@ export const sensitiveFields: Record<ImplementedChannelType, string[]> = {
 	webhook: ['url', 'signingSecret']
 };
 
-/**
- * Get sensitive field names for a channel type.
- */
 export function getSensitiveFields(type: string): string[] {
 	return sensitiveFields[type as ImplementedChannelType] ?? [];
 }

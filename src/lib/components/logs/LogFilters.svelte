@@ -1,8 +1,4 @@
 <script lang="ts">
-/**
- * Log viewer filters component.
- */
-
 import DownloadIcon from '@lucide/svelte/icons/download';
 import RefreshCwIcon from '@lucide/svelte/icons/refresh-cw';
 import SearchIcon from '@lucide/svelte/icons/search';
@@ -37,7 +33,6 @@ let {
 let localSearch = $state('');
 let isRefreshing = $state(false);
 
-// Initialize localSearch from prop
 $effect(() => {
 	localSearch = searchQuery;
 });

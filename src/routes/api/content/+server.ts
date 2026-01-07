@@ -43,7 +43,6 @@ export const GET: RequestHandler = async ({ url, locals }) => {
 	const sort = url.searchParams.get('sort') as SortColumn | null;
 	const order = url.searchParams.get('order') as SortDirection | null;
 
-	// Validate and parse limit
 	let limit = DEFAULT_LIMIT;
 	if (limitParam) {
 		const parsed = parseInt(limitParam, 10);
@@ -53,7 +52,6 @@ export const GET: RequestHandler = async ({ url, locals }) => {
 		limit = Math.min(parsed, MAX_LIMIT);
 	}
 
-	// Parse connector ID
 	let connectorId: number | undefined;
 	if (connectorIdParam) {
 		const parsed = parseInt(connectorIdParam, 10);
@@ -63,17 +61,12 @@ export const GET: RequestHandler = async ({ url, locals }) => {
 		connectorId = parsed;
 	}
 
-	// Decode cursor if provided
 	let offset = 0;
 	if (cursor) {
 		const decoded = decodeCursor(cursor);
 		if (!decoded) {
 			error(400, 'Invalid cursor parameter');
 		}
-		// For simplicity, we continue using offset-based pagination internally
-		// but expose cursor-based interface to the client
-		// The cursor is used to track position for the next page
-		// We use the offset parameter from URL if available, otherwise start fresh
 		const offsetParam = url.searchParams.get('offset');
 		if (offsetParam) {
 			const parsedOffset = parseInt(offsetParam, 10);
@@ -83,7 +76,6 @@ export const GET: RequestHandler = async ({ url, locals }) => {
 		}
 	}
 
-	// Build filters
 	const filters: ContentFilters = {
 		limit,
 		offset,

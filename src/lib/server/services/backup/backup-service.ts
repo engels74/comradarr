@@ -55,7 +55,7 @@ async function getBackupDirectory(): Promise<string> {
 	try {
 		await mkdir(backupDir, { recursive: true });
 	} catch {
-		// Directory may already exist
+		// Ignore if already exists
 	}
 
 	return backupDir;
@@ -123,7 +123,6 @@ async function getSchemaVersion(): Promise<SchemaVersion> {
 			migrationIndex: lastEntry.idx
 		};
 	} catch {
-		// If journal doesn't exist, return defaults
 		return {
 			appVersion: APP_VERSION,
 			lastMigration: 'unknown',

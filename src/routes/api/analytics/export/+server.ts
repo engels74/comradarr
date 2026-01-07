@@ -14,9 +14,6 @@ import { requireScope } from '$lib/server/auth';
 import { type ExportRow, getDailyStatsForExport } from '$lib/server/db/queries/analytics';
 import type { RequestHandler } from './$types';
 
-/**
- * CSV column headers.
- */
 const CSV_HEADERS = [
 	'date',
 	'connector',
@@ -34,10 +31,6 @@ const CSV_HEADERS = [
 	'success_rate'
 ] as const;
 
-/**
- * Escapes a CSV field value.
- * Wraps in quotes if contains comma, quote, or newline.
- */
 function escapeCSVField(value: string | number | null): string {
 	if (value === null) {
 		return '';
@@ -45,25 +38,17 @@ function escapeCSVField(value: string | number | null): string {
 
 	const stringValue = String(value);
 
-	// Check if escaping is needed
 	if (stringValue.includes(',') || stringValue.includes('"') || stringValue.includes('\n')) {
-		// Escape double quotes by doubling them
 		return `"${stringValue.replace(/"/g, '""')}"`;
 	}
 
 	return stringValue;
 }
 
-/**
- * Converts export rows to CSV string.
- */
 function toCSV(rows: ExportRow[]): string {
 	const lines: string[] = [];
-
-	// Add header row
 	lines.push(CSV_HEADERS.join(','));
 
-	// Add data rows
 	for (const row of rows) {
 		const values = [
 			escapeCSVField(row.date),
@@ -87,15 +72,11 @@ function toCSV(rows: ExportRow[]): string {
 	return lines.join('\n');
 }
 
-/**
- * Validates a date string in YYYY-MM-DD format.
- */
 function parseDate(dateString: string | null, paramName: string): Date {
 	if (!dateString) {
 		error(400, `Missing required parameter: ${paramName}`);
 	}
 
-	// Validate format
 	const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
 	if (!dateRegex.test(dateString)) {
 		error(400, `Invalid date format for ${paramName}. Expected YYYY-MM-DD.`);
@@ -110,41 +91,32 @@ function parseDate(dateString: string | null, paramName: string): Date {
 }
 
 export const GET: RequestHandler = async ({ url, locals }) => {
-	// Require read scope for read operations
 	requireScope(locals, 'read');
 
-	// Parse and validate date parameters
 	const startDateParam = url.searchParams.get('startDate');
 	const endDateParam = url.searchParams.get('endDate');
 
 	const startDate = parseDate(startDateParam, 'startDate');
 	const endDate = parseDate(endDateParam, 'endDate');
 
-	// Validate date range
 	if (startDate > endDate) {
 		error(400, 'startDate must be before or equal to endDate');
 	}
 
-	// Limit date range to prevent excessive queries (max 1 year)
+	// Max 1 year range to prevent excessive queries
 	const maxRangeMs = 365 * 24 * 60 * 60 * 1000;
 	if (endDate.getTime() - startDate.getTime() > maxRangeMs) {
 		error(400, 'Date range cannot exceed 1 year');
 	}
 
-	// Set end date to end of day for inclusive query
+	// End of day for inclusive query
 	const endDateInclusive = new Date(endDate);
 	endDateInclusive.setUTCHours(23, 59, 59, 999);
 
-	// Fetch data
 	const rows = await getDailyStatsForExport(startDate, endDateInclusive);
-
-	// Generate CSV
 	const csv = toCSV(rows);
-
-	// Generate filename
 	const filename = `comradarr-analytics-${startDateParam}-to-${endDateParam}.csv`;
 
-	// Return CSV file
 	return new Response(csv, {
 		headers: {
 			'Content-Type': 'text/csv; charset=utf-8',

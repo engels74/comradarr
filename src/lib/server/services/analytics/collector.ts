@@ -139,7 +139,6 @@ class AnalyticsCollector {
 		const samples: QueueDepthSample[] = [];
 
 		try {
-			// Get queue depth per connector with state breakdown
 			const result = await db
 				.select({
 					connectorId: searchRegistry.connectorId,
@@ -150,7 +149,6 @@ class AnalyticsCollector {
 				.where(inArray(searchRegistry.state, ['pending', 'queued', 'searching', 'cooldown']))
 				.groupBy(searchRegistry.connectorId, searchRegistry.state);
 
-			// Aggregate by connector
 			const connectorMap = new Map<number, QueueDepthSample>();
 
 			for (const row of result) {
@@ -181,7 +179,6 @@ class AnalyticsCollector {
 				}
 			}
 
-			// Record events for each connector
 			for (const sample of connectorMap.values()) {
 				const payload: QueueDepthSampledPayload = {
 					queueDepth: sample.queueDepth,

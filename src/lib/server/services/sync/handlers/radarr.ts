@@ -5,18 +5,14 @@ import { movies } from '$lib/server/db/schema';
 import { mapMovieToDb } from '../mappers';
 
 export async function syncRadarrMovies(client: RadarrClient, connectorId: number): Promise<number> {
-	// Fetch all movies from Radarr (single API call)
 	const apiMovies = await client.getMovies();
 
 	if (apiMovies.length === 0) {
 		return 0;
 	}
 
-	// Map all movies to database format
 	const movieRecords = apiMovies.map((movie) => mapMovieToDb(connectorId, movie));
 
-	// Upsert all movies using ON CONFLICT DO UPDATE
-	// Uses the unique index on (connectorId, arrId)
 	await db
 		.insert(movies)
 		.values(movieRecords)

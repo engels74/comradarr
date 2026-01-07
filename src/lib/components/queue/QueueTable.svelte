@@ -6,11 +6,6 @@ import { cn } from '$lib/utils.js';
 import QueueStateBadge from './QueueStateBadge.svelte';
 import type { SerializedQueueItem, SerializedThrottleInfo } from './types';
 
-/**
- * Virtualized queue table for large datasets.
- * Uses TanStack Virtual to only render visible rows.
- */
-
 interface Props {
 	items: SerializedQueueItem[];
 	throttleInfo: Record<number, SerializedThrottleInfo>;
@@ -27,16 +22,12 @@ let {
 	onSelectionChange
 }: Props = $props();
 
-// Selection state
 const isAllSelected = $derived(
 	items.length > 0 && items.every((item) => selectedIds.has(item.searchRegistryId))
 );
 const isSomeSelected = $derived(items.some((item) => selectedIds.has(item.searchRegistryId)));
 const isIndeterminate = $derived(isSomeSelected && !isAllSelected);
 
-/**
- * Toggle selection for a single item.
- */
 function toggleSelection(registryId: number) {
 	const newSet = new Set(selectedIds);
 	if (newSet.has(registryId)) {
@@ -47,19 +38,14 @@ function toggleSelection(registryId: number) {
 	onSelectionChange?.(newSet);
 }
 
-/**
- * Toggle all items selection.
- */
 function toggleAll() {
 	if (isAllSelected) {
-		// Deselect all visible items
 		const newSet = new Set(selectedIds);
 		for (const item of items) {
 			newSet.delete(item.searchRegistryId);
 		}
 		onSelectionChange?.(newSet);
 	} else {
-		// Select all visible items
 		const newSet = new Set(selectedIds);
 		for (const item of items) {
 			newSet.add(item.searchRegistryId);
@@ -68,9 +54,6 @@ function toggleAll() {
 	}
 }
 
-/**
- * Handle row click for selection (only if not clicking a link).
- */
 function handleRowClick(e: MouseEvent, registryId: number) {
 	// Don't toggle if clicking on a link or checkbox
 	const target = e.target as HTMLElement;
@@ -85,14 +68,11 @@ function handleRowClick(e: MouseEvent, registryId: number) {
 	toggleSelection(registryId);
 }
 
-// Scroll container reference
 let scrollContainer: HTMLDivElement | null = $state(null);
 
-// Virtualizer configuration
 const ROW_HEIGHT = 60;
 const OVERSCAN = 5;
 
-// Create virtualizer
 const virtualizerStore = $derived(
 	scrollContainer
 		? createVirtualizer({
@@ -114,7 +94,6 @@ const totalHeight = $derived.by(() => {
 	return $virtualizerStore?.getTotalSize() ?? 0;
 });
 
-// Connector type colors using OKLCH accent colors
 const typeColors: Record<string, string> = {
 	sonarr:
 		'bg-[oklch(var(--accent-sonarr)/0.15)] text-[oklch(var(--accent-sonarr))] border border-[oklch(var(--accent-sonarr)/0.3)]',
@@ -124,9 +103,6 @@ const typeColors: Record<string, string> = {
 		'bg-[oklch(var(--accent-whisparr)/0.15)] text-[oklch(var(--accent-whisparr))] border border-[oklch(var(--accent-whisparr)/0.3)]'
 };
 
-/**
- * Formats the display title for an item.
- */
 function formatTitle(item: SerializedQueueItem): string {
 	if (item.contentType === 'episode' && item.seriesTitle) {
 		const episodeCode = `S${String(item.seasonNumber ?? 0).padStart(2, '0')}E${String(item.episodeNumber ?? 0).padStart(2, '0')}`;
@@ -138,9 +114,6 @@ function formatTitle(item: SerializedQueueItem): string {
 	return item.title;
 }
 
-/**
- * Gets the link to the content detail page.
- */
 function getContentLink(item: SerializedQueueItem): string {
 	if (item.contentType === 'episode') {
 		// For episodes, we link to the series page
@@ -150,37 +123,28 @@ function getContentLink(item: SerializedQueueItem): string {
 	return `/content/movie/${item.contentId}`;
 }
 
-/**
- * Estimates dispatch time based on queue position and throttle info.
- */
 function estimateDispatchTime(item: SerializedQueueItem, index: number): string {
 	const info = throttleInfo[item.connectorId];
 
-	// If searching, it's in progress
 	if (item.state === 'searching') {
 		return 'In progress';
 	}
 
-	// If not queued, no dispatch time
 	if (item.state !== 'queued') {
 		return '-';
 	}
 
-	// If no throttle info, use scheduled time
 	if (!info) {
 		if (!item.scheduledAt) return 'Unknown';
 		return formatRelativeTime(new Date(item.scheduledAt));
 	}
 
-	// If paused, show paused state
 	if (info.isPaused) {
 		if (info.pausedUntil) {
 			return `Paused until ${formatTime(new Date(info.pausedUntil))}`;
 		}
 		return 'Paused';
 	}
-
-	// Calculate estimated dispatch based on position and rate
 	const requestsPerMinute = info.requestsPerMinute || 5;
 	const minutesAhead = Math.ceil((index + 1) / requestsPerMinute);
 
@@ -192,9 +156,6 @@ function estimateDispatchTime(item: SerializedQueueItem, index: number): string 
 	return formatRelativeTime(dispatchTime);
 }
 
-/**
- * Formats a relative time string.
- */
 function formatRelativeTime(date: Date): string {
 	const now = Date.now();
 	const diff = date.getTime() - now;
@@ -217,16 +178,10 @@ function formatRelativeTime(date: Date): string {
 	return days === 1 ? 'in 1 day' : `in ${days} days`;
 }
 
-/**
- * Formats a time for display.
- */
 function formatTime(date: Date): string {
 	return date.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
 }
 
-/**
- * Max attempts for exhausted calculation display.
- */
 const MAX_ATTEMPTS = 5;
 </script>
 

@@ -6,7 +6,6 @@ import type { DiscoveryOptions, DiscoveryStats, GapDiscoveryResult } from './typ
 
 const DEFAULT_BATCH_SIZE = 1000;
 
-/** Idempotent - running multiple times won't create duplicate entries. */
 export async function discoverGaps(
 	connectorId: number,
 	options: DiscoveryOptions = {}

@@ -33,7 +33,6 @@ let {
 let canvas: HTMLCanvasElement;
 let chart: import('chart.js').Chart | null = null;
 
-// Time unit configuration based on period
 const timeConfig = $derived(() => {
 	switch (period) {
 		case '24h':
@@ -57,7 +56,6 @@ const timeConfig = $derived(() => {
 	}
 });
 
-// Transform datasets to Chart.js format
 const chartData = $derived(() => ({
 	datasets: datasets.map((ds) => {
 		const dataset: {
@@ -175,7 +173,6 @@ onMount(async () => {
 	});
 });
 
-// Update chart when data or period changes
 $effect(() => {
 	if (chart) {
 		const config = timeConfig();

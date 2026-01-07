@@ -408,10 +408,8 @@ interface MovieWithStats {
 function buildMovieStatusConditions(status: ContentStatus | undefined): SQL | undefined {
 	switch (status) {
 		case 'missing':
-			// Movie is missing (no file, monitored)
 			return and(eq(movies.hasFile, false), eq(movies.monitored, true));
 		case 'upgrade':
-			// Movie needs upgrade (has file, cutoff not met, monitored)
 			return and(
 				eq(movies.qualityCutoffNotMet, true),
 				eq(movies.hasFile, true),
@@ -593,13 +591,8 @@ export async function getContentList(filters: ContentFilters): Promise<ContentLi
 		// Merge and sort
 		items = [...seriesItems, ...movieItems];
 
-		// Sort merged results (status filtering already done in SQL)
 		items = sortItems(items, filters.sortColumn ?? 'title', filters.sortDirection ?? 'asc');
-
-		// Apply pagination to merged results
 		items = items.slice(0, filters.limit ?? 50);
-
-		// Total is now accurate (status filter applied in SQL)
 		total = seriesCount + moviesCount;
 	} else if (querySeries) {
 		const [seriesResult, seriesCount] = await Promise.all([
