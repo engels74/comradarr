@@ -1,20 +1,3 @@
-/**
- * Notification-specific error classes.
- *
- * Follows the pattern from `connectors/common/errors.ts` with
- * `category` and `retryable` properties for intelligent error handling.
- *
- * @module services/notifications/errors
-
- */
-
-// =============================================================================
-// Error Categories
-// =============================================================================
-
-/**
- * Categories of notification errors.
- */
 export type NotificationErrorCategory =
 	| 'network'
 	| 'authentication'
@@ -24,20 +7,9 @@ export type NotificationErrorCategory =
 	| 'configuration'
 	| 'validation';
 
-// =============================================================================
-// Base Error Class
-// =============================================================================
-
-/**
- * Base class for all notification-related errors.
- * Provides `category` and `retryable` properties for error handling.
- */
 export abstract class NotificationError extends Error {
-	/** Error category for classification */
 	abstract readonly category: NotificationErrorCategory;
-	/** Whether this error is retryable */
 	abstract readonly retryable: boolean;
-	/** Timestamp when error occurred */
 	readonly timestamp: Date = new Date();
 
 	constructor(message: string) {
@@ -47,18 +19,10 @@ export abstract class NotificationError extends Error {
 	}
 }
 
-// =============================================================================
-// Specific Error Classes
-// =============================================================================
-
-/**
- * Network-related errors (connection refused, DNS failure, etc.).
- * These are generally retryable.
- */
+// Network errors (connection refused, DNS failure) - retryable
 export class NotificationNetworkError extends NotificationError {
 	readonly category = 'network' as const;
 	readonly retryable = true;
-	/** Additional context about the network error */
 	readonly networkCause: string | undefined;
 
 	constructor(message: string, networkCause?: string) {
@@ -68,10 +32,7 @@ export class NotificationNetworkError extends NotificationError {
 	}
 }
 
-/**
- * Authentication errors (invalid API key, token, etc.).
- * These are NOT retryable without configuration changes.
- */
+// Authentication errors - NOT retryable without configuration changes
 export class NotificationAuthenticationError extends NotificationError {
 	readonly category = 'authentication' as const;
 	readonly retryable = false;
@@ -82,10 +43,7 @@ export class NotificationAuthenticationError extends NotificationError {
 	}
 }
 
-/**
- * Rate limit errors (HTTP 429).
- * These are retryable after waiting.
- */
+// Rate limit errors (HTTP 429) - retryable after waiting
 export class NotificationRateLimitError extends NotificationError {
 	readonly category = 'rate_limit' as const;
 	readonly retryable = true;
@@ -103,10 +61,7 @@ export class NotificationRateLimitError extends NotificationError {
 	}
 }
 
-/**
- * Server errors (HTTP 5xx).
- * These are generally retryable.
- */
+// Server errors (HTTP 5xx) - retryable
 export class NotificationServerError extends NotificationError {
 	readonly category = 'server' as const;
 	readonly retryable = true;
@@ -120,10 +75,7 @@ export class NotificationServerError extends NotificationError {
 	}
 }
 
-/**
- * Request timeout errors.
- * These are generally retryable.
- */
+// Timeout errors - retryable
 export class NotificationTimeoutError extends NotificationError {
 	readonly category = 'timeout' as const;
 	readonly retryable = true;
@@ -134,10 +86,7 @@ export class NotificationTimeoutError extends NotificationError {
 	}
 }
 
-/**
- * Configuration errors (missing required config, invalid values).
- * These are NOT retryable without configuration changes.
- */
+// Configuration errors - NOT retryable without configuration changes
 export class NotificationConfigurationError extends NotificationError {
 	readonly category = 'configuration' as const;
 	readonly retryable = false;
@@ -148,10 +97,7 @@ export class NotificationConfigurationError extends NotificationError {
 	}
 }
 
-/**
- * Validation errors (invalid payload, malformed data).
- * These are NOT retryable without fixing the payload.
- */
+// Validation errors - NOT retryable without fixing the payload
 export class NotificationValidationError extends NotificationError {
 	readonly category = 'validation' as const;
 	readonly retryable = false;
@@ -162,21 +108,10 @@ export class NotificationValidationError extends NotificationError {
 	}
 }
 
-// =============================================================================
-// Type Guards
-// =============================================================================
-
-/**
- * Type guard to check if an error is a NotificationError.
- */
 export function isNotificationError(error: unknown): error is NotificationError {
 	return error instanceof NotificationError;
 }
 
-/**
- * Check if an error is retryable.
- * Returns false for unknown errors.
- */
 export function isRetryableNotificationError(error: unknown): boolean {
 	if (isNotificationError(error)) {
 		return error.retryable;

@@ -1,7 +1,3 @@
-/**
- * Database queries for authentication operations.
- */
-
 import { and, desc, eq, ne, sql } from 'drizzle-orm';
 import {
 	calculateLockoutExpiry,
@@ -14,7 +10,6 @@ import {
 import { db } from '$lib/server/db';
 import { sessions, type User, users } from '$lib/server/db/schema';
 
-// Re-export lockout utilities for backward compatibility
 export {
 	MAX_FAILED_ATTEMPTS,
 	LOCKOUT_DURATION_MINUTES,
@@ -24,36 +19,18 @@ export {
 	shouldTriggerLockout
 };
 
-/**
- * Gets a user by username for login.
- *
- * @param username - The username to look up
- * @returns User if found, null otherwise
- */
 export async function getUserByUsername(username: string): Promise<User | null> {
 	const result = await db.select().from(users).where(eq(users.username, username)).limit(1);
 
 	return result[0] ?? null;
 }
 
-/**
- * Gets a user by ID.
- *
- * @param id - The user ID to look up
- * @returns User if found, null otherwise
- */
 export async function getUserById(id: number): Promise<User | null> {
 	const result = await db.select().from(users).where(eq(users.id, id)).limit(1);
 
 	return result[0] ?? null;
 }
 
-/**
- * Creates a new user.
- *
- * @param data - User data including username and passwordHash
- * @returns Created user
- */
 export async function createUser(data: {
 	username: string;
 	passwordHash: string;
@@ -73,24 +50,14 @@ export async function createUser(data: {
 	return result[0]!;
 }
 
-/**
- * Result of a failed login attempt.
- */
 export interface FailedLoginResult {
 	/** Whether the account is now locked */
 	isLocked: boolean;
 	/** Lockout duration in minutes (only set if isLocked is true) */
 	lockoutMinutes?: number;
-	/** Current failed attempt count */
 	attemptCount: number;
 }
 
-/**
- * Records a failed login attempt and triggers lockout if threshold exceeded (Req 35.1, 35.2).
- *
- * @param userId - The user ID that failed login
- * @returns Result containing lockout status and attempt count
- */
 export async function recordFailedLogin(userId: number): Promise<FailedLoginResult> {
 	// Increment the counter and get the new value
 	const result = await db
@@ -122,11 +89,6 @@ export async function recordFailedLogin(userId: number): Promise<FailedLoginResu
 	};
 }
 
-/**
- * Resets failed login counter on successful login (Req 35.5).
- *
- * @param userId - The user ID that successfully logged in
- */
 export async function recordSuccessfulLogin(userId: number): Promise<void> {
 	await db
 		.update(users)
@@ -140,12 +102,6 @@ export async function recordSuccessfulLogin(userId: number): Promise<void> {
 		.where(eq(users.id, userId));
 }
 
-/**
- * Locks a user account until specified time (Req 35.2, 35.3).
- *
- * @param userId - The user ID to lock
- * @param until - When the lock expires
- */
 export async function lockUserAccount(userId: number, until: Date): Promise<void> {
 	await db
 		.update(users)
@@ -156,15 +112,6 @@ export async function lockUserAccount(userId: number, until: Date): Promise<void
 		.where(eq(users.id, userId));
 }
 
-/**
- * Checks if account is locked, and resets lockout if expired (Req 35.3, 35.4).
- *
- * This function should be called at login time to automatically reset
- * the failed attempt counter when the lockout period has expired.
- *
- * @param user - User object with lockout fields
- * @returns true if account is still locked, false if not locked or lockout expired
- */
 export async function checkAndResetLockout(user: User): Promise<boolean> {
 	if (!user.lockedUntil) return false;
 
@@ -187,12 +134,6 @@ export async function checkAndResetLockout(user: User): Promise<boolean> {
 	return false;
 }
 
-/**
- * Updates user's password hash.
- *
- * @param userId - The user ID to update
- * @param passwordHash - New Argon2id password hash
- */
 export async function updateUserPassword(userId: number, passwordHash: string): Promise<void> {
 	await db
 		.update(users)
@@ -203,24 +144,11 @@ export async function updateUserPassword(userId: number, passwordHash: string): 
 		.where(eq(users.id, userId));
 }
 
-/**
- * Checks if any users exist in the database.
- * Used during initial setup to determine if admin account needs creation.
- *
- * @returns true if at least one user exists
- */
 export async function hasUsers(): Promise<boolean> {
 	const result = await db.select({ id: users.id }).from(users).limit(1);
 	return result.length > 0;
 }
 
-// =============================================================================
-// Session Management
-// =============================================================================
-
-/**
- * Represents a user session for display in security settings.
- */
 export interface UserSession {
 	id: string;
 	createdAt: Date;
@@ -231,13 +159,6 @@ export interface UserSession {
 	isCurrent: boolean;
 }
 
-/**
- * Gets all active sessions for a user.
- *
- * @param userId - The user ID to get sessions for
- * @param currentSessionId - Optional current session ID to mark as current
- * @returns Array of user sessions, sorted by last accessed (most recent first)
- */
 export async function getUserSessions(
 	userId: number,
 	currentSessionId?: string
@@ -263,13 +184,6 @@ export async function getUserSessions(
 	}));
 }
 
-/**
- * Deletes a specific session for a user.
- *
- * @param userId - The user ID (for authorization check)
- * @param sessionId - The session ID to delete
- * @returns true if session was deleted, false if not found or unauthorized
- */
 export async function deleteUserSession(userId: number, sessionId: string): Promise<boolean> {
 	const result = await db
 		.delete(sessions)
@@ -279,13 +193,6 @@ export async function deleteUserSession(userId: number, sessionId: string): Prom
 	return result.length > 0;
 }
 
-/**
- * Deletes all sessions for a user except the current one.
- *
- * @param userId - The user ID
- * @param currentSessionId - The current session ID to keep
- * @returns Number of sessions deleted
- */
 export async function deleteOtherUserSessions(
 	userId: number,
 	currentSessionId: string

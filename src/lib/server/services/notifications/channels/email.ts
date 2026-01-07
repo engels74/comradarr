@@ -1,12 +1,3 @@
-/**
- * Email notification sender via SMTP.
- *
- * Uses nodemailer for SMTP transport.
- *
- * @module services/notifications/channels/email
-
- */
-
 import type { Transporter } from 'nodemailer';
 import nodemailer from 'nodemailer';
 import type SMTPTransport from 'nodemailer/lib/smtp-transport';
@@ -25,13 +16,6 @@ import type {
 	NotificationResult
 } from '../types';
 
-// =============================================================================
-// Email Sender Implementation
-// =============================================================================
-
-/**
- * Sends notifications via SMTP email.
- */
 export class EmailSender implements NotificationSender {
 	private readonly timeout: number;
 
@@ -39,9 +23,6 @@ export class EmailSender implements NotificationSender {
 		this.timeout = config?.timeout ?? DEFAULT_SENDER_CONFIG.timeout;
 	}
 
-	/**
-	 * Send a notification via email.
-	 */
 	async send(
 		channel: NotificationChannel,
 		sensitiveConfig: Record<string, unknown>,
@@ -108,9 +89,6 @@ export class EmailSender implements NotificationSender {
 		}
 	}
 
-	/**
-	 * Send a test email to verify the SMTP configuration.
-	 */
 	async test(
 		channel: NotificationChannel,
 		sensitiveConfig: Record<string, unknown>
@@ -128,9 +106,6 @@ export class EmailSender implements NotificationSender {
 		});
 	}
 
-	/**
-	 * Create a nodemailer transporter with the given configuration.
-	 */
 	private createTransporter(
 		config: EmailConfig,
 		sensitive: EmailSensitiveConfig
@@ -155,9 +130,6 @@ export class EmailSender implements NotificationSender {
 		return nodemailer.createTransport(transportOptions);
 	}
 
-	/**
-	 * Build the HTML email body.
-	 */
 	private buildHtmlBody(payload: NotificationPayload): string {
 		const color = payload.color ?? getEventColor(payload.eventType);
 		const timestamp = (payload.timestamp ?? new Date()).toISOString();
@@ -235,9 +207,6 @@ export class EmailSender implements NotificationSender {
 </html>`;
 	}
 
-	/**
-	 * Build the plain text email body.
-	 */
 	private buildTextBody(payload: NotificationPayload): string {
 		const timestamp = (payload.timestamp ?? new Date()).toISOString();
 
@@ -259,9 +228,6 @@ export class EmailSender implements NotificationSender {
 		return text;
 	}
 
-	/**
-	 * Escape HTML special characters.
-	 */
 	private escapeHtml(text: string): string {
 		return text
 			.replace(/&/g, '&amp;')
@@ -271,9 +237,6 @@ export class EmailSender implements NotificationSender {
 			.replace(/'/g, '&#039;');
 	}
 
-	/**
-	 * Handle nodemailer errors and return appropriate error message.
-	 */
 	private handleError(error: unknown): string {
 		if (error instanceof Error) {
 			// Authentication errors

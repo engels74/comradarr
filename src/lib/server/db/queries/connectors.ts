@@ -1,11 +1,3 @@
-/**
- * Database queries for connector operations.
- *
- *
- * API keys are encrypted using AES-256-GCM before storage.
- * Decryption happens lazily, only when the key is needed for API calls.
- */
-
 import { and, count, desc, eq, inArray, or } from 'drizzle-orm';
 import { DecryptionError, decrypt, encrypt, SecretKeyError } from '$lib/server/crypto';
 import { db } from '$lib/server/db';
@@ -22,17 +14,10 @@ import {
 	syncState
 } from '$lib/server/db/schema';
 
-// Re-export crypto errors for consumers
 export { DecryptionError, SecretKeyError };
 
-/**
- * Supported connector types.
- */
 export type ConnectorType = 'sonarr' | 'radarr' | 'whisparr';
 
-/**
- * Input for creating a new connector.
- */
 export interface CreateConnectorInput {
 	type: ConnectorType;
 	name: string;
@@ -41,9 +26,6 @@ export interface CreateConnectorInput {
 	enabled?: boolean;
 }
 
-/**
- * Input for updating an existing connector.
- */
 export interface UpdateConnectorInput {
 	name?: string;
 	url?: string;
@@ -52,13 +34,6 @@ export interface UpdateConnectorInput {
 	healthStatus?: string;
 }
 
-/**
- * Creates a new connector with encrypted API key.
- *
- * @param input - Connector data with plain text API key
- * @returns Created connector (API key is encrypted)
- * @throws SecretKeyError if SECRET_KEY is not configured
- */
 export async function createConnector(input: CreateConnectorInput): Promise<Connector> {
 	// Encrypt API key before storage (Req 1.1)
 	const apiKeyEncrypted = await encrypt(input.apiKey);
@@ -77,46 +52,20 @@ export async function createConnector(input: CreateConnectorInput): Promise<Conn
 	return result[0]!;
 }
 
-/**
- * Gets a connector by ID.
- * Note: API key remains encrypted. Use getDecryptedApiKey() when needed.
- *
- * @param id - Connector ID
- * @returns Connector if found, null otherwise
- */
 export async function getConnector(id: number): Promise<Connector | null> {
 	const result = await db.select().from(connectors).where(eq(connectors.id, id)).limit(1);
 
 	return result[0] ?? null;
 }
 
-/**
- * Gets all connectors.
- * Note: API keys remain encrypted. Use getDecryptedApiKey() when needed.
- *
- * @returns Array of all connectors
- */
 export async function getAllConnectors(): Promise<Connector[]> {
 	return db.select().from(connectors).orderBy(connectors.name);
 }
 
-/**
- * Gets all enabled connectors.
- * Note: API keys remain encrypted. Use getDecryptedApiKey() when needed.
- *
- * @returns Array of enabled connectors
- */
 export async function getEnabledConnectors(): Promise<Connector[]> {
 	return db.select().from(connectors).where(eq(connectors.enabled, true)).orderBy(connectors.name);
 }
 
-/**
- * Gets all enabled connectors with healthy status (healthy or degraded).
- * Excludes unhealthy, offline, and unknown status connectors from sweep cycles.
- * Used by scheduler to skip sweep cycles for unhealthy connectors.
- *
- * @returns Array of healthy, enabled connectors
- */
 export async function getHealthyConnectors(): Promise<Connector[]> {
 	return db
 		.select()
@@ -127,28 +76,10 @@ export async function getHealthyConnectors(): Promise<Connector[]> {
 		.orderBy(connectors.name);
 }
 
-/**
- * Decrypts the API key from a connector.
- * Call this only when making actual API requests to the *arr application.
- *
- * @param connector - Connector with encrypted API key
- * @returns Decrypted plain text API key
- * @throws DecryptionError if decryption fails
- * @throws SecretKeyError if SECRET_KEY is not configured
- */
 export async function getDecryptedApiKey(connector: Connector): Promise<string> {
 	return decrypt(connector.apiKeyEncrypted);
 }
 
-/**
- * Updates a connector.
- * If apiKey is provided, it will be encrypted before storage.
- *
- * @param id - Connector ID to update
- * @param input - Fields to update
- * @returns Updated connector, or null if not found
- * @throws SecretKeyError if SECRET_KEY is not configured (when updating apiKey)
- */
 export async function updateConnector(
 	id: number,
 	input: UpdateConnectorInput
@@ -187,12 +118,6 @@ export async function updateConnector(
 	return result[0] ?? null;
 }
 
-/**
- * Updates a connector's health status.
- *
- * @param id - Connector ID
- * @param healthStatus - New health status
- */
 export async function updateConnectorHealth(
 	id: number,
 	healthStatus: 'healthy' | 'degraded' | 'unhealthy' | 'offline' | 'unknown'
@@ -206,11 +131,6 @@ export async function updateConnectorHealth(
 		.where(eq(connectors.id, id));
 }
 
-/**
- * Updates a connector's last sync timestamp.
- *
- * @param id - Connector ID
- */
 export async function updateConnectorLastSync(id: number): Promise<void> {
 	await db
 		.update(connectors)
@@ -221,13 +141,6 @@ export async function updateConnectorLastSync(id: number): Promise<void> {
 		.where(eq(connectors.id, id));
 }
 
-/**
- * Deletes a connector.
- * Cascades to related content and search state.
- *
- * @param id - Connector ID to delete
- * @returns true if deleted, false if not found
- */
 export async function deleteConnector(id: number): Promise<boolean> {
 	const result = await db
 		.delete(connectors)
@@ -237,13 +150,6 @@ export async function deleteConnector(id: number): Promise<boolean> {
 	return result.length > 0;
 }
 
-/**
- * Checks if a connector exists with the given name.
- *
- * @param name - Connector name to check
- * @param excludeId - Optional ID to exclude (for updates)
- * @returns true if a connector with this name exists
- */
 export async function connectorNameExists(name: string, excludeId?: number): Promise<boolean> {
 	const result = await db
 		.select({ id: connectors.id })
@@ -257,33 +163,16 @@ export async function connectorNameExists(name: string, excludeId?: number): Pro
 	return true;
 }
 
-/**
- * Normalizes a URL for consistent storage.
- * Removes trailing slashes.
- */
 function normalizeUrl(url: string): string {
 	return url.replace(/\/+$/, '');
 }
 
-// =============================================================================
-// Connector Statistics
-// =============================================================================
-
-/**
- * Statistics for a single connector.
- */
 export interface ConnectorStats {
 	connectorId: number;
 	gapsCount: number; // Episodes/movies with hasFile=false, monitored=true
-	queueDepth: number; // Items in request_queue
+	queueDepth: number;
 }
 
-/**
- * Gets statistics for a single connector.
- *
- * @param connectorId - Connector ID
- * @returns Statistics for the connector
- */
 export async function getConnectorStats(connectorId: number): Promise<ConnectorStats> {
 	// Count episode gaps (hasFile=false, monitored=true)
 	const episodeGapsResult = await db
@@ -326,11 +215,6 @@ export async function getConnectorStats(connectorId: number): Promise<ConnectorS
 	};
 }
 
-/**
- * Gets statistics for all connectors efficiently.
- *
- * @returns Map of connectorId to ConnectorStats
- */
 export async function getAllConnectorStats(): Promise<Map<number, ConnectorStats>> {
 	// Get all connector IDs first
 	const allConnectors = await db.select({ id: connectors.id }).from(connectors);
@@ -395,16 +279,6 @@ export async function getAllConnectorStats(): Promise<Map<number, ConnectorStats
 	return statsMap;
 }
 
-// =============================================================================
-// Connector Detail Queries
-// =============================================================================
-
-/**
- * Gets sync state for a connector.
- *
- * @param connectorId - Connector ID
- * @returns SyncState if found, null otherwise
- */
 export async function getSyncState(connectorId: number): Promise<SyncState | null> {
 	const result = await db
 		.select()
@@ -415,9 +289,6 @@ export async function getSyncState(connectorId: number): Promise<SyncState | nul
 	return result[0] ?? null;
 }
 
-/**
- * Detailed statistics for connector detail page.
- */
 export interface ConnectorDetailedStats {
 	connectorId: number;
 	episodeGapsCount: number; // Episodes with hasFile=false, monitored=true
@@ -429,13 +300,6 @@ export interface ConnectorDetailedStats {
 	queueDepth: number;
 }
 
-/**
- * Gets detailed statistics for a connector.
- * Includes separate counts for episodes vs movies, gaps vs upgrades.
- *
- * @param connectorId - Connector ID
- * @returns Detailed statistics
- */
 export async function getConnectorDetailedStats(
 	connectorId: number
 ): Promise<ConnectorDetailedStats> {
@@ -524,9 +388,6 @@ export async function getConnectorDetailedStats(
 	};
 }
 
-/**
- * Search state distribution for a connector.
- */
 export interface SearchStateDistribution {
 	pending: number;
 	queued: number;
@@ -535,12 +396,6 @@ export interface SearchStateDistribution {
 	exhausted: number;
 }
 
-/**
- * Gets the distribution of search states for a connector.
- *
- * @param connectorId - Connector ID
- * @returns Distribution of search states
- */
 export async function getSearchStateDistribution(
 	connectorId: number
 ): Promise<SearchStateDistribution> {
@@ -573,9 +428,6 @@ export async function getSearchStateDistribution(
 	return distribution;
 }
 
-/**
- * Recent search history entry.
- */
 export interface SearchHistoryEntry {
 	id: number;
 	contentType: string;
@@ -585,14 +437,6 @@ export interface SearchHistoryEntry {
 	contentTitle: string | null;
 }
 
-/**
- * Gets recent search history entries for a connector.
- * Includes content titles by joining with episodes/movies tables.
- *
- * @param connectorId - Connector ID
- * @param limit - Maximum number of entries to return (default 15)
- * @returns Recent search history entries with content titles
- */
 export async function getRecentSearchHistory(
 	connectorId: number,
 	limit: number = 15
@@ -660,13 +504,6 @@ export async function getRecentSearchHistory(
 	}));
 }
 
-/**
- * Clears failed search entries (exhausted or cooldown) for a connector.
- * Resets them to pending state with attempt count reset.
- *
- * @param connectorId - Connector ID
- * @returns Number of entries cleared
- */
 export async function clearFailedSearches(connectorId: number): Promise<number> {
 	const result = await db
 		.update(searchRegistry)

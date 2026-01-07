@@ -1,32 +1,9 @@
-/**
- * Radarr sync handler
- *
- * Handles incremental sync for Radarr movie libraries.
- * Fetches all movies from the Radarr API and upserts them into the content mirror.
- *
- * @module services/sync/handlers/radarr
-
- */
-
 import { sql } from 'drizzle-orm';
 import type { RadarrClient } from '$lib/server/connectors/radarr/client';
 import { db } from '$lib/server/db';
 import { movies } from '$lib/server/db/schema';
 import { mapMovieToDb } from '../mappers';
 
-/**
- * Sync all movies from a Radarr instance.
- *
- * 1. Fetches all movies from the Radarr API (single API call)
- * 2. Maps each movie to the database format
- * 3. Upserts all movies using ON CONFLICT DO UPDATE
- *
- * @param client - RadarrClient instance configured with baseUrl and apiKey
- * @param connectorId - The database ID of the connector being synced
- * @returns The number of movies processed
- *
-
- */
 export async function syncRadarrMovies(client: RadarrClient, connectorId: number): Promise<number> {
 	// Fetch all movies from Radarr (single API call)
 	const apiMovies = await client.getMovies();

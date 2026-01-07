@@ -1,14 +1,3 @@
-/**
- * Database queries for content browser operations.
- *
- *
- * Provides unified content queries for series and movies with:
- * - Connector, type, and status filtering
- * - Title search with ILIKE
- * - Sortable columns
- * - Pagination
- */
-
 import { and, asc, count, desc, eq, ilike, inArray, type SQL, sql } from 'drizzle-orm';
 import { db } from '$lib/server/db';
 import {
@@ -21,38 +10,14 @@ import {
 	series
 } from '$lib/server/db/schema';
 
-// =============================================================================
-// Types
-// =============================================================================
-
-/**
- * Content type filter values.
- */
 export type ContentType = 'series' | 'movie';
 
-/**
- * Content status filter values.
- * - all: No status filter
- * - missing: Has missing content (hasFile=false)
- * - upgrade: Has upgrade candidates (qualityCutoffNotMet=true)
- * - queued/searching/exhausted: Search registry states
- */
 export type ContentStatus = 'all' | 'missing' | 'upgrade' | 'queued' | 'searching' | 'exhausted';
 
-/**
- * Sortable columns for content list.
- */
 export type SortColumn = 'title' | 'connector' | 'year';
 
-/**
- * Sort direction.
- */
 export type SortDirection = 'asc' | 'desc';
 
-/**
- * Filter options for content queries.
- * Note: Optional properties include `| undefined` for exactOptionalPropertyTypes compliance.
- */
 export interface ContentFilters {
 	connectorId?: number | undefined;
 	contentType?: ContentType | 'all' | undefined;
@@ -62,30 +27,19 @@ export interface ContentFilters {
 	sortDirection?: SortDirection | undefined;
 	limit?: number | undefined;
 	offset?: number | undefined;
-	/** Cursor for keyset pagination (encoded as type:id:title) */
 	cursor?: string | undefined;
 }
 
-/**
- * Cursor for keyset pagination.
- * Encodes position in the result set for efficient pagination.
- */
 export interface ContentCursor {
 	type: 'series' | 'movie';
 	id: number;
 	title: string;
 }
 
-/**
- * Encodes a cursor from content item properties.
- */
 export function encodeCursor(type: 'series' | 'movie', id: number, title: string): string {
 	return Buffer.from(JSON.stringify({ type, id, title })).toString('base64url');
 }
 
-/**
- * Decodes a cursor string to its components.
- */
 export function decodeCursor(cursor: string): ContentCursor | null {
 	try {
 		const decoded = JSON.parse(Buffer.from(cursor, 'base64url').toString('utf-8'));
@@ -104,10 +58,6 @@ export function decodeCursor(cursor: string): ContentCursor | null {
 	}
 }
 
-/**
- * Unified content item for display.
- * Represents either a series or movie with aggregated stats.
- */
 export interface ContentItem {
 	id: number;
 	type: 'series' | 'movie';
@@ -123,19 +73,12 @@ export interface ContentItem {
 	searchState: string | null;
 }
 
-/**
- * Result from content list query with pagination info.
- */
 export interface ContentListResult {
 	items: ContentItem[];
 	total: number;
-	/** Cursor for next page, null if no more results */
 	nextCursor: string | null;
 }
 
-/**
- * Status counts for filter badges.
- */
 export interface ContentStatusCounts {
 	all: number;
 	missing: number;
@@ -145,13 +88,6 @@ export interface ContentStatusCounts {
 	exhausted: number;
 }
 
-// =============================================================================
-// Series Detail Types
-// =============================================================================
-
-/**
- * Quality model structure (from *arr API).
- */
 export interface QualityModel {
 	quality: {
 		id: number;
@@ -166,9 +102,6 @@ export interface QualityModel {
 	};
 }
 
-/**
- * Full series detail with connector info.
- */
 export interface SeriesDetail {
 	id: number;
 	connectorId: number;
@@ -185,9 +118,6 @@ export interface SeriesDetail {
 	connectorUrl: string;
 }
 
-/**
- * Episode detail with search state.
- */
 export interface EpisodeDetail {
 	id: number;
 	arrId: number;
@@ -206,9 +136,6 @@ export interface EpisodeDetail {
 	nextEligible: Date | null;
 }
 
-/**
- * Season with aggregated stats and episode list.
- */
 export interface SeasonWithEpisodes {
 	id: number;
 	seasonNumber: number;
@@ -221,9 +148,6 @@ export interface SeasonWithEpisodes {
 	episodes: EpisodeDetail[];
 }
 
-/**
- * Search history entry for series episodes.
- */
 export interface SeriesSearchHistoryEntry {
 	id: number;
 	episodeId: number;
@@ -235,9 +159,6 @@ export interface SeriesSearchHistoryEntry {
 	metadata: unknown;
 }
 
-/**
- * Season summary without episode list (for lazy loading).
- */
 export interface SeasonSummary {
 	id: number;
 	seasonNumber: number;
@@ -249,13 +170,6 @@ export interface SeasonSummary {
 	upgradeCount: number;
 }
 
-// =============================================================================
-// Movie Detail Types
-// =============================================================================
-
-/**
- * Full movie detail with connector info.
- */
 export interface MovieDetail {
 	id: number;
 	connectorId: number;
@@ -277,9 +191,6 @@ export interface MovieDetail {
 	connectorUrl: string;
 }
 
-/**
- * Search history entry for movies.
- */
 export interface MovieSearchHistoryEntry {
 	id: number;
 	movieTitle: string;
@@ -288,13 +199,6 @@ export interface MovieSearchHistoryEntry {
 	metadata: unknown;
 }
 
-// =============================================================================
-// Helper Functions
-// =============================================================================
-
-/**
- * Parse and validate content filters with defaults.
- */
 export function parseContentFilters(searchParams: URLSearchParams): ContentFilters {
 	const connectorParam = searchParams.get('connector');
 	const pageParam = searchParams.get('page');
@@ -314,13 +218,6 @@ export function parseContentFilters(searchParams: URLSearchParams): ContentFilte
 	};
 }
 
-// =============================================================================
-// Series Queries
-// =============================================================================
-
-/**
- * Internal series item with aggregated episode stats.
- */
 interface SeriesWithStats {
 	id: number;
 	title: string;
@@ -334,10 +231,6 @@ interface SeriesWithStats {
 	searchState: string | null;
 }
 
-/**
- * Pre-aggregated episode counts subquery.
- * This replaces N correlated subqueries with a single aggregation query.
- */
 const episodeCountsSubquery = db
 	.select({
 		seriesId: seasons.seriesId,
@@ -355,14 +248,6 @@ const episodeCountsSubquery = db
 	.groupBy(seasons.seriesId)
 	.as('ep_counts');
 
-/**
- * Pre-aggregated search state subquery.
- * Uses DISTINCT ON to get the highest-priority search state per series.
- * Priority: searching > queued > cooldown > exhausted > pending
- *
- * This computes the "most active" search state once for all series,
- * then we join to it, eliminating the N correlated subqueries.
- */
 const searchStateSubquery = db
 	.select({
 		seriesId: sql<number>`sr_agg.series_id`.as('series_id'),
@@ -389,10 +274,6 @@ const searchStateSubquery = db
 	)
 	.as('sr_state');
 
-/**
- * Builds SQL conditions for status filtering on series.
- * Status filters reference the aggregated subquery columns.
- */
 function buildSeriesStatusConditions(status: ContentStatus | undefined): SQL | undefined {
 	switch (status) {
 		case 'missing':
@@ -412,16 +293,6 @@ function buildSeriesStatusConditions(status: ContentStatus | undefined): SQL | u
 	}
 }
 
-/**
- * Gets series with aggregated episode stats and search state.
- * Optimized to eliminate N+1 subquery pattern by using pre-aggregated joins.
- *
- * Performance optimization:
- * - Episode counts: Single aggregation query joined to series (replaces 2N subqueries)
- * - Search state: Single DISTINCT ON query joined to series (replaces N subqueries)
- * - Status filtering: Applied in SQL WHERE clause (not post-filtering)
- * - Total queries: 1 instead of 3N+1
- */
 async function getSeriesList(filters: ContentFilters): Promise<SeriesWithStats[]> {
 	const conditions: SQL[] = [];
 
@@ -442,8 +313,8 @@ async function getSeriesList(filters: ContentFilters): Promise<SeriesWithStats[]
 	}
 
 	// Build order by
-	let orderBy;
 	const direction = filters.sortDirection === 'desc' ? desc : asc;
+	let orderBy: SQL;
 	switch (filters.sortColumn) {
 		case 'connector':
 			orderBy = direction(connectors.name);
@@ -480,10 +351,6 @@ async function getSeriesList(filters: ContentFilters): Promise<SeriesWithStats[]
 	return result;
 }
 
-/**
- * Gets count of series matching filters, including status filters.
- * Uses the same aggregation subqueries as getSeriesList to ensure consistent counts.
- */
 async function getSeriesCount(filters: ContentFilters): Promise<number> {
 	const conditions: SQL[] = [];
 
@@ -525,13 +392,6 @@ async function getSeriesCount(filters: ContentFilters): Promise<number> {
 	}
 }
 
-// =============================================================================
-// Movies Queries
-// =============================================================================
-
-/**
- * Internal movie item with search state.
- */
 interface MovieWithStats {
 	id: number;
 	title: string;
@@ -545,10 +405,6 @@ interface MovieWithStats {
 	searchState: string | null;
 }
 
-/**
- * Builds SQL conditions for status filtering on movies.
- * Movies are simpler than series - status is based on hasFile and qualityCutoffNotMet.
- */
 function buildMovieStatusConditions(status: ContentStatus | undefined): SQL | undefined {
 	switch (status) {
 		case 'missing':
@@ -572,10 +428,6 @@ function buildMovieStatusConditions(status: ContentStatus | undefined): SQL | un
 	}
 }
 
-/**
- * Gets movies with search state.
- * Status filtering is applied in SQL WHERE clause.
- */
 async function getMoviesList(filters: ContentFilters): Promise<MovieWithStats[]> {
 	const conditions: SQL[] = [];
 
@@ -596,8 +448,8 @@ async function getMoviesList(filters: ContentFilters): Promise<MovieWithStats[]>
 	}
 
 	// Build order by
-	let orderBy;
 	const direction = filters.sortDirection === 'desc' ? desc : asc;
+	let orderBy: SQL;
 	switch (filters.sortColumn) {
 		case 'connector':
 			orderBy = direction(connectors.name);
@@ -641,10 +493,6 @@ async function getMoviesList(filters: ContentFilters): Promise<MovieWithStats[]>
 	return result;
 }
 
-/**
- * Gets count of movies matching filters, including status filters.
- * Uses the same conditions as getMoviesList to ensure consistent counts.
- */
 async function getMoviesCount(filters: ContentFilters): Promise<number> {
 	const conditions: SQL[] = [];
 
@@ -691,20 +539,6 @@ async function getMoviesCount(filters: ContentFilters): Promise<number> {
 	}
 }
 
-// =============================================================================
-// Unified Content Queries
-// =============================================================================
-
-/**
- * Gets unified content list (series and/or movies) with filters.
- *
- * Status filtering is now applied in SQL (not post-filtering) for:
- * - Correct pagination counts
- * - Better performance at scale
- *
- * @param filters - Query filters
- * @returns Content items and total count
- */
 export async function getContentList(filters: ContentFilters): Promise<ContentListResult> {
 	const contentType = filters.contentType ?? 'all';
 
@@ -831,9 +665,6 @@ export async function getContentList(filters: ContentFilters): Promise<ContentLi
 	return { items, total, nextCursor };
 }
 
-/**
- * Sorts content items.
- */
 function sortItems(
 	items: ContentItem[],
 	column: SortColumn,
@@ -853,15 +684,6 @@ function sortItems(
 	});
 }
 
-// =============================================================================
-// Supporting Queries
-// =============================================================================
-
-/**
- * Gets connectors for filter dropdown.
- *
- * @returns Array of connector options
- */
 export async function getConnectorsForFilter(): Promise<
 	Array<{ id: number; name: string; type: string }>
 > {
@@ -877,12 +699,6 @@ export async function getConnectorsForFilter(): Promise<
 	return result;
 }
 
-/**
- * Gets content status counts for filter badges.
- *
- * @param connectorId - Optional connector ID to filter by
- * @returns Status counts
- */
 export async function getContentStatusCounts(connectorId?: number): Promise<ContentStatusCounts> {
 	// Build connector conditions
 	const episodeConnectorCondition =
@@ -980,16 +796,6 @@ export async function getContentStatusCounts(connectorId?: number): Promise<Cont
 	};
 }
 
-// =============================================================================
-// Series Detail Queries
-// =============================================================================
-
-/**
- * Gets series detail with connector information.
- *
- * @param id - Series ID (Comradarr internal ID)
- * @returns Series detail or null if not found
- */
 export async function getSeriesDetail(id: number): Promise<SeriesDetail | null> {
 	const result = await db
 		.select({
@@ -1015,12 +821,6 @@ export async function getSeriesDetail(id: number): Promise<SeriesDetail | null> 
 	return result[0] ?? null;
 }
 
-/**
- * Gets all seasons for a series with episodes and search state.
- *
- * @param seriesId - Series ID
- * @returns Array of seasons with episodes
- */
 export async function getSeriesSeasonsWithEpisodes(
 	seriesId: number
 ): Promise<SeasonWithEpisodes[]> {
@@ -1111,13 +911,6 @@ export async function getSeriesSeasonsWithEpisodes(
 	});
 }
 
-/**
- * Gets season summaries for a series without loading episodes.
- * Used for initial page load with lazy episode loading.
- *
- * @param seriesId - Series ID
- * @returns Array of season summaries with computed counts
- */
 export async function getSeasonSummaries(seriesId: number): Promise<SeasonSummary[]> {
 	const result = await db
 		.select({
@@ -1147,13 +940,6 @@ export async function getSeasonSummaries(seriesId: number): Promise<SeasonSummar
 	return result;
 }
 
-/**
- * Gets episodes for a specific season with search state.
- * Used for lazy loading when a season is expanded.
- *
- * @param seasonId - Season ID
- * @returns Array of episode details
- */
 export async function getSeasonEpisodes(seasonId: number): Promise<EpisodeDetail[]> {
 	const result = await db
 		.select({
@@ -1201,13 +987,6 @@ export async function getSeasonEpisodes(seasonId: number): Promise<EpisodeDetail
 	}));
 }
 
-/**
- * Gets search history for all episodes in a series.
- *
- * @param seriesId - Series ID
- * @param limit - Maximum entries to return (default 20)
- * @returns Search history entries with episode info
- */
 export async function getSeriesSearchHistory(
 	seriesId: number,
 	limit: number = 20
@@ -1254,16 +1033,6 @@ export async function getSeriesSearchHistory(
 	}));
 }
 
-// =============================================================================
-// Movie Detail Queries
-// =============================================================================
-
-/**
- * Gets movie detail with connector information.
- *
- * @param id - Movie ID (Comradarr internal ID)
- * @returns Movie detail or null if not found
- */
 export async function getMovieDetail(id: number): Promise<MovieDetail | null> {
 	const result = await db
 		.select({
@@ -1300,13 +1069,6 @@ export async function getMovieDetail(id: number): Promise<MovieDetail | null> {
 	};
 }
 
-/**
- * Gets search history for a movie.
- *
- * @param movieId - Movie ID
- * @param limit - Maximum entries to return (default 20)
- * @returns Search history entries
- */
 export async function getMovieSearchHistory(
 	movieId: number,
 	limit: number = 20
@@ -1334,37 +1096,16 @@ export async function getMovieSearchHistory(
 	}));
 }
 
-// =============================================================================
-// Bulk Action Types and Queries
-// =============================================================================
-
-/**
- * Target for bulk actions.
- */
 export interface BulkActionTarget {
 	type: 'series' | 'movie';
 	id: number;
 }
 
-/**
- * Result of a bulk action operation.
- */
 export interface BulkActionResult {
 	affected: number;
 	skipped: number;
 }
 
-/**
- * Queues selected content items for search.
- * Creates or updates search registry entries with state='pending'.
- *
- * For series: Gets all episodes that are missing or need upgrade and creates/updates their entries.
- * For movies: Creates/updates the movie's search registry entry.
- *
- * @param targets - Array of content items to queue
- * @param searchType - Type of search ('gap' for missing, 'upgrade' for quality upgrade)
- * @returns Number of items affected
- */
 export async function bulkQueueForSearch(
 	targets: BulkActionTarget[],
 	searchType: 'gap' | 'upgrade' = 'gap'
@@ -1480,14 +1221,6 @@ export async function bulkQueueForSearch(
 	return { affected, skipped: 0 };
 }
 
-/**
- * Sets priority for selected content items.
- * Updates the priority field in search_registry for matching entries.
- *
- * @param targets - Array of content items to update
- * @param priority - Absolute priority value (0-100)
- * @returns Number of items affected
- */
 export async function bulkSetPriority(
 	targets: BulkActionTarget[],
 	priority: number
@@ -1547,13 +1280,6 @@ export async function bulkSetPriority(
 	return { affected, skipped: 0 };
 }
 
-/**
- * Marks selected content items as exhausted.
- * Updates search_registry state to 'exhausted' for matching entries.
- *
- * @param targets - Array of content items to mark
- * @returns Number of items affected
- */
 export async function bulkMarkExhausted(targets: BulkActionTarget[]): Promise<BulkActionResult> {
 	if (targets.length === 0) {
 		return { affected: 0, skipped: 0 };
@@ -1649,13 +1375,6 @@ export async function bulkMarkExhausted(targets: BulkActionTarget[]): Promise<Bu
 	return { affected, skipped };
 }
 
-/**
- * Clears search state for selected content items.
- * Resets search_registry to: state='pending', attemptCount=0, failureCategory=null, nextEligible=null.
- *
- * @param targets - Array of content items to reset
- * @returns Number of items affected
- */
 export async function bulkClearSearchState(targets: BulkActionTarget[]): Promise<BulkActionResult> {
 	if (targets.length === 0) {
 		return { affected: 0, skipped: 0 };

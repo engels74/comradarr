@@ -1,21 +1,3 @@
-/**
- * Sync service configuration constants.
- *
- * Defines thresholds for health status updates and retry behavior
- * for sync operations.
- *
- * @module services/sync/config
-
- */
-
-/**
- * Sync failure handling configuration.
- *
- * These constants control:
- * - When a connector is marked degraded/unhealthy
- * - How sync-level retries are performed (separate from HTTP-level retries)
- * - Backoff delays between retry attempts
- */
 export const SYNC_CONFIG = {
 	/**
 	 * Number of consecutive failures before marking connector as unhealthy.
@@ -54,5 +36,4 @@ export const SYNC_CONFIG = {
 	SYNC_RETRY_MULTIPLIER: 2
 } as const;
 
-/** Type for the sync configuration */
 export type SyncConfig = typeof SYNC_CONFIG;

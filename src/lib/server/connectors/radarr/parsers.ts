@@ -1,12 +1,3 @@
-/**
- * API response parsers for Radarr using Valibot for runtime validation.
- *
- * Provides type-safe parsing with graceful error handling for movie responses.
- * Unknown fields are ignored and malformed records return errors instead of throwing.
- *
- * @module connectors/radarr/parsers
- */
-
 import * as v from 'valibot';
 import {
 	createPaginatedResponseSchema,
@@ -18,13 +9,6 @@ import {
 import type { PaginatedResponse } from '../common/types';
 import type { RadarrMovie, RadarrMovieFile } from './types';
 
-// =============================================================================
-// Valibot Schemas
-// =============================================================================
-
-/**
- * Schema for movie file information
- */
 export const RadarrMovieFileSchema = v.object({
 	id: v.number(),
 	quality: QualityModelSchema,
@@ -32,10 +16,6 @@ export const RadarrMovieFileSchema = v.object({
 	relativePath: v.optional(v.string())
 });
 
-/**
- * Valibot schema for Radarr movie response (GET /api/v3/movie).
- * Required: id, title, tmdbId, imdbId, year, hasFile, qualityCutoffNotMet
- */
 export const RadarrMovieSchema = v.object({
 	id: v.number(),
 	title: v.string(),
@@ -50,28 +30,6 @@ export const RadarrMovieSchema = v.object({
 	status: v.optional(v.string())
 });
 
-// =============================================================================
-// Parser Functions
-// =============================================================================
-
-/**
- * Parses a Radarr movie response from an unknown API response value.
- *
- * @param data - Unknown data from API response
- * @returns ParseResult with typed RadarrMovie or error details
- *
-
- *
- * @example
- * ```typescript
- * const result = parseRadarrMovie(apiResponse);
- * if (result.success) {
- *   console.log(`Movie: ${result.data.title} (${result.data.year})`);
- * } else {
- *   console.warn('Malformed movie:', result.error);
- * }
- * ```
- */
 export function parseRadarrMovie(data: unknown): ParseResult<RadarrMovie> {
 	const result = v.safeParse(RadarrMovieSchema, data);
 
@@ -105,26 +63,6 @@ export function parseRadarrMovie(data: unknown): ParseResult<RadarrMovie> {
 	};
 }
 
-/**
- * Parses a paginated movie response from Radarr API.
- * Used for /api/v3/wanted/missing and /api/v3/wanted/cutoff endpoints.
- *
- * @param data - Unknown data from API response
- * @returns ParseResult with typed PaginatedResponse<RadarrMovie> or error details
- *
-
- *
- * @example
- * ```typescript
- * const result = parsePaginatedMovies(apiResponse);
- * if (result.success) {
- *   console.log(`Found ${result.data.totalRecords} movies`);
- *   for (const movie of result.data.records) {
- *     console.log(`${movie.title} (${movie.year})`);
- *   }
- * }
- * ```
- */
 export function parsePaginatedMovies(data: unknown): ParseResult<PaginatedResponse<RadarrMovie>> {
 	const schema = createPaginatedResponseSchema(RadarrMovieSchema);
 	const result = v.safeParse(schema, data);
@@ -168,31 +106,6 @@ export function parsePaginatedMovies(data: unknown): ParseResult<PaginatedRespon
 	};
 }
 
-// =============================================================================
-// Lenient Parser Functions
-// =============================================================================
-
-/**
- * Parses a paginated movies response leniently, skipping malformed records.
- * Use this when you want to continue processing even if some movie records are invalid.
- *
- * @param data - Unknown data from API response
- * @param onInvalid - Optional callback for invalid records (for logging warnings)
- * @returns LenientParseResult with typed PaginatedResponse<RadarrMovie>, skipped count, or error
- *
-
- *
- * @example
- * ```typescript
- * const result = parsePaginatedMoviesLenient(
- *   apiResponse,
- *   (record, error) => console.warn('Skipping malformed movie:', error)
- * );
- * if (result.success) {
- *   console.log(`Parsed ${result.data.records.length} movies, skipped ${result.skipped}`);
- * }
- * ```
- */
 export function parsePaginatedMoviesLenient(
 	data: unknown,
 	onInvalid?: (record: unknown, error: string) => void

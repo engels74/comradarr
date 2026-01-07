@@ -1,24 +1,3 @@
-/**
- * Queue service for priority calculation and queue management.
- *
- * This module exports functions for:
- * - Priority calculation: scoring search items based on multiple factors
- * - Priority comparison: sorting items by priority
- * - Queue management: enqueue, dequeue, pause/resume, clear
- * - State transitions: searching → cooldown/exhausted, cooldown → pending
- * - Episode batching: deciding SeasonSearch vs EpisodeSearch
- *
- * Priority is calculated based on:
- * - Content age (newer content scores higher)
- * - Missing duration (longer missing scores higher)
- * - User priority override (manual adjustments)
- * - Failure penalty (fewer failures scores higher)
- * - Search type (gaps prioritized over upgrades)
- *
- * @module services/queue
-
- */
-
 // State transitions (pure functions)
 export { calculateNextEligibleTime, shouldMarkExhausted } from './backoff';
 export type {

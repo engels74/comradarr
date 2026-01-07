@@ -1,17 +1,3 @@
-/**
- * Types for the database maintenance service.
- *
- * @module services/maintenance/types
-
- */
-
-// =============================================================================
-// Configuration Types
-// =============================================================================
-
-/**
- * Options for database maintenance operations.
- */
 export interface MaintenanceOptions {
 	/**
 	 * Use VACUUM FULL instead of regular VACUUM.
@@ -27,13 +13,6 @@ export interface MaintenanceOptions {
 	analyzeTables?: string[];
 }
 
-// =============================================================================
-// Result Types
-// =============================================================================
-
-/**
- * Result of a database maintenance operation.
- */
 export interface MaintenanceResult {
 	/** Whether the maintenance operation completed successfully */
 	success: boolean;
@@ -51,16 +30,6 @@ export interface MaintenanceResult {
 	error?: string;
 }
 
-// =============================================================================
-// Orphan Cleanup Types
-// =============================================================================
-
-/**
- * Result of an orphan cleanup operation.
- *
- * Orphan cleanup deletes search_registry entries that reference
- * content_id values that no longer exist in the episodes or movies tables.
- */
 export interface OrphanCleanupResult {
 	/** Whether the orphan cleanup operation completed successfully */
 	success: boolean;
@@ -81,17 +50,6 @@ export interface OrphanCleanupResult {
 	error?: string;
 }
 
-// =============================================================================
-// History Pruning Types
-// =============================================================================
-
-/**
- * Result of a history pruning operation.
- *
- * History pruning deletes search_history entries older than the configured
- * retention period. Aggregated statistics in analytics_hourly_stats and
- * analytics_daily_stats are preserved.
- */
 export interface HistoryPruningResult {
 	/** Whether the history pruning operation completed successfully */
 	success: boolean;

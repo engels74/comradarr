@@ -1,17 +1,4 @@
-/**
- * Upgrade detector service for identifying content that can be upgraded.
- *
- * Queries the content mirror for monitored items with hasFile=true AND
- * qualityCutoffNotMet=true and creates search registry entries for new
- * upgrade candidates. Also cleans up upgrade registries when content quality
- * has reached the cutoff.
- *
- * The qualityCutoffNotMet flag comes from the *arr API and already accounts
- * for Custom Format scores in Radarr/Sonarr v3+.
- *
- * @module services/discovery/upgrade-detector
-
- */
+// qualityCutoffNotMet flag comes from *arr API and already accounts for Custom Format scores
 
 import { and, eq, isNull, sql } from 'drizzle-orm';
 import { db } from '$lib/server/db';
@@ -19,33 +6,9 @@ import { connectors, episodes, movies, searchRegistry } from '$lib/server/db/sch
 import { cleanupResolvedUpgradeRegistries } from '../sync/search-state-cleanup';
 import type { DiscoveryOptions, DiscoveryStats, UpgradeDiscoveryResult } from './types';
 
-/**
- * Default batch size for inserting search registry entries.
- */
 const DEFAULT_BATCH_SIZE = 1000;
 
-/**
- * Discovers upgrade candidates for a connector and creates search registry entries.
- *
- * Upgrade discovery:
- * 1. Queries episodes/movies where monitored=true AND hasFile=true AND qualityCutoffNotMet=true
- * 2. Excludes items that already have a search registry entry
- * 3. Creates new search registry entries with state='pending' and searchType='upgrade'
- *
- * The function is idempotent - running it multiple times won't create duplicate entries.
- *
- * @param connectorId - The connector ID to discover upgrades for
- * @param options - Optional configuration for discovery behavior
- * @returns Discovery result with statistics about upgrades found and registries created
- *
- * @example
- * ```typescript
- * const result = await discoverUpgrades(1);
- * console.log(`Found ${result.upgradesFound} upgrades, created ${result.registriesCreated} registries`);
- * ```
- *
-
- */
+// Idempotent - running multiple times won't create duplicate entries
 export async function discoverUpgrades(
 	connectorId: number,
 	options: DiscoveryOptions = {}
@@ -120,21 +83,6 @@ export async function discoverUpgrades(
 	}
 }
 
-/**
- * Discovers episode upgrade candidates and creates search registry entries.
- *
- * Uses a LEFT JOIN to efficiently find episodes that:
- * - Are monitored (monitored=true)
- * - Have a file (hasFile=true)
- * - Are below quality cutoff (qualityCutoffNotMet=true)
- * - Don't already have a search registry entry
- *
- * @param connectorId - The connector ID to discover episode upgrades for
- * @param batchSize - Batch size for inserting registries
- * @returns Statistics about discovered upgrade candidates
- *
-
- */
 async function discoverEpisodeUpgrades(
 	connectorId: number,
 	batchSize: number
@@ -216,21 +164,6 @@ async function discoverEpisodeUpgrades(
 	};
 }
 
-/**
- * Discovers movie upgrade candidates and creates search registry entries.
- *
- * Uses a LEFT JOIN to efficiently find movies that:
- * - Are monitored (monitored=true)
- * - Have a file (hasFile=true)
- * - Are below quality cutoff (qualityCutoffNotMet=true)
- * - Don't already have a search registry entry
- *
- * @param connectorId - The connector ID to discover movie upgrades for
- * @param batchSize - Batch size for inserting registries
- * @returns Statistics about discovered upgrade candidates
- *
-
- */
 async function discoverMovieUpgrades(
 	connectorId: number,
 	batchSize: number
@@ -312,14 +245,6 @@ async function discoverMovieUpgrades(
 	};
 }
 
-/**
- * Gets upgrade statistics for a connector without creating registry entries.
- *
- * Useful for reporting and dashboard display without triggering discovery.
- *
- * @param connectorId - The connector ID to get upgrade stats for
- * @returns Object with episode and movie upgrade counts
- */
 export async function getUpgradeStats(
 	connectorId: number
 ): Promise<{ episodeUpgrades: number; movieUpgrades: number }> {

@@ -1,8 +1,3 @@
-/**
- * Base API client for *arr applications.
- * @module connectors/common/base-client
- */
-
 import {
 	type ArrClientError,
 	AuthenticationError,
@@ -27,7 +22,6 @@ const DEFAULT_TIMEOUT = 30000;
 const DEFAULT_USER_AGENT = 'Comradarr/1.0';
 const API_VERSION = 'v3';
 
-/** Base client for *arr API communication. */
 export class BaseArrClient {
 	protected readonly baseUrl: string;
 	protected readonly apiKey: string;

@@ -1,15 +1,5 @@
-/**
- * Discord webhook notification sender.
- *
- * Discord webhooks accept POST requests with JSON body containing:
- * - content: Plain text message
- * - embeds: Array of rich embed objects
- *
- * Reference: https://discord.com/developers/docs/resources/webhook
- *
- * @module services/notifications/channels/discord
-
- */
+// Discord webhooks: POST JSON with content (plain text) or embeds (rich objects)
+// Reference: https://discord.com/developers/docs/resources/webhook
 
 import type { NotificationChannel } from '$lib/server/db/schema';
 import type { NotificationSender } from '../base-channel';
@@ -28,13 +18,6 @@ import type {
 	NotificationResult
 } from '../types';
 
-// =============================================================================
-// Discord Sender Implementation
-// =============================================================================
-
-/**
- * Sends notifications via Discord webhooks.
- */
 export class DiscordSender implements NotificationSender {
 	private readonly timeout: number;
 	private readonly userAgent: string;
@@ -44,9 +27,6 @@ export class DiscordSender implements NotificationSender {
 		this.userAgent = config?.userAgent ?? DEFAULT_SENDER_CONFIG.userAgent;
 	}
 
-	/**
-	 * Send a notification to a Discord webhook.
-	 */
 	async send(
 		channel: NotificationChannel,
 		sensitiveConfig: Record<string, unknown>,
@@ -145,9 +125,6 @@ export class DiscordSender implements NotificationSender {
 		}
 	}
 
-	/**
-	 * Send a test notification to verify the Discord webhook configuration.
-	 */
 	async test(
 		channel: NotificationChannel,
 		sensitiveConfig: Record<string, unknown>
@@ -165,9 +142,6 @@ export class DiscordSender implements NotificationSender {
 		});
 	}
 
-	/**
-	 * Handle HTTP error responses from Discord.
-	 */
 	private handleErrorResponse(response: Response): Error {
 		if (response.status === 429) {
 			const retryAfter = response.headers.get('Retry-After');
@@ -194,9 +168,6 @@ export class DiscordSender implements NotificationSender {
 		);
 	}
 
-	/**
-	 * Handle errors caught during fetch.
-	 */
 	private handleCatchError(error: unknown): string {
 		if (error instanceof Error) {
 			if (error.name === 'TimeoutError' || error.name === 'AbortError') {
@@ -213,10 +184,6 @@ export class DiscordSender implements NotificationSender {
 		return 'Unknown error occurred';
 	}
 }
-
-// =============================================================================
-// Discord API Types
-// =============================================================================
 
 interface DiscordEmbed {
 	title?: string;

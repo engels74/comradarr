@@ -1,16 +1,5 @@
-/**
- * Slack webhook notification sender.
- *
- * Slack webhooks accept POST requests with JSON body containing:
- * - text: Plain text message (fallback)
- * - blocks: Array of Block Kit blocks for rich formatting
- *
- * Reference: https://api.slack.com/messaging/webhooks
- * Block Kit Reference: https://api.slack.com/block-kit
- *
- * @module services/notifications/channels/slack
-
- */
+// Slack webhooks: POST JSON with text (fallback) and blocks (Block Kit)
+// Reference: https://api.slack.com/messaging/webhooks
 
 import type { NotificationChannel } from '$lib/server/db/schema';
 import type { NotificationSender } from '../base-channel';
@@ -29,13 +18,6 @@ import type {
 	SlackSensitiveConfig
 } from '../types';
 
-// =============================================================================
-// Slack Sender Implementation
-// =============================================================================
-
-/**
- * Sends notifications via Slack incoming webhooks.
- */
 export class SlackSender implements NotificationSender {
 	private readonly timeout: number;
 	private readonly userAgent: string;
@@ -45,9 +27,6 @@ export class SlackSender implements NotificationSender {
 		this.userAgent = config?.userAgent ?? DEFAULT_SENDER_CONFIG.userAgent;
 	}
 
-	/**
-	 * Send a notification to a Slack webhook.
-	 */
 	async send(
 		channel: NotificationChannel,
 		sensitiveConfig: Record<string, unknown>,
@@ -130,9 +109,6 @@ export class SlackSender implements NotificationSender {
 		}
 	}
 
-	/**
-	 * Send a test notification to verify the Slack webhook configuration.
-	 */
 	async test(
 		channel: NotificationChannel,
 		sensitiveConfig: Record<string, unknown>
@@ -150,9 +126,6 @@ export class SlackSender implements NotificationSender {
 		});
 	}
 
-	/**
-	 * Build Slack Block Kit blocks for the notification.
-	 */
 	private buildBlocks(payload: NotificationPayload): SlackBlock[] {
 		const blocks: SlackBlock[] = [];
 
@@ -222,9 +195,7 @@ export class SlackSender implements NotificationSender {
 		return blocks;
 	}
 
-	/**
-	 * Handle HTTP error responses from Slack.
-	 */
+	// Slack webhook returns error codes as plain text (e.g., 'invalid_payload')
 	private handleErrorResponse(response: Response, responseText: string): Error {
 		// Slack webhook returns 'invalid_payload' etc as plain text
 		if (responseText === 'invalid_payload' || responseText === 'invalid_token') {
@@ -258,9 +229,6 @@ export class SlackSender implements NotificationSender {
 		);
 	}
 
-	/**
-	 * Handle errors caught during fetch.
-	 */
 	private handleCatchError(error: unknown): string {
 		if (error instanceof Error) {
 			if (error.name === 'TimeoutError' || error.name === 'AbortError') {
@@ -277,10 +245,6 @@ export class SlackSender implements NotificationSender {
 		return 'Unknown error occurred';
 	}
 }
-
-// =============================================================================
-// Slack Block Kit Types
-// =============================================================================
 
 interface SlackTextObject {
 	type: 'plain_text' | 'mrkdwn';

@@ -1,18 +1,5 @@
-/**
- * Generic webhook notification sender with HMAC-SHA256 signature support.
- *
- * Supports customizable HTTP method, headers, and HMAC signature generation
- * for secure webhook verification.
- *
- * Signature Verification on Receiver Side:
- * 1. Get raw body: `const rawBody = await request.text()` (NOT request.json())
- * 2. Get timestamp: `const timestamp = request.headers.get('X-Comradarr-Timestamp')`
- * 3. Compute expected signature: `HMAC-SHA256(timestamp + '.' + rawBody, signingSecret)`
- * 4. Compare with header: `request.headers.get('X-Comradarr-Signature')`
- * 5. Optionally verify timestamp is recent (within 5 minutes)
- *
- * @module services/notifications/channels/webhook
- */
+// Generic webhook with optional HMAC-SHA256 signature (timestamp.body format)
+// Signature verification: HMAC-SHA256(timestamp + '.' + rawBody, signingSecret)
 
 import type { NotificationChannel } from '$lib/server/db/schema';
 import type { NotificationSender } from '../base-channel';

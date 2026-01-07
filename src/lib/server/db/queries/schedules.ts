@@ -1,11 +1,3 @@
-/**
- * Database queries for sweep schedule operations.
- *
- *
- * Sweep schedules allow per-connector configuration of cron-based
- * sweep cycles for gap and upgrade discovery.
- */
-
 import { eq, isNull, or } from 'drizzle-orm';
 import { db } from '$lib/server/db';
 import {
@@ -16,18 +8,8 @@ import {
 	throttleProfiles
 } from '$lib/server/db/schema';
 
-// =============================================================================
-// Types
-// =============================================================================
-
-/**
- * Supported sweep types.
- */
 export type SweepType = 'incremental' | 'full_reconciliation';
 
-/**
- * Input for creating a new sweep schedule.
- */
 export interface CreateScheduleInput {
 	connectorId?: number | null; // null = global schedule
 	name: string;
@@ -38,9 +20,6 @@ export interface CreateScheduleInput {
 	throttleProfileId?: number | null;
 }
 
-/**
- * Input for updating an existing sweep schedule.
- */
 export interface UpdateScheduleInput {
 	name?: string;
 	sweepType?: SweepType;
@@ -50,9 +29,6 @@ export interface UpdateScheduleInput {
 	throttleProfileId?: number | null;
 }
 
-/**
- * Schedule with joined connector and throttle profile info.
- */
 export interface ScheduleWithRelations extends SweepSchedule {
 	connector: {
 		id: number;
@@ -65,15 +41,6 @@ export interface ScheduleWithRelations extends SweepSchedule {
 	} | null;
 }
 
-// =============================================================================
-// Query Functions
-// =============================================================================
-
-/**
- * Gets all sweep schedules with related connector and throttle profile data.
- *
- * @returns Array of all schedules with relations
- */
 export async function getAllSchedules(): Promise<ScheduleWithRelations[]> {
 	const results = await db
 		.select({
@@ -100,12 +67,6 @@ export async function getAllSchedules(): Promise<ScheduleWithRelations[]> {
 	}));
 }
 
-/**
- * Gets a schedule by ID with relations.
- *
- * @param id - Schedule ID
- * @returns Schedule with relations if found, null otherwise
- */
 export async function getScheduleById(id: number): Promise<ScheduleWithRelations | null> {
 	const results = await db
 		.select({
@@ -136,12 +97,6 @@ export async function getScheduleById(id: number): Promise<ScheduleWithRelations
 	};
 }
 
-/**
- * Gets all schedules for a specific connector (including global schedules).
- *
- * @param connectorId - Connector ID
- * @returns Array of schedules that apply to the connector
- */
 export async function getSchedulesForConnector(connectorId: number): Promise<SweepSchedule[]> {
 	return db
 		.select()
@@ -150,11 +105,6 @@ export async function getSchedulesForConnector(connectorId: number): Promise<Swe
 		.orderBy(sweepSchedules.name);
 }
 
-/**
- * Gets all enabled schedules (for scheduler initialization).
- *
- * @returns Array of enabled schedules with relations
- */
 export async function getEnabledSchedules(): Promise<ScheduleWithRelations[]> {
 	const results = await db
 		.select({
@@ -182,12 +132,6 @@ export async function getEnabledSchedules(): Promise<ScheduleWithRelations[]> {
 	}));
 }
 
-/**
- * Creates a new sweep schedule.
- *
- * @param input - Schedule data
- * @returns Created schedule
- */
 export async function createSchedule(input: CreateScheduleInput): Promise<SweepSchedule> {
 	const result = await db
 		.insert(sweepSchedules)
@@ -205,13 +149,6 @@ export async function createSchedule(input: CreateScheduleInput): Promise<SweepS
 	return result[0]!;
 }
 
-/**
- * Updates an existing sweep schedule.
- *
- * @param id - Schedule ID to update
- * @param input - Fields to update
- * @returns Updated schedule, or null if not found
- */
 export async function updateSchedule(
 	id: number,
 	input: UpdateScheduleInput
@@ -236,12 +173,6 @@ export async function updateSchedule(
 	return result[0] ?? null;
 }
 
-/**
- * Deletes a sweep schedule.
- *
- * @param id - Schedule ID to delete
- * @returns true if deleted, false if not found
- */
 export async function deleteSchedule(id: number): Promise<boolean> {
 	const result = await db
 		.delete(sweepSchedules)
@@ -251,13 +182,6 @@ export async function deleteSchedule(id: number): Promise<boolean> {
 	return result.length > 0;
 }
 
-/**
- * Toggles schedule enabled status.
- *
- * @param id - Schedule ID
- * @param enabled - New enabled status
- * @returns Updated schedule, or null if not found
- */
 export async function toggleScheduleEnabled(
 	id: number,
 	enabled: boolean
@@ -271,13 +195,6 @@ export async function toggleScheduleEnabled(
 	return result[0] ?? null;
 }
 
-/**
- * Updates the next run time for a schedule.
- * Called by scheduler after job registration.
- *
- * @param id - Schedule ID
- * @param nextRunAt - Next scheduled run time
- */
 export async function updateNextRunAt(id: number, nextRunAt: Date): Promise<void> {
 	await db
 		.update(sweepSchedules)
@@ -285,13 +202,6 @@ export async function updateNextRunAt(id: number, nextRunAt: Date): Promise<void
 		.where(eq(sweepSchedules.id, id));
 }
 
-/**
- * Updates the last run time for a schedule.
- * Called by scheduler when job executes.
- *
- * @param id - Schedule ID
- * @param lastRunAt - Time the job ran
- */
 export async function updateLastRunAt(id: number, lastRunAt: Date): Promise<void> {
 	await db
 		.update(sweepSchedules)
@@ -299,14 +209,6 @@ export async function updateLastRunAt(id: number, lastRunAt: Date): Promise<void
 		.where(eq(sweepSchedules.id, id));
 }
 
-/**
- * Updates both last run and next run times for a schedule.
- * Convenience function for post-job updates.
- *
- * @param id - Schedule ID
- * @param lastRunAt - Time the job ran
- * @param nextRunAt - Next scheduled run time
- */
 export async function updateScheduleRunTimes(
 	id: number,
 	lastRunAt: Date,

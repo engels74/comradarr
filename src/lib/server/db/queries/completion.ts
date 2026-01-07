@@ -1,25 +1,7 @@
-/**
- * Database queries for library completion tracking.
- *
- *
- * Provides:
- * - Current completion stats per connector
- * - Historical snapshots for trend visualization (sparklines)
- * - Snapshot capture for scheduler
- * - Cleanup of old snapshots
- */
-
 import { desc, eq, lt, sql } from 'drizzle-orm';
 import { db } from '$lib/server/db';
 import { completionSnapshots, connectors, episodes, movies } from '$lib/server/db/schema';
 
-// =============================================================================
-// Types
-// =============================================================================
-
-/**
- * Current completion stats for a single connector.
- */
 export interface ConnectorCompletionStats {
 	connectorId: number;
 	connectorName: string;
@@ -30,35 +12,19 @@ export interface ConnectorCompletionStats {
 	moviesDownloaded: number;
 	totalMonitored: number;
 	totalDownloaded: number;
-	completionPercentage: number; // 0-100 with 2 decimal precision
+	completionPercentage: number;
 }
 
-/**
- * Historical snapshot point for sparkline.
- */
 export interface CompletionDataPoint {
 	capturedAt: Date;
-	completionPercentage: number; // 0-100
+	completionPercentage: number;
 }
 
-/**
- * Completion stats with historical trend data.
- */
 export interface ConnectorCompletionWithTrend extends ConnectorCompletionStats {
 	trend: CompletionDataPoint[];
-	trendDelta: number; // Change from oldest to newest point
+	trendDelta: number;
 }
 
-// =============================================================================
-// Current Completion Queries
-// =============================================================================
-
-/**
- * Gets current completion stats for all connectors.
- * Runs parallel queries for efficiency.
- *
- * @returns Array of completion stats per connector
- */
 export async function getAllConnectorCompletionStats(): Promise<ConnectorCompletionStats[]> {
 	// Get all connectors
 	const allConnectors = await db
@@ -138,12 +104,6 @@ export async function getAllConnectorCompletionStats(): Promise<ConnectorComplet
 	});
 }
 
-/**
- * Gets current completion stats for a single connector.
- *
- * @param connectorId - Connector ID
- * @returns Completion stats or null if connector not found
- */
 export async function getConnectorCompletionStats(
 	connectorId: number
 ): Promise<ConnectorCompletionStats | null> {
@@ -151,18 +111,6 @@ export async function getConnectorCompletionStats(
 	return all.find((s) => s.connectorId === connectorId) ?? null;
 }
 
-// =============================================================================
-// Historical Trend Queries
-// =============================================================================
-
-/**
- * Gets historical completion snapshots for a connector.
- * Returns up to `limit` most recent snapshots in chronological order.
- *
- * @param connectorId - Connector ID
- * @param limit - Maximum snapshots to return (default 14 for 2 weeks)
- * @returns Array of data points in chronological order (oldest first)
- */
 export async function getCompletionTrend(
 	connectorId: number,
 	limit: number = 14
@@ -186,13 +134,6 @@ export async function getCompletionTrend(
 		.reverse();
 }
 
-/**
- * Gets completion stats with trend data for all connectors.
- * Optimized for dashboard display.
- *
- * @param trendDays - Number of days of trend data to include (default 14)
- * @returns Array of completion stats with trend data
- */
 export async function getAllConnectorCompletionWithTrends(
 	trendDays: number = 14
 ): Promise<ConnectorCompletionWithTrend[]> {
@@ -225,16 +166,6 @@ export async function getAllConnectorCompletionWithTrends(
 	});
 }
 
-// =============================================================================
-// Snapshot Capture (for Scheduler)
-// =============================================================================
-
-/**
- * Captures a completion snapshot for all connectors.
- * Called by the scheduler job to record current completion state.
- *
- * @returns Number of snapshots captured
- */
 export async function captureCompletionSnapshots(): Promise<number> {
 	const stats = await getAllConnectorCompletionStats();
 
@@ -259,16 +190,6 @@ export async function captureCompletionSnapshots(): Promise<number> {
 	return snapshotValues.length;
 }
 
-// =============================================================================
-// Cleanup
-// =============================================================================
-
-/**
- * Cleans up old completion snapshots beyond retention period.
- *
- * @param retentionDays - Days to keep (default 30)
- * @returns Number of snapshots deleted
- */
 export async function cleanupOldSnapshots(retentionDays: number = 30): Promise<number> {
 	const cutoffDate = new Date();
 	cutoffDate.setDate(cutoffDate.getDate() - retentionDays);

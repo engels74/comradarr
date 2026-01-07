@@ -1,13 +1,3 @@
-/**
- * Prowlarr health monitoring service.
- *
- * Periodically checks Prowlarr instances for indexer health status
- * and caches the results in the database for quick access by other services.
- *
- * @module services/prowlarr/health-monitor
-
- */
-
 import { isArrClientError } from '$lib/server/connectors/common/errors';
 import {
 	deleteStaleIndexerHealth,
@@ -29,40 +19,9 @@ import type {
 	ProwlarrHealthStatus
 } from './types.js';
 
-// =============================================================================
-// Constants
-// =============================================================================
-
-/** Default health check interval: 5 minutes */
 const DEFAULT_CHECK_INTERVAL_MS = 5 * 60 * 1000;
-
-/** Default stale threshold: 10 minutes */
 const DEFAULT_STALE_THRESHOLD_MS = 10 * 60 * 1000;
 
-// =============================================================================
-// ProwlarrHealthMonitor
-// =============================================================================
-
-/**
- * Prowlarr health monitoring service.
- *
- * Provides periodic health checking for Prowlarr instances and caches
- * indexer health status in the database.
- *
-
- *
- * @example
- * ```typescript
- * // Check all enabled instances
- * const results = await prowlarrHealthMonitor.checkAllInstances();
- *
- * // Get cached health for display
- * const cached = await prowlarrHealthMonitor.getCachedHealth(1);
- *
- * // Get health summary
- * const summary = await prowlarrHealthMonitor.getHealthSummary();
- * ```
- */
 export class ProwlarrHealthMonitor {
 	private readonly checkIntervalMs: number;
 	private readonly staleThresholdMs: number;
@@ -72,14 +31,6 @@ export class ProwlarrHealthMonitor {
 		this.staleThresholdMs = config.staleThresholdMs ?? DEFAULT_STALE_THRESHOLD_MS;
 	}
 
-	/**
-	 * Check health for all enabled Prowlarr instances.
-	 * Updates both instance-level and per-indexer health in database.
-	 *
-	 * @returns Array of health check results for each instance
-	 *
-
-	 */
 	async checkAllInstances(): Promise<HealthCheckResult[]> {
 		const instances = await getEnabledProwlarrInstances();
 
@@ -97,14 +48,6 @@ export class ProwlarrHealthMonitor {
 		return results;
 	}
 
-	/**
-	 * Check health for a single Prowlarr instance.
-	 *
-	 * @param instance - Prowlarr instance to check
-	 * @returns Health check result
-	 *
-
-	 */
 	async checkInstance(instance: ProwlarrInstance): Promise<HealthCheckResult> {
 		const checkedAt = new Date();
 
@@ -179,15 +122,7 @@ export class ProwlarrHealthMonitor {
 		}
 	}
 
-	/**
-	 * Get cached indexer health for an instance.
-	 * Returns cached data even if stale (for 38.6 requirement).
-	 *
-	 * @param instanceId - Prowlarr instance ID
-	 * @returns Array of cached indexer health with stale indicators
-	 *
-
-	 */
+	// Returns cached data even if stale for display purposes
 	async getCachedHealth(instanceId: number): Promise<CachedIndexerHealth[]> {
 		const cached = await getIndexerHealthByInstance(instanceId);
 		const now = new Date();
@@ -205,13 +140,6 @@ export class ProwlarrHealthMonitor {
 		}));
 	}
 
-	/**
-	 * Get all cached indexer health across all instances.
-	 *
-	 * @returns Array of all cached indexer health with stale indicators
-	 *
-
-	 */
 	async getAllCachedHealth(): Promise<CachedIndexerHealth[]> {
 		const cached = await getAllCachedIndexerHealth();
 		const now = new Date();
@@ -229,13 +157,6 @@ export class ProwlarrHealthMonitor {
 		}));
 	}
 
-	/**
-	 * Get summary health status for all instances.
-	 *
-	 * @returns Health summary
-	 *
-
-	 */
 	async getHealthSummary(): Promise<HealthSummary> {
 		const instances = await getAllProwlarrInstances();
 		const allHealth = await getAllCachedIndexerHealth();
@@ -251,27 +172,14 @@ export class ProwlarrHealthMonitor {
 		};
 	}
 
-	/**
-	 * Get the configured check interval in milliseconds.
-	 */
 	getCheckIntervalMs(): number {
 		return this.checkIntervalMs;
 	}
 
-	/**
-	 * Get the configured stale threshold in milliseconds.
-	 */
 	getStaleThresholdMs(): number {
 		return this.staleThresholdMs;
 	}
 
-	/**
-	 * Determine instance health status based on indexer states.
-	 *
-	 * @param totalIndexers - Total number of indexers
-	 * @param rateLimitedCount - Number of rate-limited indexers
-	 * @returns Health status
-	 */
 	private determineInstanceHealth(
 		totalIndexers: number,
 		rateLimitedCount: number
@@ -298,12 +206,6 @@ export class ProwlarrHealthMonitor {
 		return 'degraded';
 	}
 
-	/**
-	 * Categorize an error and determine appropriate health status.
-	 *
-	 * @param error - The caught error
-	 * @returns Status and error message
-	 */
 	private categorizeError(error: unknown): {
 		status: ProwlarrHealthStatus;
 		errorMessage: string;
@@ -343,12 +245,4 @@ export class ProwlarrHealthMonitor {
 	}
 }
 
-// =============================================================================
-// Singleton Instance
-// =============================================================================
-
-/**
- * Singleton instance of ProwlarrHealthMonitor.
- * Use this for application-wide health monitoring.
- */
 export const prowlarrHealthMonitor = new ProwlarrHealthMonitor();

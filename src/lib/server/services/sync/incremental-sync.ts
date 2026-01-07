@@ -1,13 +1,3 @@
-/**
- * Incremental sync service orchestrator
- *
- * Main entry point for syncing content from *arr applications to the content mirror.
- * Routes to appropriate handler based on connector type and manages sync state.
- *
- * @module services/sync/incremental-sync
-
- */
-
 import { sql } from 'drizzle-orm';
 import { RadarrClient } from '$lib/server/connectors/radarr/client';
 import { SonarrClient } from '$lib/server/connectors/sonarr/client';
@@ -23,38 +13,6 @@ import { withSyncRetry } from './with-sync-retry';
 
 const logger = createLogger('sync');
 
-/**
- * Run an incremental sync for a connector.
- *
- * This function:
- * 1. Validates the connector is enabled
- * 2. Optionally wraps with retry logic (unless skipRetry is set)
- * 3. Decrypts the API key
- * 4. Creates the appropriate client based on connector type
- * 5. Calls the type-specific sync handler
- * 6. Updates sync state on success/failure
- * 7. Updates connector health status based on consecutive failures
- * 8. Updates the connector's lastSync timestamp
- *
- * @param connector - The connector to sync
- * @param options - Optional sync configuration
- * @returns Result of the sync operation including health status
- *
- * @example
- * ```typescript
- * const connector = await getConnector(1);
- * const result = await runIncrementalSync(connector);
- *
- * if (result.success) {
- *   console.log(`Synced ${result.itemsSynced} items in ${result.durationMs}ms`);
- *   console.log(`Health status: ${result.healthStatus}`);
- * } else {
- *   console.error(`Sync failed after ${result.attempts} attempts: ${result.error}`);
- * }
- * ```
- *
-
- */
 export async function runIncrementalSync(
 	connector: Connector,
 	options?: SyncOptions
@@ -117,12 +75,6 @@ export async function runIncrementalSync(
 	};
 }
 
-/**
- * Execute the incremental sync logic without retry wrapper.
- * This is the core sync implementation that can be wrapped with retry logic.
- *
- * @internal
- */
 async function executeIncrementalSync(
 	connector: Connector,
 	options: SyncOptions | undefined,
@@ -202,14 +154,7 @@ async function executeIncrementalSync(
 	}
 }
 
-/**
- * Update sync state for a connector.
- *
- * On success: Sets lastSync to now, resets consecutiveFailures to 0
- * On failure: Increments consecutiveFailures
- *
- * Uses upsert pattern to handle first sync (insert) vs subsequent syncs (update)
- */
+// On success: resets consecutiveFailures to 0; On failure: increments consecutiveFailures
 async function updateSyncState(connectorId: number, success: boolean): Promise<void> {
 	const now = new Date();
 

@@ -1,12 +1,3 @@
-/**
- * API response parsers for Sonarr using Valibot for runtime validation.
- *
- * Provides type-safe parsing with graceful error handling for series and episode responses.
- * Unknown fields are ignored and malformed records return errors instead of throwing.
- *
- * @module connectors/sonarr/parsers
- */
-
 import * as v from 'valibot';
 import {
 	createPaginatedResponseSchema,
@@ -25,13 +16,6 @@ import type {
 	SonarrSeriesStatistics
 } from './types';
 
-// =============================================================================
-// Valibot Schemas
-// =============================================================================
-
-/**
- * Schema for season statistics within a series response
- */
 export const SonarrSeasonStatisticsSchema = v.object({
 	episodeFileCount: v.number(),
 	episodeCount: v.number(),
@@ -40,18 +24,12 @@ export const SonarrSeasonStatisticsSchema = v.object({
 	percentOfEpisodes: v.number()
 });
 
-/**
- * Schema for a season within a series response
- */
 export const SonarrSeasonSchema = v.object({
 	seasonNumber: v.number(),
 	monitored: v.boolean(),
 	statistics: v.optional(SonarrSeasonStatisticsSchema)
 });
 
-/**
- * Schema for series statistics
- */
 export const SonarrSeriesStatisticsSchema = v.object({
 	seasonCount: v.number(),
 	episodeFileCount: v.number(),
@@ -60,10 +38,6 @@ export const SonarrSeriesStatisticsSchema = v.object({
 	percentOfEpisodes: v.number()
 });
 
-/**
- * Valibot schema for Sonarr series response (GET /api/v3/series).
- * Required: id, title, tvdbId, status, seasons array, statistics
- */
 export const SonarrSeriesSchema = v.object({
 	id: v.number(),
 	title: v.string(),
@@ -75,9 +49,6 @@ export const SonarrSeriesSchema = v.object({
 	statistics: v.optional(SonarrSeriesStatisticsSchema)
 });
 
-/**
- * Schema for episode file information
- */
 export const SonarrEpisodeFileSchema = v.object({
 	id: v.number(),
 	quality: QualityModelSchema,
@@ -85,10 +56,6 @@ export const SonarrEpisodeFileSchema = v.object({
 	relativePath: v.optional(v.string())
 });
 
-/**
- * Valibot schema for Sonarr episode response (GET /api/v3/episode, GET /api/v3/wanted/missing).
- * Required: id, seriesId, seasonNumber, episodeNumber, hasFile, airDateUtc, qualityCutoffNotMet
- */
 export const SonarrEpisodeSchema = v.object({
 	id: v.number(),
 	seriesId: v.number(),
@@ -103,28 +70,6 @@ export const SonarrEpisodeSchema = v.object({
 	episodeFile: v.optional(SonarrEpisodeFileSchema)
 });
 
-// =============================================================================
-// Parser Functions
-// =============================================================================
-
-/**
- * Parses a Sonarr series response from an unknown API response value.
- *
- * @param data - Unknown data from API response
- * @returns ParseResult with typed SonarrSeries or error details
- *
-
- *
- * @example
- * ```typescript
- * const result = parseSonarrSeries(apiResponse);
- * if (result.success) {
- *   console.log(`Series: ${result.data.title} (${result.data.seasons.length} seasons)`);
- * } else {
- *   console.warn('Malformed series:', result.error);
- * }
- * ```
- */
 export function parseSonarrSeries(data: unknown): ParseResult<SonarrSeries> {
 	const result = v.safeParse(SonarrSeriesSchema, data);
 
@@ -163,24 +108,6 @@ export function parseSonarrSeries(data: unknown): ParseResult<SonarrSeries> {
 	};
 }
 
-/**
- * Parses a Sonarr episode response from an unknown API response value.
- *
- * @param data - Unknown data from API response
- * @returns ParseResult with typed SonarrEpisode or error details
- *
-
- *
- * @example
- * ```typescript
- * const result = parseSonarrEpisode(apiResponse);
- * if (result.success) {
- *   console.log(`S${result.data.seasonNumber}E${result.data.episodeNumber}: ${result.data.title}`);
- * } else {
- *   console.warn('Malformed episode:', result.error);
- * }
- * ```
- */
 export function parseSonarrEpisode(data: unknown): ParseResult<SonarrEpisode> {
 	const result = v.safeParse(SonarrEpisodeSchema, data);
 
@@ -214,25 +141,6 @@ export function parseSonarrEpisode(data: unknown): ParseResult<SonarrEpisode> {
 	};
 }
 
-/**
- * Parses a paginated series response from Sonarr API.
- *
- * @param data - Unknown data from API response
- * @returns ParseResult with typed PaginatedResponse<SonarrSeries> or error details
- *
-
- *
- * @example
- * ```typescript
- * const result = parsePaginatedSeries(apiResponse);
- * if (result.success) {
- *   console.log(`Found ${result.data.totalRecords} series`);
- *   for (const series of result.data.records) {
- *     console.log(series.title);
- *   }
- * }
- * ```
- */
 export function parsePaginatedSeries(data: unknown): ParseResult<PaginatedResponse<SonarrSeries>> {
 	const schema = createPaginatedResponseSchema(SonarrSeriesSchema);
 	const result = v.safeParse(schema, data);
@@ -281,26 +189,6 @@ export function parsePaginatedSeries(data: unknown): ParseResult<PaginatedRespon
 	};
 }
 
-/**
- * Parses a paginated episode response from Sonarr API.
- * Used for /api/v3/wanted/missing and /api/v3/wanted/cutoff endpoints.
- *
- * @param data - Unknown data from API response
- * @returns ParseResult with typed PaginatedResponse<SonarrEpisode> or error details
- *
-
- *
- * @example
- * ```typescript
- * const result = parsePaginatedEpisodes(apiResponse);
- * if (result.success) {
- *   console.log(`Found ${result.data.totalRecords} missing episodes`);
- *   for (const episode of result.data.records) {
- *     console.log(`S${episode.seasonNumber}E${episode.episodeNumber}`);
- *   }
- * }
- * ```
- */
 export function parsePaginatedEpisodes(
 	data: unknown
 ): ParseResult<PaginatedResponse<SonarrEpisode>> {
@@ -346,31 +234,6 @@ export function parsePaginatedEpisodes(
 	};
 }
 
-// =============================================================================
-// Lenient Parser Functions
-// =============================================================================
-
-/**
- * Parses a paginated series response leniently, skipping malformed records.
- * Use this when you want to continue processing even if some series records are invalid.
- *
- * @param data - Unknown data from API response
- * @param onInvalid - Optional callback for invalid records (for logging warnings)
- * @returns LenientParseResult with typed PaginatedResponse<SonarrSeries>, skipped count, or error
- *
-
- *
- * @example
- * ```typescript
- * const result = parsePaginatedSeriesLenient(
- *   apiResponse,
- *   (record, error) => console.warn('Skipping malformed series:', error)
- * );
- * if (result.success) {
- *   console.log(`Parsed ${result.data.records.length} series, skipped ${result.skipped}`);
- * }
- * ```
- */
 export function parsePaginatedSeriesLenient(
 	data: unknown,
 	onInvalid?: (record: unknown, error: string) => void
@@ -381,27 +244,6 @@ export function parsePaginatedSeriesLenient(
 	return result as LenientParseResult<PaginatedResponse<SonarrSeries>>;
 }
 
-/**
- * Parses a paginated episodes response leniently, skipping malformed records.
- * Use this when you want to continue processing even if some episode records are invalid.
- *
- * @param data - Unknown data from API response
- * @param onInvalid - Optional callback for invalid records (for logging warnings)
- * @returns LenientParseResult with typed PaginatedResponse<SonarrEpisode>, skipped count, or error
- *
-
- *
- * @example
- * ```typescript
- * const result = parsePaginatedEpisodesLenient(
- *   apiResponse,
- *   (record, error) => console.warn('Skipping malformed episode:', error)
- * );
- * if (result.success) {
- *   console.log(`Parsed ${result.data.records.length} episodes, skipped ${result.skipped}`);
- * }
- * ```
- */
 export function parsePaginatedEpisodesLenient(
 	data: unknown,
 	onInvalid?: (record: unknown, error: string) => void

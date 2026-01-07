@@ -1,13 +1,4 @@
-/**
- * Radarr full reconciliation handler
- *
- * Performs full reconciliation for Radarr movie libraries.
- * Unlike incremental sync which only upserts, this also deletes movies
- * that no longer exist in the *arr application.
- *
- * @module services/sync/handlers/radarr-reconcile
-
- */
+// Unlike incremental sync which only upserts, reconciliation also deletes removed content
 
 import { and, eq, inArray, sql } from 'drizzle-orm';
 import type { RadarrClient } from '$lib/server/connectors/radarr/client';
@@ -16,9 +7,6 @@ import { movies } from '$lib/server/db/schema';
 import { mapMovieToDb } from '../mappers';
 import { deleteSearchRegistryForMovies } from '../search-state-cleanup';
 
-/**
- * Result of the Radarr reconciliation operation
- */
 export interface RadarrReconcileResult {
 	moviesCreated: number;
 	moviesUpdated: number;
@@ -26,21 +14,6 @@ export interface RadarrReconcileResult {
 	searchStateDeleted: number;
 }
 
-/**
- * Perform full reconciliation for Radarr movie content.
- *
- * This function:
- * 1. Fetches all movies from the API
- * 2. Gets existing movies from the database
- * 3. Identifies and deletes movies that no longer exist (with search state cleanup)
- * 4. Upserts existing/new movies
- *
- * @param client - RadarrClient instance
- * @param connectorId - The database ID of the connector being reconciled
- * @returns Detailed result of the reconciliation operation
- *
-
- */
 export async function reconcileRadarrMovies(
 	client: RadarrClient,
 	connectorId: number

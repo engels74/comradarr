@@ -1,11 +1,3 @@
-/**
- * Database queries for throttle profile operations.
- *
- *
- * Throttle profiles control rate limiting for search dispatches.
- * Profile resolution follows: connector profile -> default profile -> fallback preset.
- */
-
 import { and, count, eq, ne } from 'drizzle-orm';
 import { DEFAULT_FALLBACK_PRESET, type ThrottlePreset } from '$lib/config/throttle-presets';
 import { db } from '$lib/server/db';
@@ -17,14 +9,6 @@ import {
 	throttleProfiles
 } from '$lib/server/db/schema';
 
-// =============================================================================
-// Input Types
-// =============================================================================
-
-/**
- * Input for creating a new throttle profile.
- * All rate limiting parameters are required for custom profiles.
- */
 export interface CreateThrottleProfileInput {
 	name: string;
 	description?: string;
@@ -36,10 +20,6 @@ export interface CreateThrottleProfileInput {
 	isDefault?: boolean;
 }
 
-/**
- * Input for updating an existing throttle profile.
- * All fields are optional - only provided fields will be updated.
- */
 export interface UpdateThrottleProfileInput {
 	name?: string;
 	description?: string;
@@ -51,16 +31,6 @@ export interface UpdateThrottleProfileInput {
 	isDefault?: boolean;
 }
 
-// =============================================================================
-// Basic CRUD Operations
-// =============================================================================
-
-/**
- * Gets a throttle profile by ID.
- *
- * @param id - Profile ID
- * @returns Profile if found, null otherwise
- */
 export async function getThrottleProfile(id: number): Promise<ThrottleProfile | null> {
 	const result = await db
 		.select()
@@ -71,20 +41,10 @@ export async function getThrottleProfile(id: number): Promise<ThrottleProfile | 
 	return result[0] ?? null;
 }
 
-/**
- * Gets all throttle profiles ordered by name.
- *
- * @returns Array of all throttle profiles
- */
 export async function getAllThrottleProfiles(): Promise<ThrottleProfile[]> {
 	return db.select().from(throttleProfiles).orderBy(throttleProfiles.name);
 }
 
-/**
- * Gets the default throttle profile (is_default = true).
- *
- * @returns Default profile if one exists, null otherwise
- */
 export async function getDefaultThrottleProfile(): Promise<ThrottleProfile | null> {
 	const result = await db
 		.select()
@@ -95,13 +55,6 @@ export async function getDefaultThrottleProfile(): Promise<ThrottleProfile | nul
 	return result[0] ?? null;
 }
 
-/**
- * Creates a new throttle profile.
- *
- * @param input - Profile data
- * @returns Created profile
- * @throws Error if name is not unique
- */
 export async function createThrottleProfile(
 	input: CreateThrottleProfileInput
 ): Promise<ThrottleProfile> {
@@ -130,13 +83,6 @@ export async function createThrottleProfile(
 	return result[0]!;
 }
 
-/**
- * Updates an existing throttle profile.
- *
- * @param id - Profile ID to update
- * @param input - Fields to update
- * @returns Updated profile, or null if not found
- */
 export async function updateThrottleProfile(
 	id: number,
 	input: UpdateThrottleProfileInput
@@ -194,14 +140,6 @@ export async function updateThrottleProfile(
 	return result[0] ?? null;
 }
 
-/**
- * Deletes a throttle profile.
- * Will fail if the profile is currently assigned to any connectors.
- *
- * @param id - Profile ID to delete
- * @returns true if deleted, false if not found
- * @throws Error if profile is in use by connectors
- */
 export async function deleteThrottleProfile(id: number): Promise<boolean> {
 	// Check if profile is in use
 	const usageCount = await getConnectorCountUsingProfile(id);
@@ -217,13 +155,6 @@ export async function deleteThrottleProfile(id: number): Promise<boolean> {
 	return result.length > 0;
 }
 
-/**
- * Checks if a throttle profile name already exists.
- *
- * @param name - Profile name to check
- * @param excludeId - Optional ID to exclude (for updates)
- * @returns true if a profile with this name exists
- */
 export async function throttleProfileNameExists(
 	name: string,
 	excludeId?: number
@@ -240,27 +171,8 @@ export async function throttleProfileNameExists(
 	return true;
 }
 
-// =============================================================================
-// Profile Resolution
-// =============================================================================
-
-/**
- * Effective throttle configuration type.
- * Can be either a database profile or a preset constant.
- */
 export type EffectiveThrottleConfig = ThrottleProfile | ThrottlePreset;
 
-/**
- * Gets the effective throttle profile for a connector.
- *
- * Profile resolution order:
- * 1. Connector's assigned profile (connectors.throttle_profile_id)
- * 2. Default profile (throttle_profiles.is_default = true)
- * 3. Fallback to Moderate preset constants
- *
- * @param connectorId - Connector ID
- * @returns The effective throttle configuration
- */
 export async function getThrottleProfileForConnector(
 	connectorId: number
 ): Promise<EffectiveThrottleConfig> {
@@ -294,13 +206,6 @@ export async function getThrottleProfileForConnector(
 	return DEFAULT_FALLBACK_PRESET;
 }
 
-/**
- * Gets the effective throttle profile for a connector by connector record.
- * Use this when you already have the connector loaded to avoid an extra query.
- *
- * @param connector - Connector record
- * @returns The effective throttle configuration
- */
 export async function getThrottleProfileForConnectorRecord(
 	connector: Pick<Connector, 'throttleProfileId'>
 ): Promise<EffectiveThrottleConfig> {
@@ -318,17 +223,6 @@ export async function getThrottleProfileForConnectorRecord(
 	return DEFAULT_FALLBACK_PRESET;
 }
 
-// =============================================================================
-// Connector Assignment Operations
-// =============================================================================
-
-/**
- * Assigns a throttle profile to a connector.
- *
- * @param connectorId - Connector ID
- * @param profileId - Profile ID to assign (null to use default)
- * @returns Updated connector, or null if connector not found
- */
 export async function assignThrottleProfileToConnector(
 	connectorId: number,
 	profileId: number | null
@@ -345,12 +239,6 @@ export async function assignThrottleProfileToConnector(
 	return result[0] ?? null;
 }
 
-/**
- * Gets all connectors using a specific throttle profile.
- *
- * @param profileId - Profile ID
- * @returns Array of connectors using the profile
- */
 export async function getConnectorsUsingProfile(profileId: number): Promise<Connector[]> {
 	return db
 		.select()
@@ -359,12 +247,6 @@ export async function getConnectorsUsingProfile(profileId: number): Promise<Conn
 		.orderBy(connectors.name);
 }
 
-/**
- * Gets the count of connectors using a specific throttle profile.
- *
- * @param profileId - Profile ID
- * @returns Number of connectors using the profile
- */
 export async function getConnectorCountUsingProfile(profileId: number): Promise<number> {
 	const result = await db
 		.select({ count: count() })
@@ -374,16 +256,6 @@ export async function getConnectorCountUsingProfile(profileId: number): Promise<
 	return result[0]?.count ?? 0;
 }
 
-// =============================================================================
-// Utility Functions
-// =============================================================================
-
-/**
- * Sets a profile as the default, unsetting any existing default.
- *
- * @param id - Profile ID to set as default
- * @returns Updated profile, or null if not found
- */
 export async function setDefaultThrottleProfile(id: number): Promise<ThrottleProfile | null> {
 	// Unset existing default
 	await db
@@ -401,18 +273,8 @@ export async function setDefaultThrottleProfile(id: number): Promise<ThrottlePro
 	return result[0] ?? null;
 }
 
-/**
- * Type guard to check if an effective config is a database profile.
- *
- * @param config - Configuration to check
- * @returns true if the config is a ThrottleProfile (has id)
- */
 export function isThrottleProfile(config: EffectiveThrottleConfig): config is ThrottleProfile {
 	return 'id' in config;
 }
-
-// =============================================================================
-// Re-export Throttle State Queries
-// =============================================================================
 
 export * from './throttle-state';

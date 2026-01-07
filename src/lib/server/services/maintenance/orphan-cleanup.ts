@@ -1,18 +1,3 @@
-/**
- * Orphan cleanup service for search state maintenance.
- *
- * Deletes search_registry entries that reference content_id values
- * that no longer exist in the episodes or movies tables.
- *
- * This can happen if:
- * - Content was deleted directly without proper cleanup
- * - Edge cases during reconciliation
- * - Race conditions between sync and search operations
- *
- * @module services/maintenance/orphan-cleanup
-
- */
-
 import { sql } from 'drizzle-orm';
 import { db } from '$lib/server/db';
 import { createLogger } from '$lib/server/logger';
@@ -20,30 +5,8 @@ import type { OrphanCleanupResult } from './types';
 
 const logger = createLogger('orphan-cleanup');
 
-// =============================================================================
-// Public API
-// =============================================================================
-
-/**
- * Clean up orphaned search registry entries.
- *
- * Deletes search_registry entries where:
- * - content_type = 'episode' AND contentId doesn't exist in episodes table
- * - content_type = 'movie' AND contentId doesn't exist in movies table
- *
- * Note: request_queue entries will cascade delete automatically (FK to search_registry).
- * search_history entries will have search_registry_id set to null (FK with SET NULL).
- *
- * @returns Result with count of deleted orphans and timing metrics
- *
- * @example
- * ```typescript
- * const result = await cleanupOrphanedSearchState();
- * if (result.success) {
- *   console.log(`Cleaned up ${result.totalOrphansDeleted} orphaned entries`);
- * }
- * ```
- */
+// Deletes search_registry entries referencing non-existent content
+// request_queue cascades, search_history sets search_registry_id to null
 export async function cleanupOrphanedSearchState(): Promise<OrphanCleanupResult> {
 	const startTime = Date.now();
 	let episodeOrphansDeleted = 0;

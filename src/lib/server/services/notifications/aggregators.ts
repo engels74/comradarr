@@ -1,12 +1,4 @@
-/**
- * Aggregate payload builders for notification batching.
- *
- * Combines multiple notification history entries of the same event type
- * into a single digest notification payload.
- *
- * @module services/notifications/aggregators
-
- */
+// Combines multiple notification history entries of the same event type into a digest
 
 import type { NotificationEventType } from '$lib/server/db/queries/notifications';
 import type { NotificationHistory } from '$lib/server/db/schema';
@@ -24,31 +16,14 @@ import type {
 } from './templates';
 import type { NotificationField, NotificationPayload } from './types';
 
-// =============================================================================
-// Constants
-// =============================================================================
-
-/** Maximum number of items to list in aggregated messages */
 const MAX_LIST_ITEMS = 5;
-
-/** Maximum length for truncated content titles */
 const MAX_TITLE_LENGTH = 40;
 
-// =============================================================================
-// Helper Functions
-// =============================================================================
-
-/**
- * Truncate text to a maximum length with ellipsis.
- */
 function truncateText(text: string, maxLength: number): string {
 	if (text.length <= maxLength) return text;
 	return `${text.slice(0, maxLength - 3)}...`;
 }
 
-/**
- * Format a content title with optional year/episode info.
- */
 function formatContentTitle(data: SearchSuccessData | SearchExhaustedData): string {
 	let title = data.contentTitle;
 	if (data.contentYear) {
@@ -64,10 +39,6 @@ function formatContentTitle(data: SearchSuccessData | SearchExhaustedData): stri
 	return truncateText(title, MAX_TITLE_LENGTH);
 }
 
-/**
- * Extract typed event data from notification history entry.
- * Returns null if eventData is missing or invalid.
- */
 function extractEventData<T>(entry: NotificationHistory): T | null {
 	if (!entry.eventData || typeof entry.eventData !== 'object') {
 		return null;
@@ -75,9 +46,6 @@ function extractEventData<T>(entry: NotificationHistory): T | null {
 	return entry.eventData as T;
 }
 
-/**
- * Create a list of items with "and N more" suffix if truncated.
- */
 function formatItemList(items: string[], maxItems: number = MAX_LIST_ITEMS): string {
 	if (items.length === 0) return 'none';
 	if (items.length === 1) return items[0]!;
@@ -91,13 +59,6 @@ function formatItemList(items: string[], maxItems: number = MAX_LIST_ITEMS): str
 	return `${displayed.join(', ')} and ${remaining} more`;
 }
 
-// =============================================================================
-// Aggregator Functions
-// =============================================================================
-
-/**
- * Aggregate multiple search_success events into a single payload.
- */
 function aggregateSearchSuccess(entries: NotificationHistory[]): NotificationPayload {
 	const items: Array<{ title: string; quality: string; connector: string }> = [];
 
@@ -145,9 +106,6 @@ function aggregateSearchSuccess(entries: NotificationHistory[]): NotificationPay
 	};
 }
 
-/**
- * Aggregate multiple search_exhausted events into a single payload.
- */
 function aggregateSearchExhausted(entries: NotificationHistory[]): NotificationPayload {
 	const items: Array<{ title: string; attempts: number; connector: string }> = [];
 
@@ -188,9 +146,6 @@ function aggregateSearchExhausted(entries: NotificationHistory[]): NotificationP
 	};
 }
 
-/**
- * Aggregate multiple sweep_started events into a single payload.
- */
 function aggregateSweepStarted(entries: NotificationHistory[]): NotificationPayload {
 	const connectors: string[] = [];
 	const sweepTypes = new Set<string>();
@@ -229,9 +184,6 @@ function aggregateSweepStarted(entries: NotificationHistory[]): NotificationPayl
 	};
 }
 
-/**
- * Aggregate multiple sweep_completed events into a single payload.
- */
 function aggregateSweepCompleted(entries: NotificationHistory[]): NotificationPayload {
 	let totalGaps = 0;
 	let totalUpgrades = 0;
@@ -275,9 +227,6 @@ function aggregateSweepCompleted(entries: NotificationHistory[]): NotificationPa
 	};
 }
 
-/**
- * Aggregate multiple sync_completed events into a single payload.
- */
 function aggregateSyncCompleted(entries: NotificationHistory[]): NotificationPayload {
 	let totalProcessed = 0;
 	let totalCreated = 0;
@@ -325,9 +274,6 @@ function aggregateSyncCompleted(entries: NotificationHistory[]): NotificationPay
 	};
 }
 
-/**
- * Aggregate multiple sync_failed events into a single payload.
- */
 function aggregateSyncFailed(entries: NotificationHistory[]): NotificationPayload {
 	const failures: Array<{ connector: string; error: string }> = [];
 
@@ -361,9 +307,6 @@ function aggregateSyncFailed(entries: NotificationHistory[]): NotificationPayloa
 	};
 }
 
-/**
- * Aggregate multiple connector_health_changed events into a single payload.
- */
 function aggregateConnectorHealthChanged(entries: NotificationHistory[]): NotificationPayload {
 	const changes: Array<{ connector: string; from: string; to: string }> = [];
 
@@ -404,9 +347,6 @@ function aggregateConnectorHealthChanged(entries: NotificationHistory[]): Notifi
 	};
 }
 
-/**
- * Check if health change is an improvement.
- */
 function isHealthImprovement(oldStatus: string, newStatus: string): boolean {
 	const statusOrder: Record<string, number> = {
 		offline: 0,
@@ -421,9 +361,6 @@ function isHealthImprovement(oldStatus: string, newStatus: string): boolean {
 	return newOrder > oldOrder;
 }
 
-/**
- * Aggregate app_started events (usually just one, but handle multiple).
- */
 function aggregateAppStarted(entries: NotificationHistory[]): NotificationPayload {
 	// Usually app_started is a single event, but handle multiples gracefully
 	const data = extractEventData<AppStartedData>(entries[0]!);
@@ -455,9 +392,6 @@ function aggregateAppStarted(entries: NotificationHistory[]): NotificationPayloa
 	return payload;
 }
 
-/**
- * Aggregate update_available events (usually just one, but handle multiples).
- */
 function aggregateUpdateAvailable(entries: NotificationHistory[]): NotificationPayload {
 	// Usually update_available is a single event, use the latest
 	const latestEntry = entries[entries.length - 1]!;
@@ -500,28 +434,6 @@ function aggregateUpdateAvailable(entries: NotificationHistory[]): NotificationP
 	return payload;
 }
 
-// =============================================================================
-// Main Builder Function
-// =============================================================================
-
-/**
- * Build an aggregate notification payload from multiple history entries.
- *
- * Groups events of the same type and creates a digest notification with
- * summarized information.
- *
- * @param eventType - The type of events to aggregate
- * @param entries - Notification history entries to combine
- * @returns Aggregated notification payload
- *
- * @example
- * ```typescript
- * const entries = await getPendingNotificationsForBatching(channelId, 'search_success', 60);
- * const payload = buildAggregatePayload('search_success', entries);
- * // payload.title = "5 Items Found"
- * // payload.message = "5 items found and grabbed: Title1, Title2, ..."
- * ```
- */
 export function buildAggregatePayload(
 	eventType: NotificationEventType,
 	entries: NotificationHistory[]
@@ -565,13 +477,6 @@ export function buildAggregatePayload(
 	}
 }
 
-// =============================================================================
-// Types
-// =============================================================================
-
-/**
- * Result metadata included in aggregated payloads.
- */
 export interface AggregatedPayloadMetadata {
 	individualCount: number;
 	[key: string]: unknown;

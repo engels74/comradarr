@@ -1,33 +1,13 @@
-/**
- * Message templates for notification events.
- *
- * Builds NotificationPayload from event-specific data for each supported event type.
- * Templates include appropriate titles, messages, fields, and colors for each event.
- *
- * @module services/notifications/templates
-
- */
-
 import type { NotificationEventType } from '$lib/server/db/queries/notifications';
 import { getEventColor } from './base-channel';
 import type { NotificationField, NotificationPayload } from './types';
 
-// =============================================================================
-// Event Data Types
-// =============================================================================
-
-/**
- * Data structure for sweep_started events.
- */
 export interface SweepStartedData {
 	connectorId: number;
 	connectorName: string;
 	sweepType: 'gap' | 'upgrade' | 'both';
 }
 
-/**
- * Data structure for sweep_completed events.
- */
 export interface SweepCompletedData {
 	connectorId: number;
 	connectorName: string;
@@ -37,9 +17,6 @@ export interface SweepCompletedData {
 	duration?: number;
 }
 
-/**
- * Data structure for search_success events.
- */
 export interface SearchSuccessData {
 	contentTitle: string;
 	contentYear?: number;
@@ -50,9 +27,6 @@ export interface SearchSuccessData {
 	episodeNumber?: number;
 }
 
-/**
- * Data structure for search_exhausted events.
- */
 export interface SearchExhaustedData {
 	contentTitle: string;
 	contentYear?: number;
@@ -63,9 +37,6 @@ export interface SearchExhaustedData {
 	episodeNumber?: number;
 }
 
-/**
- * Data structure for connector_health_changed events.
- */
 export interface ConnectorHealthChangedData {
 	connectorId: number;
 	connectorName: string;
@@ -75,9 +46,6 @@ export interface ConnectorHealthChangedData {
 	errorMessage?: string;
 }
 
-/**
- * Data structure for sync_completed events.
- */
 export interface SyncCompletedData {
 	connectorId: number;
 	connectorName: string;
@@ -88,9 +56,6 @@ export interface SyncCompletedData {
 	duration?: number;
 }
 
-/**
- * Data structure for sync_failed events.
- */
 export interface SyncFailedData {
 	connectorId: number;
 	connectorName: string;
@@ -98,17 +63,11 @@ export interface SyncFailedData {
 	consecutiveFailures?: number;
 }
 
-/**
- * Data structure for app_started events.
- */
 export interface AppStartedData {
 	version?: string;
 	environment?: string;
 }
 
-/**
- * Data structure for update_available events.
- */
 export interface UpdateAvailableData {
 	currentVersion: string;
 	newVersion: string;
@@ -116,9 +75,6 @@ export interface UpdateAvailableData {
 	releaseNotes?: string;
 }
 
-/**
- * Union type mapping event types to their data structures.
- */
 export interface EventDataMap {
 	sweep_started: SweepStartedData;
 	sweep_completed: SweepCompletedData;
@@ -131,13 +87,6 @@ export interface EventDataMap {
 	update_available: UpdateAvailableData;
 }
 
-// =============================================================================
-// Template Functions
-// =============================================================================
-
-/**
- * Build a notification payload for a sweep_started event.
- */
 function buildSweepStartedPayload(data: SweepStartedData): NotificationPayload {
 	const sweepTypeLabel =
 		data.sweepType === 'both'
@@ -159,9 +108,6 @@ function buildSweepStartedPayload(data: SweepStartedData): NotificationPayload {
 	};
 }
 
-/**
- * Build a notification payload for a sweep_completed event.
- */
 function buildSweepCompletedPayload(data: SweepCompletedData): NotificationPayload {
 	const fields: NotificationField[] = [
 		{ name: 'Connector', value: data.connectorName, inline: true },
@@ -188,9 +134,6 @@ function buildSweepCompletedPayload(data: SweepCompletedData): NotificationPaylo
 	};
 }
 
-/**
- * Build a notification payload for a search_success event.
- */
 function buildSearchSuccessPayload(data: SearchSuccessData): NotificationPayload {
 	let contentDisplay = data.contentTitle;
 	if (data.contentYear) {
@@ -227,9 +170,6 @@ function buildSearchSuccessPayload(data: SearchSuccessData): NotificationPayload
 	};
 }
 
-/**
- * Build a notification payload for a search_exhausted event.
- */
 function buildSearchExhaustedPayload(data: SearchExhaustedData): NotificationPayload {
 	let contentDisplay = data.contentTitle;
 	if (data.contentYear) {
@@ -266,9 +206,6 @@ function buildSearchExhaustedPayload(data: SearchExhaustedData): NotificationPay
 	};
 }
 
-/**
- * Build a notification payload for a connector_health_changed event.
- */
 function buildConnectorHealthChangedPayload(data: ConnectorHealthChangedData): NotificationPayload {
 	const statusEmoji = getHealthStatusEmoji(data.newStatus);
 	const isImprovement = isHealthImprovement(data.oldStatus, data.newStatus);
@@ -300,9 +237,6 @@ function buildConnectorHealthChangedPayload(data: ConnectorHealthChangedData): N
 	};
 }
 
-/**
- * Build a notification payload for a sync_completed event.
- */
 function buildSyncCompletedPayload(data: SyncCompletedData): NotificationPayload {
 	const fields: NotificationField[] = [
 		{ name: 'Connector', value: data.connectorName, inline: true },
@@ -335,9 +269,6 @@ function buildSyncCompletedPayload(data: SyncCompletedData): NotificationPayload
 	};
 }
 
-/**
- * Build a notification payload for a sync_failed event.
- */
 function buildSyncFailedPayload(data: SyncFailedData): NotificationPayload {
 	const fields: NotificationField[] = [
 		{ name: 'Connector', value: data.connectorName, inline: true },
@@ -362,9 +293,6 @@ function buildSyncFailedPayload(data: SyncFailedData): NotificationPayload {
 	};
 }
 
-/**
- * Build a notification payload for an app_started event.
- */
 function buildAppStartedPayload(data: AppStartedData): NotificationPayload {
 	const fields: NotificationField[] = [];
 
@@ -394,9 +322,6 @@ function buildAppStartedPayload(data: AppStartedData): NotificationPayload {
 	return payload;
 }
 
-/**
- * Build a notification payload for an update_available event.
- */
 function buildUpdateAvailablePayload(data: UpdateAvailableData): NotificationPayload {
 	const fields: NotificationField[] = [
 		{ name: 'Current Version', value: data.currentVersion, inline: true },
@@ -428,27 +353,6 @@ function buildUpdateAvailablePayload(data: UpdateAvailableData): NotificationPay
 	return payload;
 }
 
-// =============================================================================
-// Main Builder Function
-// =============================================================================
-
-/**
- * Build a notification payload for any supported event type.
- *
- * @param eventType - The type of event
- * @param data - Event-specific data
- * @returns NotificationPayload ready to be sent to channels
- *
- * @example
- * ```typescript
- * const payload = buildPayload('sweep_completed', {
- *   connectorId: 1,
- *   connectorName: 'Sonarr',
- *   gapsFound: 15,
- *   itemsQueued: 10
- * });
- * ```
- */
 export function buildPayload<T extends NotificationEventType>(
 	eventType: T,
 	data: EventDataMap[T]
@@ -480,13 +384,6 @@ export function buildPayload<T extends NotificationEventType>(
 	}
 }
 
-// =============================================================================
-// Helper Functions
-// =============================================================================
-
-/**
- * Format duration in milliseconds to human-readable string.
- */
 function formatDuration(ms: number): string {
 	if (ms < 1000) {
 		return `${ms}ms`;
@@ -505,25 +402,16 @@ function formatDuration(ms: number): string {
 	return remainingMinutes > 0 ? `${hours}h ${remainingMinutes}m` : `${hours}h`;
 }
 
-/**
- * Capitalize first letter of a string.
- */
 function capitalizeFirst(str: string): string {
 	if (!str) return str;
 	return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
 }
 
-/**
- * Truncate text to a maximum length with ellipsis.
- */
 function truncateText(text: string, maxLength: number): string {
 	if (text.length <= maxLength) return text;
 	return `${text.slice(0, maxLength - 3)}...`;
 }
 
-/**
- * Get emoji for health status.
- */
 function getHealthStatusEmoji(status: string): string {
 	switch (status.toLowerCase()) {
 		case 'healthy':
@@ -539,9 +427,6 @@ function getHealthStatusEmoji(status: string): string {
 	}
 }
 
-/**
- * Check if health change is an improvement.
- */
 function isHealthImprovement(oldStatus: string, newStatus: string): boolean {
 	const statusOrder: Record<string, number> = {
 		offline: 0,

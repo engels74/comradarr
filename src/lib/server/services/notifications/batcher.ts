@@ -1,13 +1,4 @@
-/**
- * Notification batching service.
- *
- * Processes pending notifications for batching-enabled channels, combining
- * similar events within the configured time window into digest notifications.
- * Also respects quiet hours configuration by deferring batch sends.
- *
- * @module services/notifications/batcher
-
- */
+// Combines similar events within configured time window into digest notifications
 
 import type {
 	NotificationEventType,
@@ -29,13 +20,6 @@ import type { NotificationResult } from './types';
 
 const logger = createLogger('notification-batcher');
 
-// =============================================================================
-// Types
-// =============================================================================
-
-/**
- * Result of processing a single batch for a channel/event type.
- */
 export interface BatchSendResult {
 	channelId: number;
 	eventType: NotificationEventType;
@@ -45,9 +29,6 @@ export interface BatchSendResult {
 	error?: string;
 }
 
-/**
- * Result of processing batches for a single channel.
- */
 export interface ChannelBatchResult {
 	channelId: number;
 	channelName: string;
@@ -57,9 +38,6 @@ export interface ChannelBatchResult {
 	results: BatchSendResult[];
 }
 
-/**
- * Overall result of batch processing.
- */
 export interface BatchProcessingResult {
 	channelsProcessed: number;
 	batchesSent: number;
@@ -68,11 +46,6 @@ export interface BatchProcessingResult {
 	channelResults: ChannelBatchResult[];
 }
 
-// =============================================================================
-// Constants
-// =============================================================================
-
-/** All event types that can be batched */
 const BATCHABLE_EVENT_TYPES: NotificationEventType[] = [
 	'sweep_started',
 	'sweep_completed',
@@ -85,35 +58,7 @@ const BATCHABLE_EVENT_TYPES: NotificationEventType[] = [
 	'update_available'
 ];
 
-// =============================================================================
-// NotificationBatcher Class
-// =============================================================================
-
-/**
- * Service for processing batched notifications.
- *
- * The batch processor runs periodically (via scheduler) and:
- * 1. Gets all channels with batching enabled
- * 2. For each channel, groups pending notifications by event type
- * 3. For event types where the oldest notification has waited beyond the window,
- *    builds an aggregate payload and sends it
- * 4. Marks processed notifications as 'batched' with a shared batchId
- *
- * @example
- * ```typescript
- * const batcher = new NotificationBatcher();
- * const result = await batcher.processBatches();
- *
- * console.log(`Processed ${result.batchesSent} batches`);
- * console.log(`Batched ${result.notificationsBatched} notifications`);
- * ```
- */
 export class NotificationBatcher {
-	/**
-	 * Process all pending batches for all batching-enabled channels.
-	 *
-	 * @returns Processing result with statistics
-	 */
 	async processBatches(): Promise<BatchProcessingResult> {
 		const result: BatchProcessingResult = {
 			channelsProcessed: 0,
@@ -152,12 +97,6 @@ export class NotificationBatcher {
 		return result;
 	}
 
-	/**
-	 * Process pending batches for a single channel.
-	 *
-	 * @param channel - The channel to process
-	 * @returns Channel processing result
-	 */
 	private async processBatchesForChannel(
 		channel: NotificationChannel
 	): Promise<ChannelBatchResult> {
@@ -203,13 +142,6 @@ export class NotificationBatcher {
 		return result;
 	}
 
-	/**
-	 * Process a batch for a specific channel and event type.
-	 *
-	 * @param channel - The channel to send to
-	 * @param eventType - The event type to batch
-	 * @returns Batch send result, or null if no batch to process
-	 */
 	private async processBatchForEventType(
 		channel: NotificationChannel,
 		eventType: NotificationEventType
@@ -310,13 +242,6 @@ export class NotificationBatcher {
 		}
 	}
 
-	/**
-	 * Send a batched notification to a channel.
-	 *
-	 * @param channel - The channel to send to
-	 * @param payload - The notification payload
-	 * @returns Send result
-	 */
 	private async sendBatchedNotification(
 		channel: NotificationChannel,
 		payload: import('./types').NotificationPayload
@@ -344,17 +269,8 @@ export class NotificationBatcher {
 	}
 }
 
-// =============================================================================
-// Singleton Instance
-// =============================================================================
-
 let batcherInstance: NotificationBatcher | null = null;
 
-/**
- * Get the singleton NotificationBatcher instance.
- *
- * @returns The singleton batcher
- */
 export function getNotificationBatcher(): NotificationBatcher {
 	if (!batcherInstance) {
 		batcherInstance = new NotificationBatcher();
@@ -362,21 +278,6 @@ export function getNotificationBatcher(): NotificationBatcher {
 	return batcherInstance;
 }
 
-/**
- * Process all pending notification batches.
- *
- * Convenience function that uses the singleton batcher.
- *
- * @returns Processing result
- *
- * @example
- * ```typescript
- * const result = await processBatches();
- * if (result.errors > 0) {
- *   console.warn(`${result.errors} batch errors occurred`);
- * }
- * ```
- */
 export async function processBatches(): Promise<BatchProcessingResult> {
 	return getNotificationBatcher().processBatches();
 }

@@ -1,11 +1,3 @@
-/**
- * Database queries for notification channel operations.
- *
- *
- * Sensitive credentials (API keys, tokens, passwords) are encrypted using AES-256-GCM
- * before storage. Decryption happens lazily, only when needed for sending notifications.
- */
-
 import { and, count, desc, eq, gte, inArray, sql } from 'drizzle-orm';
 import { DecryptionError, decrypt, encrypt, SecretKeyError } from '$lib/server/crypto';
 import { db } from '$lib/server/db';
@@ -18,16 +10,8 @@ import {
 	notificationHistory
 } from '$lib/server/db/schema';
 
-// Re-export crypto errors for consumers
 export { DecryptionError, SecretKeyError };
 
-// =============================================================================
-// Types
-// =============================================================================
-
-/**
- * Supported notification channel types.
- */
 export type NotificationChannelType =
 	| 'discord'
 	| 'telegram'
@@ -38,9 +22,6 @@ export type NotificationChannelType =
 	| 'email'
 	| 'webhook';
 
-/**
- * Supported notification event types.
- */
 export type NotificationEventType =
 	| 'sweep_started'
 	| 'sweep_completed'
@@ -52,14 +33,8 @@ export type NotificationEventType =
 	| 'app_started'
 	| 'update_available';
 
-/**
- * Notification status values.
- */
 export type NotificationStatus = 'pending' | 'sent' | 'failed' | 'batched';
 
-/**
- * Input for creating a new notification channel.
- */
 export interface CreateNotificationChannelInput {
 	name: string;
 	type: NotificationChannelType;
@@ -75,9 +50,6 @@ export interface CreateNotificationChannelInput {
 	quietHoursTimezone?: string;
 }
 
-/**
- * Input for updating an existing notification channel.
- */
 export interface UpdateNotificationChannelInput {
 	name?: string;
 	config?: Record<string, unknown>;
@@ -92,9 +64,6 @@ export interface UpdateNotificationChannelInput {
 	quietHoursTimezone?: string;
 }
 
-/**
- * Input for creating a notification history entry.
- */
 export interface CreateNotificationHistoryInput {
 	channelId: number;
 	eventType: NotificationEventType;
@@ -103,17 +72,6 @@ export interface CreateNotificationHistoryInput {
 	batchId?: string;
 }
 
-// =============================================================================
-// Notification Channel Queries
-// =============================================================================
-
-/**
- * Creates a new notification channel with encrypted sensitive credentials.
- *
- * @param input - Channel configuration with optional sensitive credentials
- * @returns Created notification channel
- * @throws SecretKeyError if SECRET_KEY is not configured and sensitiveConfig is provided
- */
 export async function createNotificationChannel(
 	input: CreateNotificationChannelInput
 ): Promise<NotificationChannel> {
@@ -145,13 +103,6 @@ export async function createNotificationChannel(
 	return result[0]!;
 }
 
-/**
- * Gets a notification channel by ID.
- * Note: Sensitive config remains encrypted. Use getDecryptedSensitiveConfig() when needed.
- *
- * @param id - Channel ID
- * @returns Notification channel if found, null otherwise
- */
 export async function getNotificationChannel(id: number): Promise<NotificationChannel | null> {
 	const result = await db
 		.select()
@@ -162,22 +113,10 @@ export async function getNotificationChannel(id: number): Promise<NotificationCh
 	return result[0] ?? null;
 }
 
-/**
- * Gets all notification channels.
- * Note: Sensitive config remains encrypted.
- *
- * @returns Array of all notification channels
- */
 export async function getAllNotificationChannels(): Promise<NotificationChannel[]> {
 	return db.select().from(notificationChannels).orderBy(notificationChannels.name);
 }
 
-/**
- * Gets all enabled notification channels.
- * Note: Sensitive config remains encrypted.
- *
- * @returns Array of enabled notification channels
- */
 export async function getEnabledNotificationChannels(): Promise<NotificationChannel[]> {
 	return db
 		.select()
@@ -186,12 +125,6 @@ export async function getEnabledNotificationChannels(): Promise<NotificationChan
 		.orderBy(notificationChannels.name);
 }
 
-/**
- * Gets enabled notification channels that have batching enabled.
- * Used by the batch processor to find channels that need batch processing.
- *
- * @returns Array of batching-enabled channels
- */
 export async function getBatchingEnabledChannels(): Promise<NotificationChannel[]> {
 	return db
 		.select()
@@ -202,13 +135,6 @@ export async function getBatchingEnabledChannels(): Promise<NotificationChannel[
 		.orderBy(notificationChannels.id);
 }
 
-/**
- * Gets enabled notification channels that have a specific event type enabled.
- * Used to determine which channels should receive a particular notification.
- *
- * @param eventType - The event type to filter by
- * @returns Array of channels that should receive this event type
- */
 export async function getChannelsForEventType(
 	eventType: NotificationEventType
 ): Promise<NotificationChannel[]> {
@@ -223,12 +149,6 @@ export async function getChannelsForEventType(
 	});
 }
 
-/**
- * Gets notification channels by type.
- *
- * @param type - Channel type to filter by
- * @returns Array of channels of the specified type
- */
 export async function getNotificationChannelsByType(
 	type: NotificationChannelType
 ): Promise<NotificationChannel[]> {
@@ -239,15 +159,6 @@ export async function getNotificationChannelsByType(
 		.orderBy(notificationChannels.name);
 }
 
-/**
- * Decrypts the sensitive configuration from a notification channel.
- * Call this only when actually sending notifications.
- *
- * @param channel - Notification channel with encrypted config
- * @returns Decrypted sensitive configuration, or empty object if none
- * @throws DecryptionError if decryption fails
- * @throws SecretKeyError if SECRET_KEY is not configured
- */
 export async function getDecryptedSensitiveConfig(
 	channel: NotificationChannel
 ): Promise<Record<string, unknown>> {
@@ -259,15 +170,6 @@ export async function getDecryptedSensitiveConfig(
 	return JSON.parse(decrypted) as Record<string, unknown>;
 }
 
-/**
- * Updates a notification channel.
- * If sensitiveConfig is provided, it will be encrypted before storage.
- *
- * @param id - Channel ID to update
- * @param input - Fields to update
- * @returns Updated channel, or null if not found
- * @throws SecretKeyError if SECRET_KEY is not configured (when updating sensitiveConfig)
- */
 export async function updateNotificationChannel(
 	id: number,
 	input: UpdateNotificationChannelInput
@@ -333,13 +235,6 @@ export async function updateNotificationChannel(
 	return result[0] ?? null;
 }
 
-/**
- * Deletes a notification channel.
- * Cascades to related notification history.
- *
- * @param id - Channel ID to delete
- * @returns true if deleted, false if not found
- */
 export async function deleteNotificationChannel(id: number): Promise<boolean> {
 	const result = await db
 		.delete(notificationChannels)
@@ -349,13 +244,6 @@ export async function deleteNotificationChannel(id: number): Promise<boolean> {
 	return result.length > 0;
 }
 
-/**
- * Checks if a notification channel exists with the given name.
- *
- * @param name - Channel name to check
- * @param excludeId - Optional ID to exclude (for updates)
- * @returns true if a channel with this name exists
- */
 export async function notificationChannelNameExists(
 	name: string,
 	excludeId?: number
@@ -372,16 +260,6 @@ export async function notificationChannelNameExists(
 	return true;
 }
 
-// =============================================================================
-// Notification History Queries
-// =============================================================================
-
-/**
- * Creates a notification history entry.
- *
- * @param input - History entry data
- * @returns Created notification history entry
- */
 export async function createNotificationHistory(
 	input: CreateNotificationHistoryInput
 ): Promise<NotificationHistory> {
@@ -399,14 +277,6 @@ export async function createNotificationHistory(
 	return result[0]!;
 }
 
-/**
- * Updates the status of a notification history entry.
- *
- * @param id - History entry ID
- * @param status - New status
- * @param errorMessage - Optional error message (for failed status)
- * @returns Updated entry, or null if not found
- */
 export async function updateNotificationHistoryStatus(
 	id: number,
 	status: NotificationStatus,
@@ -433,13 +303,6 @@ export async function updateNotificationHistoryStatus(
 	return result[0] ?? null;
 }
 
-/**
- * Gets notification history for a specific channel.
- *
- * @param channelId - Channel ID
- * @param limit - Maximum number of entries to return (default 50)
- * @returns Array of notification history entries
- */
 export async function getNotificationHistoryForChannel(
 	channelId: number,
 	limit: number = 50
@@ -452,12 +315,6 @@ export async function getNotificationHistoryForChannel(
 		.limit(limit);
 }
 
-/**
- * Gets recent notification history across all channels.
- *
- * @param limit - Maximum number of entries to return (default 50)
- * @returns Array of notification history entries
- */
 export async function getRecentNotificationHistory(
 	limit: number = 50
 ): Promise<NotificationHistory[]> {
@@ -468,15 +325,6 @@ export async function getRecentNotificationHistory(
 		.limit(limit);
 }
 
-/**
- * Gets pending notifications that are ready to be batched.
- * Returns entries with status 'pending' that are within the batching window.
- *
- * @param channelId - Channel ID
- * @param eventType - Event type to batch
- * @param windowSeconds - Batching window in seconds
- * @returns Array of pending notifications within the window
- */
 export async function getPendingNotificationsForBatching(
 	channelId: number,
 	eventType: NotificationEventType,
@@ -498,13 +346,6 @@ export async function getPendingNotificationsForBatching(
 		.orderBy(notificationHistory.createdAt);
 }
 
-/**
- * Marks multiple notification history entries as batched.
- *
- * @param ids - Array of history entry IDs
- * @param batchId - Batch ID to assign
- * @returns Number of entries updated
- */
 export async function markNotificationsAsBatched(ids: number[], batchId: string): Promise<number> {
 	if (ids.length === 0) return 0;
 
@@ -520,12 +361,6 @@ export async function markNotificationsAsBatched(ids: number[], batchId: string)
 	return result.length;
 }
 
-/**
- * Gets notification history entries by batch ID.
- *
- * @param batchId - Batch ID
- * @returns Array of notification history entries in the batch
- */
 export async function getNotificationsByBatchId(batchId: string): Promise<NotificationHistory[]> {
 	return db
 		.select()
@@ -534,9 +369,6 @@ export async function getNotificationsByBatchId(batchId: string): Promise<Notifi
 		.orderBy(notificationHistory.createdAt);
 }
 
-/**
- * Gets notification statistics for a channel.
- */
 export interface NotificationChannelStats {
 	channelId: number;
 	totalSent: number;
@@ -545,12 +377,6 @@ export interface NotificationChannelStats {
 	totalPending: number;
 }
 
-/**
- * Gets notification statistics for a channel.
- *
- * @param channelId - Channel ID
- * @returns Statistics for the channel
- */
 export async function getNotificationChannelStats(
 	channelId: number
 ): Promise<NotificationChannelStats> {
@@ -591,13 +417,6 @@ export async function getNotificationChannelStats(
 	return stats;
 }
 
-/**
- * Deletes old notification history entries.
- * Used for database cleanup/maintenance.
- *
- * @param olderThanDays - Delete entries older than this many days
- * @returns Number of entries deleted
- */
 export async function pruneNotificationHistory(olderThanDays: number): Promise<number> {
 	const cutoffDate = new Date();
 	cutoffDate.setDate(cutoffDate.getDate() - olderThanDays);

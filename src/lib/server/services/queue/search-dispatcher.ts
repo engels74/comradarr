@@ -1,16 +1,3 @@
-/**
- * Search Dispatcher Service
- *
- * Orchestrates dispatching search commands to *arr connectors with:
- * - Pre-dispatch throttle checking
- * - Optional Prowlarr indexer health check (informational only)
- * - HTTP 429 (RateLimitError) handling
- * - Request recording for rate limiting
- *
- * @module services/queue/search-dispatcher
-
- */
-
 import {
 	type CommandResponse,
 	isArrClientError,
@@ -27,47 +14,23 @@ import type { ContentType, SearchType } from './types';
 
 const logger = createLogger('dispatcher');
 
-// =============================================================================
-// Types
-// =============================================================================
-
-/**
- * Options for dispatching a search.
- */
 export interface DispatchOptions {
-	/** Episode IDs for EpisodeSearch (Sonarr/Whisparr) */
 	episodeIds?: number[];
-	/** Series ID for SeasonSearch (Sonarr/Whisparr) */
 	seriesId?: number;
-	/** Season number for SeasonSearch (Sonarr/Whisparr) */
 	seasonNumber?: number;
-	/** Movie IDs for MoviesSearch (Radarr) */
 	movieIds?: number[];
 }
 
-/**
- * Result of a search dispatch operation.
- */
 export interface DispatchResult {
-	/** Whether the dispatch was successful */
 	success: boolean;
-	/** The search registry ID */
 	searchRegistryId: number;
-	/** The connector ID */
 	connectorId: number;
-	/** Command ID from *arr API (if successful) */
 	commandId?: number;
-	/** Error message (if failed) */
 	error?: string;
-	/** Whether failure was due to rate limiting */
 	rateLimited?: boolean;
-	/** Whether the connector is now paused due to rate limiting */
 	connectorPaused?: boolean;
 }
 
-/**
- * Reason for dispatch failure.
- */
 export type DispatchFailureReason =
 	| 'throttled'
 	| 'rate_limited'
@@ -75,13 +38,6 @@ export type DispatchFailureReason =
 	| 'api_error'
 	| 'invalid_options';
 
-// =============================================================================
-// Helper Functions
-// =============================================================================
-
-/**
- * Creates an appropriate connector client based on connector type.
- */
 async function createConnectorClient(
 	connectorId: number
 ): Promise<{ client: SonarrClient | RadarrClient | WhisparrClient; type: string } | null> {
@@ -105,9 +61,6 @@ async function createConnectorClient(
 	}
 }
 
-/**
- * Dispatches a search command to the appropriate connector client.
- */
 async function executeSearchCommand(
 	client: SonarrClient | RadarrClient | WhisparrClient,
 	connectorType: string,
@@ -137,13 +90,7 @@ async function executeSearchCommand(
 	throw new Error('Invalid search options: provide episodeIds, movieIds, or seriesId+seasonNumber');
 }
 
-/**
- * Check Prowlarr indexer health and log warning if issues detected.
- * This is informational only - does NOT block dispatch.
- * Uses cached data to avoid additional API calls.
- *
-
- */
+// Informational only - does NOT block dispatch; uses cached data
 async function checkProwlarrHealth(): Promise<void> {
 	try {
 		const cachedHealth = await prowlarrHealthMonitor.getAllCachedHealth();
@@ -173,52 +120,7 @@ async function checkProwlarrHealth(): Promise<void> {
 	}
 }
 
-// =============================================================================
-// Main Dispatch Function
-// =============================================================================
-
-/**
- * Dispatches a search request to a connector with throttle and rate limit handling.
- *
- * Flow:
- * 1. Check if dispatch is allowed via ThrottleEnforcer.canDispatch()
- * 2. Create connector client
- * 3. Execute search command
- * 4. Record request on success via ThrottleEnforcer.recordRequest()
- * 5. On HTTP 429: call ThrottleEnforcer.handleRateLimitResponse() to pause connector
- *
- * @param connectorId - The connector to dispatch to
- * @param searchRegistryId - The search registry ID for tracking
- * @param contentType - Type of content being searched
- * @param searchType - Type of search (gap or upgrade)
- * @param options - Search-specific options (episodeIds, movieIds, etc.)
- * @returns Dispatch result with success/failure info
- *
- * @example
- * ```typescript
- * // Episode search
- * const result = await dispatchSearch(1, 123, 'episode', 'gap', {
- *   episodeIds: [456, 457, 458]
- * });
- *
- * // Season search
- * const result = await dispatchSearch(1, 123, 'episode', 'gap', {
- *   seriesId: 10,
- *   seasonNumber: 1
- * });
- *
- * // Movie search
- * const result = await dispatchSearch(2, 456, 'movie', 'gap', {
- *   movieIds: [789]
- * });
- *
- * if (result.rateLimited) {
- *   console.log('Connector paused due to rate limiting');
- * }
- * ```
- *
-
- */
+// On HTTP 429: pauses connector via ThrottleEnforcer.handleRateLimitResponse()
 export async function dispatchSearch(
 	connectorId: number,
 	searchRegistryId: number,
@@ -268,12 +170,8 @@ export async function dispatchSearch(
 			commandId: commandResponse.id
 		};
 	} catch (error) {
-		// 5. Handle HTTP 429 - catch RateLimitError and pause connector
-		// When an HTTP 429 response is received, pause all searches for the affected
-		// connector and apply extended cooldown
+		// HTTP 429: pause connector, respects Retry-After or uses profile's rateLimitPauseSeconds
 		if (error instanceof RateLimitError) {
-			// Call handleRateLimitResponse to set pausedUntil in throttle_state
-			// This respects Retry-After header when present, otherwise uses profile's rateLimitPauseSeconds
 			await throttleEnforcer.handleRateLimitResponse(connectorId, error.retryAfter);
 
 			return {
@@ -301,17 +199,7 @@ export async function dispatchSearch(
 	}
 }
 
-/**
- * Dispatches multiple searches in batch, stopping on rate limit.
- *
- * Processes searches sequentially, stopping if any search triggers a rate limit.
- * This prevents overwhelming the *arr API after a 429 response.
- *
- * @param dispatches - Array of dispatch parameters
- * @returns Array of dispatch results
- *
-
- */
+// Stops processing on rate limit to prevent overwhelming *arr API
 export async function dispatchBatch(
 	dispatches: Array<{
 		connectorId: number;

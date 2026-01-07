@@ -1,15 +1,6 @@
-/**
- * Sync services for content mirror maintenance.
- *
- * @module services/sync
- */
-
-// Sync configuration
 export { SYNC_CONFIG, type SyncConfig } from './config';
 export { runFullReconciliation } from './full-reconciliation';
-// Re-export database-dependent functions
 export { updateHealthFromSyncResult } from './health';
-// Re-export pure utility functions (usable in unit tests without database)
 export {
 	calculateSyncBackoffDelay,
 	determineHealthStatus,

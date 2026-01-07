@@ -1,13 +1,4 @@
-/**
- * Sonarr/Whisparr full reconciliation handler
- *
- * Performs full reconciliation for Sonarr and Whisparr TV series libraries.
- * Unlike incremental sync which only upserts, this also deletes content
- * that no longer exists in the *arr application.
- *
- * @module services/sync/handlers/sonarr-reconcile
-
- */
+// Unlike incremental sync which only upserts, reconciliation also deletes removed content
 
 import { and, eq, inArray, sql } from 'drizzle-orm';
 import type { SonarrClient } from '$lib/server/connectors/sonarr/client';
@@ -19,20 +10,11 @@ import { mapEpisodeToDb, mapSeasonToDb, mapSeriesToDb } from '../mappers';
 import { deleteSearchRegistryForEpisodes } from '../search-state-cleanup';
 import type { SyncOptions } from '../types';
 
-/** Default concurrency for parallel episode fetching */
 const DEFAULT_CONCURRENCY = 5;
-
-/** Default delay between API requests in milliseconds */
 const DEFAULT_REQUEST_DELAY_MS = 100;
 
-/**
- * Type representing either SonarrClient or WhisparrClient
- */
 type SeriesClient = SonarrClient | WhisparrClient;
 
-/**
- * Result of the reconciliation operation
- */
 export interface SonarrReconcileResult {
 	seriesCreated: number;
 	seriesUpdated: number;
@@ -43,16 +25,10 @@ export interface SonarrReconcileResult {
 	searchStateDeleted: number;
 }
 
-/**
- * Sleep for a specified number of milliseconds
- */
 function sleep(ms: number): Promise<void> {
 	return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-/**
- * Execute async functions with limited concurrency and optional delay between requests.
- */
 async function parallelLimit<T, R>(
 	items: T[],
 	limit: number,
@@ -85,23 +61,6 @@ async function parallelLimit<T, R>(
 	return results;
 }
 
-/**
- * Perform full reconciliation for Sonarr or Whisparr content.
- *
- * This function:
- * 1. Fetches all series from the API
- * 2. Identifies and deletes series that no longer exist (with search state cleanup)
- * 3. Upserts existing/new series and seasons
- * 4. For each series, identifies and deletes episodes that no longer exist
- * 5. Upserts existing/new episodes
- *
- * @param client - SonarrClient or WhisparrClient instance
- * @param connectorId - The database ID of the connector being reconciled
- * @param options - Sync options for concurrency and rate limiting
- * @returns Detailed result of the reconciliation operation
- *
-
- */
 export async function reconcileSonarrContent(
 	client: SeriesClient,
 	connectorId: number,
@@ -220,9 +179,6 @@ export async function reconcileSonarrContent(
 	return result;
 }
 
-/**
- * Upsert series and track which were created vs updated
- */
 async function upsertSeriesWithTracking(
 	connectorId: number,
 	apiSeriesList: SonarrSeries[],
@@ -262,9 +218,6 @@ async function upsertSeriesWithTracking(
 	return { seriesIdMap, created, updated };
 }
 
-/**
- * Upsert all seasons and return a map of `${seriesDbId}-${seasonNumber}` → seasonDbId
- */
 async function upsertSeasons(
 	apiSeriesList: SonarrSeries[],
 	seriesIdMap: Map<number, number>
@@ -311,9 +264,6 @@ async function upsertSeasons(
 	return seasonIdMap;
 }
 
-/**
- * Reconcile episodes for a single series
- */
 async function reconcileEpisodesForSeries(
 	connectorId: number,
 	seriesDbId: number,
