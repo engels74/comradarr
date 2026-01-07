@@ -44,10 +44,8 @@ export async function reconcileRadarrMovies(
 		const movieIdsToDelete = moviesToDelete.map((m) => m.id);
 		const movieArrIdsToDelete = moviesToDelete.map((m) => m.arrId);
 
-		// Delete search registry entries first
 		result.searchStateDeleted = await deleteSearchRegistryForMovies(connectorId, movieIdsToDelete);
 
-		// Delete the movies
 		await db
 			.delete(movies)
 			.where(and(eq(movies.connectorId, connectorId), inArray(movies.arrId, movieArrIdsToDelete)));
@@ -78,7 +76,6 @@ export async function reconcileRadarrMovies(
 				}
 			});
 
-		// Count created vs updated
 		for (const apiMovie of apiMovies) {
 			if (existingMovieMap.has(apiMovie.id)) {
 				result.moviesUpdated++;
