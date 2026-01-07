@@ -1,10 +1,7 @@
 /**
- * Property-based tests for authentication.
+ * Property-based tests for password hashing using Argon2id.
  *
- * Validates requirements:
- * - 10.2: Password hashing using Argon2id
- *
- * Tests password hashing properties:
+ * Tests:
  * - Correct password always verifies
  * - Incorrect password never verifies
  * - Same password produces different hashes (unique salts)
@@ -26,7 +23,7 @@ const passwordArbitrary = fc.string({ minLength: 8, maxLength: 128 });
 const SLOW_TEST_TIMEOUT = 60000; // 60 seconds
 const PROPERTY_RUNS = 25; // Balance between coverage and speed
 
-describe('Password Hashing (Requirement 10.2)', () => {
+describe('Password Hashing', () => {
 	describe('Property: Correct Password Always Verifies', () => {
 		it(
 			'should always verify the correct password',

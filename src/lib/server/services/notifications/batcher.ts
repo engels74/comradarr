@@ -238,7 +238,7 @@ export class NotificationBatcher {
 			return null;
 		}
 
-		// Check if currently in quiet hours (Requirement 9.4)
+		// Check if currently in quiet hours
 		// If so, defer sending until quiet hours end
 		if (channel.quietHoursEnabled && isInQuietHours(channel)) {
 			// Skip this batch - notifications will be sent when quiet hours end

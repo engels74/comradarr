@@ -160,7 +160,7 @@ export interface PriorityResult {
 }
 
 // =============================================================================
-// Queue Service Types (Requirement 5.2)
+// Queue Service Types
 // =============================================================================
 
 /**
@@ -305,7 +305,7 @@ export interface DequeueOptions {
 }
 
 // =============================================================================
-// State Transition Types (Requirement 5.5, 5.6)
+// State Transition Types
 // =============================================================================
 
 /**
@@ -357,7 +357,7 @@ export interface MarkSearchFailedInput {
 	/**
 	 * Whether this failure was from a SeasonSearch (season pack) command.
 	 * If true and failureCategory is 'no_results', will mark all episodes
-	 * in the season for EpisodeSearch fallback (Requirement 6.5).
+	 * in the season for EpisodeSearch fallback.
 	 */
 	wasSeasonPackSearch?: boolean;
 }

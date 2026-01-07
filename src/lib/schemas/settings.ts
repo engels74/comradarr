@@ -169,7 +169,7 @@ export type BackupSettingsInput = v.InferInput<typeof BackupSettingsSchema>;
 export type BackupSettingsOutput = v.InferOutput<typeof BackupSettingsSchema>;
 
 // =============================================================================
-// API Key Settings (Requirements 34.1, 34.5)
+// API Key Settings
 // =============================================================================
 
 /**
@@ -214,7 +214,7 @@ export const apiKeyExpirationLabels: Record<ApiKeyExpiration, string> = {
 };
 
 /**
- * API key rate limit preset options (Requirement 34.5).
+ * API key rate limit preset options.
  *
  * - unlimited: No rate limit
  * - 60: Standard rate limit (60 requests/minute)
@@ -283,7 +283,7 @@ export type CreateApiKeyInput = v.InferInput<typeof CreateApiKeySchema>;
 export type CreateApiKeyOutput = v.InferOutput<typeof CreateApiKeySchema>;
 
 /**
- * Update API key rate limit validation schema (Requirement 34.5).
+ * Update API key rate limit validation schema.
  *
  * Validates:
  * - rateLimitPreset: Required, one of 'unlimited' | '60' | '120' | 'custom'

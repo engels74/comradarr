@@ -180,8 +180,7 @@ export interface ValidateApiKeyResult {
 /**
  * Validates an API key and returns user info if valid.
  * Updates lastUsedAt on successful validation.
- *
- * Requirement 34.3: Revoked keys are immediately rejected.
+ * Revoked keys are immediately rejected.
  *
  * @param key - The full API key to validate
  * @returns User ID, scope, and key ID if valid, null if invalid/expired/revoked
@@ -195,7 +194,6 @@ export async function validateApiKey(key: string): Promise<ValidateApiKeyResult 
 	const prefix = extractPrefix(key);
 
 	// Find keys with matching prefix (narrows search before expensive hash verification)
-	// Requirement 34.3: Filter out revoked keys immediately
 	const now = new Date();
 	const candidates = await db
 		.select()
@@ -204,7 +202,7 @@ export async function validateApiKey(key: string): Promise<ValidateApiKeyResult 
 			and(
 				eq(apiKeys.keyPrefix, prefix),
 				or(isNull(apiKeys.expiresAt), gt(apiKeys.expiresAt, now)),
-				isNull(apiKeys.revokedAt) // Requirement 34.3: Reject revoked keys
+				isNull(apiKeys.revokedAt)
 			)
 		);
 
@@ -251,8 +249,6 @@ export async function deleteApiKey(id: number, userId: number): Promise<boolean>
 
 /**
  * Revokes an API key (soft delete).
- *
- * Requirement 34.3: Revoked keys are immediately rejected.
  * Unlike delete, revoked keys remain visible in the UI for audit purposes.
  *
  * @param id - The key ID to revoke
@@ -332,10 +328,8 @@ export interface ApiKeyUsageLogInput {
 
 /**
  * Logs API key usage for auditing.
- *
- * Requirement 34.4: Record key identifier, endpoint, and timestamp.
- * Additional fields (method, statusCode, responseTimeMs, ipAddress, userAgent)
- * are included for comprehensive auditing.
+ * Records key identifier, endpoint, timestamp, and additional fields
+ * (method, statusCode, responseTimeMs, ipAddress, userAgent) for comprehensive auditing.
  *
  * This function is designed to be fire-and-forget (errors are silently ignored)
  * to avoid impacting request performance.
@@ -360,9 +354,6 @@ export async function logApiKeyUsage(input: ApiKeyUsageLogInput): Promise<void> 
 
 /**
  * Updates the rate limit for an API key.
- *
- * Requirement 34.5: Per-key rate limiting configuration.
- * Users can modify rate limits on existing keys.
  *
  * @param keyId - The API key ID to update
  * @param userId - The user who owns the key (for authorization)

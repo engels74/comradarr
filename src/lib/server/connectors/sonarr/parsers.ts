@@ -1,16 +1,10 @@
 /**
  * API response parsers for Sonarr using Valibot for runtime validation.
  *
- * Provides type-safe parsing with graceful error handling for:
- * - Series responses (Requirement 27.2)
- * - Episode responses (Requirement 27.3)
- *
- * Design:
- * - Unknown fields are ignored (Requirement 27.7)
- * - Malformed records return errors instead of throwing (Requirement 27.8)
+ * Provides type-safe parsing with graceful error handling for series and episode responses.
+ * Unknown fields are ignored and malformed records return errors instead of throwing.
  *
  * @module connectors/sonarr/parsers
-
  */
 
 import * as v from 'valibot';
@@ -67,13 +61,8 @@ export const SonarrSeriesStatisticsSchema = v.object({
 });
 
 /**
- * Valibot schema for Sonarr series response
- * GET /api/v3/series
- *
- * Required fields per Requirement 27.2:
- * - id, title, tvdbId, status, seasons array, statistics
- *
-
+ * Valibot schema for Sonarr series response (GET /api/v3/series).
+ * Required: id, title, tvdbId, status, seasons array, statistics
  */
 export const SonarrSeriesSchema = v.object({
 	id: v.number(),
@@ -97,13 +86,8 @@ export const SonarrEpisodeFileSchema = v.object({
 });
 
 /**
- * Valibot schema for Sonarr episode response
- * GET /api/v3/episode or GET /api/v3/wanted/missing
- *
- * Required fields per Requirement 27.3:
- * - id, seriesId, seasonNumber, episodeNumber, hasFile, airDateUtc, qualityCutoffNotMet
- *
-
+ * Valibot schema for Sonarr episode response (GET /api/v3/episode, GET /api/v3/wanted/missing).
+ * Required: id, seriesId, seasonNumber, episodeNumber, hasFile, airDateUtc, qualityCutoffNotMet
  */
 export const SonarrEpisodeSchema = v.object({
 	id: v.number(),
@@ -363,7 +347,7 @@ export function parsePaginatedEpisodes(
 }
 
 // =============================================================================
-// Lenient Parser Functions (Requirement 27.8)
+// Lenient Parser Functions
 // =============================================================================
 
 /**

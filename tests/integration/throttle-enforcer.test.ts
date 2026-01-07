@@ -287,7 +287,7 @@ describe('ThrottleEnforcer.canDispatch', () => {
 		});
 	});
 
-	describe('Per-minute rate limit (Requirement 7.1)', () => {
+	describe('Per-minute rate limit', () => {
 		it('should deny dispatch when minute limit exceeded', async () => {
 			// Default profile is Moderate with 5 requests/minute
 			const _state = await getOrCreateThrottleState(testConnectorId);
@@ -437,7 +437,7 @@ describe('ThrottleEnforcer.canDispatch', () => {
 		});
 	});
 
-	describe('Profile resolution (Requirement 7.7)', () => {
+	describe('Profile resolution', () => {
 		it('should use default profile when no connector profile assigned', async () => {
 			// Connector has no profile assigned, should use default/fallback
 			const profile = await getThrottleProfileForConnector(testConnectorId);

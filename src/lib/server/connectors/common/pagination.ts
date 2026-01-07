@@ -9,16 +9,14 @@
 
 import type { PaginatedResponse } from './types.js';
 
-/**
- * Default page size for API requests (per Requirement 29.1)
- */
+/** Default page size for API requests */
 export const DEFAULT_PAGE_SIZE = 1000;
 
 /**
  * Options for pagination iteration
  */
 export interface FetchAllPagesOptions {
-	/** Page size for requests (default: 1000 per Requirement 29.1) */
+	/** Page size for requests (default: 1000) */
 	pageSize?: number;
 	/** Starting page number (default: 1) */
 	startPage?: number;
@@ -36,29 +34,14 @@ export type PageFetcher<T> = (page: number, pageSize: number) => Promise<Paginat
 
 /**
  * Async generator that yields records from all pages of a paginated API response.
- *
- * Continues fetching pages until `page * pageSize >= totalRecords` (Requirement 29.2).
- * Uses default pageSize of 1000 per Requirement 29.1.
- *
- * @template T - The type of records being fetched
- * @param fetcher - Async function that fetches a single page of results
- * @param options - Pagination options (pageSize, startPage)
- * @yields Individual records from each page
+ * Continues fetching pages until `page * pageSize >= totalRecords`.
  *
  * @example
  * ```typescript
- * // Fetch all missing movies from Radarr
- * const fetcher: PageFetcher<Movie> = async (page, pageSize) => {
- *   const params = new URLSearchParams({ page: String(page), pageSize: String(pageSize) });
- *   return await client.request<PaginatedResponse<Movie>>(`wanted/missing?${params}`);
- * };
- *
  * for await (const movie of fetchAllPages(fetcher)) {
  *   console.log(movie.title);
  * }
  * ```
- *
-
  */
 export async function* fetchAllPages<T>(
 	fetcher: PageFetcher<T>,
@@ -75,8 +58,7 @@ export async function* fetchAllPages<T>(
 			yield record;
 		}
 
-		// Check termination condition (Requirement 29.2)
-		// Continue until page * pageSize >= totalRecords
+		// Continue until all records fetched
 		if (page * pageSize >= response.totalRecords) {
 			break;
 		}
@@ -171,7 +153,6 @@ export async function collectAllPagesWithMetadata<T>(
 		// Collect records from current page
 		records.push(...response.records);
 
-		// Check termination condition (Requirement 29.2)
 		if (page * pageSize >= response.totalRecords) {
 			break;
 		}

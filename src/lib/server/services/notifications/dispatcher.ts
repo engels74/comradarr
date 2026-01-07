@@ -7,10 +7,9 @@
  * - Building payloads from event data using templates
  * - Sending to each channel via channel senders
  * - Recording results in notification history
- * - Quiet hours suppression (Requirement 9.4)
+ * - Quiet hours suppression
  *
  * @module services/notifications/dispatcher
-
  */
 
 import type { NotificationEventType } from '$lib/server/db/queries/notifications';
@@ -53,7 +52,7 @@ export interface DispatchResult {
 	skippedCount: number;
 	/** Number of channels where notification was queued for batching */
 	batchedCount: number;
-	/** Number of channels where notification was suppressed due to quiet hours (Requirement 9.4) */
+	/** Number of channels where notification was suppressed due to quiet hours */
 	quietHoursSuppressedCount: number;
 }
 
@@ -125,14 +124,14 @@ export class NotificationDispatcher {
 
 		// Process each channel - check quiet hours, batching, or send immediately
 		const sendPromises = channels.map(async (channel) => {
-			// Check if in quiet hours for this channel (Requirement 9.4)
+			// Check if in quiet hours for this channel
 			if (channel.quietHoursEnabled && isInQuietHours(channel)) {
 				// Store as pending for later (will be sent when quiet hours end)
 				const stored = await this.storeForBatching(channel, eventType, eventData);
 				return { type: 'quiet_hours' as const, success: stored };
 			}
 
-			// Check if batching is enabled for this channel (Requirement 9.3)
+			// Check if batching is enabled for this channel
 			if (channel.batchingEnabled) {
 				// Store as pending for later batching
 				const stored = await this.storeForBatching(channel, eventType, eventData);
@@ -149,7 +148,7 @@ export class NotificationDispatcher {
 		// Aggregate results
 		for (const channelResult of channelResults) {
 			if (channelResult.type === 'quiet_hours') {
-				// Notification was suppressed due to quiet hours (Requirement 9.4)
+				// Notification was suppressed due to quiet hours
 				if (channelResult.success) {
 					result.quietHoursSuppressedCount++;
 				} else {
@@ -182,7 +181,7 @@ export class NotificationDispatcher {
 	}
 
 	/**
-	 * Store a notification for batching (Requirement 9.3).
+	 * Store a notification for batching.
 	 *
 	 * Instead of sending immediately, store the notification as pending
 	 * in notification history. The batch processor will send it later.

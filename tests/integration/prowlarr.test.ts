@@ -106,7 +106,7 @@ function normalizeUrl(url: string): string {
 	return url.replace(/\/+$/, '');
 }
 
-describe('Property: Prowlarr Instance Data Persistence (Requirement 38.1)', () => {
+describe('Property: Prowlarr Instance Data Persistence', () => {
 	beforeAll(() => {
 		// Set a valid SECRET_KEY for tests
 		process.env.SECRET_KEY = TEST_SECRET_KEY;

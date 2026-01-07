@@ -259,7 +259,7 @@ beforeEach(async () => {
 // Tests
 // ============================================================================
 
-describe('Orphan Cleanup Service (Requirement 13.2)', () => {
+describe('Orphan Cleanup Service', () => {
 	describe('cleanupOrphanedSearchState - Basic Functionality', () => {
 		it('should return success with zero deletions when no orphans exist', async () => {
 			const result = await cleanupOrphanedSearchState();

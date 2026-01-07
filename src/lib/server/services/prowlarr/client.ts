@@ -351,7 +351,7 @@ export class ProwlarrClient {
 			let mostRecentFailure: Date | null = null;
 
 			if (status) {
-				// Requirement 38.3: Mark as rate-limited when disabledTill is in the future
+				// Mark as rate-limited when disabledTill is in the future
 				if (status.disabledTill) {
 					const disabledUntil = new Date(status.disabledTill);
 					if (disabledUntil > now) {

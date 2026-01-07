@@ -1,7 +1,6 @@
 /**
  * Unit tests for API Key Rate Limiter.
- *
- * Requirement 34.5: Per-key rate limiting
+ * Verifies per-key rate limiting functionality.
  */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';

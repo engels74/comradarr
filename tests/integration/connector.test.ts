@@ -111,7 +111,7 @@ function normalizeUrl(url: string): string {
 	return url.replace(/\/+$/, '');
 }
 
-describe('Property: Connector Data Persistence (Requirement 1.1)', () => {
+describe('Property: Connector Data Persistence', () => {
 	beforeAll(() => {
 		// Set a valid SECRET_KEY for tests
 		process.env.SECRET_KEY = TEST_SECRET_KEY;

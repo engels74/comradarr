@@ -215,7 +215,7 @@ describe('Property 11: Throttle Profile Enforcement (Requirements 7.1, 7.2)', ()
 // Property 12: Request Counter Reset
 // =============================================================================
 
-describe('Property 12: Request Counter Reset (Requirement 7.4)', () => {
+describe('Property 12: Request Counter Reset', () => {
 	describe('Minute window reset', () => {
 		it('counter should reset to zero at window boundary', () => {
 			fc.assert(

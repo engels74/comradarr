@@ -6,11 +6,10 @@
  * - Upgrade candidates: items below quality cutoff (qualityCutoffNotMet=true)
  *
  * Also handles cleanup of resolved registries:
- * - Gap registries cleaned when hasFile becomes true (Requirement 3.4)
- * - Upgrade registries cleaned when qualityCutoffNotMet becomes false (Requirement 4.4)
+ * - Gap registries cleaned when hasFile becomes true
+ * - Upgrade registries cleaned when qualityCutoffNotMet becomes false
  *
  * @module services/discovery
-
  */
 
 // Gap detection

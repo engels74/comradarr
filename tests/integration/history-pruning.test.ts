@@ -122,7 +122,7 @@ beforeEach(async () => {
 // Tests
 // ============================================================================
 
-describe('History Pruning Service (Requirement 13.3)', () => {
+describe('History Pruning Service', () => {
 	describe('pruneSearchHistory - Basic Functionality', () => {
 		it('should return success with zero deletions when no history exists', async () => {
 			const result = await pruneSearchHistory(30);

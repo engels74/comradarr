@@ -3,7 +3,7 @@ import { cn } from '$lib/utils.js';
 
 /**
  * Health status values for connectors.
- * Requirement 22.4: Consistent color coding
+ * Uses consistent color coding across the application.
  */
 type HealthStatus = 'healthy' | 'degraded' | 'unhealthy' | 'offline' | 'unknown';
 

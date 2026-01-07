@@ -32,7 +32,6 @@ const MAX_LIMIT = 100;
 const DEFAULT_LIMIT = 50;
 
 export const GET: RequestHandler = async ({ url, locals }) => {
-	// Require read scope for read operations (Requirement 34.2)
 	requireScope(locals, 'read');
 
 	// Parse query parameters

@@ -27,7 +27,6 @@ import type { RequestHandler } from './$types';
  * - 500: Error message on failure
  */
 export const POST: RequestHandler = async ({ request, locals }) => {
-	// Require full scope for write operations (Requirement 34.2)
 	requireScope(locals, 'full');
 	let description: string | undefined;
 
@@ -66,7 +65,6 @@ export const POST: RequestHandler = async ({ request, locals }) => {
  * - 401: Not authenticated
  */
 export const GET: RequestHandler = async ({ locals }) => {
-	// Require read scope for read operations (Requirement 34.2)
 	requireScope(locals, 'read');
 
 	const backups = await listBackups();

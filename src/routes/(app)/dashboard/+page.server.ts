@@ -8,10 +8,7 @@ import { getTodaySearchStats } from '$lib/server/db/queries/queue';
 import { getSchedulerStatus } from '$lib/server/scheduler';
 import type { PageServerLoad } from './$types';
 
-/**
- * Job metadata for display in the dashboard.
- * Requirement 15.5: Show next scheduled sweeps and current sweep progress.
- */
+/** Job metadata for display in the dashboard */
 const JOB_METADATA: Record<string, { displayName: string; description: string }> = {
 	'incremental-sync-sweep': {
 		displayName: 'Incremental Sync',
@@ -101,7 +98,6 @@ export const load: PageServerLoad = async ({ parent }) => {
 		}))
 	}));
 
-	// Serialize scheduled jobs with display metadata (Requirement 15.5)
 	const scheduledJobs: SerializedScheduledJob[] = schedulerStatus.jobs.map((job) => {
 		const metadata = JOB_METADATA[job.name] ?? {
 			displayName: job.name,

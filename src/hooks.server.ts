@@ -23,26 +23,22 @@ const SESSION_COOKIE_NAME = 'session';
  * Only runs in non-test environments to avoid interference with tests.
  */
 if (process.env.NODE_ENV !== 'test') {
-	// Initialize log level from database (Requirement 31.5)
-	// This allows log level to persist across restarts
+	// Log level persists across restarts via database
 	initializeLogLevel().catch(() => {
 		// Silently handle errors - logger will fall back to env/default
 	});
 
-	// Initialize scheduled jobs (Requirement 7.4)
-	// The initializeScheduler function is idempotent (safe to call multiple times).
+	// Scheduler is idempotent (safe to call multiple times)
 	initializeScheduler();
 }
 
 export const handle: Handle = async ({ event, resolve }) => {
-	// Track request start time for API key usage logging (Requirement 34.4)
 	const startTime = Date.now();
 
-	// Generate correlation ID for request tracing (Requirement 31.2)
+	// Use existing correlation ID from header or generate new one
 	const correlationId = event.request.headers.get('x-correlation-id') ?? crypto.randomUUID();
 	event.locals.correlationId = correlationId;
 
-	// API key authentication (Requirement 34.2)
 	// Check X-API-Key header before session validation
 	const apiKey = event.request.headers.get('x-api-key');
 	if (apiKey) {
@@ -68,7 +64,6 @@ export const handle: Handle = async ({ event, resolve }) => {
 				event.locals.apiKeyId = apiKeyResult.keyId;
 				event.locals.apiKeyRateLimitPerMinute = apiKeyResult.rateLimitPerMinute;
 
-				// API key rate limiting (Requirement 34.5)
 				// Check if request is allowed before processing
 				const rateLimitResult = await apiKeyRateLimiter.canMakeRequest(
 					apiKeyResult.keyId,
@@ -118,8 +113,7 @@ export const handle: Handle = async ({ event, resolve }) => {
 		}
 	}
 
-	// Local network bypass (Requirement 10.3)
-	// Only check bypass if no valid session exists
+	// Only check local network bypass if no valid session exists
 	if (!event.locals.user) {
 		try {
 			const securitySettings = await getSecuritySettings();
@@ -142,7 +136,6 @@ export const handle: Handle = async ({ event, resolve }) => {
 		}
 	}
 
-	// Create request context for correlation ID propagation (Requirement 31.2)
 	// All async operations within this context will have access to the correlation ID
 	const context: RequestContext = {
 		correlationId,
@@ -158,7 +151,6 @@ export const handle: Handle = async ({ event, resolve }) => {
 			const apiKeyId = event.locals.apiKeyId;
 			const rateLimitPerMinute = event.locals.apiKeyRateLimitPerMinute ?? null;
 
-			// Record the request for rate limiting (Requirement 34.5)
 			// Only record if rate limit is configured (not unlimited)
 			if (rateLimitPerMinute !== null) {
 				apiKeyRateLimiter.recordRequest(apiKeyId).catch(() => {
@@ -166,7 +158,6 @@ export const handle: Handle = async ({ event, resolve }) => {
 				});
 			}
 
-			// Add rate limit headers to response (Requirement 34.5)
 			if (rateLimitPerMinute !== null) {
 				const rateLimitStatus = await apiKeyRateLimiter.getRateLimitStatus(
 					apiKeyId,
@@ -180,7 +171,6 @@ export const handle: Handle = async ({ event, resolve }) => {
 				response.headers.set('X-RateLimit-Reset', String(rateLimitStatus.resetInSeconds));
 			}
 
-			// Log API key usage after request completes (Requirement 34.4)
 			// Fire and forget - don't block the response
 			const responseTimeMs = Date.now() - startTime;
 			const clientIP = getClientIP(event.request, event.getClientAddress);
@@ -197,7 +187,7 @@ export const handle: Handle = async ({ event, resolve }) => {
 			});
 		}
 
-		// Security headers (Requirement 10.5)
+		// Security headers
 		response.headers.set('X-Frame-Options', 'SAMEORIGIN');
 		response.headers.set('X-Content-Type-Options', 'nosniff');
 		response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');

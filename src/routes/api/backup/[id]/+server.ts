@@ -26,7 +26,6 @@ import type { RequestHandler } from './$types';
  * - 404: Backup not found
  */
 export const GET: RequestHandler = async ({ params, locals }) => {
-	// Require read scope for read operations (Requirement 34.2)
 	requireScope(locals, 'read');
 
 	const { id } = params;
@@ -64,7 +63,6 @@ export const GET: RequestHandler = async ({ params, locals }) => {
  * - 404: Backup not found
  */
 export const DELETE: RequestHandler = async ({ params, locals }) => {
-	// Require full scope for write operations (Requirement 34.2)
 	requireScope(locals, 'full');
 
 	const { id } = params;

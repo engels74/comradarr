@@ -1,17 +1,11 @@
 /**
  * API response parsers for *arr applications using Valibot for runtime validation.
  *
- * Provides type-safe parsing with graceful error handling for:
- * - Paginated responses (Requirement 27.1)
- * - Quality model (Requirement 27.5)
- * - Command responses (Requirement 27.6)
- *
- * Design:
- * - Unknown fields are ignored (Requirement 27.7)
- * - Malformed records return errors instead of throwing (Requirement 27.8)
+ * Provides type-safe parsing with graceful error handling for paginated responses,
+ * quality models, and command responses. Unknown fields are ignored and malformed
+ * records return errors instead of throwing.
  *
  * @module connectors/common/parsers
-
  */
 
 import * as v from 'valibot';
@@ -62,13 +56,8 @@ export const QualityModelSchema = v.object({
 export const CommandStatusSchema = v.picklist(['queued', 'started', 'completed', 'failed']);
 
 /**
- * Valibot schema for CommandResponse from *arr API.
- * POST /api/v3/command returns this structure.
- *
- * Required fields per Requirement 27.6:
- * - id, name, status, started, ended, message
- *
-
+ * Valibot schema for CommandResponse from *arr API (POST /api/v3/command).
+ * Required: id, name, status, started, ended, message
  */
 export const CommandResponseSchema = v.object({
 	id: v.number(),
@@ -91,14 +80,7 @@ export const CommandResponseSchema = v.object({
 
 /**
  * Creates a Valibot schema for paginated responses with a specific record type.
- *
- * Required fields per Requirement 27.1:
- * - page, pageSize, totalRecords, records array
- *
- * @param recordSchema - Valibot schema for individual records in the response
- * @returns Paginated response schema
- *
-
+ * Required: page, pageSize, totalRecords, records array
  */
 export function createPaginatedResponseSchema<T extends v.GenericSchema>(recordSchema: T) {
 	return v.object({

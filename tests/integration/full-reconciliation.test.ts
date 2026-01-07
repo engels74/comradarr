@@ -222,7 +222,7 @@ async function countMovies(connectorId: number): Promise<number> {
 	return result[0]?.count ?? 0;
 }
 
-describe('Search State Cleanup (Requirement 2.2)', () => {
+describe('Search State Cleanup', () => {
 	beforeAll(async () => {
 		process.env.SECRET_KEY = TEST_SECRET_KEY;
 		testSonarrConnectorId = await createTestConnector('sonarr', 'Test Sonarr');
@@ -655,7 +655,7 @@ async function simulateReconciliationDelete(
 // Property test connector (separate from example tests)
 let propertyTestConnectorId: number;
 
-describe('Property 18: Sync Reconciliation - Property-Based Tests (Requirement 2.2)', () => {
+describe('Property 18: Sync Reconciliation - Property-Based Tests', () => {
 	beforeAll(async () => {
 		process.env.SECRET_KEY = TEST_SECRET_KEY;
 		propertyTestConnectorId = await createTestConnector('radarr', 'Property Test Radarr');

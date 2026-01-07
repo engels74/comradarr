@@ -65,7 +65,7 @@ export function shouldMarkExhausted(attemptCount: number): boolean {
 }
 
 // =============================================================================
-// Async versions using database configuration (Requirement 21.4)
+// Async versions using database configuration
 // =============================================================================
 
 /**
