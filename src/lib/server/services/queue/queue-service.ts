@@ -1,14 +1,6 @@
 /**
  * Queue service for managing search request queue operations.
- *
- * Provides functions for:
- * - Enqueuing pending items with calculated priorities
- * - Dequeuing items in priority order for dispatch
- * - Pausing/resuming queue processing per connector
- * - Clearing queue items
- *
  * @module services/queue/queue-service
-
  */
 
 import { and, asc, desc, eq, inArray, isNull, sql } from 'drizzle-orm';
@@ -31,21 +23,7 @@ import type {
 
 /**
  * Enqueues all pending search registry items for a connector.
- *
- * This function:
- * 1. Queries searchRegistry for items with state='pending'
- * 2. Joins with content tables (episodes/movies) to get data for priority calculation
- * 3. Calculates priority scores for each item
- * 4. Updates searchRegistry state to 'queued' and stores the priority
- * 5. Inserts items into requestQueue
- *
- * The function is idempotent - running multiple times won't create duplicates.
- *
- * @param connectorId - The connector ID to enqueue items for
- * @param options - Optional configuration for enqueue behavior
- * @returns Enqueue result with statistics
- *
-
+ * Idempotent - running multiple times won't create duplicates.
  */
 export async function enqueuePendingItems(
 	connectorId: number,
@@ -56,7 +34,6 @@ export async function enqueuePendingItems(
 	const scheduledAt = options.scheduledAt ?? new Date();
 
 	try {
-		// Verify connector exists
 		const connector = await db
 			.select({ id: connectors.id, type: connectors.type })
 			.from(connectors)
@@ -76,7 +53,6 @@ export async function enqueuePendingItems(
 
 		const connectorType = connector[0]!.type as 'sonarr' | 'radarr' | 'whisparr';
 
-		// Get pending registry entries based on connector type
 		let totalEnqueued = 0;
 		let totalSkipped = 0;
 
@@ -85,7 +61,6 @@ export async function enqueuePendingItems(
 			totalEnqueued = result.enqueued;
 			totalSkipped = result.skipped;
 		} else {
-			// Sonarr or Whisparr - handle episodes
 			const result = await enqueueEpisodes(connectorId, batchSize, scheduledAt);
 			totalEnqueued = result.enqueued;
 			totalSkipped = result.skipped;
@@ -118,7 +93,6 @@ async function enqueueEpisodes(
 	batchSize: number,
 	scheduledAt: Date
 ): Promise<{ enqueued: number; skipped: number }> {
-	// Get pending episode registries with content data for priority calculation
 	const pendingRegistries = await db
 		.select({
 			registryId: searchRegistry.id,
@@ -128,7 +102,6 @@ async function enqueueEpisodes(
 			searchType: searchRegistry.searchType,
 			attemptCount: searchRegistry.attemptCount,
 			createdAt: searchRegistry.createdAt,
-			// Episode data for priority calculation
 			airDate: episodes.airDate
 		})
 		.from(searchRegistry)
@@ -139,7 +112,7 @@ async function enqueueEpisodes(
 				eq(searchRegistry.connectorId, connectorId),
 				eq(searchRegistry.contentType, 'episode'),
 				eq(searchRegistry.state, 'pending'),
-				isNull(requestQueue.id) // Not already in queue
+				isNull(requestQueue.id)
 			)
 		);
 
@@ -147,7 +120,6 @@ async function enqueueEpisodes(
 		return { enqueued: 0, skipped: 0 };
 	}
 
-	// Calculate priorities and prepare batch inserts
 	const now = new Date();
 	const itemsToEnqueue: Array<{
 		registryId: number;
@@ -173,14 +145,12 @@ async function enqueueEpisodes(
 		});
 	}
 
-	// Insert into queue and update registry state in batches
 	let totalEnqueued = 0;
 
 	for (let i = 0; i < itemsToEnqueue.length; i += batchSize) {
 		const batch = itemsToEnqueue.slice(i, i + batchSize);
 		const registryIds = batch.map((item) => item.registryId);
 
-		// Update search registry state to 'queued' and store priority
 		await db
 			.update(searchRegistry)
 			.set({
@@ -190,7 +160,6 @@ async function enqueueEpisodes(
 			})
 			.where(inArray(searchRegistry.id, registryIds));
 
-		// Insert into request queue
 		const inserted = await db
 			.insert(requestQueue)
 			.values(
@@ -279,14 +248,12 @@ async function enqueueMovies(
 		});
 	}
 
-	// Insert into queue and update registry state in batches
 	let totalEnqueued = 0;
 
 	for (let i = 0; i < itemsToEnqueue.length; i += batchSize) {
 		const batch = itemsToEnqueue.slice(i, i + batchSize);
 		const registryIds = batch.map((item) => item.registryId);
 
-		// Update search registry state to 'queued' and store priority
 		await db
 			.update(searchRegistry)
 			.set({
@@ -296,7 +263,6 @@ async function enqueueMovies(
 			})
 			.where(inArray(searchRegistry.id, registryIds));
 
-		// Insert into request queue
 		const inserted = await db
 			.insert(requestQueue)
 			.values(
@@ -321,20 +287,7 @@ async function enqueueMovies(
 
 /**
  * Dequeues items from the request queue in priority order.
- *
- * This function atomically:
- * 1. Checks if the connector queue is paused
- * 2. Selects the highest priority items scheduled before now
- * 3. Deletes them from the request queue
- * 4. Updates searchRegistry state to 'searching'
- *
- * The operation is atomic - concurrent calls will get different items.
- *
- * @param connectorId - The connector ID to dequeue items from
- * @param options - Optional configuration for dequeue behavior
- * @returns Dequeue result with items in priority order
- *
-
+ * Atomic operation - concurrent calls will get different items.
  */
 export async function dequeuePriorityItems(
 	connectorId: number,
@@ -348,7 +301,6 @@ export async function dequeuePriorityItems(
 	const scheduledBefore = options.scheduledBefore ?? new Date();
 
 	try {
-		// Check if queue is paused for this connector
 		const connector = await db
 			.select({ id: connectors.id, queuePaused: connectors.queuePaused })
 			.from(connectors)
@@ -366,7 +318,6 @@ export async function dequeuePriorityItems(
 		}
 
 		if (connector[0]!.queuePaused) {
-			// Queue is paused - return empty result (not an error)
 			return {
 				success: true,
 				connectorId,
@@ -375,7 +326,6 @@ export async function dequeuePriorityItems(
 			};
 		}
 
-		// Get items to dequeue in priority order
 		const itemsToDequeue = await db
 			.select({
 				id: requestQueue.id,
@@ -410,10 +360,8 @@ export async function dequeuePriorityItems(
 		const queueIds = itemsToDequeue.map((item) => item.id);
 		const registryIds = itemsToDequeue.map((item) => item.searchRegistryId);
 
-		// Delete from request queue
 		await db.delete(requestQueue).where(inArray(requestQueue.id, queueIds));
 
-		// Update search registry state to 'searching'
 		const now = new Date();
 		await db
 			.update(searchRegistry)
@@ -424,7 +372,6 @@ export async function dequeuePriorityItems(
 			})
 			.where(inArray(searchRegistry.id, registryIds));
 
-		// Transform to QueueItem interface
 		const items: QueueItem[] = itemsToDequeue.map((item) => ({
 			id: item.id,
 			searchRegistryId: item.searchRegistryId,
@@ -453,17 +400,7 @@ export async function dequeuePriorityItems(
 	}
 }
 
-/**
- * Pauses queue processing for a connector.
- *
- * When paused, dequeuePriorityItems returns empty results.
- * Items can still be enqueued while paused.
- *
- * @param connectorId - The connector ID to pause
- * @returns Control result indicating success/failure
- *
-
- */
+/** Pauses queue processing for a connector. */
 export async function pauseQueue(connectorId: number): Promise<QueueControlResult> {
 	const startTime = Date.now();
 
@@ -504,14 +441,7 @@ export async function pauseQueue(connectorId: number): Promise<QueueControlResul
 	}
 }
 
-/**
- * Resumes queue processing for a connector.
- *
- * @param connectorId - The connector ID to resume
- * @returns Control result indicating success/failure
- *
-
- */
+/** Resumes queue processing for a connector. */
 export async function resumeQueue(connectorId: number): Promise<QueueControlResult> {
 	const startTime = Date.now();
 
@@ -552,28 +482,15 @@ export async function resumeQueue(connectorId: number): Promise<QueueControlResu
 	}
 }
 
-/**
- * Clears queue items and resets search registry state.
- *
- * This function:
- * 1. Deletes items from requestQueue
- * 2. Resets corresponding searchRegistry entries back to 'pending'
- *
- * @param connectorId - The connector ID to clear queue for (null for all connectors)
- * @returns Control result with count of cleared items
- *
-
- */
+/** Clears queue items and resets search registry state back to 'pending'. */
 export async function clearQueue(connectorId?: number): Promise<QueueControlResult> {
 	const startTime = Date.now();
 
 	try {
-		// Get search registry IDs before deletion
 		let registryIds: number[];
 		let deletedCount: number;
 
 		if (connectorId !== undefined) {
-			// Clear specific connector's queue
 			const toDelete = await db
 				.select({ searchRegistryId: requestQueue.searchRegistryId })
 				.from(requestQueue)
@@ -588,7 +505,6 @@ export async function clearQueue(connectorId?: number): Promise<QueueControlResu
 
 			deletedCount = deleted.length;
 		} else {
-			// Clear all queues
 			const toDelete = await db
 				.select({ searchRegistryId: requestQueue.searchRegistryId })
 				.from(requestQueue);
@@ -600,7 +516,6 @@ export async function clearQueue(connectorId?: number): Promise<QueueControlResu
 			deletedCount = deleted.length;
 		}
 
-		// Reset search registry state back to 'pending'
 		if (registryIds.length > 0) {
 			await db
 				.update(searchRegistry)
@@ -628,16 +543,8 @@ export async function clearQueue(connectorId?: number): Promise<QueueControlResu
 	}
 }
 
-/**
- * Gets queue status for a connector.
- *
- * @param connectorId - The connector ID to get status for
- * @returns Queue status including pause state, depth, and next scheduled time
- *
-
- */
+/** Gets queue status for a connector. */
 export async function getQueueStatus(connectorId: number): Promise<QueueStatus | null> {
-	// Get connector info
 	const connector = await db
 		.select({ id: connectors.id, queuePaused: connectors.queuePaused })
 		.from(connectors)
@@ -648,7 +555,6 @@ export async function getQueueStatus(connectorId: number): Promise<QueueStatus |
 		return null;
 	}
 
-	// Get queue depth
 	const depthResult = await db
 		.select({ count: sql<number>`count(*)::int` })
 		.from(requestQueue)
@@ -656,7 +562,6 @@ export async function getQueueStatus(connectorId: number): Promise<QueueStatus |
 
 	const queueDepth = depthResult[0]?.count ?? 0;
 
-	// Get next scheduled time
 	const nextItem = await db
 		.select({ scheduledAt: requestQueue.scheduledAt })
 		.from(requestQueue)

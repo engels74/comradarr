@@ -1,49 +1,28 @@
 /**
  * Notification channels service.
- *
- * Provides implementations for sending notifications through various channels:
- * - Discord webhooks
- * - Telegram bot API
- * - Slack webhooks
- * - Email via SMTP
- * - Generic webhooks with HMAC signature support
- *
  * @module services/notifications
-
- *
- * @example
- * ```typescript
- * // Simple usage with notify() convenience function
- * import { notify } from '$lib/server/services/notifications';
- *
- * await notify('sweep_completed', {
- *   connectorId: 1,
- *   connectorName: 'Sonarr',
- *   gapsFound: 15,
- *   itemsQueued: 10
- * });
- *
- * // Or use the dispatcher directly
- * import { getNotificationDispatcher } from '$lib/server/services/notifications';
- *
- * const dispatcher = getNotificationDispatcher();
- * const result = await dispatcher.dispatch('search_success', {
- *   contentTitle: 'Breaking Bad',
- *   contentYear: 2008,
- *   quality: 'HDTV-1080p',
- *   connectorName: 'Sonarr'
- * });
- *
- * if (result.failureCount > 0) {
- *   console.warn(`${result.failureCount} notification(s) failed`);
- * }
- * ```
  */
 
-// =============================================================================
-// Type Exports
-// =============================================================================
-
+export type { NotificationSender } from './base-channel';
+export { DEFAULT_SENDER_CONFIG, EVENT_COLORS, getEventColor, hexColorToInt } from './base-channel';
+export { DiscordSender } from './channels/discord';
+export { EmailSender } from './channels/email';
+export { SlackSender } from './channels/slack';
+export { TelegramSender } from './channels/telegram';
+export { WebhookSender } from './channels/webhook';
+export {
+	isNotificationError,
+	isRetryableNotificationError,
+	NotificationAuthenticationError,
+	NotificationConfigurationError,
+	NotificationError,
+	type NotificationErrorCategory,
+	NotificationNetworkError,
+	NotificationRateLimitError,
+	NotificationServerError,
+	NotificationTimeoutError,
+	NotificationValidationError
+} from './errors';
 export type {
 	// Channel-specific configs
 	DiscordConfig,
@@ -63,45 +42,6 @@ export type {
 	WebhookSensitiveConfig
 } from './types';
 
-// =============================================================================
-// Base Interface Exports
-// =============================================================================
-
-export type { NotificationSender } from './base-channel';
-export { DEFAULT_SENDER_CONFIG, EVENT_COLORS, getEventColor, hexColorToInt } from './base-channel';
-
-// =============================================================================
-// Error Exports
-// =============================================================================
-
-export {
-	isNotificationError,
-	isRetryableNotificationError,
-	NotificationAuthenticationError,
-	NotificationConfigurationError,
-	NotificationError,
-	type NotificationErrorCategory,
-	NotificationNetworkError,
-	NotificationRateLimitError,
-	NotificationServerError,
-	NotificationTimeoutError,
-	NotificationValidationError
-} from './errors';
-
-// =============================================================================
-// Channel Implementation Exports
-// =============================================================================
-
-export { DiscordSender } from './channels/discord';
-export { EmailSender } from './channels/email';
-export { SlackSender } from './channels/slack';
-export { TelegramSender } from './channels/telegram';
-export { WebhookSender } from './channels/webhook';
-
-// =============================================================================
-// Factory Function
-// =============================================================================
-
 import type { NotificationSender } from './base-channel';
 import { DiscordSender } from './channels/discord';
 import { EmailSender } from './channels/email';
@@ -110,28 +50,9 @@ import { TelegramSender } from './channels/telegram';
 import { WebhookSender } from './channels/webhook';
 import { NotificationConfigurationError } from './errors';
 
-/**
- * Cache of sender instances.
- * Senders are instantiated once and reused for performance.
- */
 const senderInstances = new Map<string, NotificationSender>();
 
-/**
- * Get the notification sender for a channel type.
- *
- * Senders are instantiated once and reused for performance.
- * This function is safe to call repeatedly with the same channel type.
- *
- * @param channelType - The type of notification channel
- * @returns The appropriate sender instance
- * @throws NotificationConfigurationError if channel type is not supported
- *
- * @example
- * ```typescript
- * const sender = getSender('discord');
- * const result = await sender.send(channel, sensitiveConfig, payload);
- * ```
- */
+/** Get the notification sender for a channel type. */
 export function getSender(channelType: string): NotificationSender {
 	const existing = senderInstances.get(channelType);
 	if (existing) {
@@ -164,38 +85,29 @@ export function getSender(channelType: string): NotificationSender {
 	return sender;
 }
 
-/**
- * Check if a channel type is supported.
- *
- * @param channelType - The channel type to check
- * @returns true if the channel type is supported
- */
 export function isSupportedChannelType(channelType: string): boolean {
 	const supportedTypes = ['discord', 'telegram', 'slack', 'email', 'webhook'];
 	return supportedTypes.includes(channelType);
 }
 
-/**
- * Get list of supported channel types.
- *
- * @returns Array of supported channel type strings
- */
 export function getSupportedChannelTypes(): string[] {
 	return ['discord', 'telegram', 'slack', 'email', 'webhook'];
 }
 
-/**
- * Clear the sender cache.
- * Primarily useful for testing.
- */
+/** Clear the sender cache (for testing). */
 export function clearSenderCache(): void {
 	senderInstances.clear();
 }
 
-// =============================================================================
-// Dispatcher Exports
-// =============================================================================
-
+export { type AggregatedPayloadMetadata, buildAggregatePayload } from './aggregators';
+export {
+	type BatchProcessingResult,
+	type BatchSendResult,
+	type ChannelBatchResult,
+	getNotificationBatcher,
+	NotificationBatcher,
+	processBatches
+} from './batcher';
 export {
 	type DispatchOptions,
 	type DispatchResult,
@@ -203,11 +115,14 @@ export {
 	NotificationDispatcher,
 	notify
 } from './dispatcher';
-
-// =============================================================================
-// Template Exports
-// =============================================================================
-
+export {
+	getCurrentTimeInTimezone,
+	isInQuietHours,
+	isTimeInRange,
+	parseTimeString,
+	type TimeOfDay,
+	timeToMinutes
+} from './quiet-hours';
 export {
 	type AppStartedData,
 	buildPayload,
@@ -221,30 +136,3 @@ export {
 	type SyncFailedData,
 	type UpdateAvailableData
 } from './templates';
-
-// =============================================================================
-// Batching Exports
-// =============================================================================
-
-export { type AggregatedPayloadMetadata, buildAggregatePayload } from './aggregators';
-export {
-	type BatchProcessingResult,
-	type BatchSendResult,
-	type ChannelBatchResult,
-	getNotificationBatcher,
-	NotificationBatcher,
-	processBatches
-} from './batcher';
-
-// =============================================================================
-// Quiet Hours Exports
-// =============================================================================
-
-export {
-	getCurrentTimeInTimezone,
-	isInQuietHours,
-	isTimeInRange,
-	parseTimeString,
-	type TimeOfDay,
-	timeToMinutes
-} from './quiet-hours';

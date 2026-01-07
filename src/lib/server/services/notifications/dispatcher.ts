@@ -1,14 +1,5 @@
 /**
  * Notification dispatcher service.
- *
- * Orchestrates sending notifications to all enabled channels for an event type.
- * Handles:
- * - Getting channels configured for the event type
- * - Building payloads from event data using templates
- * - Sending to each channel via channel senders
- * - Recording results in notification history
- * - Quiet hours suppression
- *
  * @module services/notifications/dispatcher
  */
 
@@ -30,13 +21,6 @@ import type { NotificationPayload, NotificationResult } from './types';
 
 const logger = createLogger('notifications');
 
-// =============================================================================
-// Types
-// =============================================================================
-
-/**
- * Result of dispatching a notification to all channels.
- */
 export interface DispatchResult {
 	/** The event type that was dispatched */
 	eventType: NotificationEventType;
@@ -64,46 +48,14 @@ export interface DispatchOptions {
 	skipHistory?: boolean;
 }
 
-// =============================================================================
-// Notification Dispatcher Class
-// =============================================================================
-
-/**
- * Dispatcher service for sending notifications to configured channels.
- *
- * @example
- * ```typescript
- * const dispatcher = new NotificationDispatcher();
- *
- * // Dispatch to all channels configured for sweep_completed
- * const result = await dispatcher.dispatch('sweep_completed', {
- *   connectorId: 1,
- *   connectorName: 'Sonarr',
- *   gapsFound: 15,
- *   itemsQueued: 10
- * });
- *
- * console.log(`Sent to ${result.successCount}/${result.totalChannels} channels`);
- * ```
- */
 export class NotificationDispatcher {
-	/**
-	 * Dispatch a notification to all enabled channels configured for the event type.
-	 *
-	 * @param eventType - The type of event
-	 * @param eventData - Event-specific data for building the payload
-	 * @param options - Optional dispatch configuration
-	 * @returns Aggregated results from all channels
-	 */
+	/** Dispatch a notification to all enabled channels configured for the event type. */
 	async dispatch<T extends NotificationEventType>(
 		eventType: T,
 		eventData: EventDataMap[T],
 		options?: DispatchOptions
 	): Promise<DispatchResult> {
-		// Build the notification payload from event data
 		const payload = buildPayload(eventType, eventData);
-
-		// Get all channels configured to receive this event type
 		const channels = await getChannelsForEventType(eventType);
 
 		const result: DispatchResult = {
@@ -117,54 +69,42 @@ export class NotificationDispatcher {
 			quietHoursSuppressedCount: 0
 		};
 
-		// No channels configured for this event type
 		if (channels.length === 0) {
 			return result;
 		}
 
-		// Process each channel - check quiet hours, batching, or send immediately
 		const sendPromises = channels.map(async (channel) => {
-			// Check if in quiet hours for this channel
 			if (channel.quietHoursEnabled && isInQuietHours(channel)) {
-				// Store as pending for later (will be sent when quiet hours end)
 				const stored = await this.storeForBatching(channel, eventType, eventData);
 				return { type: 'quiet_hours' as const, success: stored };
 			}
 
-			// Check if batching is enabled for this channel
 			if (channel.batchingEnabled) {
-				// Store as pending for later batching
 				const stored = await this.storeForBatching(channel, eventType, eventData);
 				return { type: 'batched' as const, success: stored };
 			}
 
-			// Send immediately
 			const sendResult = await this.sendToChannelInternal(channel, payload, options);
 			return { type: 'sent' as const, result: sendResult };
 		});
 
 		const channelResults = await Promise.all(sendPromises);
 
-		// Aggregate results
 		for (const channelResult of channelResults) {
 			if (channelResult.type === 'quiet_hours') {
-				// Notification was suppressed due to quiet hours
 				if (channelResult.success) {
 					result.quietHoursSuppressedCount++;
 				} else {
 					result.failureCount++;
 				}
 			} else if (channelResult.type === 'batched') {
-				// Notification was stored for batching
 				if (channelResult.success) {
 					result.batchedCount++;
 				} else {
 					result.failureCount++;
 				}
 			} else {
-				// Notification was sent immediately
 				if (channelResult.result === null) {
-					// Channel was skipped (unsupported type)
 					result.skippedCount++;
 				} else {
 					result.channelResults.push(channelResult.result);
@@ -180,17 +120,7 @@ export class NotificationDispatcher {
 		return result;
 	}
 
-	/**
-	 * Store a notification for batching.
-	 *
-	 * Instead of sending immediately, store the notification as pending
-	 * in notification history. The batch processor will send it later.
-	 *
-	 * @param channel - The channel to store for
-	 * @param eventType - The event type
-	 * @param eventData - The event data
-	 * @returns true if stored successfully
-	 */
+	/** Store a notification for later batching instead of sending immediately. */
 	private async storeForBatching<T extends NotificationEventType>(
 		channel: NotificationChannel,
 		eventType: T,
@@ -215,17 +145,7 @@ export class NotificationDispatcher {
 		}
 	}
 
-	/**
-	 * Send a notification to a specific channel by ID.
-	 *
-	 * Useful for testing channel configuration or manual sends.
-	 *
-	 * @param channelId - The channel ID to send to
-	 * @param payload - The notification payload to send
-	 * @param options - Optional dispatch configuration
-	 * @returns The result of the send operation
-	 * @throws Error if channel is not found
-	 */
+	/** Send a notification to a specific channel by ID. */
 	async sendToChannel(
 		channelId: number,
 		payload: NotificationPayload,
@@ -245,7 +165,6 @@ export class NotificationDispatcher {
 
 		const result = await this.sendToChannelInternal(channel, payload, options);
 
-		// If channel was skipped, return a failure result
 		if (result === null) {
 			return {
 				success: false,
@@ -259,26 +178,15 @@ export class NotificationDispatcher {
 		return result;
 	}
 
-	/**
-	 * Internal method to send to a single channel.
-	 *
-	 * @param channel - The channel to send to
-	 * @param payload - The notification payload
-	 * @param options - Optional dispatch configuration
-	 * @returns NotificationResult or null if channel type is not supported
-	 */
 	private async sendToChannelInternal(
 		channel: NotificationChannel,
 		payload: NotificationPayload,
 		options?: DispatchOptions
 	): Promise<NotificationResult | null> {
-		// Check if channel type is supported
 		if (!isSupportedChannelType(channel.type)) {
-			// Skip unsupported channel types gracefully
 			return null;
 		}
 
-		// Create history entry before sending (unless skipped)
 		let historyId: number | undefined;
 		if (!options?.skipHistory) {
 			try {
@@ -287,7 +195,6 @@ export class NotificationDispatcher {
 					eventType: payload.eventType,
 					status: 'pending'
 				};
-				// Only include eventData if it exists
 				if (payload.eventData) {
 					historyInput.eventData = payload.eventData;
 				}
@@ -295,21 +202,14 @@ export class NotificationDispatcher {
 				historyId = historyEntry.id;
 			} catch {
 				// History creation failed, but continue with send
-				// This shouldn't block notification delivery
 			}
 		}
 
 		try {
-			// Decrypt sensitive configuration
 			const sensitiveConfig = await getDecryptedSensitiveConfig(channel);
-
-			// Get the appropriate sender
 			const sender = getSender(channel.type);
-
-			// Send the notification
 			const result = await sender.send(channel, sensitiveConfig, payload);
 
-			// Update history entry with result
 			if (historyId !== undefined) {
 				await this.updateHistory(historyId, result);
 			}
@@ -327,12 +227,10 @@ export class NotificationDispatcher {
 				durationMs: 0
 			};
 
-			// Update history entry with failure
 			if (historyId !== undefined) {
 				await this.updateHistory(historyId, result);
 			}
 
-			// Log for debugging (retryable errors are less severe)
 			if (isRetryable) {
 				logger.warn('Retryable error sending notification', {
 					channelName: channel.name,
@@ -366,20 +264,9 @@ export class NotificationDispatcher {
 	}
 }
 
-// =============================================================================
-// Singleton Instance
-// =============================================================================
-
-/**
- * Singleton dispatcher instance for convenience.
- */
 let dispatcherInstance: NotificationDispatcher | null = null;
 
-/**
- * Get the singleton NotificationDispatcher instance.
- *
- * @returns The shared dispatcher instance
- */
+/** Get the singleton NotificationDispatcher instance. */
 export function getNotificationDispatcher(): NotificationDispatcher {
 	if (!dispatcherInstance) {
 		dispatcherInstance = new NotificationDispatcher();
@@ -387,44 +274,7 @@ export function getNotificationDispatcher(): NotificationDispatcher {
 	return dispatcherInstance;
 }
 
-// =============================================================================
-// Convenience Function
-// =============================================================================
-
-/**
- * Send a notification for an event to all configured channels.
- *
- * This is a convenience function that uses the singleton dispatcher.
- *
- * @param eventType - The type of event
- * @param eventData - Event-specific data for building the payload
- * @returns Aggregated results from all channels
- *
- * @example
- * ```typescript
- * import { notify } from '$lib/server/services/notifications';
- *
- * // Simple notification
- * await notify('sweep_completed', {
- *   connectorId: 1,
- *   connectorName: 'Sonarr',
- *   gapsFound: 15,
- *   itemsQueued: 10
- * });
- *
- * // With result handling
- * const result = await notify('search_success', {
- *   contentTitle: 'Breaking Bad',
- *   contentYear: 2008,
- *   quality: 'HDTV-1080p',
- *   connectorName: 'Sonarr'
- * });
- *
- * if (result.failureCount > 0) {
- *   console.warn(`${result.failureCount} notification(s) failed`);
- * }
- * ```
- */
+/** Send a notification for an event to all configured channels. */
 export async function notify<T extends NotificationEventType>(
 	eventType: T,
 	eventData: EventDataMap[T]
