@@ -71,44 +71,16 @@ import { throttleEnforcer } from '$lib/server/services/throttle';
 
 const logger = createLogger('scheduler');
 
-// =============================================================================
-// Types
-// =============================================================================
-
-/**
- * Scheduled job registration.
- */
 interface ScheduledJob {
 	name: string;
 	cron: Cron;
 }
 
-// =============================================================================
-// Module State
-// =============================================================================
-
-/** Map of registered static jobs */
 const jobs: Map<string, ScheduledJob> = new Map();
-
-/** Map of dynamic schedule jobs (loaded from database) */
 const dynamicJobs: Map<number, Cron> = new Map();
-
-/** Scheduled backup job (dynamically created based on settings) */
 let scheduledBackupJob: Cron | null = null;
-
-/** Flag to prevent multiple initializations */
 let initialized = false;
 
-// =============================================================================
-// Internal Helpers
-// =============================================================================
-
-/**
- * Logs connectors that are being skipped due to unhealthy status.
- * Used by sweep cycle jobs to inform about excluded connectors.
- *
- * @param healthyConnectors - Connectors that will be processed
- */
 async function logSkippedUnhealthyConnectors(healthyConnectors: Connector[]): Promise<void> {
 	const allEnabled = await getEnabledConnectors();
 	const skipped = allEnabled.filter((c) => !healthyConnectors.some((hc) => hc.id === c.id));
@@ -120,14 +92,7 @@ async function logSkippedUnhealthyConnectors(healthyConnectors: Connector[]): Pr
 	}
 }
 
-/**
- * Creates a job executor that wraps the callback in a request context.
- * Ensures all scheduled jobs have proper correlation ID propagation.
- *
- * @param jobName - Name of the job for context tracking
- * @param callback - The job callback to wrap
- * @returns Wrapped callback that executes within a request context
- */
+/** Wraps job callback in a request context with correlation ID propagation */
 function withJobContext(jobName: string, callback: () => Promise<void>): () => Promise<void> {
 	return async () => {
 		const context: RequestContext = {
@@ -140,14 +105,7 @@ function withJobContext(jobName: string, callback: () => Promise<void>): () => P
 	};
 }
 
-// =============================================================================
-// Public API
-// =============================================================================
-
-/**
- * Initialize all scheduled jobs.
- * Safe to call multiple times - will only initialize once.
- */
+/** Initialize all scheduled jobs. Safe to call multiple times. */
 export function initializeScheduler(): void {
 	if (initialized) {
 		logger.info('Already initialized, skipping');
@@ -156,14 +114,11 @@ export function initializeScheduler(): void {
 
 	logger.info('Initializing scheduled jobs');
 
-	// Throttle window reset - runs every minute
-	// Resets expired per-minute counters, daily counters, and clears expired pauses
-	// Also resets expired API key rate limit windows
 	const throttleResetJob = new Cron(
-		'* * * * *', // Every minute
+		'* * * * *',
 		{
 			name: 'throttle-window-reset',
-			protect: true, // Prevent overlapping executions
+			protect: true,
 			catch: (err) => {
 				logger.error('Throttle window reset failed', {
 					error: err instanceof Error ? err.message : String(err)
@@ -171,10 +126,8 @@ export function initializeScheduler(): void {
 			}
 		},
 		withJobContext('throttle-window-reset', async () => {
-			// Reset connector throttle windows
 			const result = await throttleEnforcer.resetExpiredWindows();
 
-			// Only log if resets occurred (reduce log noise)
 			if (result.minuteResets > 0 || result.dayResets > 0 || result.pausesCleared > 0) {
 				logger.info('Throttle windows reset', {
 					minuteResets: result.minuteResets,
@@ -183,7 +136,6 @@ export function initializeScheduler(): void {
 				});
 			}
 
-			// Reset API key rate limit windows
 			const apiKeyResets = await apiKeyRateLimiter.resetExpiredWindows();
 
 			if (apiKeyResets > 0) {
@@ -199,13 +151,11 @@ export function initializeScheduler(): void {
 		cron: throttleResetJob
 	});
 
-	// Prowlarr health check - runs every 5 minutes
-	// Checks indexer health status from Prowlarr and caches results
 	const prowlarrHealthJob = new Cron(
-		'*/5 * * * *', // Every 5 minutes
+		'*/5 * * * *',
 		{
 			name: 'prowlarr-health-check',
-			protect: true, // Prevent overlapping executions
+			protect: true,
 			catch: (err) => {
 				logger.error('Prowlarr health check failed', {
 					error: err instanceof Error ? err.message : String(err)
@@ -215,7 +165,6 @@ export function initializeScheduler(): void {
 		withJobContext('prowlarr-health-check', async () => {
 			const results = await prowlarrHealthMonitor.checkAllInstances();
 
-			// Only log if there are instances to check
 			if (results.length > 0) {
 				const unhealthy = results.filter((r) => r.status !== 'healthy');
 				if (unhealthy.length > 0) {
@@ -238,13 +187,11 @@ export function initializeScheduler(): void {
 		cron: prowlarrHealthJob
 	});
 
-	// Connector health check - runs every 5 minutes
-	// Checks *arr connector health status and updates database
 	const connectorHealthJob = new Cron(
-		'*/5 * * * *', // Every 5 minutes
+		'*/5 * * * *',
 		{
 			name: 'connector-health-check',
-			protect: true, // Prevent overlapping executions
+			protect: true,
 			catch: (err) => {
 				logger.error('Connector health check failed', {
 					error: err instanceof Error ? err.message : String(err)
@@ -255,7 +202,7 @@ export function initializeScheduler(): void {
 			const connectors = await getEnabledConnectors();
 
 			if (connectors.length === 0) {
-				return; // No connectors to check
+				return;
 			}
 
 			const results: Array<{
@@ -268,15 +215,11 @@ export function initializeScheduler(): void {
 
 			for (const connector of connectors) {
 				try {
-					// Decrypt API key and create client
 					const apiKey = await getDecryptedApiKey(connector);
 					const client = createConnectorClient(connector, apiKey);
-
-					// Try to ping first (fast connectivity check)
 					const isReachable = await client.ping();
 
 					if (!isReachable) {
-						// Can't reach connector - mark as offline
 						await updateConnectorHealth(connector.id, 'offline');
 						results.push({
 							id: connector.id,
@@ -288,14 +231,10 @@ export function initializeScheduler(): void {
 						continue;
 					}
 
-					// Get health checks from API
 					const healthChecks = await client.getHealth();
 					const newStatus = determineHealthFromChecks(healthChecks);
-
-					// Update status in database
 					await updateConnectorHealth(connector.id, newStatus);
 
-					// Track if status changed
 					if (connector.healthStatus !== newStatus) {
 						results.push({
 							id: connector.id,
@@ -305,7 +244,6 @@ export function initializeScheduler(): void {
 						});
 					}
 				} catch (error) {
-					// Categorize error to determine status
 					let newStatus: HealthStatus;
 					let errorMsg: string;
 
@@ -331,7 +269,6 @@ export function initializeScheduler(): void {
 				}
 			}
 
-			// Log only if there were status changes
 			if (results.length > 0) {
 				logger.info('Connector health status changes', { results });
 			}
@@ -343,18 +280,11 @@ export function initializeScheduler(): void {
 		cron: connectorHealthJob
 	});
 
-	// =========================================================================
-	// Sweep Cycle Jobs
-	// =========================================================================
-
-	// Incremental sync sweep - runs every 15 minutes
-	// Syncs content from *arr apps, discovers gaps/upgrades, enqueues items
-	// Only processes healthy connectors
 	const incrementalSyncJob = new Cron(
-		'*/15 * * * *', // Every 15 minutes
+		'*/15 * * * *',
 		{
 			name: 'incremental-sync-sweep',
-			protect: true, // Prevent overlapping executions
+			protect: true,
 			catch: (err) => {
 				logger.error('Incremental sync sweep failed', {
 					error: err instanceof Error ? err.message : String(err)
@@ -363,14 +293,11 @@ export function initializeScheduler(): void {
 		},
 		withJobContext('incremental-sync-sweep', async () => {
 			const startTime = Date.now();
-			// Only process healthy connectors
 			const connectors = await getHealthyConnectors();
-
-			// Log any unhealthy connectors being skipped
 			await logSkippedUnhealthyConnectors(connectors);
 
 			if (connectors.length === 0) {
-				return; // No healthy connectors to process
+				return;
 			}
 
 			const summary = {
@@ -384,7 +311,6 @@ export function initializeScheduler(): void {
 
 			for (const connector of connectors) {
 				try {
-					// 1. Run incremental sync
 					const syncResult = await runIncrementalSync(connector);
 					if (syncResult.success) {
 						summary.totalItemsSynced += syncResult.itemsSynced;
@@ -395,10 +321,9 @@ export function initializeScheduler(): void {
 							name: connector.name,
 							error: syncResult.error
 						});
-						continue; // Skip discovery/enqueue for failed sync
+						continue;
 					}
 
-					// 2. Run discovery (gaps and upgrades)
 					const [gapsResult, upgradesResult] = await Promise.all([
 						discoverGaps(connector.id),
 						discoverUpgrades(connector.id)
@@ -406,16 +331,13 @@ export function initializeScheduler(): void {
 
 					if (gapsResult.success) {
 						summary.totalGapsFound += gapsResult.registriesCreated;
-						// Record analytics for gap discovery
 						await analyticsCollector.recordGapDiscovery(connector.id, gapsResult);
 					}
 					if (upgradesResult.success) {
 						summary.totalUpgradesFound += upgradesResult.registriesCreated;
-						// Record analytics for upgrade discovery
 						await analyticsCollector.recordUpgradeDiscovery(connector.id, upgradesResult);
 					}
 
-					// 3. Enqueue pending items
 					const enqueueResult = await enqueuePendingItems(connector.id);
 					if (enqueueResult.success) {
 						summary.totalItemsEnqueued += enqueueResult.itemsEnqueued;
@@ -432,7 +354,6 @@ export function initializeScheduler(): void {
 				}
 			}
 
-			// Log summary
 			const durationMs = Date.now() - startTime;
 			if (
 				summary.totalItemsSynced > 0 ||
@@ -454,14 +375,11 @@ export function initializeScheduler(): void {
 		cron: incrementalSyncJob
 	});
 
-	// Full reconciliation - runs daily at 3 AM
-	// Complete sync with deletion of removed items, full discovery and enqueue
-	// Only processes healthy connectors
 	const fullReconciliationJob = new Cron(
-		'0 3 * * *', // Daily at 3:00 AM
+		'0 3 * * *',
 		{
 			name: 'full-reconciliation',
-			protect: true, // Prevent overlapping executions
+			protect: true,
 			catch: (err) => {
 				logger.error('Full reconciliation failed', {
 					error: err instanceof Error ? err.message : String(err)
@@ -470,14 +388,11 @@ export function initializeScheduler(): void {
 		},
 		withJobContext('full-reconciliation', async () => {
 			const startTime = Date.now();
-			// Only process healthy connectors
 			const connectors = await getHealthyConnectors();
-
-			// Log any unhealthy connectors being skipped
 			await logSkippedUnhealthyConnectors(connectors);
 
 			if (connectors.length === 0) {
-				return; // No healthy connectors to process
+				return;
 			}
 
 			const summary = {
@@ -493,7 +408,6 @@ export function initializeScheduler(): void {
 
 			for (const connector of connectors) {
 				try {
-					// 1. Run full reconciliation
 					const reconcileResult = await runFullReconciliation(connector);
 					if (reconcileResult.success) {
 						summary.totalCreated += reconcileResult.itemsCreated;
@@ -506,10 +420,9 @@ export function initializeScheduler(): void {
 							name: connector.name,
 							error: reconcileResult.error
 						});
-						continue; // Skip discovery/enqueue for failed reconciliation
+						continue;
 					}
 
-					// 2. Run discovery (gaps and upgrades)
 					const [gapsResult, upgradesResult] = await Promise.all([
 						discoverGaps(connector.id),
 						discoverUpgrades(connector.id)
@@ -517,16 +430,13 @@ export function initializeScheduler(): void {
 
 					if (gapsResult.success) {
 						summary.totalGapsFound += gapsResult.registriesCreated;
-						// Record analytics for gap discovery
 						await analyticsCollector.recordGapDiscovery(connector.id, gapsResult);
 					}
 					if (upgradesResult.success) {
 						summary.totalUpgradesFound += upgradesResult.registriesCreated;
-						// Record analytics for upgrade discovery
 						await analyticsCollector.recordUpgradeDiscovery(connector.id, upgradesResult);
 					}
 
-					// 3. Enqueue pending items
 					const enqueueResult = await enqueuePendingItems(connector.id);
 					if (enqueueResult.success) {
 						summary.totalItemsEnqueued += enqueueResult.itemsEnqueued;
@@ -543,7 +453,6 @@ export function initializeScheduler(): void {
 				}
 			}
 
-			// Log summary
 			const durationMs = Date.now() - startTime;
 			logger.info('Full reconciliation completed', {
 				...summary,
@@ -557,17 +466,11 @@ export function initializeScheduler(): void {
 		cron: fullReconciliationJob
 	});
 
-	// =========================================================================
-	// Completion Snapshot Job
-	// =========================================================================
-
-	// Completion snapshot capture - runs daily at 4 AM (after full reconciliation at 3 AM)
-	// Captures library completion stats for trend visualization (sparklines)
 	const completionSnapshotJob = new Cron(
-		'0 4 * * *', // Daily at 4:00 AM
+		'0 4 * * *',
 		{
 			name: 'completion-snapshot',
-			protect: true, // Prevent overlapping executions
+			protect: true,
 			catch: (err) => {
 				logger.error('Completion snapshot failed', {
 					error: err instanceof Error ? err.message : String(err)
@@ -579,10 +482,7 @@ export function initializeScheduler(): void {
 				'$lib/server/db/queries/completion'
 			);
 
-			// Capture current state
 			const captured = await captureCompletionSnapshots();
-
-			// Clean up old snapshots (keep 30 days)
 			const cleaned = await cleanupOldSnapshots(30);
 
 			if (captured > 0 || cleaned > 0) {
@@ -599,17 +499,11 @@ export function initializeScheduler(): void {
 		cron: completionSnapshotJob
 	});
 
-	// =========================================================================
-	// Database Maintenance Job
-	// =========================================================================
-
-	// Database maintenance - runs daily at 4:30 AM (after completion snapshot at 4:00 AM)
-	// Executes VACUUM/ANALYZE and orphan cleanup for optimal database performance
 	const dbMaintenanceJob = new Cron(
-		'30 4 * * *', // Daily at 4:30 AM
+		'30 4 * * *',
 		{
 			name: 'db-maintenance',
-			protect: true, // Prevent overlapping executions
+			protect: true,
 			catch: (err) => {
 				logger.error('Database maintenance failed', {
 					error: err instanceof Error ? err.message : String(err)
@@ -617,7 +511,6 @@ export function initializeScheduler(): void {
 			}
 		},
 		withJobContext('db-maintenance', async () => {
-			// 1. Run VACUUM and ANALYZE
 			const maintenanceResult = await runDatabaseMaintenance();
 
 			if (maintenanceResult.success) {
@@ -630,7 +523,6 @@ export function initializeScheduler(): void {
 				logger.error('Database maintenance failed', { error: maintenanceResult.error });
 			}
 
-			// 2. Run orphan cleanup
 			const orphanResult = await cleanupOrphanedSearchState();
 
 			if (orphanResult.success) {
@@ -646,7 +538,6 @@ export function initializeScheduler(): void {
 				logger.error('Orphan cleanup failed', { error: orphanResult.error });
 			}
 
-			// 3. Run history pruning
 			const historyResult = await pruneSearchHistory();
 
 			if (historyResult.success) {
@@ -667,14 +558,11 @@ export function initializeScheduler(): void {
 		cron: dbMaintenanceJob
 	});
 
-	// Queue processor - runs every minute
-	// Re-enqueues cooldown items, dequeues and dispatches searches
-	// Only processes healthy connectors
 	const queueProcessorJob = new Cron(
-		'* * * * *', // Every minute
+		'* * * * *',
 		{
 			name: 'queue-processor',
-			protect: true, // Prevent overlapping executions
+			protect: true,
 			catch: (err) => {
 				logger.error('Queue processor failed', {
 					error: err instanceof Error ? err.message : String(err)
@@ -683,8 +571,6 @@ export function initializeScheduler(): void {
 		},
 		withJobContext('queue-processor', async () => {
 			const startTime = Date.now();
-
-			// 1. Re-enqueue eligible cooldown items (items whose cooldown has expired)
 			const reenqueueResult = await reenqueueEligibleCooldownItems();
 
 			const summary = {
@@ -695,29 +581,24 @@ export function initializeScheduler(): void {
 				rateLimited: 0
 			};
 
-			// 2. Process queue for each healthy connector
 			const connectors = await getHealthyConnectors();
 
 			for (const connector of connectors) {
 				try {
-					// Dequeue items for this connector (limit to 5 per minute per connector)
 					const dequeueResult = await dequeuePriorityItems(connector.id, { limit: 5 });
 
 					if (!dequeueResult.success || dequeueResult.items.length === 0) {
 						continue;
 					}
 
-					// Dispatch each dequeued item
 					for (const item of dequeueResult.items) {
 						summary.dispatched++;
 
-						// Build dispatch options based on content type
 						const dispatchOptions =
 							item.contentType === 'movie'
 								? { movieIds: [item.contentId] }
 								: { episodeIds: [item.contentId] };
 
-						// Track response time for analytics
 						const dispatchStartTime = Date.now();
 						const dispatchResult = await dispatchSearch(
 							item.connectorId,
@@ -730,7 +611,6 @@ export function initializeScheduler(): void {
 
 						if (dispatchResult.success) {
 							summary.succeeded++;
-							// Record successful dispatch analytics
 							await analyticsCollector.recordSearchDispatched(
 								item.connectorId,
 								item.searchRegistryId,
@@ -742,7 +622,6 @@ export function initializeScheduler(): void {
 						} else {
 							summary.failed++;
 
-							// Mark the search as failed with appropriate category
 							const failureCategory: FailureCategory = dispatchResult.rateLimited
 								? 'rate_limited'
 								: dispatchResult.error?.includes('timeout')
@@ -751,7 +630,6 @@ export function initializeScheduler(): void {
 										? 'network_error'
 										: 'server_error';
 
-							// Record failed dispatch analytics
 							await analyticsCollector.recordSearchFailed(
 								item.connectorId,
 								item.searchRegistryId,
@@ -764,7 +642,6 @@ export function initializeScheduler(): void {
 
 							if (dispatchResult.rateLimited) {
 								summary.rateLimited++;
-								// Stop processing this connector if rate limited
 								break;
 							}
 
@@ -783,7 +660,6 @@ export function initializeScheduler(): void {
 				}
 			}
 
-			// Log summary only if there was activity
 			const durationMs = Date.now() - startTime;
 			if (
 				summary.reenqueued > 0 ||
@@ -804,17 +680,11 @@ export function initializeScheduler(): void {
 		cron: queueProcessorJob
 	});
 
-	// =========================================================================
-	// Notification Batch Processor
-	// =========================================================================
-
-	// Notification batch processor - runs every minute
-	// Processes pending batched notifications and sends digest notifications
 	const notificationBatchJob = new Cron(
-		'* * * * *', // Every minute
+		'* * * * *',
 		{
 			name: 'notification-batch-processor',
-			protect: true, // Prevent overlapping executions
+			protect: true,
 			catch: (err) => {
 				logger.error('Notification batch processing failed', {
 					error: err instanceof Error ? err.message : String(err)
@@ -826,7 +696,6 @@ export function initializeScheduler(): void {
 
 			const result = await processBatches();
 
-			// Only log if there was activity
 			if (result.batchesSent > 0 || result.errors > 0) {
 				logger.info('Notification batches processed', {
 					channelsProcessed: result.channelsProcessed,
@@ -843,17 +712,11 @@ export function initializeScheduler(): void {
 		cron: notificationBatchJob
 	});
 
-	// =========================================================================
-	// Analytics Jobs
-	// =========================================================================
-
-	// Queue depth sampler - runs every 5 minutes
-	// Samples queue depth for analytics tracking
 	const queueDepthSamplerJob = new Cron(
-		'*/5 * * * *', // Every 5 minutes
+		'*/5 * * * *',
 		{
 			name: 'queue-depth-sampler',
-			protect: true, // Prevent overlapping executions
+			protect: true,
 			catch: (err) => {
 				logger.error('Queue depth sampling failed', {
 					error: err instanceof Error ? err.message : String(err)
@@ -878,13 +741,11 @@ export function initializeScheduler(): void {
 		cron: queueDepthSamplerJob
 	});
 
-	// Hourly stats aggregation - runs at minute 5 of every hour
-	// Aggregates raw events into hourly statistics
 	const hourlyAggregationJob = new Cron(
-		'5 * * * *', // 5 minutes past every hour
+		'5 * * * *',
 		{
 			name: 'analytics-hourly-aggregation',
-			protect: true, // Prevent overlapping executions
+			protect: true,
 			catch: (err) => {
 				logger.error('Hourly analytics aggregation failed', {
 					error: err instanceof Error ? err.message : String(err)
@@ -892,7 +753,6 @@ export function initializeScheduler(): void {
 			}
 		},
 		withJobContext('analytics-hourly-aggregation', async () => {
-			// Aggregate the previous hour
 			const previousHour = new Date();
 			previousHour.setHours(previousHour.getHours() - 1);
 			previousHour.setMinutes(0, 0, 0);
@@ -915,13 +775,11 @@ export function initializeScheduler(): void {
 		cron: hourlyAggregationJob
 	});
 
-	// Daily stats aggregation - runs at 1:00 AM
-	// Aggregates hourly stats into daily statistics and cleans up old events
 	const dailyAggregationJob = new Cron(
-		'0 1 * * *', // 1:00 AM daily
+		'0 1 * * *',
 		{
 			name: 'analytics-daily-aggregation',
-			protect: true, // Prevent overlapping executions
+			protect: true,
 			catch: (err) => {
 				logger.error('Daily analytics aggregation failed', {
 					error: err instanceof Error ? err.message : String(err)
@@ -929,7 +787,6 @@ export function initializeScheduler(): void {
 			}
 		},
 		withJobContext('analytics-daily-aggregation', async () => {
-			// Aggregate the previous day
 			const previousDay = new Date();
 			previousDay.setDate(previousDay.getDate() - 1);
 			previousDay.setHours(0, 0, 0, 0);
@@ -944,7 +801,6 @@ export function initializeScheduler(): void {
 				});
 			}
 
-			// Cleanup old raw events (keep 7 days)
 			const eventsDeleted = await cleanupOldEvents(7);
 			if (eventsDeleted > 0) {
 				logger.info('Old analytics events cleaned up', { eventsDeleted });
@@ -957,12 +813,6 @@ export function initializeScheduler(): void {
 		cron: dailyAggregationJob
 	});
 
-	// =========================================================================
-	// Scheduled Backup Job
-	// =========================================================================
-
-	// Initialize scheduled backup job from settings
-	// This is done asynchronously to avoid blocking initialization
 	initializeScheduledBackup().catch((err) => {
 		logger.error('Failed to initialize scheduled backup', {
 			error: err instanceof Error ? err.message : String(err)
@@ -973,28 +823,22 @@ export function initializeScheduler(): void {
 	logger.info('Scheduled jobs initialized', { jobs: Array.from(jobs.keys()) });
 }
 
-/**
- * Stop all scheduled jobs.
- * Used for graceful shutdown.
- */
+/** Stop all scheduled jobs. Used for graceful shutdown. */
 export function stopScheduler(): void {
 	logger.info('Stopping all scheduled jobs');
 
-	// Stop static jobs
 	for (const [name, job] of jobs) {
 		job.cron.stop();
 		logger.info('Stopped job', { name });
 	}
 	jobs.clear();
 
-	// Stop dynamic jobs
 	for (const [id, cron] of dynamicJobs) {
 		cron.stop();
 		logger.info('Stopped dynamic schedule', { id });
 	}
 	dynamicJobs.clear();
 
-	// Stop scheduled backup job
 	if (scheduledBackupJob) {
 		scheduledBackupJob.stop();
 		scheduledBackupJob = null;
@@ -1005,10 +849,6 @@ export function stopScheduler(): void {
 	logger.info('All scheduled jobs stopped');
 }
 
-/**
- * Get the status of all scheduled jobs.
- * Useful for health checks and debugging.
- */
 export function getSchedulerStatus(): {
 	initialized: boolean;
 	jobs: Array<{
@@ -1049,41 +889,24 @@ export function getSchedulerStatus(): {
 	};
 }
 
-// =============================================================================
-// Dynamic Schedule Management
-// =============================================================================
-
-/**
- * Refresh dynamic schedules from the database.
- * Called when schedules are created, updated, or toggled.
- *
- * This function:
- * 1. Stops all existing dynamic schedule jobs
- * 2. Loads enabled schedules from database
- * 3. Creates new Cron jobs for each enabled schedule
- * 4. Updates nextRunAt for each schedule in the database
- */
 export async function refreshDynamicSchedules(): Promise<void> {
 	logger.info('Refreshing dynamic schedules');
 
-	// Stop all existing dynamic jobs
 	for (const [_id, cron] of dynamicJobs) {
 		cron.stop();
 	}
 	dynamicJobs.clear();
 
-	// Load enabled schedules from database
 	const schedules = await getEnabledSchedules();
 
 	for (const schedule of schedules) {
 		try {
-			// Create Cron job for this schedule
 			const cron = new Cron(
 				schedule.cronExpression,
 				{
 					name: `sweep-schedule-${schedule.id}`,
 					timezone: schedule.timezone,
-					protect: true, // Prevent overlapping executions
+					protect: true,
 					catch: (err) => {
 						logger.error('Dynamic schedule failed', {
 							scheduleId: schedule.id,
@@ -1095,10 +918,8 @@ export async function refreshDynamicSchedules(): Promise<void> {
 				withJobContext(`sweep-schedule-${schedule.id}`, async () => {
 					const startTime = Date.now();
 
-					// Determine target connectors based on schedule configuration
 					let targetConnectors: Connector[];
 					if (schedule.connectorId) {
-						// Schedule targets a specific connector
 						const connector = await getConnector(schedule.connectorId);
 						if (
 							!connector ||
@@ -1115,7 +936,6 @@ export async function refreshDynamicSchedules(): Promise<void> {
 						}
 						targetConnectors = [connector];
 					} else {
-						// Global schedule targets all healthy connectors
 						targetConnectors = await getHealthyConnectors();
 					}
 
@@ -1138,7 +958,6 @@ export async function refreshDynamicSchedules(): Promise<void> {
 
 					for (const connector of targetConnectors) {
 						try {
-							// 1. Run sync based on sweepType
 							const syncResult =
 								schedule.sweepType === 'full_reconciliation'
 									? await runFullReconciliation(connector)
@@ -1155,14 +974,12 @@ export async function refreshDynamicSchedules(): Promise<void> {
 								continue;
 							}
 
-							// Handle different result types (incremental vs reconciliation)
 							if ('itemsSynced' in syncResult) {
 								summary.totalItemsSynced += syncResult.itemsSynced;
 							} else if ('itemsCreated' in syncResult) {
 								summary.totalItemsSynced += syncResult.itemsCreated + syncResult.itemsUpdated;
 							}
 
-							// 2. Run discovery (gaps and upgrades in parallel)
 							const [gapsResult, upgradesResult] = await Promise.all([
 								discoverGaps(connector.id),
 								discoverUpgrades(connector.id)
@@ -1175,7 +992,6 @@ export async function refreshDynamicSchedules(): Promise<void> {
 								summary.totalUpgradesFound += upgradesResult.registriesCreated;
 							}
 
-							// 3. Enqueue pending items
 							const enqueueResult = await enqueuePendingItems(connector.id);
 							if (enqueueResult.success) {
 								summary.totalItemsEnqueued += enqueueResult.itemsEnqueued;
@@ -1193,13 +1009,11 @@ export async function refreshDynamicSchedules(): Promise<void> {
 						}
 					}
 
-					// Update nextRunAt for timeline display
 					const nextRun = dynamicJobs.get(schedule.id)?.nextRun();
 					if (nextRun) {
 						await updateNextRunAt(schedule.id, nextRun);
 					}
 
-					// Log completion summary
 					const durationMs = Date.now() - startTime;
 					logger.info('Dynamic schedule completed', {
 						scheduleId: schedule.id,
@@ -1213,7 +1027,6 @@ export async function refreshDynamicSchedules(): Promise<void> {
 
 			dynamicJobs.set(schedule.id, cron);
 
-			// Update nextRunAt in database
 			const nextRun = cron.nextRun();
 			if (nextRun) {
 				await updateNextRunAt(schedule.id, nextRun);
@@ -1228,15 +1041,6 @@ export async function refreshDynamicSchedules(): Promise<void> {
 
 	logger.info('Loaded dynamic schedules', { count: dynamicJobs.size });
 }
-
-// =============================================================================
-// Scheduled Backup Management
-// =============================================================================
-
-/**
- * Initialize the scheduled backup job from database settings.
- * Called during scheduler initialization.
- */
 async function initializeScheduledBackup(): Promise<void> {
 	try {
 		const settings = await getBackupSettings();
