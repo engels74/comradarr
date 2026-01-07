@@ -135,6 +135,11 @@ export class RadarrClient extends BaseArrClient {
 			responseType: typeof response
 		});
 
+		// Guard against non-array responses (e.g., error objects)
+		if (!Array.isArray(response)) {
+			throw new Error(`Expected array response from /movie endpoint, got ${typeof response}`);
+		}
+
 		const movies: RadarrMovie[] = [];
 		let skipped = 0;
 		for (const item of response) {
@@ -144,10 +149,20 @@ export class RadarrClient extends BaseArrClient {
 			} else {
 				skipped++;
 				// Log first few parsing failures for debugging
+				// Only log non-sensitive fields to avoid leaking filesystem paths
 				if (skipped <= 3) {
+					const safeItem =
+						item && typeof item === 'object'
+							? {
+									id: (item as Record<string, unknown>).id,
+									title: (item as Record<string, unknown>).title,
+									tmdbId: (item as Record<string, unknown>).tmdbId,
+									year: (item as Record<string, unknown>).year
+								}
+							: { type: typeof item };
 					logger.warn('Failed to parse movie record', {
 						error: result.error,
-						sample: JSON.stringify(item).slice(0, 500)
+						sample: safeItem
 					});
 				}
 			}
