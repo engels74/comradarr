@@ -24,6 +24,7 @@ PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 # Configuration
 # -----------------------------------------------------------------------------
 STATE_FILE="/tmp/comradarr-dev-state.json"
+PERSISTENT_DBS_FILE="$SCRIPT_DIR/.comradarr-dev-dbs.json"
 FORCE_CLEANUP=false
 SHOW_STATUS_ONLY=false
 GRACEFUL_TIMEOUT=10
@@ -278,6 +279,30 @@ database_exists() {
     list_databases "$db_host" "$db_port" | cut -d \| -f 1 | grep -qw "$db_name"
 }
 
+# Remove database from persistent credential storage
+remove_db_credentials() {
+    local db_name="$1"
+
+    if [[ ! -f "$PERSISTENT_DBS_FILE" ]]; then
+        return
+    fi
+
+    if ! command -v jq &> /dev/null; then
+        return
+    fi
+
+    # Check if database exists in storage
+    if ! jq -e --arg db "$db_name" '.[$db]' "$PERSISTENT_DBS_FILE" &>/dev/null; then
+        return
+    fi
+
+    log_info "Removing saved credentials for '${db_name}'..."
+    local temp_file
+    temp_file=$(mktemp)
+    jq --arg db "$db_name" 'del(.[$db])' "$PERSISTENT_DBS_FILE" > "$temp_file" && \
+        mv "$temp_file" "$PERSISTENT_DBS_FILE"
+}
+
 # Cleanup database and user
 cleanup_database() {
     local db_name="$1"
@@ -285,11 +310,16 @@ cleanup_database() {
     local db_host="${3:-localhost}"
     local db_port="${4:-5432}"
     local persist_mode="${5:-false}"
+    local reconnect_mode="${6:-false}"
 
-    # Skip if persistent and not forcing cleanup
+    # Skip if persistent/reconnect and not forcing cleanup
     if [[ "$persist_mode" == "true" ]] && [[ "$FORCE_CLEANUP" != "true" ]]; then
         echo ""
-        log_info "Database '${db_name}' preserved (persistent mode)"
+        if [[ "$reconnect_mode" == "true" ]]; then
+            log_info "Database '${db_name}' preserved (reconnect mode)"
+        else
+            log_info "Database '${db_name}' preserved (persistent mode)"
+        fi
         log_info "Use --force-cleanup to remove"
         return 0
     fi
@@ -315,6 +345,9 @@ cleanup_database() {
             log_warn "Failed to drop user '${db_user}'"
         fi
     fi
+
+    # Remove saved credentials
+    remove_db_credentials "$db_name"
 }
 
 # -----------------------------------------------------------------------------
@@ -382,20 +415,31 @@ show_status() {
         log_success "State file exists: $STATE_FILE"
 
         if read_state_file; then
-            local pid port db_name persist log_file timestamp
+            local pid port db_name persist reconnect log_file timestamp
 
             pid=$(get_state_field "pid")
             port=$(get_state_field "port")
             db_name=$(get_state_field "dbName")
             persist=$(get_state_field "persistMode")
+            reconnect=$(get_state_field "reconnectMode")
             log_file=$(get_state_field "logFile")
             timestamp=$(get_state_field "timestamp")
+
+            # Determine mode label
+            local mode_label
+            if [[ "$reconnect" == "true" ]]; then
+                mode_label="reconnect"
+            elif [[ "$persist" == "true" ]]; then
+                mode_label="persistent"
+            else
+                mode_label="ephemeral"
+            fi
 
             echo ""
             echo "  PID:        $pid"
             echo "  Port:       $port"
             echo "  Database:   $db_name"
-            echo "  Persist:    $persist"
+            echo "  Mode:       $mode_label"
             echo "  Started:    $timestamp"
             if [[ -n "$log_file" ]]; then
                 echo "  Log:        $log_file"
@@ -583,7 +627,7 @@ main() {
     fi
 
     # Read state
-    local pid sudo_pid db_name db_user db_host db_port log_file persist_mode
+    local pid sudo_pid db_name db_user db_host db_port log_file persist_mode reconnect_mode
 
     pid=$(get_state_field "pid")
     sudo_pid=$(get_state_field "sudoRefreshPid")
@@ -593,10 +637,12 @@ main() {
     db_port=$(get_state_field "dbPort")
     log_file=$(get_state_field "logFile")
     persist_mode=$(get_state_field "persistMode")
+    reconnect_mode=$(get_state_field "reconnectMode")
 
     # Default values if not found
     db_host="${db_host:-localhost}"
     db_port="${db_port:-5432}"
+    reconnect_mode="${reconnect_mode:-false}"
 
     # Stop dev server
     if [[ -n "$pid" ]]; then
@@ -617,7 +663,7 @@ main() {
 
     # Handle database cleanup
     if [[ -n "$db_name" ]]; then
-        cleanup_database "$db_name" "$db_user" "$db_host" "$db_port" "$persist_mode"
+        cleanup_database "$db_name" "$db_user" "$db_host" "$db_port" "$persist_mode" "$reconnect_mode"
     fi
 
     # Handle log file cleanup
