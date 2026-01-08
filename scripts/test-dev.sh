@@ -346,6 +346,9 @@ check_requirements() {
     if ! command -v pg_isready &> /dev/null; then
         missing+=("pg_isready")
     fi
+    if ! command -v jq &> /dev/null; then
+        missing+=("jq")
+    fi
 
     if [[ ${#missing[@]} -gt 0 ]]; then
         log_error "Missing required tools: ${missing[*]}"
@@ -1029,6 +1032,9 @@ main() {
         # Reconnect flow - use existing database
         initialize_reconnect_config
         prompt_reconnect_credentials
+        # Prompt for sudo password upfront (Linux only)
+        # Required for check_superuser_access which uses sudo -n
+        prompt_sudo_upfront
         check_postgres_running
         check_superuser_access
         check_port_available "$DEV_PORT"

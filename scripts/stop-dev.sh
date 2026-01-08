@@ -326,15 +326,19 @@ cleanup_database() {
 
     log_info "Cleaning up database '${db_name}'..."
 
+    local db_cleanup_success=false
+
     # Drop database
     if database_exists "$db_name" "$db_host" "$db_port" 2>/dev/null; then
         if run_psql_superuser "DROP DATABASE ${db_name};" "postgres" "$db_host" "$db_port"; then
             log_success "Database '${db_name}' dropped"
+            db_cleanup_success=true
         else
             log_warn "Failed to drop database '${db_name}'"
         fi
     else
         log_info "Database '${db_name}' does not exist (already cleaned up)"
+        db_cleanup_success=true
     fi
 
     # Drop user
@@ -346,8 +350,12 @@ cleanup_database() {
         fi
     fi
 
-    # Remove saved credentials
-    remove_db_credentials "$db_name"
+    # Remove saved credentials only if database was successfully dropped
+    if [[ "$db_cleanup_success" == "true" ]]; then
+        remove_db_credentials "$db_name"
+    else
+        log_warn "Credentials preserved for '${db_name}' (database drop failed)"
+    fi
 }
 
 # -----------------------------------------------------------------------------
