@@ -358,6 +358,77 @@ cleanup_database() {
     fi
 }
 
+# Validate database name matches safe identifier pattern
+# Only allows comradarr_dev_ prefix followed by lowercase alphanumeric and underscores
+is_safe_dev_db_name() {
+    local name="$1"
+    [[ "$name" =~ ^comradarr_dev_[a-z0-9_]+$ ]]
+}
+
+# Discover and cleanup ALL comradarr_dev_* databases (fallback when no state file)
+discover_and_cleanup_all_dev_databases() {
+    local db_host="${1:-localhost}"
+    local db_port="${2:-5432}"
+
+    log_info "Discovering all comradarr_dev_* databases..."
+
+    # Get list of matching databases
+    local dev_dbs
+    dev_dbs=$(list_databases "$db_host" "$db_port" | cut -d \| -f 1 | grep "comradarr_dev_" | tr -d ' ' || true)
+
+    if [[ -z "$dev_dbs" ]]; then
+        log_info "No comradarr_dev_* databases found"
+        return 0
+    fi
+
+    # Count and display
+    local db_count
+    db_count=$(echo "$dev_dbs" | wc -l | tr -d ' ')
+    log_info "Found $db_count comradarr_dev_* database(s):"
+    echo "$dev_dbs" | while read -r db; do
+        echo "  - $db"
+    done
+    echo ""
+
+    # Clean up each database
+    local cleaned=0
+    local failed=0
+
+    while read -r db_name; do
+        [[ -z "$db_name" ]] && continue
+
+        # Validate database name matches safe pattern before SQL interpolation
+        if ! is_safe_dev_db_name "$db_name"; then
+            log_warn "Skipping '$db_name' - name doesn't match safe identifier pattern"
+            failed=$((failed + 1))
+            continue
+        fi
+
+        log_info "Cleaning up: $db_name"
+
+        # Drop database
+        if run_psql_superuser "DROP DATABASE ${db_name};" "postgres" "$db_host" "$db_port" 2>/dev/null; then
+            log_success "  Database dropped"
+
+            # Drop user (same name as database)
+            if run_psql_superuser "DROP ROLE IF EXISTS ${db_name};" "postgres" "$db_host" "$db_port" 2>/dev/null; then
+                log_success "  User dropped"
+            fi
+
+            # Remove saved credentials
+            remove_db_credentials "$db_name"
+
+            cleaned=$((cleaned + 1))
+        else
+            log_warn "  Failed to drop database"
+            failed=$((failed + 1))
+        fi
+    done <<< "$dev_dbs"
+
+    echo ""
+    log_info "Cleanup summary: $cleaned dropped, $failed failed"
+}
+
 # -----------------------------------------------------------------------------
 # Verification Functions
 # -----------------------------------------------------------------------------
@@ -542,8 +613,19 @@ EXAMPLES:
 
 FALLBACK:
     If no state file exists (e.g., test-dev.sh was interrupted), the script
-    attempts to discover the dev server process automatically. In this mode,
-    database cleanup may be incomplete since the database name is unknown.
+    attempts to discover the dev server process automatically.
+
+    Without --force-cleanup:
+        - Stops any discovered dev server processes
+        - Skips database cleanup (no database name available)
+        - Suggests using --force-cleanup for full cleanup
+
+    With --force-cleanup:
+        - Stops any discovered dev server processes
+        - Discovers ALL comradarr_dev_* databases in PostgreSQL
+        - Drops each database and its associated user
+        - Removes saved credentials from persistent storage
+        - Provides detailed logging of what is being cleaned up
 
 STATE FILE:
     /tmp/comradarr-dev-state.json
@@ -615,9 +697,16 @@ main() {
                 echo ""
                 log_success "Dev server stopped"
                 echo ""
-                log_warn "Database cleanup skipped (no state file)"
-                log_info "If a database was created, you may need to clean it up manually:"
-                echo "  psql -c \"SELECT datname FROM pg_database WHERE datname LIKE 'comradarr_dev_%';\""
+
+                # Handle database cleanup based on --force-cleanup flag
+                if [[ "$FORCE_CLEANUP" == "true" ]]; then
+                    log_info "Force cleanup requested - discovering orphaned databases..."
+                    discover_and_cleanup_all_dev_databases
+                else
+                    log_warn "Database cleanup skipped (no state file)"
+                    log_info "Use --force-cleanup to discover and remove all comradarr_dev_* databases"
+                fi
+
                 echo ""
                 check_orphaned_resources
                 exit 0
@@ -628,8 +717,18 @@ main() {
         else
             log_info "No running dev server found"
             echo ""
-            log_info "The server may have already been stopped."
-            log_info "Use './scripts/stop-dev.sh --status' to check for orphaned resources."
+
+            # Even without a running server, clean up databases if force-cleanup is requested
+            if [[ "$FORCE_CLEANUP" == "true" ]]; then
+                log_info "Force cleanup requested - discovering orphaned databases..."
+                discover_and_cleanup_all_dev_databases
+                echo ""
+                check_orphaned_resources
+            else
+                log_info "The server may have already been stopped."
+                log_info "Use './scripts/stop-dev.sh --status' to check for orphaned resources."
+                log_info "Use './scripts/stop-dev.sh --force-cleanup' to clean up any orphaned databases."
+            fi
             exit 0
         fi
     fi
