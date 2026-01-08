@@ -46,6 +46,13 @@ SUDO_PASSWORD_ARG=""  # Password from --sudo-password argument
 SUDO_FROM_STDIN=false # Whether to read password from stdin
 SKIP_AUTH=false       # Enable local network bypass authentication
 
+# Reconnect mode configuration
+RECONNECT_MODE=false
+RECONNECT_DB_NAME=""
+PROVIDED_DB_PASSWORD=""
+PROVIDED_SECRET_KEY=""
+PERSISTENT_DBS_FILE="$SCRIPT_DIR/.comradarr-dev-dbs.json"
+
 # Generated values (set during initialization)
 DB_NAME=""
 DB_USER=""
@@ -172,6 +179,81 @@ database_exists() {
 }
 
 # -----------------------------------------------------------------------------
+# Persistent Credential Storage Functions
+# -----------------------------------------------------------------------------
+
+# Save database credentials to persistent storage
+save_db_credentials() {
+    local db_name="$1"
+    local db_password="$2"
+    local secret_key="$3"
+    local admin_password="$4"
+
+    # Create file if it doesn't exist
+    if [[ ! -f "$PERSISTENT_DBS_FILE" ]]; then
+        echo '{}' > "$PERSISTENT_DBS_FILE"
+        chmod 600 "$PERSISTENT_DBS_FILE"
+    fi
+
+    # Use jq to add/update the database entry
+    local temp_file
+    temp_file=$(mktemp)
+    jq --arg db "$db_name" \
+       --arg pwd "$db_password" \
+       --arg key "$secret_key" \
+       --arg admin "$admin_password" \
+       --arg ts "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+       '.[$db] = {"password": $pwd, "secretKey": $key, "adminPassword": $admin, "savedAt": $ts}' \
+       "$PERSISTENT_DBS_FILE" > "$temp_file" && mv "$temp_file" "$PERSISTENT_DBS_FILE"
+
+    chmod 600 "$PERSISTENT_DBS_FILE"
+}
+
+# Load database credentials from persistent storage
+# Returns: sets DB_PASSWORD, SECRET_KEY, ADMIN_PASSWORD or returns 1 if not found
+load_db_credentials() {
+    local db_name="$1"
+
+    if [[ ! -f "$PERSISTENT_DBS_FILE" ]]; then
+        return 1
+    fi
+
+    # Check if database exists in storage
+    if ! jq -e --arg db "$db_name" '.[$db]' "$PERSISTENT_DBS_FILE" &>/dev/null; then
+        return 1
+    fi
+
+    # Extract credentials
+    DB_PASSWORD=$(jq -r --arg db "$db_name" '.[$db].password' "$PERSISTENT_DBS_FILE")
+    SECRET_KEY=$(jq -r --arg db "$db_name" '.[$db].secretKey' "$PERSISTENT_DBS_FILE")
+    ADMIN_PASSWORD=$(jq -r --arg db "$db_name" '.[$db].adminPassword // "(unknown)"' "$PERSISTENT_DBS_FILE")
+
+    return 0
+}
+
+# List all saved databases
+list_saved_databases() {
+    if [[ ! -f "$PERSISTENT_DBS_FILE" ]]; then
+        return
+    fi
+    jq -r 'keys[]' "$PERSISTENT_DBS_FILE" 2>/dev/null
+}
+
+# Remove database from persistent storage
+remove_db_credentials() {
+    local db_name="$1"
+
+    if [[ ! -f "$PERSISTENT_DBS_FILE" ]]; then
+        return
+    fi
+
+    local temp_file
+    temp_file=$(mktemp)
+    jq --arg db "$db_name" 'del(.[$db])' "$PERSISTENT_DBS_FILE" > "$temp_file" && \
+        mv "$temp_file" "$PERSISTENT_DBS_FILE"
+}
+
+# -----------------------------------------------------------------------------
 # Validation Functions
 # -----------------------------------------------------------------------------
 
@@ -264,6 +346,9 @@ check_requirements() {
     if ! command -v pg_isready &> /dev/null; then
         missing+=("pg_isready")
     fi
+    if ! command -v jq &> /dev/null; then
+        missing+=("jq")
+    fi
 
     if [[ ${#missing[@]} -gt 0 ]]; then
         log_error "Missing required tools: ${missing[*]}"
@@ -312,6 +397,95 @@ check_superuser_access() {
     fi
 
     log_success "PostgreSQL superuser access verified"
+}
+
+# -----------------------------------------------------------------------------
+# Reconnect Mode Functions
+# -----------------------------------------------------------------------------
+
+# Prompt for reconnect credentials (or load from persistent storage)
+prompt_reconnect_credentials() {
+    # First try to load from persistent storage
+    if load_db_credentials "$RECONNECT_DB_NAME"; then
+        log_success "Loaded saved credentials for '${RECONNECT_DB_NAME}'"
+        DB_PASSWORD_ENCODED="$(urlencode "$DB_PASSWORD")"
+        return 0
+    fi
+
+    log_info "No saved credentials found for '${RECONNECT_DB_NAME}'"
+
+    # Prompt for DB password if not provided via CLI
+    if [[ -z "$PROVIDED_DB_PASSWORD" ]]; then
+        echo -e "${YELLOW}Database password required for reconnection${NC}"
+        echo -n "Enter database password for '${RECONNECT_DB_NAME}': "
+        read -rs PROVIDED_DB_PASSWORD
+        echo ""
+        if [[ -z "$PROVIDED_DB_PASSWORD" ]]; then
+            log_error "Database password is required"
+            exit 1
+        fi
+    fi
+    DB_PASSWORD="$PROVIDED_DB_PASSWORD"
+    DB_PASSWORD_ENCODED="$(urlencode "$DB_PASSWORD")"
+
+    # Prompt for SECRET_KEY if not provided via CLI
+    if [[ -z "$PROVIDED_SECRET_KEY" ]]; then
+        echo -e "${YELLOW}SECRET_KEY required for reconnection${NC}"
+        echo -n "Enter SECRET_KEY (64 hex chars): "
+        read -rs PROVIDED_SECRET_KEY
+        echo ""
+        if [[ -z "$PROVIDED_SECRET_KEY" ]]; then
+            log_error "SECRET_KEY is required"
+            exit 1
+        fi
+    fi
+    SECRET_KEY="$PROVIDED_SECRET_KEY"
+    ADMIN_PASSWORD="(unknown)"
+}
+
+# Validate database connection for reconnect mode
+validate_reconnect_database() {
+    log_info "Validating database connection for '${DB_NAME}'..."
+
+    # Check database exists
+    if ! database_exists "$DB_NAME"; then
+        log_error "Database '${DB_NAME}' does not exist"
+        echo ""
+        echo "Available comradarr_dev_* databases in PostgreSQL:"
+        list_databases | cut -d \| -f 1 | grep -E '^\s*comradarr_dev_' | sed 's/^[[:space:]]*/  /' || echo "  (none found)"
+        echo ""
+        echo "Databases with saved credentials:"
+        list_saved_databases | sed 's/^/  /' || echo "  (none saved)"
+        echo ""
+        exit 1
+    fi
+
+    # Test connection with provided credentials
+    if ! PGPASSWORD="$DB_PASSWORD" psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" -c '\q' &>/dev/null; then
+        log_error "Failed to connect to database '${DB_NAME}'"
+        echo "Check that the password is correct."
+        exit 1
+    fi
+
+    # Validate SECRET_KEY format (64 hex characters)
+    if ! [[ "$SECRET_KEY" =~ ^[a-f0-9]{64}$ ]]; then
+        log_error "Invalid SECRET_KEY format (must be 64 lowercase hex characters)"
+        exit 1
+    fi
+
+    log_success "Database connection validated"
+}
+
+# Initialize configuration for reconnect mode
+initialize_reconnect_config() {
+    DB_NAME="$RECONNECT_DB_NAME"
+    DB_USER="$RECONNECT_DB_NAME"
+    PERSIST_MODE=true
+
+    TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+    if [[ "$LOG_ENABLED" == "true" ]] && [[ -z "$LOG_FILE" ]]; then
+        LOG_FILE="/tmp/comradarr-test-dev-${TIMESTAMP}.log"
+    fi
 }
 
 # -----------------------------------------------------------------------------
@@ -411,6 +585,7 @@ write_state_file() {
   "dbPort": ${DB_PORT},
   "logFile": "${LOG_FILE:-}",
   "persistMode": ${PERSIST_MODE},
+  "reconnectMode": ${RECONNECT_MODE},
   "sudoRefreshPid": ${SUDO_REFRESH_PID:-0},
   "secretKey": "${SECRET_KEY}",
   "timestamp": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
@@ -446,6 +621,22 @@ cleanup() {
         kill "$SUDO_REFRESH_PID" 2>/dev/null || true
     fi
 
+    # Handle reconnect mode - always preserve database
+    if [[ "$RECONNECT_MODE" == "true" ]]; then
+        echo ""
+        log_success "Database '${DB_NAME}' preserved (reconnect mode)"
+        echo ""
+        echo "To reconnect again:"
+        echo "  ./scripts/test-dev.sh --reconnect ${DB_NAME}"
+        echo ""
+        # Only remove state file and log file
+        rm -f "$STATE_FILE"
+        if [[ -n "$LOG_FILE" ]] && [[ -f "$LOG_FILE" ]]; then
+            rm -f "$LOG_FILE"
+        fi
+        return
+    fi
+
     # Handle persist mode
     if [[ "$PERSIST_MODE" == "true" ]]; then
         echo ""
@@ -462,6 +653,9 @@ cleanup() {
             fi
             echo ""
             echo "To reuse this database:"
+            echo "  ./scripts/test-dev.sh --reconnect ${DB_NAME}"
+            echo ""
+            echo "Or manually:"
             echo "  export DATABASE_URL='postgres://${DB_USER}:${DB_PASSWORD_ENCODED}@${DB_HOST}:${DB_PORT}/${DB_NAME}'"
             echo "  export SECRET_KEY='${SECRET_KEY}'"
             echo "  bun run dev --port ${DEV_PORT}"
@@ -495,6 +689,11 @@ cleanup_resources() {
         run_psql_superuser "DROP ROLE IF EXISTS ${DB_USER};" 2>/dev/null || true
     fi
 
+    # Remove saved credentials when database is dropped
+    if [[ -n "$DB_NAME" ]]; then
+        remove_db_credentials "$DB_NAME"
+    fi
+
     # Remove log file
     if [[ -n "$LOG_FILE" ]] && [[ -f "$LOG_FILE" ]]; then
         log_info "Removing log file..."
@@ -510,7 +709,9 @@ cleanup_resources() {
 # -----------------------------------------------------------------------------
 display_banner() {
     local mode_label
-    if [[ "$PERSIST_MODE" == "true" ]]; then
+    if [[ "$RECONNECT_MODE" == "true" ]]; then
+        mode_label="${CYAN}Reconnected${NC}"
+    elif [[ "$PERSIST_MODE" == "true" ]]; then
         mode_label="${YELLOW}Persistent${NC}"
     else
         mode_label="${GREEN}Ephemeral${NC}"
@@ -523,7 +724,13 @@ display_banner() {
     echo -e "${CYAN}${BOLD}║${NC} Mode:        ${mode_label}"
     echo -e "${CYAN}${BOLD}║${NC} Dev Server:  ${GREEN}http://localhost:${DEV_PORT}${NC}"
     echo -e "${CYAN}${BOLD}║${NC} Database:    ${GREEN}postgres://${DB_USER}:${DB_PASSWORD_ENCODED}@${DB_HOST}:${DB_PORT}/${DB_NAME}${NC}"
-    if [[ "$SKIP_AUTH" == "true" ]]; then
+    if [[ "$RECONNECT_MODE" == "true" ]]; then
+        if [[ "$ADMIN_PASSWORD" == "(unknown)" ]]; then
+            echo -e "${CYAN}${BOLD}║${NC} Admin Login: ${GREEN}admin${NC} / ${YELLOW}(use saved password)${NC}"
+        else
+            echo -e "${CYAN}${BOLD}║${NC} Admin Login: ${GREEN}admin${NC} / ${GREEN}${ADMIN_PASSWORD}${NC}"
+        fi
+    elif [[ "$SKIP_AUTH" == "true" ]]; then
         echo -e "${CYAN}${BOLD}║${NC} Auth:        ${YELLOW}Skipped${NC} (local bypass enabled)"
     else
         echo -e "${CYAN}${BOLD}║${NC} Admin Login: ${GREEN}admin${NC} / ${GREEN}${ADMIN_PASSWORD}${NC}"
@@ -642,6 +849,31 @@ parse_arguments() {
                 SKIP_AUTH=true
                 shift
                 ;;
+            --reconnect)
+                if [[ -z "${2:-}" ]]; then
+                    log_error "--reconnect requires a database name"
+                    exit 1
+                fi
+                RECONNECT_MODE=true
+                RECONNECT_DB_NAME="$2"
+                shift 2
+                ;;
+            --db-password)
+                if [[ -z "${2:-}" ]]; then
+                    log_error "--db-password requires a value"
+                    exit 1
+                fi
+                PROVIDED_DB_PASSWORD="$2"
+                shift 2
+                ;;
+            --secret-key)
+                if [[ -z "${2:-}" ]]; then
+                    log_error "--secret-key requires a value"
+                    exit 1
+                fi
+                PROVIDED_SECRET_KEY="$2"
+                shift 2
+                ;;
             --help|-h)
                 show_help
                 exit 0
@@ -690,6 +922,14 @@ OPTIONS:
     --skip-auth             Skip authentication (enables local network bypass)
     --help, -h              Show this help message
 
+RECONNECT OPTIONS:
+    --reconnect <db_name>   Reconnect to an existing persistent database
+    --db-password <pwd>     Database password (auto-loaded or prompts if not saved)
+    --secret-key <key>      SECRET_KEY for encryption (auto-loaded or prompts if not saved)
+
+    When using --db-name, credentials are automatically saved to
+    scripts/.comradarr-dev-dbs.json for future reconnection.
+
 SUDO OPTIONS (Linux only):
     --sudo-password <pwd>   Provide sudo password (INSECURE: visible in ps)
     --sudo-stdin            Read sudo password from stdin (for piped input)
@@ -707,8 +947,15 @@ EXAMPLES:
     # Persistent database for multi-session development
     ./scripts/test-dev.sh --persist
 
-    # Named database for repeatable setup
+    # Named database for repeatable setup (credentials auto-saved)
     ./scripts/test-dev.sh --db-name my_feature_db
+
+    # Reconnect to existing database (credentials auto-loaded)
+    ./scripts/test-dev.sh --reconnect my_feature_db
+
+    # Reconnect with explicit credentials
+    ./scripts/test-dev.sh --reconnect comradarr_dev_abc123 \
+        --db-password "password" --secret-key "64hexchars..."
 
     # Custom ports
     ./scripts/test-dev.sh --port 3000 --db-port 5433
@@ -763,6 +1010,12 @@ initialize_config() {
     if [[ "$LOG_ENABLED" == "true" ]] && [[ -z "$LOG_FILE" ]]; then
         LOG_FILE="/tmp/comradarr-test-dev-${TIMESTAMP}.log"
     fi
+
+    # Save credentials for named databases (for future reconnection)
+    if [[ -n "$CUSTOM_DB_NAME" ]]; then
+        save_db_credentials "$DB_NAME" "$DB_PASSWORD" "$SECRET_KEY" "$ADMIN_PASSWORD"
+        log_info "Credentials saved for future reconnection"
+    fi
 }
 
 # -----------------------------------------------------------------------------
@@ -775,17 +1028,38 @@ main() {
     # Validate requirements (basic tools first)
     check_requirements
 
-    # Prompt for sudo password upfront (Linux only)
-    # This caches credentials before any operations that need sudo
-    prompt_sudo_upfront
+    if [[ "$RECONNECT_MODE" == "true" ]]; then
+        # Reconnect flow - use existing database
+        initialize_reconnect_config
+        prompt_reconnect_credentials
+        # Prompt for sudo password upfront (Linux only)
+        # Required for check_superuser_access which uses sudo -n
+        prompt_sudo_upfront
+        check_postgres_running
+        check_superuser_access
+        check_port_available "$DEV_PORT"
+        validate_reconnect_database
+        # Skip: setup_database, run_migrations, create_admin_user, configure_skip_auth
+    else
+        # Normal flow - create new database
+        # Prompt for sudo password upfront (Linux only)
+        # This caches credentials before any operations that need sudo
+        prompt_sudo_upfront
 
-    # Continue validation
-    check_postgres_running
-    check_superuser_access
-    check_port_available "$DEV_PORT"
+        # Continue validation
+        check_postgres_running
+        check_superuser_access
+        check_port_available "$DEV_PORT"
 
-    # Initialize configuration
-    initialize_config
+        # Initialize configuration
+        initialize_config
+
+        # Setup phase
+        setup_database
+        run_migrations
+        create_admin_user
+        configure_skip_auth
+    fi
 
     # Set up signal handlers
     trap cleanup EXIT INT TERM
@@ -796,16 +1070,11 @@ main() {
             echo "=== Comradarr Test Dev Server Log ==="
             echo "Started: $(date)"
             echo "Database: $DB_NAME"
+            echo "Mode: $(if [[ "$RECONNECT_MODE" == "true" ]]; then echo "Reconnect"; else echo "New"; fi)"
             echo "========================================="
             echo ""
         } > "$LOG_FILE"
     fi
-
-    # Setup phase
-    setup_database
-    run_migrations
-    create_admin_user
-    configure_skip_auth
 
     # Display startup banner
     display_banner
