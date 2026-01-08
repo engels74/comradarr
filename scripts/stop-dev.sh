@@ -358,6 +358,13 @@ cleanup_database() {
     fi
 }
 
+# Validate database name matches safe identifier pattern
+# Only allows comradarr_dev_ prefix followed by lowercase alphanumeric and underscores
+is_safe_dev_db_name() {
+    local name="$1"
+    [[ "$name" =~ ^comradarr_dev_[a-z0-9_]+$ ]]
+}
+
 # Discover and cleanup ALL comradarr_dev_* databases (fallback when no state file)
 discover_and_cleanup_all_dev_databases() {
     local db_host="${1:-localhost}"
@@ -389,6 +396,13 @@ discover_and_cleanup_all_dev_databases() {
 
     while read -r db_name; do
         [[ -z "$db_name" ]] && continue
+
+        # Validate database name matches safe pattern before SQL interpolation
+        if ! is_safe_dev_db_name "$db_name"; then
+            log_warn "Skipping '$db_name' - name doesn't match safe identifier pattern"
+            failed=$((failed + 1))
+            continue
+        fi
 
         log_info "Cleaning up: $db_name"
 
