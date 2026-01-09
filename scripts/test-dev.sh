@@ -257,6 +257,23 @@ remove_db_credentials() {
 # Validation Functions
 # -----------------------------------------------------------------------------
 
+# Validate database name to prevent SQL injection
+# Only allows alphanumeric characters and underscores
+validate_db_name() {
+    local name="$1"
+    if [[ ! "$name" =~ ^[a-zA-Z_][a-zA-Z0-9_]*$ ]]; then
+        log_error "Invalid database name: '${name}'"
+        echo "Database names must start with a letter or underscore,"
+        echo "and contain only letters, numbers, and underscores."
+        exit 1
+    fi
+    # PostgreSQL identifier length limit
+    if [[ ${#name} -gt 63 ]]; then
+        log_error "Database name too long: ${#name} characters (max 63)"
+        exit 1
+    fi
+}
+
 # Prompt for sudo password upfront and cache credentials (Linux only)
 # This ensures all subsequent sudo commands work without re-prompting
 #
@@ -499,9 +516,9 @@ setup_database() {
         DO \$\$
         BEGIN
             IF NOT EXISTS (SELECT FROM pg_catalog.pg_roles WHERE rolname = '${DB_USER}') THEN
-                CREATE ROLE ${DB_USER} WITH LOGIN PASSWORD '${DB_PASSWORD}';
+                CREATE ROLE \"${DB_USER}\" WITH LOGIN PASSWORD '${DB_PASSWORD}';
             ELSE
-                ALTER ROLE ${DB_USER} WITH PASSWORD '${DB_PASSWORD}';
+                ALTER ROLE \"${DB_USER}\" WITH PASSWORD '${DB_PASSWORD}';
             END IF;
         END
         \$\$;
@@ -509,43 +526,23 @@ setup_database() {
 
     # Handle existing database
     if database_exists "$DB_NAME"; then
-        if [[ -n "$CUSTOM_DB_NAME" ]]; then
-            # Named database exists - prompt for confirmation
-            echo ""
-            log_warn "Database '${DB_NAME}' already exists!"
-            echo ""
-            echo "Options:"
-            echo "  1. Drop and recreate (destroys existing data)"
-            echo "  2. Reconnect to existing database (use --reconnect instead)"
-            echo "  3. Abort"
-            echo ""
-            read -r -p "Drop and recreate database? (y/N) " response
-            case "$(echo "$response" | tr '[:upper:]' '[:lower:]')" in
-                y|yes)
-                    log_info "Dropping existing database '${DB_NAME}'..."
-                    run_psql_superuser "DROP DATABASE ${DB_NAME};"
-                    ;;
-                *)
-                    echo ""
-                    log_info "Aborting. To reconnect to existing database, use:"
-                    echo "  ./scripts/test-dev.sh --reconnect ${DB_NAME}"
-                    echo ""
-                    exit 0
-                    ;;
-            esac
-        else
+        if [[ -n "$CUSTOM_DB_NAME" ]] && [[ "${DROP_EXISTING_DB:-}" == "true" ]]; then
+            # User already confirmed drop in check_existing_named_database
+            log_info "Dropping existing database '${DB_NAME}'..."
+            run_psql_superuser "DROP DATABASE \"${DB_NAME}\";"
+        elif [[ -z "$CUSTOM_DB_NAME" ]]; then
             # Random name collision (rare) - drop without prompt
             log_warn "Database '${DB_NAME}' already exists, dropping..."
-            run_psql_superuser "DROP DATABASE ${DB_NAME};"
+            run_psql_superuser "DROP DATABASE \"${DB_NAME}\";"
         fi
     fi
 
     # Create database
-    run_psql_superuser "CREATE DATABASE ${DB_NAME} OWNER ${DB_USER};"
+    run_psql_superuser "CREATE DATABASE \"${DB_NAME}\" OWNER \"${DB_USER}\";"
 
     # Grant privileges
-    run_psql_superuser "GRANT ALL PRIVILEGES ON DATABASE ${DB_NAME} TO ${DB_USER};"
-    run_psql_superuser "GRANT ALL ON SCHEMA public TO ${DB_USER};" "$DB_NAME"
+    run_psql_superuser "GRANT ALL PRIVILEGES ON DATABASE \"${DB_NAME}\" TO \"${DB_USER}\";"
+    run_psql_superuser "GRANT ALL ON SCHEMA public TO \"${DB_USER}\";" "$DB_NAME"
 
     log_success "Database '${DB_NAME}' created"
 }
@@ -706,14 +703,14 @@ cleanup_resources() {
     # Drop database
     if database_exists "$DB_NAME" 2>/dev/null; then
         log_info "Dropping database '${DB_NAME}'..."
-        run_psql_superuser "DROP DATABASE ${DB_NAME};" 2>/dev/null || true
+        run_psql_superuser "DROP DATABASE \"${DB_NAME}\";" 2>/dev/null || true
     fi
 
     # Drop database user (matches DB_NAME for isolation)
     # Note: DB_USER is set to match DB_NAME in initialize_config
     if [[ -n "$DB_USER" ]]; then
         log_info "Dropping database user '${DB_USER}'..."
-        run_psql_superuser "DROP ROLE IF EXISTS ${DB_USER};" 2>/dev/null || true
+        run_psql_superuser "DROP ROLE IF EXISTS \"${DB_USER}\";" 2>/dev/null || true
     fi
 
     # Remove saved credentials when database is dropped
@@ -1005,6 +1002,46 @@ EOF
 }
 
 # -----------------------------------------------------------------------------
+# Pre-initialization Checks
+# -----------------------------------------------------------------------------
+
+# Check if a named database already exists BEFORE generating credentials
+# This prevents credential mutation when user chooses to abort
+check_existing_named_database() {
+    # Only applies to named databases (--db-name)
+    if [[ -z "$CUSTOM_DB_NAME" ]]; then
+        return 0
+    fi
+
+    # Check if database exists
+    if ! database_exists "$CUSTOM_DB_NAME"; then
+        return 0
+    fi
+
+    # Named database exists - prompt for confirmation BEFORE generating credentials
+    echo ""
+    log_warn "Database '${CUSTOM_DB_NAME}' already exists!"
+    echo ""
+    echo "To reconnect to an existing database instead, use:"
+    echo "  ./scripts/test-dev.sh --reconnect ${CUSTOM_DB_NAME}"
+    echo ""
+    read -r -p "Drop and recreate database? This will destroy existing data. (y/N) " response
+    case "$(echo "$response" | tr '[:upper:]' '[:lower:]')" in
+        y|yes)
+            # User confirmed - will drop in setup_database
+            export DROP_EXISTING_DB=true
+            ;;
+        *)
+            echo ""
+            log_info "Aborting. To reconnect to existing database, use:"
+            echo "  ./scripts/test-dev.sh --reconnect ${CUSTOM_DB_NAME}"
+            echo ""
+            exit 0
+            ;;
+    esac
+}
+
+# -----------------------------------------------------------------------------
 # Initialization
 # -----------------------------------------------------------------------------
 initialize_config() {
@@ -1052,6 +1089,16 @@ main() {
     # Parse command line arguments
     parse_arguments "$@"
 
+    # Validate database name if custom name provided
+    if [[ -n "$CUSTOM_DB_NAME" ]]; then
+        validate_db_name "$CUSTOM_DB_NAME"
+    fi
+
+    # Validate reconnect database name
+    if [[ "$RECONNECT_MODE" == "true" ]]; then
+        validate_db_name "$RECONNECT_DB_NAME"
+    fi
+
     # Validate requirements (basic tools first)
     check_requirements
 
@@ -1078,7 +1125,11 @@ main() {
         check_superuser_access
         check_port_available "$DEV_PORT"
 
-        # Initialize configuration
+        # Check for existing named database BEFORE generating credentials
+        # This prevents credential mutation when user chooses to abort
+        check_existing_named_database
+
+        # Initialize configuration (generates credentials)
         initialize_config
 
         # Setup phase
