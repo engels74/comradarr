@@ -507,10 +507,37 @@ setup_database() {
         \$\$;
     "
 
-    # Drop existing database if it exists (should not happen with random names)
+    # Handle existing database
     if database_exists "$DB_NAME"; then
-        log_warn "Database '${DB_NAME}' already exists, dropping..."
-        run_psql_superuser "DROP DATABASE ${DB_NAME};"
+        if [[ -n "$CUSTOM_DB_NAME" ]]; then
+            # Named database exists - prompt for confirmation
+            echo ""
+            log_warn "Database '${DB_NAME}' already exists!"
+            echo ""
+            echo "Options:"
+            echo "  1. Drop and recreate (destroys existing data)"
+            echo "  2. Reconnect to existing database (use --reconnect instead)"
+            echo "  3. Abort"
+            echo ""
+            read -r -p "Drop and recreate database? (y/N) " response
+            case "$(echo "$response" | tr '[:upper:]' '[:lower:]')" in
+                y|yes)
+                    log_info "Dropping existing database '${DB_NAME}'..."
+                    run_psql_superuser "DROP DATABASE ${DB_NAME};"
+                    ;;
+                *)
+                    echo ""
+                    log_info "Aborting. To reconnect to existing database, use:"
+                    echo "  ./scripts/test-dev.sh --reconnect ${DB_NAME}"
+                    echo ""
+                    exit 0
+                    ;;
+            esac
+        else
+            # Random name collision (rare) - drop without prompt
+            log_warn "Database '${DB_NAME}' already exists, dropping..."
+            run_psql_superuser "DROP DATABASE ${DB_NAME};"
+        fi
     fi
 
     # Create database
@@ -641,7 +668,7 @@ cleanup() {
     if [[ "$PERSIST_MODE" == "true" ]]; then
         echo ""
         read -r -p "Keep database and logs? (y/N) " response
-        if [[ "${response,,}" == "y" ]]; then
+        if [[ "$(echo "$response" | tr '[:upper:]' '[:lower:]')" == "y" ]]; then
             echo ""
             log_success "Resources preserved!"
             echo ""
