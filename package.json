@@ -67,7 +67,7 @@
 		"chartjs-adapter-date-fns": "^3.0.0",
 		"clsx": "^2.1.1",
 		"croner": "^9.1.0",
-		"drizzle-orm": "^0.44.7",
+		"drizzle-orm": "^0.45.0",
 		"formsnap": "^2.0.1",
 		"nodemailer": "^7.0.12",
 		"tailwind-merge": "^3.4.0",
