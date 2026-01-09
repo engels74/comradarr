@@ -7,6 +7,7 @@
 		"postinstall": "if [ -d .git ]; then prek install && prek install --hook-type pre-push; fi",
 		"dev": "bun --bun vite dev",
 		"build": "bun --bun vite build",
+		"start": "bun ./build",
 		"preview": "bun --bun vite preview",
 		"prepare": "svelte-kit sync || echo ''",
 		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
