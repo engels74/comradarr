@@ -1,1 +1,0 @@
-ALTER TABLE "search_registry" ADD COLUMN "season_pack_failed" boolean DEFAULT false NOT NULL;
