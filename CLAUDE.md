@@ -56,6 +56,23 @@ uv run --project dev-cli basedpyright src tests # Type check Python code
 uv run --project dev-cli ruff check src tests   # Lint Python code
 ```
 
+## Coding Guidelines
+
+**Always follow the coding patterns established in:**
+`.augment/rules/bun-svelte-pro.md`
+
+Before making any changes, review this file to ensure consistency with project standards.
+
+### Comment Philosophy
+
+This codebase maintains a comment-minimal style. Follow these principles:
+
+- **Remove redundant comments** that restate what the code does—the code is the documentation
+- **Keep comments that explain WHY**, not WHAT (business logic rationale, non-obvious decisions)
+- **Preserve essential context** that isn't obvious from reading the code itself
+- **Avoid over-explanatory JSDoc** where TypeScript types already provide sufficient documentation
+- **Never add section dividers** or decorative comment blocks
+
 ## Architecture
 
 ### Stack
