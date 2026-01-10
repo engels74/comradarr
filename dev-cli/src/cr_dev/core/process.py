@@ -17,27 +17,67 @@ def is_process_running(pid: int) -> bool:
         return False
 
 
+def _get_child_pids(pid: int) -> list[int]:
+    """Get all child process PIDs recursively."""
+    result = subprocess.run(
+        ["pgrep", "-P", str(pid)],
+        capture_output=True,
+        text=True,
+    )
+
+    children: list[int] = []
+    if result.returncode == 0 and result.stdout.strip():
+        for line in result.stdout.strip().split("\n"):
+            try:
+                child_pid = int(line)
+                children.append(child_pid)
+                # Recursively get grandchildren
+                children.extend(_get_child_pids(child_pid))
+            except ValueError:
+                continue
+    return children
+
+
 def kill_process_tree(pid: int, *, timeout: float = 10.0) -> bool:
-    """Kill a process and all its children gracefully, then forcefully."""
+    """Kill a process and all its children gracefully, then forcefully.
+
+    First collects all child PIDs recursively, then sends SIGTERM to all
+    processes (children first, then parent). If processes don't terminate
+    within the timeout, sends SIGKILL to any remaining processes.
+    """
     if not is_process_running(pid):
         return True
 
-    try:
-        os.kill(pid, signal.SIGTERM)
-    except (OSError, ProcessLookupError):
-        return True
+    # Collect all child PIDs before killing (children first, then parent)
+    child_pids = _get_child_pids(pid)
+    all_pids = [*child_pids, pid]  # Kill children before parent
 
-    start = time.monotonic()
-    while is_process_running(pid) and (time.monotonic() - start) < timeout:
-        time.sleep(0.1)
-
-    if is_process_running(pid):
+    # Send SIGTERM to all processes
+    for target_pid in all_pids:
         try:
-            os.kill(pid, signal.SIGKILL)
+            os.kill(target_pid, signal.SIGTERM)
         except (OSError, ProcessLookupError):
             pass
 
-    return not is_process_running(pid)
+    # Wait for processes to terminate
+    start = time.monotonic()
+    while (time.monotonic() - start) < timeout:
+        remaining = [p for p in all_pids if is_process_running(p)]
+        if not remaining:
+            return True
+        time.sleep(0.1)
+
+    # Force kill any remaining processes
+    for target_pid in all_pids:
+        if is_process_running(target_pid):
+            try:
+                os.kill(target_pid, signal.SIGKILL)
+            except (OSError, ProcessLookupError):
+                pass
+
+    # Final check - verify all processes are dead
+    time.sleep(0.1)
+    return not any(is_process_running(p) for p in all_pids)
 
 
 def find_process_on_port(port: int) -> int | None:

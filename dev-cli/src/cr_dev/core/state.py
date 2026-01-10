@@ -1,12 +1,36 @@
 """State file management for dev server persistence."""
 
 import json
+import os
+import stat
 from dataclasses import asdict, dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import cast
 
 STATE_FILE = Path("/tmp/cr-dev-state.json")
+
+
+def _write_secure_file(path: Path, content: str) -> None:
+    """Write content to a file with restrictive permissions (owner read/write only).
+
+    Creates the file with 0600 permissions to protect sensitive data like passwords
+    and secret keys from being read by other users on the system.
+    """
+    # Remove existing file first to ensure clean permission state
+    if path.exists():
+        path.unlink()
+
+    # Create file with restrictive permissions using os.open for atomic creation
+    fd = os.open(
+        path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, stat.S_IRUSR | stat.S_IWUSR
+    )
+    try:
+        _ = os.write(fd, content.encode("utf-8"))
+    finally:
+        os.close(fd)
+
+
 CREDENTIALS_FILE = (
     Path(__file__).parent.parent.parent.parent.parent / ".cr-dev-dbs.json"
 )
@@ -31,8 +55,8 @@ class DevState:
 
 
 def save_state(state: DevState) -> None:
-    """Save dev server state to file."""
-    _ = STATE_FILE.write_text(json.dumps(asdict(state), indent=2))
+    """Save dev server state to file with restrictive permissions."""
+    _write_secure_file(STATE_FILE, json.dumps(asdict(state), indent=2))
 
 
 def load_state() -> DevState | None:
@@ -93,7 +117,7 @@ def save_credentials(db_name: str, creds: SavedCredentials) -> None:
             pass
 
     data[db_name] = cast(dict[str, str], asdict(creds))
-    _ = CREDENTIALS_FILE.write_text(json.dumps(data, indent=2))
+    _write_secure_file(CREDENTIALS_FILE, json.dumps(data, indent=2))
 
 
 def load_credentials(db_name: str) -> SavedCredentials | None:
@@ -146,7 +170,7 @@ def remove_credentials(db_name: str) -> None:
         data = cast(dict[str, object], raw_data)
         if db_name in data:
             del data[db_name]
-            _ = CREDENTIALS_FILE.write_text(json.dumps(data, indent=2))
+            _write_secure_file(CREDENTIALS_FILE, json.dumps(data, indent=2))
     except json.JSONDecodeError:
         pass
 
