@@ -3,7 +3,7 @@
  * Create admin user for Comradarr.
  *
  * This script creates the initial admin user with the provided password.
- * It's used by test-dev.sh to bootstrap the development database.
+ * It's used by the Python CLI (comradarr-dev) to bootstrap the development database.
  *
  * Required environment variables:
  * - DATABASE_URL: PostgreSQL connection string

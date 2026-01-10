@@ -56,6 +56,15 @@ This codebase maintains a comment-minimal style. Follow these principles:
 - **Avoid over-explanatory JSDoc** where TypeScript types already provide sufficient documentation
 - **Never add section dividers** or decorative comment blocks
 
+### Python Dev Tools (run from project root)
+```bash
+uv run --project scripts/python comradarr-dev menu            # Interactive TUI menu
+uv run --project scripts/python comradarr-dev dev             # Dev server with temp database
+uv run --project scripts/python comradarr-dev dev --persist   # Dev server with named database
+uv run --project scripts/python basedpyright src tests        # Type check Python code
+uv run --project scripts/python ruff check src tests          # Lint Python code
+```
+
 ## Architecture
 
 ### Directory Structure

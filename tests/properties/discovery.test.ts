@@ -13,13 +13,15 @@
  * - Registry entries are deleted when content status changes to success
  * - Discovery operations are idempotent
  *
- * Quick setup:
- *   1. Install PostgreSQL (WSL): ./scripts/test-db.sh install
- *   2. Start PostgreSQL:         ./scripts/test-db.sh start
+ * Quick setup (via Python CLI from project root):
+ *   1. Install PostgreSQL:       uv run --project scripts/python comradarr-dev db install
+ *   2. Start PostgreSQL:         uv run --project scripts/python comradarr-dev db start
  *   3. Create test database:     bun run test:db:setup
- *   4. Run integration tests:    eval "$(./scripts/test-db.sh env)" && bun test tests/integration/
+ *   4. Run integration tests:    bun run test:integration
  *
- * See scripts/test-db.sh for detailed usage and cleanup commands.
+ * Alternative: Use the interactive TUI menu:
+ *   uv run --project scripts/python comradarr-dev menu
+ *
  * This file is a placeholder - the actual tests are in tests/integration/.
  */
 
@@ -33,7 +35,7 @@ describe('Discovery Property Tests', () => {
 			// - Bun runtime (not Node.js/vitest)
 			// - DATABASE_URL and SECRET_KEY environment variables
 			//
-			// Run: ./scripts/test-db.sh help
+			// Run: uv run --project scripts/python comradarr-dev --help
 		});
 	});
 
@@ -44,7 +46,7 @@ describe('Discovery Property Tests', () => {
 			// - Bun runtime (not Node.js/vitest)
 			// - DATABASE_URL and SECRET_KEY environment variables
 			//
-			// Run: ./scripts/test-db.sh help
+			// Run: uv run --project scripts/python comradarr-dev --help
 		});
 	});
 
@@ -55,7 +57,7 @@ describe('Discovery Property Tests', () => {
 			// - Bun runtime (not Node.js/vitest)
 			// - DATABASE_URL and SECRET_KEY environment variables
 			//
-			// Run: ./scripts/test-db.sh help
+			// Run: uv run --project scripts/python comradarr-dev --help
 		});
 	});
 });
