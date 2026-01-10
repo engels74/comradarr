@@ -10,11 +10,13 @@ Comradarr is a media library completion service that integrates with *arr applic
 
 ### Development
 ```bash
-bun install                          # Install dependencies
+bun install                          # Install dependencies (also installs git hooks via prek)
 bun run dev                          # Start dev server with Vite
 bun run build                        # Production build
 bun run start                        # Run production build
 ```
+
+Git hooks (pre-commit, pre-push) are managed by `prek` and installed automatically on `bun install`.
 
 ### Type Checking & Linting
 ```bash
@@ -31,7 +33,13 @@ bun run test                         # Full test suite (unit + integration via P
 bun run test:unit                    # Vitest unit tests only
 bun run test:watch                   # Vitest watch mode
 bun run test:integration             # Integration tests with real database
+
+# Run a single test file
+bun run test:unit -- src/path/to/file.test.ts
+bun run test:watch -- src/path/to/file.test.ts
 ```
+
+Test files: `src/**/*.test.ts` or `tests/**/*.test.ts` (integration tests in `tests/integration/` run separately).
 
 ### Database (via Python CLI or directly)
 ```bash
@@ -113,7 +121,7 @@ src/
 
 **Svelte 5 Runes**: Use `$state()`, `$derived()`, `$props()`, `{#snippet}`, `{@render}`. Avoid legacy `export let`, `$:`, and `<slot>`.
 
-**Database**: Schema in `src/lib/server/db/schema/index.ts`. Use `$inferSelect`/`$inferInsert` for types. Runtime uses `bun:sql`, drizzle-kit uses `postgres` package.
+**Database**: Schema in `src/lib/server/db/schema/index.ts`. Use `$inferSelect`/`$inferInsert` for types. Two PostgreSQL drivers are used: `bun:sql` for runtime (via Drizzle ORM) and `postgres` package for drizzle-kit only (migrations/studio) since drizzle-kit doesn't support `bun:sql`.
 
 **Connectors**: Factory pattern in `src/lib/server/connectors/factory.ts`. Each connector type (sonarr, radarr, whisparr) has its own client, types, and parsers.
 
