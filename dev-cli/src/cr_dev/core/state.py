@@ -27,8 +27,13 @@ def _get_secure_state_dir() -> Path:
     # Ensure directory exists with restrictive permissions
     if not state_dir.exists():
         state_dir.mkdir(mode=0o700, parents=True)
+    elif state_dir.is_symlink():
+        # Reject symlinks to prevent redirection attacks (is_dir follows symlinks)
+        raise RuntimeError(
+            f"State directory path is a symlink, refusing for security: {state_dir}"
+        )
     elif not state_dir.is_dir():
-        # If it exists but isn't a directory (e.g., symlink attack), fail safely
+        # If it exists but isn't a directory, fail safely
         raise RuntimeError(
             f"State directory path exists but is not a directory: {state_dir}"
         )
