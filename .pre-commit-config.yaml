@@ -33,11 +33,36 @@ repos:
           - json
           - css
 
+      # Python formatting with ruff on commit
+      - id: ruff-format
+        name: Format Python with Ruff
+        entry: uv run --project scripts/python ruff format
+        language: system
+        files: ^scripts/python/(src|tests)/.*\.py$
+        pass_filenames: true
+
+      # Python linting with ruff on commit
+      - id: ruff-check
+        name: Lint Python with Ruff
+        entry: uv run --project scripts/python ruff check --fix
+        language: system
+        files: ^scripts/python/(src|tests)/.*\.py$
+        pass_filenames: true
+
       # Full TypeScript checking on push (includes tsc --noEmit)
       - id: typecheck
         name: TypeScript Check
         entry: bun run typecheck
         language: system
+        pass_filenames: false
+        stages: [pre-push]
+
+      # Python type checking with basedpyright on push
+      - id: python-typecheck
+        name: Python Type Check
+        entry: uv run --project scripts/python basedpyright scripts/python/src scripts/python/tests
+        language: system
+        files: ^scripts/python/(src|tests)/.*\.py$
         pass_filenames: false
         stages: [pre-push]
 
