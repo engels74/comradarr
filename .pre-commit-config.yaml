@@ -42,6 +42,7 @@ repos:
           - svelte
           - json
           - css
+        exclude: ^drizzle/
 
       # Full TypeScript checking on push (includes tsc --noEmit)
       - id: typecheck
