@@ -19,10 +19,17 @@ jobs:
         uses: oven-sh/setup-bun@v2
         with:
           bun-version: latest
-          cache: true
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
 
       - name: Install dependencies
         run: bun install
+
+      - name: Install Python dev dependencies
+        run: uv sync --project dev-cli --dev
 
       - name: Run prek checks
         uses: j178/prek-action@v1

@@ -1,0 +1,156 @@
+/* Comradarr Dev Tools TUI Stylesheet */
+
+/* Base screen styling */
+Screen {
+    background: $surface;
+}
+
+/* Main container layout */
+#main-container {
+    width: 100%;
+    height: 100%;
+}
+
+/* Menu panel (left side) */
+#menu-panel {
+    width: 40%;
+    min-width: 42;
+    max-width: 58;
+    height: 100%;
+    padding: 1 2;
+    border-right: solid $primary;
+}
+
+/* Output panel (right side) */
+#output-panel {
+    width: 60%;
+    min-width: 40;
+    height: 100%;
+    padding: 1 2;
+}
+
+/* Menu sections */
+MenuSection {
+    height: auto;
+    margin-bottom: 1;
+}
+
+/* Menu items */
+MenuItem {
+    height: 1;
+    padding: 0;
+}
+
+MenuItem:hover {
+    background: $primary 20%;
+}
+
+MenuItem:focus {
+    background: $primary 40%;
+}
+
+/* Server status widget */
+#server-status {
+    height: auto;
+    margin-bottom: 1;
+}
+
+/* Saved databases hint */
+#saved-dbs-hint {
+    margin-top: 1;
+    padding: 0 1;
+}
+
+/* Output log */
+#output-log {
+    height: 100%;
+    border: solid $primary;
+    background: $surface-darken-1;
+}
+
+/* Database management screen specific */
+DatabaseManagementScreen #output-panel {
+    layout: vertical;
+}
+
+#table-title {
+    height: 1;
+    padding: 0 1;
+    margin-bottom: 1;
+}
+
+#db-table {
+    height: 40%;
+    min-height: 5;
+    max-height: 15;
+    margin-bottom: 1;
+}
+
+DatabaseManagementScreen #output-log {
+    height: 1fr;
+}
+
+/* Navigation section styling */
+#nav-section {
+    margin-top: 2;
+    border-top: solid $primary-darken-2;
+    padding-top: 1;
+}
+
+/* Database items in select dialog */
+.db-item {
+    height: 1;
+    padding: 0 1;
+}
+
+.db-item:hover {
+    background: $primary 30%;
+}
+
+.db-item.-selected {
+    background: $primary;
+    color: $background;
+}
+
+/* Credential items styling */
+CredentialItem {
+    height: 1;
+    padding: 0;
+}
+
+CredentialItem:hover {
+    background: $primary 20%;
+}
+
+CredentialItem:focus {
+    background: $primary 40%;
+}
+
+/* Credential items in dialogs */
+CredentialsDialog CredentialItem {
+    height: 1;
+    margin-bottom: 0;
+    padding: 0 1;
+}
+
+CredentialsDialog CredentialItem:hover {
+    background: $primary 30%;
+}
+
+CredentialsDialog CredentialItem:focus {
+    background: $primary 50%;
+}
+
+/* Credential items in ServerStatusWidget */
+ServerStatusWidget CredentialItem {
+    height: 1;
+    padding: 0;
+}
+
+ServerStatusWidget CredentialItem:hover {
+    background: $success 20%;
+}
+
+ServerStatusWidget CredentialItem:focus {
+    background: $success 40%;
+}

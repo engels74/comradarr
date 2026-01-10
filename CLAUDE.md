@@ -4,105 +4,135 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Comradarr is a media library completion service integrating with \*arr applications (Sonarr, Radarr, Whisparr) to identify and request missing or upgradeable content.
-
-## Tech Stack
-
-- **Runtime:** Bun
-- **Framework:** SvelteKit 2 with Svelte 5
-- **Database:** PostgreSQL 15+ with Drizzle ORM
-- **Styling:** UnoCSS with Tailwind preset, shadcn-svelte components
-- **Testing:** Vitest (unit), Bun test (integration)
+Comradarr is a media library completion service that integrates with *arr applications (Sonarr, Radarr, Whisparr) to systematically identify and request missing or upgradeable content. Built with Bun, SvelteKit 2, Svelte 5, Drizzle ORM, and PostgreSQL.
 
 ## Commands
 
+### Development
 ```bash
-# Development
-bun run dev                    # Start dev server with hot reload
-bun run check                  # Type check Svelte components
-bun run typecheck              # Full TypeScript check (includes tsc --noEmit)
-
-# Testing
-bun run test:unit              # Run unit tests only (no database required)
-bun run test:watch             # Watch mode for unit tests
-bun run test                   # Full test suite (auto-handles DB setup)
-bun run test:db:setup          # Manually setup test database
-
-# Database
-bun run db:generate            # Generate new migrations
-bun run db:migrate             # Run pending migrations
-bun run db:push                # Push schema changes directly
-bun run db:studio              # Visual database editor
-
-# Build
-bun run build                  # Production build to ./build
-bun run preview                # Preview built application
+bun install                          # Install dependencies
+bun run dev                          # Start dev server with Vite
+bun run build                        # Production build
+bun run start                        # Run production build
 ```
 
-## Coding Guidelines
+### Type Checking & Linting
+```bash
+bun run typecheck                    # svelte-check + tsc --noEmit
+bun run check                        # svelte-check only
+bun run lint                         # Biome lint
+bun run format                       # Biome format
+bun run check:biome                  # Biome check (lint + format)
+```
 
-**Always follow the coding patterns established in:**
-`.augment/rules/bun-svelte-pro.md`
+### Testing
+```bash
+bun run test                         # Full test suite (unit + integration via Python CLI)
+bun run test:unit                    # Vitest unit tests only
+bun run test:watch                   # Vitest watch mode
+bun run test:integration             # Integration tests with real database
+```
 
-Before making any changes, review this file to ensure consistency with project standards.
+### Database (via Python CLI or directly)
+```bash
+bun run db:generate                  # Generate migrations from schema changes
+bun run db:migrate                   # Apply pending migrations
+bun run db:push                      # Push schema directly (dev only)
+bun run db:studio                    # Open Drizzle Studio GUI
 
-### Comment Philosophy
+# Python CLI for test database management
+bun run test:db:setup                # Create test database container
+bun run test:db:teardown             # Remove test database
+bun run test:db:reset                # Reset test database
+bun run test:db:status               # Show database status
+```
 
-This codebase maintains a comment-minimal style. Follow these principles:
-
-- **Remove redundant comments** that restate what the code does—the code is the documentation
-- **Keep comments that explain WHY**, not WHAT (business logic rationale, non-obvious decisions)
-- **Preserve essential context** that isn't obvious from reading the code itself
-- **Avoid over-explanatory JSDoc** where TypeScript types already provide sufficient documentation
-- **Never add section dividers** or decorative comment blocks
+### Python Dev Tools (run from project root)
+```bash
+uv run --project dev-cli cr-dev menu            # Interactive TUI menu
+uv run --project dev-cli cr-dev dev             # Dev server with temp database
+uv run --project dev-cli cr-dev dev --persist   # Dev server with named database
+uv run --project dev-cli basedpyright src tests # Type check Python code
+uv run --project dev-cli ruff check src tests   # Lint Python code
+```
 
 ## Architecture
 
-### Directory Structure
+### Stack
+- **Runtime**: Bun with native PostgreSQL driver (`bun:sql`)
+- **Framework**: SvelteKit 2.x with svelte-adapter-bun
+- **UI**: Svelte 5 (Runes), shadcn-svelte, UnoCSS (presetWind3 + presetShadcn)
+- **Database**: PostgreSQL with Drizzle ORM
+- **Type Checking**: svelte-check + TypeScript strict mode
+- **Linting/Formatting**: Biome (tabs, single quotes, 100 line width)
 
-- `src/lib/server/` - All server-side code (never imported client-side)
-  - `connectors/` - \*arr API clients using factory pattern (`createConnectorClient()`)
-  - `services/` - Business logic: sync, discovery, queue, throttle, analytics, etc.
-  - `db/schema/` - Drizzle ORM schema definitions
-  - `db/queries/` - Database query functions (one file per entity)
-  - `scheduler.ts` - Background job scheduler (croner with 11 jobs)
-  - `context.ts` - AsyncLocalStorage for request correlation IDs
-- `src/lib/components/` - Svelte components
-  - `ui/` - shadcn-svelte base components
-- `src/lib/schemas/` - Zod validation schemas
-- `src/routes/` - SvelteKit file-based routing
-  - `(app)/` - Protected routes requiring authentication
-  - `(auth)/` - Login/auth routes
-  - `api/` - REST API endpoints (v1)
+### Directory Structure
+```
+src/
+├── lib/
+│   ├── components/         # Svelte components (shadcn-svelte UI in ui/)
+│   ├── server/             # Server-only code (enforced by SvelteKit)
+│   │   ├── auth/           # Authentication (Argon2id, sessions, lockout)
+│   │   ├── connectors/     # *arr API clients (sonarr/, radarr/, whisparr/)
+│   │   ├── db/             # Drizzle schema and queries
+│   │   │   ├── schema/     # Table definitions with inferred types
+│   │   │   └── queries/    # Database query functions
+│   │   └── services/       # Business logic services
+│   │       ├── analytics/  # Stats aggregation
+│   │       ├── discovery/  # Gap/upgrade detection
+│   │       ├── notifications/ # Multi-channel notifications
+│   │       ├── prowlarr/   # Indexer health monitoring
+│   │       ├── queue/      # Search queue management
+│   │       ├── sync/       # Content synchronization
+│   │       └── throttle/   # Rate limiting
+│   └── stores/             # Svelte state (use $state in .svelte.ts)
+└── routes/
+    ├── (app)/              # Authenticated routes
+    ├── (auth)/             # Login/logout
+    └── api/                # API endpoints
+```
 
 ### Key Patterns
 
-**Request Context:** Uses AsyncLocalStorage (`src/lib/server/context.ts`) for correlation ID propagation through async chains. All services and logging use this context.
+**Svelte 5 Runes**: Use `$state()`, `$derived()`, `$props()`, `{#snippet}`, `{@render}`. Avoid legacy `export let`, `$:`, and `<slot>`.
 
-**Connector Factory:** `createConnectorClient()` instantiates the correct client (Sonarr/Radarr/Whisparr) based on connector type. Base client handles retry logic and error handling.
+**Database**: Schema in `src/lib/server/db/schema/index.ts`. Use `$inferSelect`/`$inferInsert` for types. Runtime uses `bun:sql`, drizzle-kit uses `postgres` package.
 
-**Database Queries:** Each entity has a dedicated query file in `db/queries/` exporting typed functions. Schema uses snake_case columns, TypeScript uses camelCase.
+**Connectors**: Factory pattern in `src/lib/server/connectors/factory.ts`. Each connector type (sonarr, radarr, whisparr) has its own client, types, and parsers.
 
-**Service Organization:** Services are in `services/` with index files exporting public functions and types. Key services:
+**Authentication**: Argon2id hashing, session-based with cookies, account lockout after failed attempts. Implemented in `src/lib/server/auth/`.
 
-- `sync/` - Content synchronization from \*arr apps
-- `discovery/` - Gap detection (missing) and upgrade detection (quality improvements)
-- `queue/` - Priority-based search request management
-- `throttle/` - Rate limiting per connector
+**Throttle System**: Per-connector rate limiting with daily budgets, batch processing, and automatic backoff. State persisted in `throttle_state` table.
 
-**Background Jobs:** Croner scheduler runs 11 jobs including health checks, syncs, analytics aggregation, and maintenance. Jobs use `protect: true` to prevent overlap.
+### Path Aliases
+- `$lib` - src/lib
+- `$components` - src/lib/components
+- `$server` - src/lib/server
 
-**Encryption:** AES-256-GCM for sensitive data (connector API keys, notification credentials). See `crypto.ts`.
+## Code Style
 
-## TypeScript Configuration
+**TypeScript**: Strict mode enabled. Use `satisfies` for configs, infer types from Drizzle schema.
 
-Uses strict TypeScript with additional flags:
+**Svelte Components**: Use Svelte 5 syntax exclusively:
+```svelte
+<script lang="ts">
+  import type { PageProps } from './$types';
+  let { data }: PageProps = $props();
+  const doubled = $derived(data.count * 2);
+</script>
+```
 
-- `noUncheckedIndexedAccess: true` - Array/object access returns possibly undefined
-- `exactOptionalPropertyTypes: true` - Distinguishes `undefined` from optional
-- `noImplicitOverride: true` - Requires `override` keyword
+**Biome Config**: Tabs, single quotes, no trailing commas, 100 char line width.
 
-## Environment
+**Icons**: Import directly from `@lucide/svelte/icons/icon-name` for tree-shaking.
 
-Required: `DATABASE_URL` - PostgreSQL connection string
-Optional: `SECRET_KEY` - 32-byte hex for encryption (auto-generated if missing)
+## Database Schema
+
+Key tables: `connectors`, `series`, `seasons`, `episodes`, `movies`, `search_registry`, `request_queue`, `throttle_state`, `users`, `sessions`, `api_keys`, `notification_channels`, `sweep_schedules`, `analytics_events`.
+
+API keys use prefix-based lookup with Argon2id hashed storage. Connector API keys use AES-256-GCM encryption.
+
+## Environment Variables
+
+- `DATABASE_URL` - PostgreSQL connection string (required)
+- `ENCRYPTION_KEY` - 32-byte hex key for API key encryption

@@ -18,6 +18,16 @@ repos:
       - id: check-added-large-files
         args: ['--maxkb=500']
 
+  # Ruff - Python linting and formatting (official hooks)
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.14.11
+    hooks:
+      - id: ruff-check
+        args: [--fix]
+        files: ^dev-cli/(src|tests)/.*\.py$
+      - id: ruff-format
+        files: ^dev-cli/(src|tests)/.*\.py$
+
   # Local hooks
   - repo: local
     hooks:
@@ -38,6 +48,15 @@ repos:
         name: TypeScript Check
         entry: bun run typecheck
         language: system
+        pass_filenames: false
+        stages: [pre-push]
+
+      # Python type checking with basedpyright on push
+      - id: python-typecheck
+        name: Python Type Check
+        entry: uv run --project dev-cli --extra dev basedpyright dev-cli/src dev-cli/tests
+        language: system
+        files: ^dev-cli/(src|tests)/.*\.py$
         pass_filenames: false
         stages: [pre-push]
 
