@@ -36,17 +36,17 @@ repos:
       # Python formatting with ruff on commit
       - id: ruff-format
         name: Format Python with Ruff
-        entry: uv run --project scripts/python ruff format
+        entry: uv run --project dev-cli ruff format
         language: system
-        files: ^scripts/python/(src|tests)/.*\.py$
+        files: ^dev-cli/(src|tests)/.*\.py$
         pass_filenames: true
 
       # Python linting with ruff on commit
       - id: ruff-check
         name: Lint Python with Ruff
-        entry: uv run --project scripts/python ruff check --fix
+        entry: uv run --project dev-cli ruff check --fix
         language: system
-        files: ^scripts/python/(src|tests)/.*\.py$
+        files: ^dev-cli/(src|tests)/.*\.py$
         pass_filenames: true
 
       # Full TypeScript checking on push (includes tsc --noEmit)
@@ -60,9 +60,9 @@ repos:
       # Python type checking with basedpyright on push
       - id: python-typecheck
         name: Python Type Check
-        entry: uv run --project scripts/python basedpyright scripts/python/src scripts/python/tests
+        entry: uv run --project dev-cli --extra dev basedpyright dev-cli/src dev-cli/tests
         language: system
-        files: ^scripts/python/(src|tests)/.*\.py$
+        files: ^dev-cli/(src|tests)/.*\.py$
         pass_filenames: false
         stages: [pre-push]
 

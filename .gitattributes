@@ -1,2 +1,2 @@
 # Exclude development tools from language statistics
-scripts/python/** linguist-vendored
+dev-cli/** linguist-vendored

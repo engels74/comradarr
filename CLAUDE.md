@@ -47,22 +47,13 @@ bun run test:db:reset                # Reset test database
 bun run test:db:status               # Show database status
 ```
 
-### Python Dev Tools (in scripts/python/)
-```bash
-uv run comradarr-dev menu            # Interactive TUI menu
-uv run comradarr-dev dev ephemeral   # Dev server with temp database
-uv run comradarr-dev dev persistent  # Dev server with named database
-uv run basedpyright src tests        # Type check Python code
-uv run ruff check src tests          # Lint Python code
-```
-
 ### Python Dev Tools (run from project root)
 ```bash
-uv run --project scripts/python comradarr-dev menu            # Interactive TUI menu
-uv run --project scripts/python comradarr-dev dev             # Dev server with temp database
-uv run --project scripts/python comradarr-dev dev --persist   # Dev server with named database
-uv run --project scripts/python basedpyright src tests        # Type check Python code
-uv run --project scripts/python ruff check src tests          # Lint Python code
+uv run --project dev-cli cr-dev menu            # Interactive TUI menu
+uv run --project dev-cli cr-dev dev             # Dev server with temp database
+uv run --project dev-cli cr-dev dev --persist   # Dev server with named database
+uv run --project dev-cli basedpyright src tests # Type check Python code
+uv run --project dev-cli ruff check src tests   # Lint Python code
 ```
 
 ## Architecture
