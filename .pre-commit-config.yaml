@@ -18,6 +18,16 @@ repos:
       - id: check-added-large-files
         args: ['--maxkb=500']
 
+  # Ruff - Python linting and formatting (official hooks)
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.14.11
+    hooks:
+      - id: ruff-check
+        args: [--fix]
+        files: ^dev-cli/(src|tests)/.*\.py$
+      - id: ruff-format
+        files: ^dev-cli/(src|tests)/.*\.py$
+
   # Local hooks
   - repo: local
     hooks:
@@ -32,22 +42,6 @@ repos:
           - svelte
           - json
           - css
-
-      # Python formatting with ruff on commit
-      - id: ruff-format
-        name: Format Python with Ruff
-        entry: uv run --project dev-cli ruff format
-        language: system
-        files: ^dev-cli/(src|tests)/.*\.py$
-        pass_filenames: true
-
-      # Python linting with ruff on commit
-      - id: ruff-check
-        name: Lint Python with Ruff
-        entry: uv run --project dev-cli ruff check --fix
-        language: system
-        files: ^dev-cli/(src|tests)/.*\.py$
-        pass_filenames: true
 
       # Full TypeScript checking on push (includes tsc --noEmit)
       - id: typecheck
