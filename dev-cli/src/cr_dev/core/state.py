@@ -25,13 +25,16 @@ def _get_secure_state_dir() -> Path:
         state_dir = Path(f"/tmp/cr-dev-{os.getuid()}")
 
     # Ensure directory exists with restrictive permissions
-    if not state_dir.exists():
-        state_dir.mkdir(mode=0o700, parents=True)
-    elif state_dir.is_symlink():
+    # Check symlinks first: is_symlink() returns True even for broken symlinks,
+    # while exists() returns False for broken symlinks. This ordering ensures
+    # we reject all symlinks (including dangling ones) with a clear error.
+    if state_dir.is_symlink():
         # Reject symlinks to prevent redirection attacks (is_dir follows symlinks)
         raise RuntimeError(
             f"State directory path is a symlink, refusing for security: {state_dir}"
         )
+    elif not state_dir.exists():
+        state_dir.mkdir(mode=0o700, parents=True)
     elif not state_dir.is_dir():
         # If it exists but isn't a directory, fail safely
         raise RuntimeError(
