@@ -480,6 +480,15 @@ class MainMenuScreen(Screen[None]):
             status_bar.set_ready()
             self._get_server_status().refresh_status()
         else:
+            # Clean up resources created during setup (DB, state file) on start failure
+            from cr_dev.core.state import remove_state
+
+            try:
+                setup_result.cleanup_callback()
+            except Exception as exc:
+                _ = output_log.log_warning(f"Cleanup failed: {exc}")
+            remove_state()
+
             status_bar.set_ready()
             _ = output_log.log_error("Failed to start dev server")
             self._get_server_status().refresh_status()

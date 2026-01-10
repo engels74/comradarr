@@ -82,13 +82,17 @@ def _run_integration_tests(project_root: Path, config: TestDbConfig) -> int:
 
 def _setup_database(_config: TestDbConfig) -> bool:
     """Set up the test database if needed."""
+    import click
+
     from cr_dev.commands.db import setup
 
     try:
         setup()
         return True
-    except SystemExit as e:
-        return e.code == 0
+    except (SystemExit, click.exceptions.Exit) as e:
+        # typer.Exit raises click.exceptions.Exit (inherits from Exception, not SystemExit)
+        exit_code = getattr(e, "exit_code", getattr(e, "code", 1))
+        return exit_code == 0
 
 
 @app.command("all")

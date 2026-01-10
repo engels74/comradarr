@@ -8,7 +8,35 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import cast
 
-STATE_FILE = Path("/tmp/cr-dev-state.json")
+
+def _get_secure_state_dir() -> Path:
+    """Get a user-specific directory for state files.
+
+    Uses a per-user directory to avoid symlink attacks in shared /tmp.
+    Falls back to XDG_RUNTIME_DIR if available, otherwise creates a
+    user-specific directory under /tmp.
+    """
+    # Prefer XDG_RUNTIME_DIR if available (typically /run/user/<uid>)
+    runtime_dir = os.environ.get("XDG_RUNTIME_DIR")
+    if runtime_dir:
+        state_dir = Path(runtime_dir) / "cr-dev"
+    else:
+        # Fall back to user-specific temp directory
+        state_dir = Path(f"/tmp/cr-dev-{os.getuid()}")
+
+    # Ensure directory exists with restrictive permissions
+    if not state_dir.exists():
+        state_dir.mkdir(mode=0o700, parents=True)
+    elif not state_dir.is_dir():
+        # If it exists but isn't a directory (e.g., symlink attack), fail safely
+        raise RuntimeError(
+            f"State directory path exists but is not a directory: {state_dir}"
+        )
+
+    return state_dir
+
+
+STATE_FILE = _get_secure_state_dir() / "state.json"
 
 
 def _write_secure_file(path: Path, content: str) -> None:
@@ -16,15 +44,24 @@ def _write_secure_file(path: Path, content: str) -> None:
 
     Creates the file with 0600 permissions to protect sensitive data like passwords
     and secret keys from being read by other users on the system.
+
+    Uses O_NOFOLLOW to prevent symlink attacks on multi-user systems.
     """
+    # Verify the path isn't a symlink (defense in depth)
+    if path.is_symlink():
+        raise RuntimeError(f"Refusing to write to symlink: {path}")
+
     # Remove existing file first to ensure clean permission state
     if path.exists():
         path.unlink()
 
     # Create file with restrictive permissions using os.open for atomic creation
-    fd = os.open(
-        path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, stat.S_IRUSR | stat.S_IWUSR
-    )
+    # O_NOFOLLOW prevents following symlinks (protects against race conditions)
+    flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL
+    if hasattr(os, "O_NOFOLLOW"):
+        flags |= os.O_NOFOLLOW
+
+    fd = os.open(path, flags, stat.S_IRUSR | stat.S_IWUSR)
     try:
         _ = os.write(fd, content.encode("utf-8"))
     finally:
