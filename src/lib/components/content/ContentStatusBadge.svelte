@@ -48,7 +48,7 @@ const stateConfig: Record<
 };
 
 const config = $derived(
-	state && state in stateConfig ? stateConfig[state as NonNullable<SearchState>] : null
+	state && Object.hasOwn(stateConfig, state) ? stateConfig[state as NonNullable<SearchState>] : null
 );
 
 const displayLabel = $derived.by(() => {

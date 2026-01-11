@@ -262,7 +262,7 @@ const searchStateSubquery = db
 				SELECT
 					sea.series_id,
 					sr.state,
-					COUNT(*) as state_count,
+					COUNT(*)::int as state_count,
 					ROW_NUMBER() OVER (
 						PARTITION BY sea.series_id
 						ORDER BY CASE sr.state
