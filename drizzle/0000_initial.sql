@@ -241,6 +241,7 @@ CREATE TABLE "search_registry" (
 	"next_eligible" timestamp with time zone,
 	"failure_category" varchar(50),
 	"season_pack_failed" boolean DEFAULT false NOT NULL,
+	"backlog_tier" integer DEFAULT 0 NOT NULL,
 	"priority" integer DEFAULT 0 NOT NULL,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
@@ -417,9 +418,4 @@ CREATE UNIQUE INDEX "series_connector_arr_idx" ON "series" USING btree ("connect
 CREATE INDEX "sessions_user_idx" ON "sessions" USING btree ("user_id");--> statement-breakpoint
 CREATE INDEX "sessions_expires_idx" ON "sessions" USING btree ("expires_at");--> statement-breakpoint
 CREATE INDEX "sweep_schedules_connector_idx" ON "sweep_schedules" USING btree ("connector_id");--> statement-breakpoint
-CREATE INDEX "sweep_schedules_enabled_idx" ON "sweep_schedules" USING btree ("enabled");--> statement-breakpoint
-INSERT INTO "throttle_profiles" ("name", "description", "requests_per_minute", "daily_budget", "batch_size", "batch_cooldown_seconds", "rate_limit_pause_seconds", "is_default")
-VALUES
-  ('Conservative', 'Low rate limits for shared/public indexers', 2, 200, 5, 120, 600, false),
-  ('Moderate', 'Balanced rate limits for typical usage', 5, 500, 10, 60, 300, true),
-  ('Aggressive', 'High rate limits for private indexers', 15, NULL, 10, 30, 120, false);
+CREATE INDEX "sweep_schedules_enabled_idx" ON "sweep_schedules" USING btree ("enabled");
