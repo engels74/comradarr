@@ -19,10 +19,47 @@ from cr_dev.core.state import (
 )
 
 
-def _drop_database(db_name: str, db_port: int) -> bool:
-    """Drop database and user."""
+def _terminate_db_connections(db_name: str, db_port: int) -> None:
+    """Terminate all connections to a database before dropping it."""
     platform = detect_platform()
     strategy = get_strategy(platform)
+
+    terminate_sql = f"""
+    SELECT pg_terminate_backend(pid)
+    FROM pg_stat_activity
+    WHERE datname = '{db_name}' AND pid <> pg_backend_pid()
+    """
+
+    if is_macos(platform):
+        _ = subprocess.run(
+            [
+                "psql",
+                "-h",
+                "localhost",
+                "-p",
+                str(db_port),
+                "-d",
+                "postgres",
+                "-c",
+                terminate_sql,
+            ],
+            capture_output=True,
+            text=True,
+        )
+    else:
+        _ = strategy.run_as_postgres_user(
+            ["psql", "-p", str(db_port), "-d", "postgres", "-c", terminate_sql],
+            check=False,
+        )
+
+
+def _drop_database(db_name: str, db_port: int) -> bool:
+    """Drop database and user after terminating active connections."""
+    platform = detect_platform()
+    strategy = get_strategy(platform)
+
+    # Terminate any active connections first
+    _terminate_db_connections(db_name, db_port)
 
     if is_macos(platform):
         _ = subprocess.run(
@@ -57,11 +94,27 @@ def _drop_database(db_name: str, db_port: int) -> bool:
         )
     else:
         _ = strategy.run_as_postgres_user(
-            ["psql", "-d", "postgres", "-c", f"DROP DATABASE IF EXISTS {db_name}"],
+            [
+                "psql",
+                "-p",
+                str(db_port),
+                "-d",
+                "postgres",
+                "-c",
+                f"DROP DATABASE IF EXISTS {db_name}",
+            ],
             check=False,
         )
         _ = strategy.run_as_postgres_user(
-            ["psql", "-d", "postgres", "-c", f"DROP ROLE IF EXISTS {db_name}"],
+            [
+                "psql",
+                "-p",
+                str(db_port),
+                "-d",
+                "postgres",
+                "-c",
+                f"DROP ROLE IF EXISTS {db_name}",
+            ],
             check=False,
         )
 
@@ -134,6 +187,8 @@ def stop_command(
             step("Looking for orphaned dev databases...")
             platform = detect_platform()
             strategy = get_strategy(platform)
+            # Default port for force cleanup when no state is available
+            default_port = 5432
 
             if is_macos(platform):
                 result = subprocess.run(
@@ -141,6 +196,8 @@ def stop_command(
                         "psql",
                         "-h",
                         "localhost",
+                        "-p",
+                        str(default_port),
                         "-d",
                         "postgres",
                         "-tAc",
@@ -153,6 +210,8 @@ def stop_command(
                 result = strategy.run_as_postgres_user(
                     [
                         "psql",
+                        "-p",
+                        str(default_port),
                         "-d",
                         "postgres",
                         "-tAc",
@@ -169,7 +228,7 @@ def stop_command(
                     db = db.strip()
                     if db:
                         step(f"Dropping {db}...")
-                        _ = _drop_database(db, 5432)
+                        _ = _drop_database(db, default_port)
                         remove_credentials(db)
                         success(f"Dropped {db}")
 
