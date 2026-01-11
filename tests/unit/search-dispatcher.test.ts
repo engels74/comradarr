@@ -38,6 +38,40 @@ vi.mock('$lib/server/db/queries/connectors', () => ({
 	getDecryptedApiKey: vi.fn()
 }));
 
+// Mock the database and schema to avoid Bun import
+vi.mock('$lib/server/db', () => ({
+	db: {
+		select: vi.fn(() => ({
+			from: vi.fn(() => ({
+				innerJoin: vi.fn(() => ({
+					innerJoin: vi.fn(() => ({
+						where: vi.fn(() => ({
+							limit: vi.fn(() => Promise.resolve([]))
+						}))
+					})),
+					where: vi.fn(() => ({
+						limit: vi.fn(() => Promise.resolve([]))
+					}))
+				})),
+				where: vi.fn(() => ({
+					limit: vi.fn(() => Promise.resolve([]))
+				}))
+			}))
+		}))
+	}
+}));
+
+vi.mock('$lib/server/db/schema', () => ({
+	episodes: {},
+	movies: {},
+	seasons: {},
+	series: {}
+}));
+
+vi.mock('drizzle-orm', () => ({
+	eq: vi.fn()
+}));
+
 // Mock connectors with proper class constructors
 vi.mock('$lib/server/connectors', async () => {
 	const errors = await import('../../src/lib/server/connectors/common/errors');
@@ -78,7 +112,8 @@ vi.mock('$lib/server/services/throttle', () => ({
 	throttleEnforcer: {
 		canDispatch: vi.fn(),
 		recordRequest: vi.fn(),
-		handleRateLimitResponse: vi.fn()
+		handleRateLimitResponse: vi.fn(),
+		getStatus: vi.fn()
 	}
 }));
 
@@ -116,6 +151,16 @@ describe('dispatchSearch', () => {
 		(throttleEnforcer.canDispatch as Mock).mockResolvedValue({ allowed: true });
 		(throttleEnforcer.recordRequest as Mock).mockResolvedValue(undefined);
 		(throttleEnforcer.handleRateLimitResponse as Mock).mockResolvedValue(undefined);
+		(throttleEnforcer.getStatus as Mock).mockResolvedValue({
+			connectorId: 1,
+			requestsThisMinute: 0,
+			requestsToday: 0,
+			remainingThisMinute: 5,
+			remainingToday: 100,
+			isPaused: false,
+			pauseReason: null,
+			pauseExpiresInMs: null
+		});
 		// Default: no Prowlarr instances configured (empty array)
 		(prowlarrHealthMonitor.getAllCachedHealth as Mock).mockResolvedValue([]);
 	});
@@ -530,6 +575,16 @@ describe('dispatchBatch', () => {
 		(throttleEnforcer.canDispatch as Mock).mockResolvedValue({ allowed: true });
 		(throttleEnforcer.recordRequest as Mock).mockResolvedValue(undefined);
 		(throttleEnforcer.handleRateLimitResponse as Mock).mockResolvedValue(undefined);
+		(throttleEnforcer.getStatus as Mock).mockResolvedValue({
+			connectorId: 1,
+			requestsThisMinute: 0,
+			requestsToday: 0,
+			remainingThisMinute: 5,
+			remainingToday: 100,
+			isPaused: false,
+			pauseReason: null,
+			pauseExpiresInMs: null
+		});
 		// Default: no Prowlarr instances configured (empty array)
 		(prowlarrHealthMonitor.getAllCachedHealth as Mock).mockResolvedValue([]);
 	});

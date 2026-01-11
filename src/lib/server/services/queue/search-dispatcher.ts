@@ -1,3 +1,4 @@
+import { eq } from 'drizzle-orm';
 import {
 	type CommandResponse,
 	isArrClientError,
@@ -6,7 +7,9 @@ import {
 	SonarrClient,
 	WhisparrClient
 } from '$lib/server/connectors';
+import { db } from '$lib/server/db';
 import { getConnector, getDecryptedApiKey } from '$lib/server/db/queries/connectors';
+import { episodes, movies, seasons, series } from '$lib/server/db/schema';
 import { createLogger } from '$lib/server/logger';
 import { prowlarrHealthMonitor } from '$lib/server/services/prowlarr';
 import { throttleEnforcer } from '$lib/server/services/throttle';
@@ -59,6 +62,57 @@ async function createConnectorClient(
 		default:
 			return null;
 	}
+}
+
+interface ContentInfo {
+	contentTitle: string;
+	seriesTitle?: string;
+	seasonNumber?: number;
+	episodeNumber?: number;
+	year?: number;
+}
+
+async function getEpisodeInfo(contentId: number): Promise<ContentInfo | null> {
+	const result = await db
+		.select({
+			title: episodes.title,
+			seasonNumber: episodes.seasonNumber,
+			episodeNumber: episodes.episodeNumber,
+			seriesTitle: series.title
+		})
+		.from(episodes)
+		.innerJoin(seasons, eq(episodes.seasonId, seasons.id))
+		.innerJoin(series, eq(seasons.seriesId, series.id))
+		.where(eq(episodes.id, contentId))
+		.limit(1);
+
+	if (result.length === 0) return null;
+	const row = result[0]!;
+	const epTitle = row.title ?? `S${row.seasonNumber}E${String(row.episodeNumber).padStart(2, '0')}`;
+	return {
+		contentTitle: epTitle,
+		seriesTitle: row.seriesTitle,
+		seasonNumber: row.seasonNumber,
+		episodeNumber: row.episodeNumber
+	};
+}
+
+async function getMovieInfo(contentId: number): Promise<ContentInfo | null> {
+	const result = await db
+		.select({
+			title: movies.title,
+			year: movies.year
+		})
+		.from(movies)
+		.where(eq(movies.id, contentId))
+		.limit(1);
+
+	if (result.length === 0) return null;
+	const row = result[0]!;
+	return {
+		contentTitle: row.title ?? 'Unknown Movie',
+		...(row.year != null && { year: row.year })
+	};
 }
 
 async function executeSearchCommand(
@@ -117,12 +171,37 @@ async function checkProwlarrHealth(): Promise<void> {
 export async function dispatchSearch(
 	connectorId: number,
 	searchRegistryId: number,
-	_contentType: ContentType,
-	_searchType: SearchType,
+	contentType: ContentType,
+	searchType: SearchType,
 	options: DispatchOptions
 ): Promise<DispatchResult> {
+	const startTime = Date.now();
+
+	const contentInfo =
+		contentType === 'movie'
+			? await getMovieInfo(options.movieIds?.[0] ?? 0)
+			: await getEpisodeInfo(options.episodeIds?.[0] ?? 0);
+
+	const connector = await getConnector(connectorId);
+	const connectorName = connector?.name ?? `Connector ${connectorId}`;
+
 	const throttleResult = await throttleEnforcer.canDispatch(connectorId);
 	if (!throttleResult.allowed) {
+		const throttleStatus = await throttleEnforcer.getStatus(connectorId);
+		logger.warn('Search throttled', {
+			contentType,
+			contentTitle: contentInfo?.contentTitle ?? 'Unknown',
+			...(contentInfo?.seriesTitle && { seriesTitle: contentInfo.seriesTitle }),
+			connectorName,
+			searchType,
+			reason: throttleResult.reason,
+			retryAfterMs: throttleResult.retryAfterMs,
+			throttle: {
+				requestsThisMinute: throttleStatus.requestsThisMinute,
+				remainingToday: throttleStatus.remainingToday,
+				isPaused: throttleStatus.isPaused
+			}
+		});
 		return {
 			success: false,
 			searchRegistryId,
@@ -136,6 +215,12 @@ export async function dispatchSearch(
 
 	const connectorResult = await createConnectorClient(connectorId);
 	if (!connectorResult) {
+		logger.error('Search failed - connector not found', {
+			contentType,
+			contentTitle: contentInfo?.contentTitle ?? 'Unknown',
+			connectorId,
+			searchType
+		});
 		return {
 			success: false,
 			searchRegistryId,
@@ -149,6 +234,18 @@ export async function dispatchSearch(
 	try {
 		const commandResponse = await executeSearchCommand(client, connectorType, options);
 		await throttleEnforcer.recordRequest(connectorId);
+		const durationMs = Date.now() - startTime;
+
+		logger.info('Search dispatched', {
+			contentType,
+			contentTitle: contentInfo?.contentTitle ?? 'Unknown',
+			...(contentInfo?.seriesTitle && { seriesTitle: contentInfo.seriesTitle }),
+			...(contentInfo?.year && { year: contentInfo.year }),
+			connectorName,
+			searchType,
+			commandId: commandResponse.id,
+			durationMs
+		});
 
 		return {
 			success: true,
@@ -157,8 +254,28 @@ export async function dispatchSearch(
 			commandId: commandResponse.id
 		};
 	} catch (error) {
+		const durationMs = Date.now() - startTime;
+
 		if (error instanceof RateLimitError) {
 			await throttleEnforcer.handleRateLimitResponse(connectorId, error.retryAfter);
+			const throttleStatus = await throttleEnforcer.getStatus(connectorId);
+
+			logger.warn('Search rate limited by *arr API', {
+				contentType,
+				contentTitle: contentInfo?.contentTitle ?? 'Unknown',
+				connectorName,
+				searchType,
+				retryAfterSeconds: error.retryAfter,
+				durationMs,
+				throttle: {
+					requestsThisMinute: throttleStatus.requestsThisMinute,
+					remainingToday: throttleStatus.remainingToday,
+					isPaused: throttleStatus.isPaused,
+					pausedUntil: throttleStatus.pauseExpiresInMs
+						? new Date(Date.now() + throttleStatus.pauseExpiresInMs).toISOString()
+						: null
+				}
+			});
 
 			return {
 				success: false,
@@ -171,6 +288,16 @@ export async function dispatchSearch(
 		}
 
 		if (isArrClientError(error)) {
+			logger.error('Search failed - API error', {
+				contentType,
+				contentTitle: contentInfo?.contentTitle ?? 'Unknown',
+				connectorName,
+				searchType,
+				errorCategory: error.category,
+				errorMessage: error.message,
+				durationMs
+			});
+
 			return {
 				success: false,
 				searchRegistryId,
