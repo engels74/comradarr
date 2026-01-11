@@ -1,1 +1,0 @@
-ALTER TABLE "search_registry" ADD COLUMN "backlog_tier" integer DEFAULT 0 NOT NULL;

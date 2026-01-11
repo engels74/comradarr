@@ -1,5 +1,5 @@
 {
-  "id": "50ec4b7f-cc61-4867-9d1e-49ce9391ea4f",
+  "id": "27f268f6-60a3-4977-b73c-7462c470b6cb",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -2500,6 +2500,13 @@
           "primaryKey": false,
           "notNull": true,
           "default": false
+        },
+        "backlog_tier": {
+          "name": "backlog_tier",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
         },
         "priority": {
           "name": "priority",
