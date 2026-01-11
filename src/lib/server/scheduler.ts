@@ -700,7 +700,20 @@ export function initializeScheduler(): void {
 							.slice(rateLimitedAtIndex)
 							.map((item) => item.searchRegistryId);
 						if (remainingItems.length > 0) {
-							await revertToQueued(remainingItems);
+							const revertResult = await revertToQueued(remainingItems);
+							if (revertResult.success) {
+								logger.debug('Reverted remaining items to queue after rate limit', {
+									connectorId: connector.id,
+									reverted: revertResult.reverted,
+									requeued: revertResult.requeued
+								});
+							} else {
+								logger.error('Failed to revert items to queue after rate limit', {
+									connectorId: connector.id,
+									error: revertResult.error,
+									itemCount: remainingItems.length
+								});
+							}
 						}
 					}
 				} catch (error) {

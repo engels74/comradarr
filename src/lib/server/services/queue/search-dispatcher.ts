@@ -220,7 +220,8 @@ export async function dispatchSearch(
 			searchRegistryId,
 			connectorId,
 			error: `Throttled: ${throttleResult.reason}`,
-			rateLimited: throttleResult.reason === 'rate_limit'
+			rateLimited: throttleResult.reason === 'rate_limit',
+			connectorPaused: throttleResult.reason === 'rate_limit'
 		};
 	}
 
