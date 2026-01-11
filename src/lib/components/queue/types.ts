@@ -23,6 +23,7 @@ export interface SerializedQueueItem {
 	priority: number;
 	attemptCount: number;
 	scheduledAt: string | null;
+	nextEligible: string | null;
 	createdAt: string;
 }
 
@@ -38,6 +39,10 @@ export interface SerializedThrottleInfo {
 	requestsThisMinute: number;
 	dailyBudget: number | null;
 	requestsToday: number;
+	name: string;
+	type: string;
+	queuedCount: number;
+	searchingCount: number;
 }
 
 /**

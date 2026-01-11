@@ -15,6 +15,7 @@ import {
 	clearQueueForConnectors,
 	getAllThrottleInfo,
 	getConnectorsForQueueFilter,
+	getPerConnectorQueueCounts,
 	getQueueList,
 	getQueuePauseStatus,
 	getQueueStatusCounts,
@@ -31,15 +32,23 @@ export const load: PageServerLoad = async ({ url, depends }) => {
 	depends('app:queue');
 	const filters = parseQueueFilters(url.searchParams);
 
-	const [queueResult, connectors, statusCounts, throttleInfoMap, pauseStatus, recentCompletions] =
-		await Promise.all([
-			getQueueList(filters),
-			getConnectorsForQueueFilter(),
-			getQueueStatusCounts(filters.connectorId),
-			getAllThrottleInfo(),
-			getQueuePauseStatus(),
-			getRecentCompletions(25)
-		]);
+	const [
+		queueResult,
+		connectors,
+		statusCounts,
+		throttleInfoMap,
+		pauseStatus,
+		recentCompletions,
+		perConnectorCounts
+	] = await Promise.all([
+		getQueueList(filters),
+		getConnectorsForQueueFilter(),
+		getQueueStatusCounts(filters.connectorId),
+		getAllThrottleInfo(),
+		getQueuePauseStatus(),
+		getRecentCompletions(25),
+		getPerConnectorQueueCounts()
+	]);
 
 	const throttleInfo: Record<
 		number,
@@ -52,13 +61,23 @@ export const load: PageServerLoad = async ({ url, depends }) => {
 			requestsThisMinute: number;
 			dailyBudget: number | null;
 			requestsToday: number;
+			name: string;
+			type: string;
+			queuedCount: number;
+			searchingCount: number;
 		}
 	> = {};
 
 	for (const [connectorId, info] of throttleInfoMap) {
+		const connector = connectors.find((c) => c.id === connectorId);
+		const counts = perConnectorCounts.get(connectorId);
 		throttleInfo[connectorId] = {
 			...info,
-			pausedUntil: info.pausedUntil?.toISOString() ?? null
+			pausedUntil: info.pausedUntil?.toISOString() ?? null,
+			name: connector?.name ?? 'Unknown',
+			type: connector?.type ?? 'unknown',
+			queuedCount: counts?.queuedCount ?? 0,
+			searchingCount: counts?.searchingCount ?? 0
 		};
 	}
 
@@ -66,6 +85,7 @@ export const load: PageServerLoad = async ({ url, depends }) => {
 		queue: queueResult.items.map((item) => ({
 			...item,
 			scheduledAt: item.scheduledAt?.toISOString() ?? null,
+			nextEligible: item.nextEligible?.toISOString() ?? null,
 			createdAt: item.createdAt.toISOString()
 		})),
 		total: queueResult.total,

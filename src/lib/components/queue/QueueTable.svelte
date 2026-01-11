@@ -130,6 +130,19 @@ function estimateDispatchTime(item: SerializedQueueItem, index: number): string 
 		return 'In progress';
 	}
 
+	if (item.state === 'cooldown' && item.nextEligible) {
+		const until = new Date(item.nextEligible);
+		return `Retry ${formatRelativeTime(until)}`;
+	}
+
+	if (item.state === 'exhausted') {
+		return 'Max attempts';
+	}
+
+	if (item.state === 'pending') {
+		return 'Awaiting sweep';
+	}
+
 	if (item.state !== 'queued') {
 		return '-';
 	}
@@ -287,7 +300,7 @@ const MAX_ATTEMPTS = 5;
 
 							<!-- State -->
 							<div class="w-24 flex-shrink-0">
-								<QueueStateBadge state={item.state} />
+								<QueueStateBadge state={item.state} cooldownUntil={item.nextEligible} />
 							</div>
 
 							<!-- Attempts -->

@@ -45,6 +45,7 @@ export interface QueueItemWithContent {
 	priority: number;
 	attemptCount: number;
 	scheduledAt: Date | null;
+	nextEligible: Date | null;
 	createdAt: Date;
 }
 
@@ -78,6 +79,12 @@ export interface QueueThrottleInfo {
 	requestsThisMinute: number;
 	dailyBudget: number | null;
 	requestsToday: number;
+}
+
+export interface ConnectorQueueCounts {
+	connectorId: number;
+	queuedCount: number;
+	searchingCount: number;
 }
 
 export function parseQueueFilters(searchParams: URLSearchParams): QueueFilters {
@@ -154,6 +161,7 @@ export async function getQueueList(filters: QueueFilters): Promise<QueueListResu
 			priority: searchRegistry.priority,
 			attempt_count: searchRegistry.attemptCount,
 			scheduled_at: requestQueue.scheduledAt,
+			next_eligible: searchRegistry.nextEligible,
 			created_at: searchRegistry.createdAt
 		})
 		.from(searchRegistry)
@@ -196,6 +204,7 @@ export async function getQueueList(filters: QueueFilters): Promise<QueueListResu
 			priority: searchRegistry.priority,
 			attempt_count: searchRegistry.attemptCount,
 			scheduled_at: requestQueue.scheduledAt,
+			next_eligible: searchRegistry.nextEligible,
 			created_at: searchRegistry.createdAt
 		})
 		.from(searchRegistry)
@@ -244,6 +253,7 @@ export async function getQueueList(filters: QueueFilters): Promise<QueueListResu
 		priority: row.priority as number,
 		attemptCount: row.attempt_count as number,
 		scheduledAt: row.scheduled_at ? new Date(row.scheduled_at as string) : null,
+		nextEligible: row.next_eligible ? new Date(row.next_eligible as string) : null,
 		createdAt: new Date(row.created_at as string)
 	}));
 
@@ -287,6 +297,38 @@ export async function getQueueStatusCounts(connectorId?: number): Promise<QueueS
 	}
 
 	return counts;
+}
+
+export async function getPerConnectorQueueCounts(): Promise<Map<number, ConnectorQueueCounts>> {
+	const result = await db
+		.select({
+			connectorId: searchRegistry.connectorId,
+			state: searchRegistry.state,
+			count: count()
+		})
+		.from(searchRegistry)
+		.where(inArray(searchRegistry.state, ['queued', 'searching']))
+		.groupBy(searchRegistry.connectorId, searchRegistry.state);
+
+	const map = new Map<number, ConnectorQueueCounts>();
+
+	for (const row of result) {
+		const existing = map.get(row.connectorId) ?? {
+			connectorId: row.connectorId,
+			queuedCount: 0,
+			searchingCount: 0
+		};
+
+		if (row.state === 'queued') {
+			existing.queuedCount = row.count;
+		} else if (row.state === 'searching') {
+			existing.searchingCount = row.count;
+		}
+
+		map.set(row.connectorId, existing);
+	}
+
+	return map;
 }
 
 export async function getConnectorsForQueueFilter(): Promise<QueueConnector[]> {
