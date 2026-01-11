@@ -81,6 +81,12 @@ export interface QueueThrottleInfo {
 	requestsToday: number;
 }
 
+export interface ConnectorQueueCounts {
+	connectorId: number;
+	queuedCount: number;
+	searchingCount: number;
+}
+
 export function parseQueueFilters(searchParams: URLSearchParams): QueueFilters {
 	const connectorParam = searchParams.get('connector');
 	const pageParam = searchParams.get('page');
@@ -291,6 +297,38 @@ export async function getQueueStatusCounts(connectorId?: number): Promise<QueueS
 	}
 
 	return counts;
+}
+
+export async function getPerConnectorQueueCounts(): Promise<Map<number, ConnectorQueueCounts>> {
+	const result = await db
+		.select({
+			connectorId: searchRegistry.connectorId,
+			state: searchRegistry.state,
+			count: count()
+		})
+		.from(searchRegistry)
+		.where(inArray(searchRegistry.state, ['queued', 'searching']))
+		.groupBy(searchRegistry.connectorId, searchRegistry.state);
+
+	const map = new Map<number, ConnectorQueueCounts>();
+
+	for (const row of result) {
+		const existing = map.get(row.connectorId) ?? {
+			connectorId: row.connectorId,
+			queuedCount: 0,
+			searchingCount: 0
+		};
+
+		if (row.state === 'queued') {
+			existing.queuedCount = row.count;
+		} else if (row.state === 'searching') {
+			existing.searchingCount = row.count;
+		}
+
+		map.set(row.connectorId, existing);
+	}
+
+	return map;
 }
 
 export async function getConnectorsForQueueFilter(): Promise<QueueConnector[]> {

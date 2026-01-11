@@ -15,6 +15,7 @@ import {
 	clearQueueForConnectors,
 	getAllThrottleInfo,
 	getConnectorsForQueueFilter,
+	getPerConnectorQueueCounts,
 	getQueueList,
 	getQueuePauseStatus,
 	getQueueStatusCounts,
@@ -31,15 +32,23 @@ export const load: PageServerLoad = async ({ url, depends }) => {
 	depends('app:queue');
 	const filters = parseQueueFilters(url.searchParams);
 
-	const [queueResult, connectors, statusCounts, throttleInfoMap, pauseStatus, recentCompletions] =
-		await Promise.all([
-			getQueueList(filters),
-			getConnectorsForQueueFilter(),
-			getQueueStatusCounts(filters.connectorId),
-			getAllThrottleInfo(),
-			getQueuePauseStatus(),
-			getRecentCompletions(25)
-		]);
+	const [
+		queueResult,
+		connectors,
+		statusCounts,
+		throttleInfoMap,
+		pauseStatus,
+		recentCompletions,
+		perConnectorCounts
+	] = await Promise.all([
+		getQueueList(filters),
+		getConnectorsForQueueFilter(),
+		getQueueStatusCounts(filters.connectorId),
+		getAllThrottleInfo(),
+		getQueuePauseStatus(),
+		getRecentCompletions(25),
+		getPerConnectorQueueCounts()
+	]);
 
 	const throttleInfo: Record<
 		number,
@@ -59,25 +68,16 @@ export const load: PageServerLoad = async ({ url, depends }) => {
 		}
 	> = {};
 
-	// Calculate per-connector queue counts from queue items
-	const queueCountsByConnector = new Map<number, { queued: number; searching: number }>();
-	for (const item of queueResult.items) {
-		const counts = queueCountsByConnector.get(item.connectorId) ?? { queued: 0, searching: 0 };
-		if (item.state === 'queued') counts.queued++;
-		else if (item.state === 'searching') counts.searching++;
-		queueCountsByConnector.set(item.connectorId, counts);
-	}
-
 	for (const [connectorId, info] of throttleInfoMap) {
 		const connector = connectors.find((c) => c.id === connectorId);
-		const counts = queueCountsByConnector.get(connectorId) ?? { queued: 0, searching: 0 };
+		const counts = perConnectorCounts.get(connectorId);
 		throttleInfo[connectorId] = {
 			...info,
 			pausedUntil: info.pausedUntil?.toISOString() ?? null,
 			name: connector?.name ?? 'Unknown',
 			type: connector?.type ?? 'unknown',
-			queuedCount: counts.queued,
-			searchingCount: counts.searching
+			queuedCount: counts?.queuedCount ?? 0,
+			searchingCount: counts?.searchingCount ?? 0
 		};
 	}
 

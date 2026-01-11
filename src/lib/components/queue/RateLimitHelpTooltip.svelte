@@ -6,10 +6,10 @@ import * as Tooltip from '$lib/components/ui/tooltip';
 <Tooltip.Provider>
 	<Tooltip.Root>
 		<Tooltip.Trigger>
-			<button type="button" class="p-2 rounded-md hover:bg-glass/50 transition-colors">
+			<span class="p-2 rounded-md hover:bg-glass/50 transition-colors inline-flex cursor-help">
 				<InfoIcon class="h-4 w-4 text-muted-foreground" />
 				<span class="sr-only">Rate limiting information</span>
-			</button>
+			</span>
 		</Tooltip.Trigger>
 		<Tooltip.Portal>
 			<Tooltip.Content side="left" class="max-w-xs p-4">
