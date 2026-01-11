@@ -22,20 +22,27 @@ export async function closePool(): Promise<void> {
 
 // Register shutdown handlers to gracefully close connections
 let shuttingDown = false;
-const shutdown = async (signal: 'SIGTERM' | 'SIGINT') => {
-	if (shuttingDown) return;
-	shuttingDown = true;
-	console.log(`[db] Received ${signal}, closing connection pool...`);
-	try {
-		await closePool();
-		console.log('[db] Connection pool closed');
-	} catch (err) {
-		console.error('[db] Error closing pool:', err);
-	}
-	// Remove our handler and re-raise signal for default termination behavior
-	process.removeAllListeners(signal);
-	process.kill(process.pid, signal);
+
+const createShutdownHandler = (signal: 'SIGTERM' | 'SIGINT') => {
+	const handler = async () => {
+		if (shuttingDown) return;
+		shuttingDown = true;
+		console.log(`[db] Received ${signal}, closing connection pool...`);
+		try {
+			await closePool();
+			console.log('[db] Connection pool closed');
+		} catch (err) {
+			console.error('[db] Error closing pool:', err);
+		}
+		// Remove only our handler and re-raise signal for default termination behavior
+		process.off(signal, handler);
+		process.kill(process.pid, signal);
+	};
+	return handler;
 };
 
-process.on('SIGTERM', () => void shutdown('SIGTERM'));
-process.on('SIGINT', () => void shutdown('SIGINT'));
+const sigtermHandler = createShutdownHandler('SIGTERM');
+const sigintHandler = createShutdownHandler('SIGINT');
+
+process.on('SIGTERM', sigtermHandler);
+process.on('SIGINT', sigintHandler);
