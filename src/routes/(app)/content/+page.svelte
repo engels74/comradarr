@@ -1,4 +1,5 @@
 <script lang="ts">
+import { untrack } from 'svelte';
 import { goto } from '$app/navigation';
 import { page } from '$app/stores';
 import { BulkActionBar, ContentFilters, VirtualizedContentTable } from '$lib/components/content';
@@ -25,8 +26,10 @@ let lastDataContent = $state<ContentItem[] | null>(null);
 
 // Reset loaded items when filters change (detected via data.content changing)
 $effect(() => {
-	// Only update when data.content reference changes (filter change or initial load)
-	if (data.content !== lastDataContent) {
+	// Use untrack to prevent lastDataContent from being a dependency,
+	// which would cause infinite re-runs when we update it
+	const last = untrack(() => lastDataContent);
+	if (data.content !== last) {
 		loadedItems = [...data.content];
 		nextCursor = data.nextCursor;
 		loadError = null;
