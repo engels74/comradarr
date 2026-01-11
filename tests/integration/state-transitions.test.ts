@@ -3,10 +3,11 @@
  *
  * Validates requirements:
  * - 5.5: Transition to cooldown on failure with exponential backoff
- * - 5.6: Transition to exhausted at max attempts
+ * - 5.6: Transition to backlog tier at max attempts (with extended cooldown)
  *
- * Property 8: Exhaustion at Max Attempts
- * - State should transition to exhausted exactly at max attempts
+ * Property 8: Backlog Entry at Max Attempts
+ * - With backlog enabled (default), items enter cooldown with backlog tier instead of exhausted
+ * - Items are never permanently abandoned; they retry with extended delays
  *
  * NOTE: These tests require a running PostgreSQL database with DATABASE_URL set.
  * Run with: bun test tests/integration/state-transitions.test.ts
@@ -295,8 +296,8 @@ describe('State Transitions - markSearchFailed', () => {
 		});
 	});
 
-	describe('Exhaustion Transition', () => {
-		it('should transition to exhausted at exactly max attempts', async () => {
+	describe('Backlog Transition (after max attempts)', () => {
+		it('should enter backlog tier 1 at exactly max attempts', async () => {
 			const episodeId = await createTestEpisode(testConnectorId);
 			// attemptCount = MAX_ATTEMPTS - 1, so after failure it becomes MAX_ATTEMPTS
 			const registryId = await createSearchingRegistry(
@@ -311,12 +312,14 @@ describe('State Transitions - markSearchFailed', () => {
 			});
 
 			expect(result.success).toBe(true);
-			expect(result.newState).toBe('exhausted');
-			expect(result.attemptCount).toBe(STATE_TRANSITION_CONFIG.MAX_ATTEMPTS);
-			expect(result.nextEligible).toBeUndefined();
+			// With backlog enabled (default), items enter cooldown with backlog tier instead of exhausted
+			expect(result.newState).toBe('cooldown');
+			expect(result.attemptCount).toBe(0); // Reset for next retry cycle
+			expect(result.backlogTier).toBe(1);
+			expect(result.nextEligible).toBeDefined();
 		});
 
-		it('should not transition to exhausted before max attempts', async () => {
+		it('should not enter backlog before max attempts', async () => {
 			const episodeId = await createTestEpisode(testConnectorId);
 			// attemptCount = MAX_ATTEMPTS - 2, so after failure it's still below max
 			const registryId = await createSearchingRegistry(
@@ -332,9 +335,10 @@ describe('State Transitions - markSearchFailed', () => {
 
 			expect(result.newState).toBe('cooldown');
 			expect(result.attemptCount).toBe(STATE_TRANSITION_CONFIG.MAX_ATTEMPTS - 1);
+			expect(result.backlogTier).toBeUndefined(); // Not in backlog yet
 		});
 
-		it('should set nextEligible to null for exhausted items', async () => {
+		it('should set extended nextEligible for backlog items', async () => {
 			const episodeId = await createTestEpisode(testConnectorId);
 			const registryId = await createSearchingRegistry(
 				testConnectorId,
@@ -342,14 +346,19 @@ describe('State Transitions - markSearchFailed', () => {
 				STATE_TRANSITION_CONFIG.MAX_ATTEMPTS - 1
 			);
 
+			const beforeTime = Date.now();
 			await markSearchFailed({
 				searchRegistryId: registryId,
 				failureCategory: 'no_results'
 			});
 
 			const registry = await getRegistryById(registryId);
-			expect(registry?.state).toBe('exhausted');
-			expect(registry?.nextEligible).toBeNull();
+			expect(registry?.state).toBe('cooldown');
+			expect(registry?.backlogTier).toBe(1);
+			expect(registry?.nextEligible).not.toBeNull();
+			// Backlog tier 1 is ~7 days (with jitter), so nextEligible should be at least 5 days out
+			const minExpectedDelay = 5 * 24 * 60 * 60 * 1000; // 5 days in ms
+			expect(registry!.nextEligible!.getTime() - beforeTime).toBeGreaterThan(minExpectedDelay);
 		});
 	});
 
@@ -638,11 +647,11 @@ describe('State Transitions - Full Lifecycle', () => {
 		expect(state).toBe('pending');
 	});
 
-	it('should reach exhausted after max attempts', async () => {
+	it('should enter backlog tier 1 after max attempts (with backlog enabled)', async () => {
 		const episodeId = await createTestEpisode(testConnectorId);
 		const registryId = await createSearchingRegistry(testConnectorId, episodeId, 0);
 
-		// Simulate multiple failures up to exhaustion
+		// Simulate multiple failures up to backlog entry
 		for (let i = 0; i < STATE_TRANSITION_CONFIG.MAX_ATTEMPTS; i++) {
 			const registry = await getRegistryById(registryId);
 
@@ -661,9 +670,14 @@ describe('State Transitions - Full Lifecycle', () => {
 		}
 
 		const finalState = await getSearchState(registryId);
-		expect(finalState).toBe('exhausted');
+		// With backlog enabled (default), items enter cooldown with backlog tier instead of exhausted
+		expect(finalState).toBe('cooldown');
 
 		const registry = await getRegistryById(registryId);
-		expect(registry?.attemptCount).toBe(STATE_TRANSITION_CONFIG.MAX_ATTEMPTS);
+		// Attempt count resets to 0 for next retry cycle when entering backlog
+		expect(registry?.attemptCount).toBe(0);
+		expect(registry?.backlogTier).toBe(1);
+		// Extended cooldown should be set (approximately 7 days for tier 1)
+		expect(registry?.nextEligible).not.toBeNull();
 	});
 });

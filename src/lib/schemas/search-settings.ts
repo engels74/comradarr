@@ -88,11 +88,31 @@ export const RetryConfigSchema = v.object({
 export type RetryConfigInput = v.InferInput<typeof RetryConfigSchema>;
 export type RetryConfigOutput = v.InferOutput<typeof RetryConfigSchema>;
 
+export const BacklogConfigSchema = v.object({
+	enabled: v.boolean('Backlog enabled must be a boolean'),
+	tierDelaysDays: v.pipe(
+		v.array(
+			v.pipe(
+				v.number('Tier delay must be a number'),
+				v.integer('Tier delay must be a whole number'),
+				v.minValue(1, 'Tier delay must be at least 1 day'),
+				v.maxValue(365, 'Tier delay must be at most 365 days')
+			)
+		),
+		v.minLength(5, 'Must have 5 tier delays'),
+		v.maxLength(5, 'Must have 5 tier delays')
+	)
+});
+
+export type BacklogConfigInput = v.InferInput<typeof BacklogConfigSchema>;
+export type BacklogConfigOutput = v.InferOutput<typeof BacklogConfigSchema>;
+
 export const SearchSettingsSchema = v.object({
 	priorityWeights: PriorityWeightsSchema,
 	seasonPackThresholds: SeasonPackThresholdsSchema,
 	cooldownConfig: CooldownConfigSchema,
-	retryConfig: RetryConfigSchema
+	retryConfig: RetryConfigSchema,
+	backlogConfig: BacklogConfigSchema
 });
 
 export type SearchSettingsInput = v.InferInput<typeof SearchSettingsSchema>;
@@ -167,5 +187,9 @@ export const SEARCH_SETTINGS_DEFAULTS: SearchSettingsOutput = {
 	},
 	retryConfig: {
 		maxAttempts: 5
+	},
+	backlogConfig: {
+		enabled: true,
+		tierDelaysDays: [7, 14, 30, 60, 90]
 	}
 };

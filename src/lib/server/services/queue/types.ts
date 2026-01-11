@@ -109,6 +109,7 @@ export interface StateTransitionResult {
 	newState: SearchState;
 	attemptCount?: number;
 	nextEligible?: Date;
+	backlogTier?: number;
 	error?: string;
 }
 

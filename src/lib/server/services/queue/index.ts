@@ -1,4 +1,8 @@
-export { calculateNextEligibleTime, shouldMarkExhausted } from './backoff';
+export {
+	calculateNextEligibleTime,
+	calculateNextEligibleTimeWithConfig,
+	shouldMarkExhausted
+} from './backoff';
 export type {
 	BatchingConfigType,
 	PriorityConstantsType,

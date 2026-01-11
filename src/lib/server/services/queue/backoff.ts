@@ -1,6 +1,6 @@
 import { calculateBackoffDelay } from '$lib/server/connectors/common/retry.js';
 import type { RetryConfig } from '$lib/server/connectors/common/types.js';
-import { getStateTransitionConfig, STATE_TRANSITION_CONFIG } from './config';
+import { BACKLOG_CONFIG, getStateTransitionConfig, STATE_TRANSITION_CONFIG } from './config';
 
 /** Calculate next retry time using exponential backoff. */
 export function calculateNextEligibleTime(attemptCount: number, now: Date = new Date()): Date {
@@ -43,4 +43,37 @@ export async function calculateNextEligibleTimeWithConfig(
 export async function shouldMarkExhaustedWithConfig(attemptCount: number): Promise<boolean> {
 	const stateConfig = await getStateTransitionConfig();
 	return attemptCount >= stateConfig.MAX_ATTEMPTS;
+}
+
+/** Check if item should enter backlog (after exhausting normal retries). */
+export function shouldEnterBacklog(attemptCount: number, maxAttempts: number): boolean {
+	return attemptCount >= maxAttempts;
+}
+
+/** Get the next backlog tier, capped at maxTier. */
+export function getNextBacklogTier(
+	currentTier: number,
+	maxTier: number = BACKLOG_CONFIG.MAX_TIER
+): number {
+	return Math.min(currentTier + 1, maxTier);
+}
+
+/**
+ * Calculate next eligible time for backlog items using tier-based delays.
+ * Adds ±12 hours jitter to prevent thundering herd.
+ */
+export function calculateBacklogNextEligibleTime(
+	backlogTier: number,
+	tierDelaysDays: number[],
+	now: Date = new Date()
+): Date {
+	// Tier is 1-indexed, array is 0-indexed
+	const tierIndex = Math.min(backlogTier - 1, tierDelaysDays.length - 1);
+	const delayDays = tierDelaysDays[tierIndex] ?? tierDelaysDays[tierDelaysDays.length - 1]!;
+	const delayMs = delayDays * 24 * 60 * 60 * 1000;
+
+	// Add jitter (±12 hours) to prevent thundering herd
+	const jitterMs = (Math.random() - 0.5) * 24 * 60 * 60 * 1000;
+
+	return new Date(now.getTime() + delayMs + jitterMs);
 }

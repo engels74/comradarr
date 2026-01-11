@@ -231,6 +231,7 @@ export const searchRegistry = pgTable(
 		nextEligible: timestamp('next_eligible', { withTimezone: true }),
 		failureCategory: varchar('failure_category', { length: 50 }),
 		seasonPackFailed: boolean('season_pack_failed').notNull().default(false), // Track if season pack search failed for fallback to individual episodes
+		backlogTier: integer('backlog_tier').notNull().default(0), // 0 = normal retry, 1-5 = backlog tiers with extended delays
 		priority: integer('priority').notNull().default(0),
 		createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 		updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow()
