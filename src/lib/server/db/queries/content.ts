@@ -185,6 +185,7 @@ export interface MovieDetail {
 	qualityCutoffNotMet: boolean;
 	movieFileId: number | null;
 	lastSearchTime: Date | null;
+	searchState: 'pending' | 'queued' | 'searching' | 'cooldown' | 'exhausted' | null;
 	createdAt: Date;
 	updatedAt: Date;
 	connectorName: string;
@@ -1059,6 +1060,7 @@ export async function getMovieDetail(id: number): Promise<MovieDetail | null> {
 			qualityCutoffNotMet: movies.qualityCutoffNotMet,
 			movieFileId: movies.movieFileId,
 			lastSearchTime: movies.lastSearchTime,
+			searchState: searchRegistry.state,
 			createdAt: movies.createdAt,
 			updatedAt: movies.updatedAt,
 			connectorName: connectors.name,
@@ -1067,6 +1069,14 @@ export async function getMovieDetail(id: number): Promise<MovieDetail | null> {
 		})
 		.from(movies)
 		.innerJoin(connectors, eq(movies.connectorId, connectors.id))
+		.leftJoin(
+			searchRegistry,
+			and(
+				eq(searchRegistry.contentType, 'movie'),
+				eq(searchRegistry.contentId, movies.id),
+				eq(searchRegistry.connectorId, movies.connectorId)
+			)
+		)
 		.where(eq(movies.id, id))
 		.limit(1);
 
@@ -1075,7 +1085,8 @@ export async function getMovieDetail(id: number): Promise<MovieDetail | null> {
 
 	return {
 		...row,
-		quality: row.quality as QualityModel | null
+		quality: row.quality as QualityModel | null,
+		searchState: row.searchState as MovieDetail['searchState']
 	};
 }
 
