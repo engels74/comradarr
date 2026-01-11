@@ -9,6 +9,7 @@ import {
 	TimeoutError,
 	WhisparrClient
 } from '$lib/server/connectors';
+import { captureConnectorSnapshotAfterSync } from '$lib/server/db/queries/completion';
 import {
 	clearFailedSearches,
 	deleteConnector,
@@ -212,6 +213,8 @@ export const actions: Actions = {
 		const result = await runIncrementalSync(connector, { skipRetry: true });
 
 		if (result.success) {
+			await captureConnectorSnapshotAfterSync(connector.id);
+
 			logger.info('Manual sync completed', {
 				connectorId: connector.id,
 				connectorName: connector.name,

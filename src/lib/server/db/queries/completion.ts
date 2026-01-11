@@ -1,4 +1,4 @@
-import { desc, eq, lt, sql } from 'drizzle-orm';
+import { and, desc, eq, gt, lt, sql } from 'drizzle-orm';
 import { db } from '$lib/server/db';
 import { completionSnapshots, connectors, episodes, movies } from '$lib/server/db/schema';
 
@@ -200,4 +200,64 @@ export async function cleanupOldSnapshots(retentionDays: number = 30): Promise<n
 		.returning({ id: completionSnapshots.id });
 
 	return result.length;
+}
+
+export async function getSnapshotCount(connectorId: number): Promise<number> {
+	const result = await db
+		.select({ count: sql<number>`COUNT(*)::int` })
+		.from(completionSnapshots)
+		.where(eq(completionSnapshots.connectorId, connectorId));
+
+	return result[0]?.count ?? 0;
+}
+
+export async function hasRecentSnapshot(
+	connectorId: number,
+	withinMinutes: number = 60
+): Promise<boolean> {
+	const cutoff = new Date();
+	cutoff.setMinutes(cutoff.getMinutes() - withinMinutes);
+
+	const result = await db
+		.select({ id: completionSnapshots.id })
+		.from(completionSnapshots)
+		.where(
+			and(
+				eq(completionSnapshots.connectorId, connectorId),
+				gt(completionSnapshots.capturedAt, cutoff)
+			)
+		)
+		.limit(1);
+
+	return result.length > 0;
+}
+
+export async function captureConnectorSnapshotAfterSync(connectorId: number): Promise<boolean> {
+	const snapshotCount = await getSnapshotCount(connectorId);
+
+	// Always capture if fewer than 2 snapshots (needed for trend display)
+	// Otherwise, only capture if no recent snapshot (within 60 minutes)
+	if (snapshotCount >= 2) {
+		const hasRecent = await hasRecentSnapshot(connectorId, 60);
+		if (hasRecent) {
+			return false;
+		}
+	}
+
+	const stats = await getConnectorCompletionStats(connectorId);
+	if (!stats) {
+		return false;
+	}
+
+	await db.insert(completionSnapshots).values({
+		connectorId: stats.connectorId,
+		capturedAt: new Date(),
+		episodesMonitored: stats.episodesMonitored,
+		episodesDownloaded: stats.episodesDownloaded,
+		moviesMonitored: stats.moviesMonitored,
+		moviesDownloaded: stats.moviesDownloaded,
+		completionPercentage: Math.round(stats.completionPercentage * 100)
+	});
+
+	return true;
 }

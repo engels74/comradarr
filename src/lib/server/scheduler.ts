@@ -28,6 +28,7 @@ import {
 } from '$lib/server/connectors/common/errors';
 import { createConnectorClient } from '$lib/server/connectors/factory';
 import { generateCorrelationId, type RequestContext, runWithContext } from '$lib/server/context';
+import { captureConnectorSnapshotAfterSync } from '$lib/server/db/queries/completion';
 import {
 	getConnector,
 	getDecryptedApiKey,
@@ -314,6 +315,7 @@ export function initializeScheduler(): void {
 					const syncResult = await runIncrementalSync(connector);
 					if (syncResult.success) {
 						summary.totalItemsSynced += syncResult.itemsSynced;
+						await captureConnectorSnapshotAfterSync(connector.id);
 					} else {
 						summary.syncErrors++;
 						logger.warn('Sync failed for connector', {
@@ -413,6 +415,7 @@ export function initializeScheduler(): void {
 						summary.totalCreated += reconcileResult.itemsCreated;
 						summary.totalUpdated += reconcileResult.itemsUpdated;
 						summary.totalDeleted += reconcileResult.itemsDeleted;
+						await captureConnectorSnapshotAfterSync(connector.id);
 					} else {
 						summary.reconciliationErrors++;
 						logger.warn('Reconciliation failed for connector', {
@@ -979,6 +982,8 @@ export async function refreshDynamicSchedules(): Promise<void> {
 							} else if ('itemsCreated' in syncResult) {
 								summary.totalItemsSynced += syncResult.itemsCreated + syncResult.itemsUpdated;
 							}
+
+							await captureConnectorSnapshotAfterSync(connector.id);
 
 							const [gapsResult, upgradesResult] = await Promise.all([
 								discoverGaps(connector.id),
