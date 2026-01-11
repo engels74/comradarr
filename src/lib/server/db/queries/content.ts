@@ -71,6 +71,7 @@ export interface ContentItem {
 	missingCount: number;
 	upgradeCount: number;
 	searchState: string | null;
+	searchStateCount: number | null;
 }
 
 export interface ContentListResult {
@@ -229,6 +230,7 @@ interface SeriesWithStats {
 	missingCount: number;
 	upgradeCount: number;
 	searchState: string | null;
+	searchStateCount: number | null;
 }
 
 const episodeCountsSubquery = db
@@ -251,25 +253,35 @@ const episodeCountsSubquery = db
 const searchStateSubquery = db
 	.select({
 		seriesId: sql<number>`sr_agg.series_id`.as('series_id'),
-		state: sql<string | null>`sr_agg.state`.as('state')
+		state: sql<string | null>`sr_agg.state`.as('state'),
+		stateCount: sql<number | null>`sr_agg.state_count`.as('state_count')
 	})
 	.from(
 		sql`(
-			SELECT DISTINCT ON (sea.series_id)
-				sea.series_id,
-				sr.state
-			FROM search_registry sr
-			JOIN episodes e ON sr.content_id = e.id AND sr.content_type = 'episode'
-			JOIN seasons sea ON e.season_id = sea.id
-			ORDER BY sea.series_id,
-				CASE sr.state
-					WHEN 'searching' THEN 1
-					WHEN 'queued' THEN 2
-					WHEN 'cooldown' THEN 3
-					WHEN 'exhausted' THEN 4
-					WHEN 'pending' THEN 5
-					ELSE 6
-				END
+			WITH state_counts AS (
+				SELECT
+					sea.series_id,
+					sr.state,
+					COUNT(*) as state_count,
+					ROW_NUMBER() OVER (
+						PARTITION BY sea.series_id
+						ORDER BY CASE sr.state
+							WHEN 'searching' THEN 1
+							WHEN 'queued' THEN 2
+							WHEN 'cooldown' THEN 3
+							WHEN 'exhausted' THEN 4
+							WHEN 'pending' THEN 5
+							ELSE 6
+						END
+					) as rn
+				FROM search_registry sr
+				JOIN episodes e ON sr.content_id = e.id AND sr.content_type = 'episode'
+				JOIN seasons sea ON e.season_id = sea.id
+				GROUP BY sea.series_id, sr.state
+			)
+			SELECT series_id, state, state_count
+			FROM state_counts
+			WHERE rn = 1
 		) AS sr_agg`
 	)
 	.as('sr_state');
@@ -337,7 +349,8 @@ async function getSeriesList(filters: ContentFilters): Promise<SeriesWithStats[]
 			monitored: series.monitored,
 			missingCount: sql<number>`COALESCE(ep_counts.missing_count, 0)`.as('missing_count'),
 			upgradeCount: sql<number>`COALESCE(ep_counts.upgrade_count, 0)`.as('upgrade_count'),
-			searchState: sql<string | null>`sr_state.state`.as('search_state')
+			searchState: sql<string | null>`sr_state.state`.as('search_state'),
+			searchStateCount: sql<number | null>`sr_state.state_count`.as('search_state_count')
 		})
 		.from(series)
 		.innerJoin(connectors, eq(series.connectorId, connectors.id))
@@ -570,7 +583,8 @@ export async function getContentList(filters: ContentFilters): Promise<ContentLi
 			monitored: s.monitored,
 			missingCount: s.missingCount,
 			upgradeCount: s.upgradeCount,
-			searchState: s.searchState
+			searchState: s.searchState,
+			searchStateCount: s.searchStateCount
 		}));
 
 		const movieItems: ContentItem[] = moviesResult.map((m) => ({
@@ -585,7 +599,8 @@ export async function getContentList(filters: ContentFilters): Promise<ContentLi
 			monitored: m.monitored,
 			missingCount: !m.hasFile && m.monitored ? 1 : 0,
 			upgradeCount: m.qualityCutoffNotMet && m.hasFile && m.monitored ? 1 : 0,
-			searchState: m.searchState
+			searchState: m.searchState,
+			searchStateCount: m.searchState ? 1 : null
 		}));
 
 		// Merge and sort
@@ -613,7 +628,8 @@ export async function getContentList(filters: ContentFilters): Promise<ContentLi
 			monitored: s.monitored,
 			missingCount: s.missingCount,
 			upgradeCount: s.upgradeCount,
-			searchState: s.searchState
+			searchState: s.searchState,
+			searchStateCount: s.searchStateCount
 		}));
 
 		total = seriesCount;
@@ -636,7 +652,8 @@ export async function getContentList(filters: ContentFilters): Promise<ContentLi
 			monitored: m.monitored,
 			missingCount: !m.hasFile && m.monitored ? 1 : 0,
 			upgradeCount: m.qualityCutoffNotMet && m.hasFile && m.monitored ? 1 : 0,
-			searchState: m.searchState
+			searchState: m.searchState,
+			searchStateCount: m.searchState ? 1 : null
 		}));
 
 		total = moviesCount;

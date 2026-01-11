@@ -203,7 +203,7 @@ const typeColors: Record<string, string> = {
 								</div>
 							</div>
 							<div class="w-24 flex-shrink-0">
-								<ContentStatusBadge state={item.searchState} />
+								<ContentStatusBadge state={item.searchState} count={item.searchStateCount} />
 							</div>
 						</div>
 					{/if}
