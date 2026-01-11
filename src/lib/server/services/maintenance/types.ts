@@ -63,3 +63,17 @@ export interface HistoryPruningResult {
 	/** Error message if pruning failed */
 	error?: string;
 }
+
+export interface BacklogRecoveryResult {
+	/** Whether the backlog recovery operation completed successfully */
+	success: boolean;
+
+	/** Number of exhausted items recovered to backlog cooldown */
+	itemsRecovered: number;
+
+	/** Time taken for the recovery operation in milliseconds */
+	durationMs: number;
+
+	/** Error message if recovery failed */
+	error?: string;
+}

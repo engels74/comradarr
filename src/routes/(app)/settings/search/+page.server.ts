@@ -27,6 +27,9 @@ export const actions: Actions = {
 	update: async ({ request }) => {
 		const formData = await request.formData();
 
+		// Get current settings to preserve backlogConfig (no UI for it yet)
+		const currentSettings = await getSearchSettings();
+
 		// Parse form data
 		const data = {
 			priorityWeights: {
@@ -48,7 +51,8 @@ export const actions: Actions = {
 			},
 			retryConfig: {
 				maxAttempts: Number(formData.get('maxAttempts'))
-			}
+			},
+			backlogConfig: currentSettings.backlogConfig
 		};
 
 		// Validate form data

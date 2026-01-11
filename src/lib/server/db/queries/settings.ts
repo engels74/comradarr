@@ -32,7 +32,15 @@ export const SEARCH_SETTINGS_DEFAULTS = {
 	search_cooldown_jitter: 'true',
 
 	// Retry Configuration
-	search_max_attempts: '5'
+	search_max_attempts: '5',
+
+	// Backlog Configuration (for exhausted items)
+	search_backlog_enabled: 'true',
+	search_backlog_tier1_delay_days: '7',
+	search_backlog_tier2_delay_days: '14',
+	search_backlog_tier3_delay_days: '30',
+	search_backlog_tier4_delay_days: '60',
+	search_backlog_tier5_delay_days: '90'
 } as const;
 
 export const MAINTENANCE_SETTINGS_DEFAULTS = {
@@ -198,6 +206,10 @@ export interface SearchSettings {
 	retryConfig: {
 		maxAttempts: number;
 	};
+	backlogConfig: {
+		enabled: boolean;
+		tierDelaysDays: number[];
+	};
 }
 
 export async function getSearchSettings(): Promise<SearchSettings> {
@@ -259,6 +271,33 @@ export async function getSearchSettings(): Promise<SearchSettings> {
 			maxAttempts: Number(
 				settings.search_max_attempts ?? SEARCH_SETTINGS_DEFAULTS.search_max_attempts
 			)
+		},
+		backlogConfig: {
+			enabled:
+				(settings.search_backlog_enabled ?? SEARCH_SETTINGS_DEFAULTS.search_backlog_enabled) ===
+				'true',
+			tierDelaysDays: [
+				Number(
+					settings.search_backlog_tier1_delay_days ??
+						SEARCH_SETTINGS_DEFAULTS.search_backlog_tier1_delay_days
+				),
+				Number(
+					settings.search_backlog_tier2_delay_days ??
+						SEARCH_SETTINGS_DEFAULTS.search_backlog_tier2_delay_days
+				),
+				Number(
+					settings.search_backlog_tier3_delay_days ??
+						SEARCH_SETTINGS_DEFAULTS.search_backlog_tier3_delay_days
+				),
+				Number(
+					settings.search_backlog_tier4_delay_days ??
+						SEARCH_SETTINGS_DEFAULTS.search_backlog_tier4_delay_days
+				),
+				Number(
+					settings.search_backlog_tier5_delay_days ??
+						SEARCH_SETTINGS_DEFAULTS.search_backlog_tier5_delay_days
+				)
+			]
 		}
 	};
 }
@@ -298,7 +337,27 @@ export async function updateSearchSettings(input: SearchSettings): Promise<void>
 		{ key: 'search_cooldown_jitter', value: input.cooldownConfig.jitter ? 'true' : 'false' },
 
 		// Retry Configuration
-		{ key: 'search_max_attempts', value: String(input.retryConfig.maxAttempts) }
+		{ key: 'search_max_attempts', value: String(input.retryConfig.maxAttempts) },
+
+		// Backlog Configuration
+		{ key: 'search_backlog_enabled', value: input.backlogConfig.enabled ? 'true' : 'false' },
+		{
+			key: 'search_backlog_tier1_delay_days',
+			value: String(input.backlogConfig.tierDelaysDays[0])
+		},
+		{
+			key: 'search_backlog_tier2_delay_days',
+			value: String(input.backlogConfig.tierDelaysDays[1])
+		},
+		{
+			key: 'search_backlog_tier3_delay_days',
+			value: String(input.backlogConfig.tierDelaysDays[2])
+		},
+		{
+			key: 'search_backlog_tier4_delay_days',
+			value: String(input.backlogConfig.tierDelaysDays[3])
+		},
+		{ key: 'search_backlog_tier5_delay_days', value: String(input.backlogConfig.tierDelaysDays[4]) }
 	];
 
 	// Use a transaction to ensure all settings are updated atomically

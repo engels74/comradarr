@@ -118,6 +118,19 @@ export const STATE_TRANSITION_CONFIG = {
 
 export type StateTransitionConfigType = typeof STATE_TRANSITION_CONFIG;
 
+export const BACKLOG_CONFIG = {
+	/** Whether backlog recovery is enabled (items never permanently exhausted) */
+	ENABLED: true,
+
+	/** Delay in days for each backlog tier [tier1, tier2, tier3, tier4, tier5] */
+	TIER_DELAYS_DAYS: [7, 14, 30, 60, 90] as const,
+
+	/** Maximum backlog tier (items stay at this tier indefinitely with 90-day retries) */
+	MAX_TIER: 5
+} as const;
+
+export type BacklogConfigType = typeof BACKLOG_CONFIG;
+
 // SeasonSearch: fully aired AND missing% >= threshold AND count >= min; else EpisodeSearch
 export const BATCHING_CONFIG = {
 	/**
@@ -213,5 +226,20 @@ export async function getStateTransitionConfig(): Promise<RuntimeStateTransition
 		COOLDOWN_MAX_DELAY: config.cooldownConfig.maxDelayHours * 3600000,
 		COOLDOWN_MULTIPLIER: config.cooldownConfig.multiplier,
 		COOLDOWN_JITTER: config.cooldownConfig.jitter
+	};
+}
+
+export interface RuntimeBacklogConfig {
+	enabled: boolean;
+	tierDelaysDays: number[];
+	maxTier: number;
+}
+
+export async function getBacklogConfig(): Promise<RuntimeBacklogConfig> {
+	const config = await getSearchConfig();
+	return {
+		enabled: config.backlogConfig.enabled,
+		tierDelaysDays: [...config.backlogConfig.tierDelaysDays],
+		maxTier: BACKLOG_CONFIG.MAX_TIER
 	};
 }

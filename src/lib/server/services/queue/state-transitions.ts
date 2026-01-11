@@ -1,9 +1,17 @@
-// State machine: pending → queued → searching → cooldown → pending (retry) or exhausted
+// State machine: pending → queued → searching → cooldown → pending (retry)
+// Backlog system: After MAX_ATTEMPTS failures, items enter backlog tiers with extended delays
+// instead of being permanently marked as exhausted. Items are never permanently abandoned.
 
 import { and, eq, inArray, lte, sql } from 'drizzle-orm';
 import { db } from '$lib/server/db';
 import { episodes, requestQueue, searchRegistry } from '$lib/server/db/schema';
-import { calculateNextEligibleTime, shouldMarkExhausted } from './backoff';
+import {
+	calculateBacklogNextEligibleTime,
+	calculateNextEligibleTime,
+	getNextBacklogTier,
+	shouldEnterBacklog
+} from './backoff';
+import { getBacklogConfig, getStateTransitionConfig } from './config';
 import type {
 	MarkSearchFailedInput,
 	ReenqueueCooldownResult,
@@ -26,6 +34,7 @@ export async function markSearchFailed(
 				id: searchRegistry.id,
 				state: searchRegistry.state,
 				attemptCount: searchRegistry.attemptCount,
+				backlogTier: searchRegistry.backlogTier,
 				contentType: searchRegistry.contentType,
 				contentId: searchRegistry.contentId,
 				connectorId: searchRegistry.connectorId
@@ -69,14 +78,50 @@ export async function markSearchFailed(
 			await markSeasonPackFailedForSeason(entry.contentId, entry.connectorId, now);
 		}
 
-		if (shouldMarkExhausted(newAttemptCount)) {
+		// Get config to determine behavior
+		const stateConfig = await getStateTransitionConfig();
+		const backlogConfig = await getBacklogConfig();
+
+		// Check if item should enter backlog (exhausted normal retries)
+		if (shouldEnterBacklog(newAttemptCount, stateConfig.MAX_ATTEMPTS)) {
+			if (!backlogConfig.enabled) {
+				// Backlog disabled - use original exhausted behavior (terminal state)
+				await db
+					.update(searchRegistry)
+					.set({
+						state: 'exhausted',
+						attemptCount: newAttemptCount,
+						failureCategory,
+						nextEligible: null,
+						updatedAt: now
+					})
+					.where(eq(searchRegistry.id, searchRegistryId));
+
+				return {
+					success: true,
+					searchRegistryId,
+					previousState,
+					newState: 'exhausted',
+					attemptCount: newAttemptCount
+				};
+			}
+
+			// Backlog enabled - enter extended cooldown with next tier
+			const newTier = getNextBacklogTier(entry.backlogTier, backlogConfig.maxTier);
+			const nextEligible = calculateBacklogNextEligibleTime(
+				newTier,
+				backlogConfig.tierDelaysDays,
+				now
+			);
+
 			await db
 				.update(searchRegistry)
 				.set({
-					state: 'exhausted',
-					attemptCount: newAttemptCount,
+					state: 'cooldown',
+					attemptCount: 0, // Reset attempt count for next retry cycle
+					backlogTier: newTier,
 					failureCategory,
-					nextEligible: null, // No retry for exhausted items
+					nextEligible,
 					updatedAt: now
 				})
 				.where(eq(searchRegistry.id, searchRegistryId));
@@ -85,11 +130,14 @@ export async function markSearchFailed(
 				success: true,
 				searchRegistryId,
 				previousState,
-				newState: 'exhausted',
-				attemptCount: newAttemptCount
+				newState: 'cooldown',
+				attemptCount: 0,
+				nextEligible,
+				backlogTier: newTier
 			};
 		}
 
+		// Normal cooldown with exponential backoff
 		const nextEligible = calculateNextEligibleTime(newAttemptCount, now);
 
 		await db
