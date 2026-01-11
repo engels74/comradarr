@@ -213,7 +213,14 @@ export const actions: Actions = {
 		const result = await runIncrementalSync(connector, { skipRetry: true });
 
 		if (result.success) {
-			await captureConnectorSnapshotAfterSync(connector.id);
+			try {
+				await captureConnectorSnapshotAfterSync(connector.id);
+			} catch (snapshotError) {
+				logger.warn('Failed to capture completion snapshot', {
+					connectorId: connector.id,
+					error: snapshotError instanceof Error ? snapshotError.message : String(snapshotError)
+				});
+			}
 
 			logger.info('Manual sync completed', {
 				connectorId: connector.id,

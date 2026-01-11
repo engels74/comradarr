@@ -315,7 +315,15 @@ export function initializeScheduler(): void {
 					const syncResult = await runIncrementalSync(connector);
 					if (syncResult.success) {
 						summary.totalItemsSynced += syncResult.itemsSynced;
-						await captureConnectorSnapshotAfterSync(connector.id);
+						try {
+							await captureConnectorSnapshotAfterSync(connector.id);
+						} catch (snapshotError) {
+							logger.warn('Failed to capture completion snapshot', {
+								connectorId: connector.id,
+								error:
+									snapshotError instanceof Error ? snapshotError.message : String(snapshotError)
+							});
+						}
 					} else {
 						summary.syncErrors++;
 						logger.warn('Sync failed for connector', {
@@ -415,7 +423,15 @@ export function initializeScheduler(): void {
 						summary.totalCreated += reconcileResult.itemsCreated;
 						summary.totalUpdated += reconcileResult.itemsUpdated;
 						summary.totalDeleted += reconcileResult.itemsDeleted;
-						await captureConnectorSnapshotAfterSync(connector.id);
+						try {
+							await captureConnectorSnapshotAfterSync(connector.id);
+						} catch (snapshotError) {
+							logger.warn('Failed to capture completion snapshot', {
+								connectorId: connector.id,
+								error:
+									snapshotError instanceof Error ? snapshotError.message : String(snapshotError)
+							});
+						}
 					} else {
 						summary.reconciliationErrors++;
 						logger.warn('Reconciliation failed for connector', {
@@ -983,7 +999,15 @@ export async function refreshDynamicSchedules(): Promise<void> {
 								summary.totalItemsSynced += syncResult.itemsCreated + syncResult.itemsUpdated;
 							}
 
-							await captureConnectorSnapshotAfterSync(connector.id);
+							try {
+								await captureConnectorSnapshotAfterSync(connector.id);
+							} catch (snapshotError) {
+								logger.warn('Failed to capture completion snapshot', {
+									connectorId: connector.id,
+									error:
+										snapshotError instanceof Error ? snapshotError.message : String(snapshotError)
+								});
+							}
 
 							const [gapsResult, upgradesResult] = await Promise.all([
 								discoverGaps(connector.id),
