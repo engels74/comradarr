@@ -7,7 +7,7 @@ import { db } from '$lib/server/db';
 import { episodes, requestQueue, searchRegistry } from '$lib/server/db/schema';
 import {
 	calculateBacklogNextEligibleTime,
-	calculateNextEligibleTime,
+	calculateNextEligibleTimeWithConfig,
 	getNextBacklogTier,
 	shouldEnterBacklog
 } from './backoff';
@@ -20,7 +20,7 @@ import type {
 	StateTransitionResult
 } from './types';
 
-export { calculateNextEligibleTime, shouldMarkExhausted } from './backoff';
+export { calculateNextEligibleTimeWithConfig, shouldMarkExhausted } from './backoff';
 
 // Season pack failure with no_results triggers EpisodeSearch fallback for all episodes in the season
 export async function markSearchFailed(
@@ -137,8 +137,8 @@ export async function markSearchFailed(
 			};
 		}
 
-		// Normal cooldown with exponential backoff
-		const nextEligible = calculateNextEligibleTime(newAttemptCount, now);
+		// Normal cooldown with exponential backoff (uses DB-backed config)
+		const nextEligible = await calculateNextEligibleTimeWithConfig(newAttemptCount, now);
 
 		await db
 			.update(searchRegistry)

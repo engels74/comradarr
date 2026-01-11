@@ -10,9 +10,12 @@ import type { BacklogRecoveryResult } from './types';
  * This function migrates existing exhausted items to use the new backlog system.
  * Should be run once after enabling backlog recovery, and optionally periodically
  * in the db-maintenance job.
+ *
+ * Uses a transaction to ensure atomicity - either all items are recovered or none.
  */
 export async function recoverExhaustedItems(): Promise<BacklogRecoveryResult> {
 	const startTime = Date.now();
+	let itemsRecovered = 0;
 
 	try {
 		const backlogConfig = await getBacklogConfig();
@@ -44,30 +47,31 @@ export async function recoverExhaustedItems(): Promise<BacklogRecoveryResult> {
 			};
 		}
 
-		// Update each exhausted item to cooldown with backlog tier 1
-		let itemsRecovered = 0;
-		for (const item of exhaustedItems) {
-			// Use existing tier or default to tier 1
-			const newTier = item.backlogTier === 0 ? 1 : item.backlogTier;
-			const nextEligible = calculateBacklogNextEligibleTime(
-				newTier,
-				backlogConfig.tierDelaysDays,
-				now
-			);
+		// Use transaction for atomicity - all updates succeed or none
+		await db.transaction(async (tx) => {
+			for (const item of exhaustedItems) {
+				// Use existing tier or default to tier 1
+				const newTier = item.backlogTier === 0 ? 1 : item.backlogTier;
+				const nextEligible = calculateBacklogNextEligibleTime(
+					newTier,
+					backlogConfig.tierDelaysDays,
+					now
+				);
 
-			await db
-				.update(searchRegistry)
-				.set({
-					state: 'cooldown',
-					backlogTier: newTier,
-					attemptCount: 0,
-					nextEligible,
-					updatedAt: now
-				})
-				.where(eq(searchRegistry.id, item.id));
+				await tx
+					.update(searchRegistry)
+					.set({
+						state: 'cooldown',
+						backlogTier: newTier,
+						attemptCount: 0,
+						nextEligible,
+						updatedAt: now
+					})
+					.where(eq(searchRegistry.id, item.id));
 
-			itemsRecovered++;
-		}
+				itemsRecovered++;
+			}
+		});
 
 		return {
 			success: true,
@@ -77,7 +81,7 @@ export async function recoverExhaustedItems(): Promise<BacklogRecoveryResult> {
 	} catch (error) {
 		return {
 			success: false,
-			itemsRecovered: 0,
+			itemsRecovered,
 			durationMs: Date.now() - startTime,
 			error: error instanceof Error ? error.message : String(error)
 		};
