@@ -122,6 +122,14 @@ def _drop_database(db_name: str, db_port: int) -> bool:
 
 
 def stop_command(
+    force: Annotated[
+        bool,
+        typer.Option(
+            "--force",
+            "-f",
+            help="Force immediate termination without waiting for graceful shutdown",
+        ),
+    ] = False,
     force_cleanup: Annotated[
         bool,
         typer.Option(
@@ -252,11 +260,23 @@ def stop_command(
 
     step(f"Stopping dev server (PID: {state.pid})...")
 
-    if kill_process_tree(state.pid):
-        success("Dev server stopped")
+    if force:
+        # Force mode: kill first with short timeout, then cleanup connections
+        if kill_process_tree(state.pid, timeout=2.0):
+            success("Dev server stopped (forced)")
+        else:
+            error("Failed to stop dev server")
+            raise typer.Exit(1)
+        # Cleanup any lingering connections after force kill
+        _terminate_db_connections(state.db_name, state.db_port)
     else:
-        error("Failed to stop dev server")
-        raise typer.Exit(1)
+        # Graceful mode: terminate connections first as safety net, then kill
+        _terminate_db_connections(state.db_name, state.db_port)
+        if kill_process_tree(state.pid):
+            success("Dev server stopped")
+        else:
+            error("Failed to stop dev server")
+            raise typer.Exit(1)
 
     remove_state()
 

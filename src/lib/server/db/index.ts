@@ -21,22 +21,24 @@ export async function closePool(): Promise<void> {
 }
 
 // Register shutdown handlers to gracefully close connections
+// Note: Signal handlers must NOT be async - Node.js doesn't await them.
+// We use .then()/.finally() to sequence operations before re-raising the signal.
 let shuttingDown = false;
 
 const createShutdownHandler = (signal: 'SIGTERM' | 'SIGINT') => {
-	const handler = async () => {
+	const handler = () => {
 		if (shuttingDown) return;
 		shuttingDown = true;
 		console.log(`[db] Received ${signal}, closing connection pool...`);
-		try {
-			await closePool();
-			console.log('[db] Connection pool closed');
-		} catch (err) {
-			console.error('[db] Error closing pool:', err);
-		}
-		// Remove only our handler and re-raise signal for default termination behavior
-		process.off(signal, handler);
-		process.kill(process.pid, signal);
+
+		closePool()
+			.then(() => console.log('[db] Connection pool closed'))
+			.catch((err) => console.error('[db] Error closing pool:', err))
+			.finally(() => {
+				process.off(signal, handler);
+				// Small delay to ensure I/O completes before re-raising signal
+				setTimeout(() => process.kill(process.pid, signal), 100);
+			});
 	};
 	return handler;
 };

@@ -479,6 +479,8 @@ class MainMenuScreen(Screen[None]):
             cwd=setup_result.project_root,
             env=setup_result.env,
             cleanup_callback=setup_result.cleanup_callback,
+            db_name=setup_result.config.db_name,
+            db_port=setup_result.config.db_port,
         )
 
         if started:
