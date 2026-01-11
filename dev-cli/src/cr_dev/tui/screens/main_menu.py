@@ -378,9 +378,17 @@ class MainMenuScreen(Screen[None]):
 
         # Check for externally-spawned server via state file
         state = load_state()
-        if state is not None and is_process_running(state.pid):
-            self._show_command_start("Stopping dev server...")
-            _ = self._stop_external_dev_server_async(state.pid)
+        if state is not None:
+            # Guard against invalid PIDs (0 would target entire process group)
+            if state.pid > 0 and is_process_running(state.pid):
+                self._show_command_start("Stopping dev server...")
+                _ = self._stop_external_dev_server_async(state.pid)
+                return
+
+            # State exists but process not running - clean up stale state
+            # (matches CLI stop behavior)
+            self._show_command_start("Cleaning up stale state...")
+            _ = self._cleanup_stale_state_async(state)
             return
 
         self.notify("No dev server is running", severity="warning")
@@ -534,6 +542,13 @@ class MainMenuScreen(Screen[None]):
         status_bar = self._get_status_bar()
         output_log = self._get_output_log()
 
+        # Guard against invalid PIDs (0 would target entire process group)
+        if pid <= 0:
+            _ = output_log.log_error(f"Invalid PID: {pid}")
+            status_bar.set_ready()
+            self._get_server_status().refresh_status()
+            return
+
         state = load_state()
 
         loop = asyncio.get_running_loop()
@@ -561,6 +576,49 @@ class MainMenuScreen(Screen[None]):
                     _ = output_log.log_warning(f"Database cleanup failed: {exc}")
         else:
             _ = output_log.log_error("Failed to stop dev server")
+
+        status_bar.set_ready()
+        self._get_server_status().refresh_status()
+        self._update_saved_dbs_hint()
+
+    @work(exclusive=True, group=DEV_SERVER_GROUP)
+    async def _cleanup_stale_state_async(self, state: object) -> None:
+        """Clean up stale state when process is not running (matches CLI stop behavior)."""
+        import asyncio
+
+        from cr_dev.core.state import DevState, remove_state
+
+        status_bar = self._get_status_bar()
+        output_log = self._get_output_log()
+
+        # Type narrowing for the state parameter
+        if not isinstance(state, DevState):
+            _ = output_log.log_error("Invalid state object")
+            status_bar.set_ready()
+            return
+
+        _ = output_log.log_warning(
+            f"Process {state.pid} is not running, cleaning up stale state"
+        )
+        remove_state()
+
+        # Clean up ephemeral database if applicable
+        if not state.persist_mode and not state.reconnect_mode and state.db_name:
+            _ = output_log.log_step(f"Cleaning up database '{state.db_name}'...")
+            try:
+                from cr_dev.commands.stop import (
+                    _drop_database,  # pyright: ignore[reportPrivateUsage]
+                )
+
+                loop = asyncio.get_running_loop()
+                _ = await loop.run_in_executor(
+                    None, _drop_database, state.db_name, state.db_port
+                )
+                _ = output_log.log_success(f"Database '{state.db_name}' removed")
+            except Exception as exc:
+                _ = output_log.log_warning(f"Database cleanup failed: {exc}")
+        else:
+            _ = output_log.log_success("Stale state cleaned up")
 
         status_bar.set_ready()
         self._get_server_status().refresh_status()
