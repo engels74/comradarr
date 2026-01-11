@@ -19,10 +19,47 @@ from cr_dev.core.state import (
 )
 
 
-def _drop_database(db_name: str, db_port: int) -> bool:
-    """Drop database and user."""
+def _terminate_db_connections(db_name: str, db_port: int) -> None:
+    """Terminate all connections to a database before dropping it."""
     platform = detect_platform()
     strategy = get_strategy(platform)
+
+    terminate_sql = f"""
+    SELECT pg_terminate_backend(pid)
+    FROM pg_stat_activity
+    WHERE datname = '{db_name}' AND pid <> pg_backend_pid()
+    """
+
+    if is_macos(platform):
+        _ = subprocess.run(
+            [
+                "psql",
+                "-h",
+                "localhost",
+                "-p",
+                str(db_port),
+                "-d",
+                "postgres",
+                "-c",
+                terminate_sql,
+            ],
+            capture_output=True,
+            text=True,
+        )
+    else:
+        _ = strategy.run_as_postgres_user(
+            ["psql", "-d", "postgres", "-c", terminate_sql],
+            check=False,
+        )
+
+
+def _drop_database(db_name: str, db_port: int) -> bool:
+    """Drop database and user after terminating active connections."""
+    platform = detect_platform()
+    strategy = get_strategy(platform)
+
+    # Terminate any active connections first
+    _terminate_db_connections(db_name, db_port)
 
     if is_macos(platform):
         _ = subprocess.run(

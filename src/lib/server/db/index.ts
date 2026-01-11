@@ -4,7 +4,7 @@ import * as schema from './schema';
 
 const client = new SQL({
 	url: process.env.DATABASE_URL!,
-	max: 20, // Pool size (requirement 13.4: 10-25)
+	max: 10, // Pool size (requirement 13.4: 10-25)
 	idleTimeout: 30, // Close idle after 30s
 	maxLifetime: 60 * 30, // Recycle connections after 30min
 	connectionTimeout: 30 // Acquisition timeout
@@ -14,3 +14,26 @@ export const db = drizzle({ client, schema });
 
 // Re-export schema for type inference
 export { schema };
+
+/** Close the database connection pool. Used for graceful shutdown. */
+export async function closePool(): Promise<void> {
+	await client.close();
+}
+
+// Register shutdown handlers to gracefully close connections
+let shuttingDown = false;
+const shutdown = async (signal: string) => {
+	if (shuttingDown) return;
+	shuttingDown = true;
+	console.log(`[db] Received ${signal}, closing connection pool...`);
+	try {
+		await closePool();
+		console.log('[db] Connection pool closed');
+	} catch (err) {
+		console.error('[db] Error closing pool:', err);
+	}
+	process.exit(0);
+};
+
+process.on('SIGTERM', () => void shutdown('SIGTERM'));
+process.on('SIGINT', () => void shutdown('SIGINT'));

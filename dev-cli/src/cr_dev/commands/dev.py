@@ -36,6 +36,7 @@ from cr_dev.core.process import (
 from cr_dev.core.state import (
     DevState,
     SavedCredentials,
+    is_database_in_use,
     load_credentials,
     remove_state,
     save_credentials,
@@ -57,6 +58,58 @@ def _get_project_root() -> Path:
     """Get the project root directory."""
     # dev.py -> commands -> cr_dev -> src -> dev-cli -> project root
     return Path(__file__).parent.parent.parent.parent.parent
+
+
+def _cleanup_orphaned_connections(db_port: int = 5432) -> None:
+    """Cleanup orphaned connections to dev databases on startup.
+
+    Finds all connections to comradarr_dev_* databases and terminates
+    connections for databases that don't have an active dev server.
+    """
+    platform = detect_platform()
+    strategy = get_strategy(platform)
+
+    # Query for all dev database connections
+    query_sql = """
+    SELECT DISTINCT datname
+    FROM pg_stat_activity
+    WHERE datname LIKE 'comradarr_dev_%'
+    """
+
+    if is_macos(platform):
+        result = subprocess.run(
+            [
+                "psql",
+                "-h",
+                "localhost",
+                "-p",
+                str(db_port),
+                "-d",
+                "postgres",
+                "-tAc",
+                query_sql,
+            ],
+            capture_output=True,
+            text=True,
+        )
+    else:
+        result = strategy.run_as_postgres_user(
+            ["psql", "-d", "postgres", "-tAc", query_sql],
+            check=False,
+        )
+
+    if result.returncode != 0 or not result.stdout.strip():
+        return
+
+    databases = [db.strip() for db in result.stdout.strip().split("\n") if db.strip()]
+
+    for db_name in databases:
+        in_use, _ = is_database_in_use(db_name)
+        if not in_use:
+            # Terminate connections to orphaned database
+            step(f"Cleaning up orphaned connections to '{db_name}'...")
+            _terminate_db_connections(db_name, db_port)
+            success(f"Terminated orphaned connections to '{db_name}'")
 
 
 def _create_database(config: DevConfig, platform_strategy: PlatformStrategy) -> bool:
@@ -196,11 +249,48 @@ def _create_database(config: DevConfig, platform_strategy: PlatformStrategy) -> 
     return True
 
 
+def _terminate_db_connections(db_name: str, db_port: int) -> None:
+    """Terminate all connections to a database before dropping it."""
+    platform = detect_platform()
+    strategy = get_strategy(platform)
+
+    terminate_sql = f"""
+    SELECT pg_terminate_backend(pid)
+    FROM pg_stat_activity
+    WHERE datname = '{db_name}' AND pid <> pg_backend_pid()
+    """
+
+    if is_macos(platform):
+        _ = subprocess.run(
+            [
+                "psql",
+                "-h",
+                "localhost",
+                "-p",
+                str(db_port),
+                "-d",
+                "postgres",
+                "-c",
+                terminate_sql,
+            ],
+            capture_output=True,
+            text=True,
+        )
+    else:
+        _ = strategy.run_as_postgres_user(
+            ["psql", "-d", "postgres", "-c", terminate_sql],
+            check=False,
+        )
+
+
 def drop_database(
     db_name: str, db_port: int, platform_strategy: PlatformStrategy
 ) -> bool:
-    """Drop database and user."""
+    """Drop database and user after terminating active connections."""
     platform = detect_platform()
+
+    # Terminate any active connections first
+    _terminate_db_connections(db_name, db_port)
 
     if is_macos(platform):
         _ = subprocess.run(
@@ -338,6 +428,9 @@ def setup_dev_server(
         if not strategy.start_postgres_service():
             error("Failed to start PostgreSQL")
             return None
+
+    # Cleanup orphaned connections from previous dev sessions
+    _cleanup_orphaned_connections(db_port)
 
     if is_port_in_use(port):
         error(f"Port {port} is already in use")
@@ -497,6 +590,9 @@ def dev_command(
         if not strategy.start_postgres_service():
             error("Failed to start PostgreSQL")
             raise typer.Exit(1)
+
+    # Cleanup orphaned connections from previous dev sessions
+    _cleanup_orphaned_connections(db_port)
 
     if is_port_in_use(port):
         error(f"Port {port} is already in use")
