@@ -2,11 +2,12 @@
 
 import { and, eq, inArray, lte, sql } from 'drizzle-orm';
 import { db } from '$lib/server/db';
-import { episodes, searchRegistry } from '$lib/server/db/schema';
+import { episodes, requestQueue, searchRegistry } from '$lib/server/db/schema';
 import { calculateNextEligibleTime, shouldMarkExhausted } from './backoff';
 import type {
 	MarkSearchFailedInput,
 	ReenqueueCooldownResult,
+	RevertToQueuedResult,
 	SearchState,
 	StateTransitionResult
 } from './types';
@@ -315,4 +316,229 @@ export async function getSearchState(searchRegistryId: number): Promise<SearchSt
 	}
 
 	return result[0]!.state as SearchState;
+}
+
+export async function setSearching(searchRegistryId: number): Promise<StateTransitionResult> {
+	try {
+		const now = new Date();
+		const result = await db
+			.update(searchRegistry)
+			.set({
+				state: 'searching',
+				lastSearched: now,
+				updatedAt: now
+			})
+			.where(and(eq(searchRegistry.id, searchRegistryId), eq(searchRegistry.state, 'queued')))
+			.returning({ id: searchRegistry.id, state: searchRegistry.state });
+
+		if (result.length === 0) {
+			const current = await getSearchState(searchRegistryId);
+			return {
+				success: false,
+				searchRegistryId,
+				previousState: current ?? 'queued',
+				newState: current ?? 'queued',
+				error: current
+					? `Cannot set searching: entry is in state '${current}', expected 'queued'`
+					: `Search registry entry ${searchRegistryId} not found`
+			};
+		}
+
+		return {
+			success: true,
+			searchRegistryId,
+			previousState: 'queued',
+			newState: 'searching'
+		};
+	} catch (error) {
+		return {
+			success: false,
+			searchRegistryId,
+			previousState: 'queued',
+			newState: 'queued',
+			error: error instanceof Error ? error.message : String(error)
+		};
+	}
+}
+
+export async function markSearchDispatched(
+	searchRegistryId: number
+): Promise<StateTransitionResult> {
+	try {
+		const current = await db
+			.select({
+				id: searchRegistry.id,
+				state: searchRegistry.state
+			})
+			.from(searchRegistry)
+			.where(eq(searchRegistry.id, searchRegistryId))
+			.limit(1);
+
+		if (current.length === 0) {
+			return {
+				success: false,
+				searchRegistryId,
+				previousState: 'searching',
+				newState: 'searching',
+				error: `Search registry entry ${searchRegistryId} not found`
+			};
+		}
+
+		const entry = current[0]!;
+		const previousState = entry.state as SearchState;
+
+		if (previousState !== 'searching') {
+			return {
+				success: false,
+				searchRegistryId,
+				previousState,
+				newState: previousState,
+				error: `Cannot mark dispatched: entry is in state '${previousState}', expected 'searching'`
+			};
+		}
+
+		await db.delete(searchRegistry).where(eq(searchRegistry.id, searchRegistryId));
+
+		return {
+			success: true,
+			searchRegistryId,
+			previousState: 'searching',
+			newState: 'searching'
+		};
+	} catch (error) {
+		return {
+			success: false,
+			searchRegistryId,
+			previousState: 'searching',
+			newState: 'searching',
+			error: error instanceof Error ? error.message : String(error)
+		};
+	}
+}
+
+export async function revertToQueued(searchRegistryIds: number[]): Promise<RevertToQueuedResult> {
+	if (searchRegistryIds.length === 0) {
+		return { success: true, reverted: 0, requeued: 0 };
+	}
+
+	try {
+		const now = new Date();
+
+		const toHandle = await db
+			.select({
+				id: searchRegistry.id,
+				connectorId: searchRegistry.connectorId,
+				priority: searchRegistry.priority,
+				state: searchRegistry.state
+			})
+			.from(searchRegistry)
+			.where(inArray(searchRegistry.id, searchRegistryIds));
+
+		if (toHandle.length === 0) {
+			return { success: true, reverted: 0, requeued: 0 };
+		}
+
+		const searchingItems = toHandle.filter((r) => r.state === 'searching');
+		const queuedItems = toHandle.filter((r) => r.state === 'queued');
+
+		if (searchingItems.length > 0) {
+			await db
+				.update(searchRegistry)
+				.set({
+					state: 'queued',
+					updatedAt: now
+				})
+				.where(
+					inArray(
+						searchRegistry.id,
+						searchingItems.map((r) => r.id)
+					)
+				);
+		}
+
+		const allToRequeue = [...searchingItems, ...queuedItems];
+		if (allToRequeue.length > 0) {
+			await db
+				.insert(requestQueue)
+				.values(
+					allToRequeue.map((r) => ({
+						searchRegistryId: r.id,
+						connectorId: r.connectorId,
+						priority: r.priority,
+						scheduledAt: now
+					}))
+				)
+				.onConflictDoNothing();
+		}
+
+		return {
+			success: true,
+			reverted: searchingItems.length,
+			requeued: allToRequeue.length
+		};
+	} catch (error) {
+		return {
+			success: false,
+			reverted: 0,
+			requeued: 0,
+			error: error instanceof Error ? error.message : String(error)
+		};
+	}
+}
+
+export async function cleanupOrphanedSearchingItems(
+	maxAgeMinutes: number = 10
+): Promise<RevertToQueuedResult> {
+	try {
+		const cutoff = new Date(Date.now() - maxAgeMinutes * 60 * 1000);
+		const now = new Date();
+
+		const orphaned = await db
+			.select({
+				id: searchRegistry.id,
+				connectorId: searchRegistry.connectorId,
+				priority: searchRegistry.priority
+			})
+			.from(searchRegistry)
+			.where(and(eq(searchRegistry.state, 'searching'), lte(searchRegistry.updatedAt, cutoff)));
+
+		if (orphaned.length === 0) {
+			return { success: true, reverted: 0, requeued: 0 };
+		}
+
+		const orphanedIds = orphaned.map((r) => r.id);
+
+		await db
+			.update(searchRegistry)
+			.set({
+				state: 'queued',
+				updatedAt: now
+			})
+			.where(inArray(searchRegistry.id, orphanedIds));
+
+		await db
+			.insert(requestQueue)
+			.values(
+				orphaned.map((r) => ({
+					searchRegistryId: r.id,
+					connectorId: r.connectorId,
+					priority: r.priority,
+					scheduledAt: now
+				}))
+			)
+			.onConflictDoNothing();
+
+		return {
+			success: true,
+			reverted: orphaned.length,
+			requeued: orphaned.length
+		};
+	} catch (error) {
+		return {
+			success: false,
+			reverted: 0,
+			requeued: 0,
+			error: error instanceof Error ? error.message : String(error)
+		};
+	}
 }

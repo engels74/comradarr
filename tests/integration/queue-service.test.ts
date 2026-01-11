@@ -481,7 +481,7 @@ describe('Queue Service - dequeuePriorityItems', () => {
 			expect(queueCount).toBe(3);
 		});
 
-		it('should update registry state to searching', async () => {
+		it('should keep registry state as queued after dequeue', async () => {
 			const seriesId = await insertTestSeries(testSonarrConnectorId, 1, 'Test Series');
 			const seasonId = await insertTestSeason(seriesId, 1);
 			const episodeId = await insertTestEpisode(testSonarrConnectorId, seasonId, 101, 1, 1);
@@ -491,9 +491,9 @@ describe('Queue Service - dequeuePriorityItems', () => {
 			await enqueuePendingItems(testSonarrConnectorId);
 			await dequeuePriorityItems(testSonarrConnectorId);
 
+			// State remains 'queued' after dequeue - setSearching() is called separately before dispatch
 			const registry = await getRegistryById(registryId);
-			expect(registry?.state).toBe('searching');
-			expect(registry?.lastSearched).toBeDefined();
+			expect(registry?.state).toBe('queued');
 		});
 
 		it('should remove items from queue after dequeue', async () => {

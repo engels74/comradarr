@@ -337,19 +337,10 @@ export async function dequeuePriorityItems(
 		}
 
 		const queueIds = itemsToDequeue.map((item) => item.id);
-		const registryIds = itemsToDequeue.map((item) => item.searchRegistryId);
 
 		await db.delete(requestQueue).where(inArray(requestQueue.id, queueIds));
 
-		const now = new Date();
-		await db
-			.update(searchRegistry)
-			.set({
-				state: 'searching',
-				lastSearched: now,
-				updatedAt: now
-			})
-			.where(inArray(searchRegistry.id, registryIds));
+		// State remains 'queued' - setSearching() will be called per-item before dispatch
 
 		const items: QueueItem[] = itemsToDequeue.map((item) => ({
 			id: item.id,

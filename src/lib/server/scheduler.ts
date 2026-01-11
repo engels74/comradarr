@@ -56,12 +56,16 @@ import {
 } from '$lib/server/services/maintenance';
 import { prowlarrHealthMonitor } from '$lib/server/services/prowlarr';
 import {
+	cleanupOrphanedSearchingItems,
 	dequeuePriorityItems,
 	dispatchSearch,
 	enqueuePendingItems,
 	type FailureCategory,
+	markSearchDispatched,
 	markSearchFailed,
-	reenqueueEligibleCooldownItems
+	reenqueueEligibleCooldownItems,
+	revertToQueued,
+	setSearching
 } from '$lib/server/services/queue';
 import { runFullReconciliation, runIncrementalSync } from '$lib/server/services/sync';
 import {
@@ -590,9 +594,11 @@ export function initializeScheduler(): void {
 		},
 		withJobContext('queue-processor', async () => {
 			const startTime = Date.now();
+			const orphanCleanup = await cleanupOrphanedSearchingItems(10);
 			const reenqueueResult = await reenqueueEligibleCooldownItems();
 
 			const summary = {
+				orphansRecovered: orphanCleanup.success ? orphanCleanup.requeued : 0,
 				reenqueued: reenqueueResult.success ? reenqueueResult.itemsReenqueued : 0,
 				dispatched: 0,
 				succeeded: 0,
@@ -610,7 +616,17 @@ export function initializeScheduler(): void {
 						continue;
 					}
 
-					for (const item of dequeueResult.items) {
+					let rateLimitedAtIndex = -1;
+
+					for (let i = 0; i < dequeueResult.items.length; i++) {
+						const item = dequeueResult.items[i]!;
+
+						const searchingResult = await setSearching(item.searchRegistryId);
+						if (!searchingResult.success) {
+							await revertToQueued([item.searchRegistryId]);
+							continue;
+						}
+
 						summary.dispatched++;
 
 						const dispatchOptions =
@@ -630,6 +646,7 @@ export function initializeScheduler(): void {
 
 						if (dispatchResult.success) {
 							summary.succeeded++;
+							await markSearchDispatched(item.searchRegistryId);
 							await analyticsCollector.recordSearchDispatched(
 								item.connectorId,
 								item.searchRegistryId,
@@ -661,6 +678,13 @@ export function initializeScheduler(): void {
 
 							if (dispatchResult.rateLimited) {
 								summary.rateLimited++;
+								if (dispatchResult.connectorPaused) {
+									await markSearchFailed({
+										searchRegistryId: item.searchRegistryId,
+										failureCategory
+									});
+								}
+								rateLimitedAtIndex = i;
 								break;
 							}
 
@@ -668,6 +692,28 @@ export function initializeScheduler(): void {
 								searchRegistryId: item.searchRegistryId,
 								failureCategory
 							});
+						}
+					}
+
+					if (rateLimitedAtIndex >= 0) {
+						const remainingItems = dequeueResult.items
+							.slice(rateLimitedAtIndex)
+							.map((item) => item.searchRegistryId);
+						if (remainingItems.length > 0) {
+							const revertResult = await revertToQueued(remainingItems);
+							if (revertResult.success) {
+								logger.debug('Reverted remaining items to queue after rate limit', {
+									connectorId: connector.id,
+									reverted: revertResult.reverted,
+									requeued: revertResult.requeued
+								});
+							} else {
+								logger.error('Failed to revert items to queue after rate limit', {
+									connectorId: connector.id,
+									error: revertResult.error,
+									itemCount: remainingItems.length
+								});
+							}
 						}
 					}
 				} catch (error) {
@@ -681,6 +727,7 @@ export function initializeScheduler(): void {
 
 			const durationMs = Date.now() - startTime;
 			if (
+				summary.orphansRecovered > 0 ||
 				summary.reenqueued > 0 ||
 				summary.dispatched > 0 ||
 				summary.failed > 0 ||

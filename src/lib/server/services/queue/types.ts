@@ -120,3 +120,10 @@ export interface ReenqueueCooldownResult {
 	durationMs: number;
 	error?: string;
 }
+
+export interface RevertToQueuedResult {
+	success: boolean;
+	reverted: number;
+	requeued: number;
+	error?: string;
+}

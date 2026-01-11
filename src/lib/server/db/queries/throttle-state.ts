@@ -92,6 +92,63 @@ export async function incrementRequestCounters(connectorId: number): Promise<Thr
 	return result[0]!;
 }
 
+export interface AcquireSlotResult {
+	acquired: boolean;
+	currentCount: number;
+	windowExpired: boolean;
+}
+
+export async function tryAcquireRequestSlot(
+	connectorId: number,
+	requestsPerMinute: number
+): Promise<AcquireSlotResult> {
+	// Ensure state exists
+	await getOrCreateThrottleState(connectorId);
+
+	const now = new Date();
+	const oneMinuteAgo = new Date(now.getTime() - 60 * 1000);
+
+	// Atomic increment only if under limit AND within valid window
+	// Uses conditional UPDATE that only affects rows meeting criteria
+	const result = await db
+		.update(throttleState)
+		.set({
+			requestsThisMinute: sql`${throttleState.requestsThisMinute} + 1`,
+			requestsToday: sql`${throttleState.requestsToday} + 1`,
+			lastRequestAt: now,
+			updatedAt: now
+		})
+		.where(
+			sql`${throttleState.connectorId} = ${connectorId}
+				AND ${throttleState.requestsThisMinute} < ${requestsPerMinute}
+				AND ${throttleState.minuteWindowStart} IS NOT NULL
+				AND ${throttleState.minuteWindowStart} > ${oneMinuteAgo}`
+		)
+		.returning({ requestsThisMinute: throttleState.requestsThisMinute });
+
+	if (result.length > 0) {
+		return {
+			acquired: true,
+			currentCount: result[0]!.requestsThisMinute,
+			windowExpired: false
+		};
+	}
+
+	// Slot not acquired - check why (window expired vs at limit)
+	const state = await getThrottleState(connectorId);
+	if (!state) {
+		return { acquired: false, currentCount: 0, windowExpired: true };
+	}
+
+	const windowExpired = !state.minuteWindowStart || state.minuteWindowStart <= oneMinuteAgo;
+
+	return {
+		acquired: false,
+		currentCount: windowExpired ? 0 : state.requestsThisMinute,
+		windowExpired
+	};
+}
+
 export async function resetMinuteWindow(connectorId: number): Promise<void> {
 	const now = new Date();
 	await db
