@@ -184,7 +184,7 @@ export async function getQueueList(filters: QueueFilters): Promise<QueueListResu
 			connector_type: connectors.type,
 			content_type: sql<'movie'>`'movie'::text`.as('content_type'),
 			content_id: searchRegistry.contentId,
-			title: movies.title,
+			title: sql<string>`COALESCE(${movies.title}, 'Unknown Movie')`.as('title'),
 			series_title: sql<string | null>`NULL::text`.as('series_title'),
 			season_number: sql<number | null>`NULL::integer`.as('season_number'),
 			episode_number: sql<number | null>`NULL::integer`.as('episode_number'),

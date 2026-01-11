@@ -38,6 +38,56 @@ vi.mock('$lib/server/db/queries/connectors', () => ({
 	getDecryptedApiKey: vi.fn()
 }));
 
+// Mock content data - arrId matches the DB ID passed in tests for simplicity
+const mockEpisodeData = {
+	title: 'Test Episode',
+	seasonNumber: 1,
+	episodeNumber: 1,
+	seriesTitle: 'Test Series',
+	arrId: 456,
+	arrSeriesId: 10
+};
+
+const mockMovieData = {
+	title: 'Test Movie',
+	year: 2024,
+	arrId: 789
+};
+
+// Mock the database and schema to avoid Bun import
+vi.mock('$lib/server/db', () => ({
+	db: {
+		select: vi.fn(() => ({
+			from: vi.fn(() => ({
+				innerJoin: vi.fn(() => ({
+					innerJoin: vi.fn(() => ({
+						where: vi.fn(() => ({
+							limit: vi.fn(() => Promise.resolve([mockEpisodeData]))
+						}))
+					})),
+					where: vi.fn(() => ({
+						limit: vi.fn(() => Promise.resolve([mockEpisodeData]))
+					}))
+				})),
+				where: vi.fn(() => ({
+					limit: vi.fn(() => Promise.resolve([mockMovieData]))
+				}))
+			}))
+		}))
+	}
+}));
+
+vi.mock('$lib/server/db/schema', () => ({
+	episodes: {},
+	movies: {},
+	seasons: {},
+	series: {}
+}));
+
+vi.mock('drizzle-orm', () => ({
+	eq: vi.fn()
+}));
+
 // Mock connectors with proper class constructors
 vi.mock('$lib/server/connectors', async () => {
 	const errors = await import('../../src/lib/server/connectors/common/errors');
@@ -78,7 +128,8 @@ vi.mock('$lib/server/services/throttle', () => ({
 	throttleEnforcer: {
 		canDispatch: vi.fn(),
 		recordRequest: vi.fn(),
-		handleRateLimitResponse: vi.fn()
+		handleRateLimitResponse: vi.fn(),
+		getStatus: vi.fn()
 	}
 }));
 
@@ -116,6 +167,16 @@ describe('dispatchSearch', () => {
 		(throttleEnforcer.canDispatch as Mock).mockResolvedValue({ allowed: true });
 		(throttleEnforcer.recordRequest as Mock).mockResolvedValue(undefined);
 		(throttleEnforcer.handleRateLimitResponse as Mock).mockResolvedValue(undefined);
+		(throttleEnforcer.getStatus as Mock).mockResolvedValue({
+			connectorId: 1,
+			requestsThisMinute: 0,
+			requestsToday: 0,
+			remainingThisMinute: 5,
+			remainingToday: 100,
+			isPaused: false,
+			pauseReason: null,
+			pauseExpiresInMs: null
+		});
 		// Default: no Prowlarr instances configured (empty array)
 		(prowlarrHealthMonitor.getAllCachedHealth as Mock).mockResolvedValue([]);
 	});
@@ -124,28 +185,35 @@ describe('dispatchSearch', () => {
 		it('should dispatch episode search and record request', async () => {
 			mockSonarrClient.sendEpisodeSearch.mockResolvedValue({ id: 123, status: 'queued' });
 
+			// Pass DB ID (1), which gets translated to arrId (456) from mock data
 			const result = await dispatchSearch(1, 100, 'episode', 'gap', {
-				episodeIds: [456, 457]
+				episodeIds: [1]
 			});
 
 			expect(result.success).toBe(true);
 			expect(result.commandId).toBe(123);
 			expect(throttleEnforcer.canDispatch).toHaveBeenCalledWith(1);
 			expect(throttleEnforcer.recordRequest).toHaveBeenCalledWith(1);
-			expect(mockSonarrClient.sendEpisodeSearch).toHaveBeenCalledWith([456, 457]);
+			// Dispatcher translates DB ID to *arr ID before calling API
+			expect(mockSonarrClient.sendEpisodeSearch).toHaveBeenCalledWith([mockEpisodeData.arrId]);
 		});
 
 		it('should dispatch season search for Sonarr', async () => {
 			mockSonarrClient.sendSeasonSearch.mockResolvedValue({ id: 124, status: 'queued' });
 
+			// Pass DB seriesId (1) and seasonNumber, gets translated to arrSeriesId (10)
 			const result = await dispatchSearch(1, 100, 'episode', 'gap', {
-				seriesId: 10,
+				seriesId: 1,
 				seasonNumber: 2
 			});
 
 			expect(result.success).toBe(true);
 			expect(result.commandId).toBe(124);
-			expect(mockSonarrClient.sendSeasonSearch).toHaveBeenCalledWith(10, 2);
+			// Dispatcher translates DB seriesId to *arr seriesId before calling API
+			expect(mockSonarrClient.sendSeasonSearch).toHaveBeenCalledWith(
+				mockEpisodeData.arrSeriesId,
+				2
+			);
 		});
 
 		it('should dispatch movie search for Radarr', async () => {
@@ -153,13 +221,15 @@ describe('dispatchSearch', () => {
 			(getConnector as Mock).mockResolvedValue(radarrConnector);
 			mockRadarrClient.sendMoviesSearch.mockResolvedValue({ id: 125, status: 'queued' });
 
+			// Pass DB ID (1), which gets translated to arrId (789) from mock data
 			const result = await dispatchSearch(2, 200, 'movie', 'gap', {
-				movieIds: [789]
+				movieIds: [1]
 			});
 
 			expect(result.success).toBe(true);
 			expect(result.commandId).toBe(125);
-			expect(mockRadarrClient.sendMoviesSearch).toHaveBeenCalledWith([789]);
+			// Dispatcher translates DB ID to *arr ID before calling API
+			expect(mockRadarrClient.sendMoviesSearch).toHaveBeenCalledWith([mockMovieData.arrId]);
 		});
 	});
 
@@ -530,6 +600,16 @@ describe('dispatchBatch', () => {
 		(throttleEnforcer.canDispatch as Mock).mockResolvedValue({ allowed: true });
 		(throttleEnforcer.recordRequest as Mock).mockResolvedValue(undefined);
 		(throttleEnforcer.handleRateLimitResponse as Mock).mockResolvedValue(undefined);
+		(throttleEnforcer.getStatus as Mock).mockResolvedValue({
+			connectorId: 1,
+			requestsThisMinute: 0,
+			requestsToday: 0,
+			remainingThisMinute: 5,
+			remainingToday: 100,
+			isPaused: false,
+			pauseReason: null,
+			pauseExpiresInMs: null
+		});
 		// Default: no Prowlarr instances configured (empty array)
 		(prowlarrHealthMonitor.getAllCachedHealth as Mock).mockResolvedValue([]);
 	});
