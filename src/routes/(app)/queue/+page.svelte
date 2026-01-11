@@ -6,8 +6,10 @@ import {
 	QueueBulkActions,
 	QueueControls,
 	QueueFilters,
+	QueueProgressSummary,
 	QueueTable,
-	RecentCompletions
+	RecentCompletions,
+	ThrottleStatusPanel
 } from '$lib/components/queue';
 import { Button } from '$lib/components/ui/button';
 import { toastStore } from '$lib/components/ui/toast';
@@ -98,9 +100,6 @@ function goToPage(pageNum: number) {
 	params.set('page', pageNum.toString());
 	goto(`/queue?${params.toString()}`);
 }
-
-// Count of active items (queued + searching)
-const activeCount = $derived(data.statusCounts.queued + data.statusCounts.searching);
 </script>
 
 <svelte:head>
@@ -113,8 +112,10 @@ const activeCount = $derived(data.statusCounts.queued + data.statusCounts.search
 		<div>
 			<h1 class="font-display text-3xl font-semibold tracking-tight md:text-4xl">Queue</h1>
 			<p class="text-muted-foreground mt-2">
-				{#if activeCount > 0}
-					{activeCount} item{activeCount !== 1 ? 's' : ''} actively processing
+				{#if data.statusCounts.searching > 0}
+					{data.statusCounts.searching} searching, {data.statusCounts.queued} waiting
+				{:else if data.statusCounts.queued > 0}
+					{data.statusCounts.queued} item{data.statusCounts.queued !== 1 ? 's' : ''} waiting for rate limit
 				{:else}
 					View and manage the search queue
 				{/if}
@@ -127,8 +128,22 @@ const activeCount = $derived(data.statusCounts.queued + data.statusCounts.search
 		/>
 	</header>
 
+	<!-- Throttle Status Panel -->
+	<ThrottleStatusPanel
+		throttleInfo={data.throttleInfo}
+		class="mb-6 animate-float-up"
+		style="animation-delay: 50ms;"
+	/>
+
+	<!-- Queue Progress Summary -->
+	<QueueProgressSummary
+		statusCounts={data.statusCounts}
+		class="mb-6 animate-float-up"
+		style="animation-delay: 75ms;"
+	/>
+
 	<!-- Filters -->
-	<div class="animate-float-up" style="animation-delay: 50ms;">
+	<div class="animate-float-up" style="animation-delay: 100ms;">
 		<QueueFilters connectors={data.connectors} statusCounts={data.statusCounts} />
 	</div>
 
@@ -143,7 +158,7 @@ const activeCount = $derived(data.statusCounts.queued + data.statusCounts.search
 
 	<!-- Content -->
 	{#if data.queue.length === 0}
-		<div class="glass-panel p-8 text-center animate-float-up" style="animation-delay: 100ms;">
+		<div class="glass-panel p-8 text-center animate-float-up" style="animation-delay: 150ms;">
 			<div class="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-glass/50 mb-4">
 				<svg class="h-8 w-8 text-muted-foreground opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />

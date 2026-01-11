@@ -52,13 +52,32 @@ export const load: PageServerLoad = async ({ url, depends }) => {
 			requestsThisMinute: number;
 			dailyBudget: number | null;
 			requestsToday: number;
+			name: string;
+			type: string;
+			queuedCount: number;
+			searchingCount: number;
 		}
 	> = {};
 
+	// Calculate per-connector queue counts from queue items
+	const queueCountsByConnector = new Map<number, { queued: number; searching: number }>();
+	for (const item of queueResult.items) {
+		const counts = queueCountsByConnector.get(item.connectorId) ?? { queued: 0, searching: 0 };
+		if (item.state === 'queued') counts.queued++;
+		else if (item.state === 'searching') counts.searching++;
+		queueCountsByConnector.set(item.connectorId, counts);
+	}
+
 	for (const [connectorId, info] of throttleInfoMap) {
+		const connector = connectors.find((c) => c.id === connectorId);
+		const counts = queueCountsByConnector.get(connectorId) ?? { queued: 0, searching: 0 };
 		throttleInfo[connectorId] = {
 			...info,
-			pausedUntil: info.pausedUntil?.toISOString() ?? null
+			pausedUntil: info.pausedUntil?.toISOString() ?? null,
+			name: connector?.name ?? 'Unknown',
+			type: connector?.type ?? 'unknown',
+			queuedCount: counts.queued,
+			searchingCount: counts.searching
 		};
 	}
 
@@ -66,6 +85,7 @@ export const load: PageServerLoad = async ({ url, depends }) => {
 		queue: queueResult.items.map((item) => ({
 			...item,
 			scheduledAt: item.scheduledAt?.toISOString() ?? null,
+			nextEligible: item.nextEligible?.toISOString() ?? null,
 			createdAt: item.createdAt.toISOString()
 		})),
 		total: queueResult.total,

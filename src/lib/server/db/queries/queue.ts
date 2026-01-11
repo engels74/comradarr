@@ -45,6 +45,7 @@ export interface QueueItemWithContent {
 	priority: number;
 	attemptCount: number;
 	scheduledAt: Date | null;
+	nextEligible: Date | null;
 	createdAt: Date;
 }
 
@@ -154,6 +155,7 @@ export async function getQueueList(filters: QueueFilters): Promise<QueueListResu
 			priority: searchRegistry.priority,
 			attempt_count: searchRegistry.attemptCount,
 			scheduled_at: requestQueue.scheduledAt,
+			next_eligible: searchRegistry.nextEligible,
 			created_at: searchRegistry.createdAt
 		})
 		.from(searchRegistry)
@@ -196,6 +198,7 @@ export async function getQueueList(filters: QueueFilters): Promise<QueueListResu
 			priority: searchRegistry.priority,
 			attempt_count: searchRegistry.attemptCount,
 			scheduled_at: requestQueue.scheduledAt,
+			next_eligible: searchRegistry.nextEligible,
 			created_at: searchRegistry.createdAt
 		})
 		.from(searchRegistry)
@@ -244,6 +247,7 @@ export async function getQueueList(filters: QueueFilters): Promise<QueueListResu
 		priority: row.priority as number,
 		attemptCount: row.attempt_count as number,
 		scheduledAt: row.scheduled_at ? new Date(row.scheduled_at as string) : null,
+		nextEligible: row.next_eligible ? new Date(row.next_eligible as string) : null,
 		createdAt: new Date(row.created_at as string)
 	}));
 
