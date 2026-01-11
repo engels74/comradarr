@@ -22,7 +22,7 @@ export async function closePool(): Promise<void> {
 
 // Register shutdown handlers to gracefully close connections
 let shuttingDown = false;
-const shutdown = async (signal: string) => {
+const shutdown = async (signal: 'SIGTERM' | 'SIGINT') => {
 	if (shuttingDown) return;
 	shuttingDown = true;
 	console.log(`[db] Received ${signal}, closing connection pool...`);
@@ -32,7 +32,9 @@ const shutdown = async (signal: string) => {
 	} catch (err) {
 		console.error('[db] Error closing pool:', err);
 	}
-	process.exit(0);
+	// Remove our handler and re-raise signal for default termination behavior
+	process.removeAllListeners(signal);
+	process.kill(process.pid, signal);
 };
 
 process.on('SIGTERM', () => void shutdown('SIGTERM'));
