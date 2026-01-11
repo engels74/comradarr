@@ -90,9 +90,13 @@ export class ThrottleEnforcer {
 		// This prevents race conditions where multiple parallel requests pass the check
 		let slotResult = await tryAcquireRequestSlot(connectorId, profile.requestsPerMinute);
 
+		// Track the effective window start (may be updated if we reset)
+		let minuteWindowStart = state.minuteWindowStart;
+
 		// If window expired, reset it and try again
 		if (slotResult.windowExpired) {
 			await resetMinuteWindow(connectorId);
+			minuteWindowStart = now; // Window was just reset to now
 			slotResult = await tryAcquireRequestSlot(connectorId, profile.requestsPerMinute);
 		}
 
@@ -100,8 +104,8 @@ export class ThrottleEnforcer {
 			return { allowed: true, slotAcquired: true };
 		}
 
-		// At per-minute limit
-		const retryAfterMs = msUntilMinuteWindowExpires(state.minuteWindowStart, now);
+		// At per-minute limit - use tracked window start (fresh if reset, original otherwise)
+		const retryAfterMs = msUntilMinuteWindowExpires(minuteWindowStart, now);
 		return {
 			allowed: false,
 			reason: 'rate_limit',
