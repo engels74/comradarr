@@ -37,7 +37,7 @@ function getContentLink(completion: SerializedCompletion): string {
 		return `/content/series/${completion.seriesId}`;
 	}
 	if (completion.contentType === 'movie') {
-		return `/content/movies/${completion.contentId}`;
+		return `/content/movie/${completion.contentId}`;
 	}
 	return '#';
 }
