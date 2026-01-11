@@ -133,28 +133,28 @@ export async function getQueueList(filters: QueueFilters): Promise<QueueListResu
 	const episodeQuery = db
 		.select({
 			id: searchRegistry.id,
-			searchRegistryId: searchRegistry.id,
-			connectorId: searchRegistry.connectorId,
-			connectorName: connectors.name,
-			connectorType: connectors.type,
-			contentType: sql<'episode'>`'episode'::text`.as('content_type'),
-			contentId: searchRegistry.contentId,
+			search_registry_id: searchRegistry.id,
+			connector_id: searchRegistry.connectorId,
+			connector_name: connectors.name,
+			connector_type: connectors.type,
+			content_type: sql<'episode'>`'episode'::text`.as('content_type'),
+			content_id: searchRegistry.contentId,
 			title:
 				sql<string>`COALESCE(${episodes.title}, 'Episode ' || ${episodes.seasonNumber} || 'x' || LPAD(${episodes.episodeNumber}::text, 2, '0'))`.as(
 					'title'
 				),
-			seriesTitle: series.title,
-			seasonNumber: episodes.seasonNumber,
-			episodeNumber: episodes.episodeNumber,
+			series_title: series.title,
+			season_number: episodes.seasonNumber,
+			episode_number: episodes.episodeNumber,
 			year: sql<number | null>`NULL::integer`.as('year'),
-			searchType: sql<'gap' | 'upgrade'>`${searchRegistry.searchType}`.as('search_type'),
+			search_type: sql<'gap' | 'upgrade'>`${searchRegistry.searchType}`.as('search_type'),
 			state: sql<
 				'pending' | 'queued' | 'searching' | 'cooldown' | 'exhausted'
 			>`${searchRegistry.state}`.as('state'),
 			priority: searchRegistry.priority,
-			attemptCount: searchRegistry.attemptCount,
-			scheduledAt: requestQueue.scheduledAt,
-			createdAt: searchRegistry.createdAt
+			attempt_count: searchRegistry.attemptCount,
+			scheduled_at: requestQueue.scheduledAt,
+			created_at: searchRegistry.createdAt
 		})
 		.from(searchRegistry)
 		.innerJoin(connectors, eq(searchRegistry.connectorId, connectors.id))
@@ -178,25 +178,25 @@ export async function getQueueList(filters: QueueFilters): Promise<QueueListResu
 	const movieQuery = db
 		.select({
 			id: searchRegistry.id,
-			searchRegistryId: searchRegistry.id,
-			connectorId: searchRegistry.connectorId,
-			connectorName: connectors.name,
-			connectorType: connectors.type,
-			contentType: sql<'movie'>`'movie'::text`.as('content_type'),
-			contentId: searchRegistry.contentId,
+			search_registry_id: searchRegistry.id,
+			connector_id: searchRegistry.connectorId,
+			connector_name: connectors.name,
+			connector_type: connectors.type,
+			content_type: sql<'movie'>`'movie'::text`.as('content_type'),
+			content_id: searchRegistry.contentId,
 			title: movies.title,
-			seriesTitle: sql<string | null>`NULL::text`.as('series_title'),
-			seasonNumber: sql<number | null>`NULL::integer`.as('season_number'),
-			episodeNumber: sql<number | null>`NULL::integer`.as('episode_number'),
+			series_title: sql<string | null>`NULL::text`.as('series_title'),
+			season_number: sql<number | null>`NULL::integer`.as('season_number'),
+			episode_number: sql<number | null>`NULL::integer`.as('episode_number'),
 			year: movies.year,
-			searchType: sql<'gap' | 'upgrade'>`${searchRegistry.searchType}`.as('search_type'),
+			search_type: sql<'gap' | 'upgrade'>`${searchRegistry.searchType}`.as('search_type'),
 			state: sql<
 				'pending' | 'queued' | 'searching' | 'cooldown' | 'exhausted'
 			>`${searchRegistry.state}`.as('state'),
 			priority: searchRegistry.priority,
-			attemptCount: searchRegistry.attemptCount,
-			scheduledAt: requestQueue.scheduledAt,
-			createdAt: searchRegistry.createdAt
+			attempt_count: searchRegistry.attemptCount,
+			scheduled_at: requestQueue.scheduledAt,
+			created_at: searchRegistry.createdAt
 		})
 		.from(searchRegistry)
 		.innerJoin(connectors, eq(searchRegistry.connectorId, connectors.id))
@@ -228,12 +228,12 @@ export async function getQueueList(filters: QueueFilters): Promise<QueueListResu
 
 	const mappedItems: QueueItemWithContent[] = (items as Record<string, unknown>[]).map((row) => ({
 		id: row.id as number,
-		searchRegistryId: row.searchregistryid as number,
-		connectorId: row.connectorid as number,
-		connectorName: row.connectorname as string,
-		connectorType: row.connectortype as string,
+		searchRegistryId: row.search_registry_id as number,
+		connectorId: row.connector_id as number,
+		connectorName: row.connector_name as string,
+		connectorType: row.connector_type as string,
 		contentType: row.content_type as 'episode' | 'movie',
-		contentId: row.contentid as number,
+		contentId: row.content_id as number,
 		title: row.title as string,
 		seriesTitle: row.series_title as string | null,
 		seasonNumber: row.season_number as number | null,
@@ -242,9 +242,9 @@ export async function getQueueList(filters: QueueFilters): Promise<QueueListResu
 		searchType: row.search_type as 'gap' | 'upgrade',
 		state: row.state as 'pending' | 'queued' | 'searching' | 'cooldown' | 'exhausted',
 		priority: row.priority as number,
-		attemptCount: row.attemptcount as number,
-		scheduledAt: row.scheduledat ? new Date(row.scheduledat as string) : null,
-		createdAt: new Date(row.createdat as string)
+		attemptCount: row.attempt_count as number,
+		scheduledAt: row.scheduled_at ? new Date(row.scheduled_at as string) : null,
+		createdAt: new Date(row.created_at as string)
 	}));
 
 	return {
@@ -600,18 +600,18 @@ export async function getRecentCompletions(limit: number = 25): Promise<RecentCo
 	const episodeCompletions = db
 		.select({
 			id: searchHistory.id,
-			contentType: sql<'episode'>`'episode'::text`.as('content_type'),
-			contentId: searchHistory.contentId,
-			contentTitle: episodes.title,
-			seriesId: series.id,
-			seriesTitle: series.title,
-			seasonNumber: episodes.seasonNumber,
-			episodeNumber: episodes.episodeNumber,
-			connectorId: searchHistory.connectorId,
-			connectorName: connectors.name,
-			connectorType: connectors.type,
+			content_type: sql<'episode'>`'episode'::text`.as('content_type'),
+			content_id: searchHistory.contentId,
+			content_title: episodes.title,
+			series_id: series.id,
+			series_title: series.title,
+			season_number: episodes.seasonNumber,
+			episode_number: episodes.episodeNumber,
+			connector_id: searchHistory.connectorId,
+			connector_name: connectors.name,
+			connector_type: connectors.type,
 			outcome: searchHistory.outcome,
-			createdAt: searchHistory.createdAt
+			created_at: searchHistory.createdAt
 		})
 		.from(searchHistory)
 		.innerJoin(connectors, eq(searchHistory.connectorId, connectors.id))
@@ -623,18 +623,18 @@ export async function getRecentCompletions(limit: number = 25): Promise<RecentCo
 	const movieCompletions = db
 		.select({
 			id: searchHistory.id,
-			contentType: sql<'movie'>`'movie'::text`.as('content_type'),
-			contentId: searchHistory.contentId,
-			contentTitle: movies.title,
-			seriesId: sql<number | null>`NULL::integer`.as('series_id'),
-			seriesTitle: sql<string | null>`NULL::text`.as('series_title'),
-			seasonNumber: sql<number | null>`NULL::integer`.as('season_number'),
-			episodeNumber: sql<number | null>`NULL::integer`.as('episode_number'),
-			connectorId: searchHistory.connectorId,
-			connectorName: connectors.name,
-			connectorType: connectors.type,
+			content_type: sql<'movie'>`'movie'::text`.as('content_type'),
+			content_id: searchHistory.contentId,
+			content_title: movies.title,
+			series_id: sql<number | null>`NULL::integer`.as('series_id'),
+			series_title: sql<string | null>`NULL::text`.as('series_title'),
+			season_number: sql<number | null>`NULL::integer`.as('season_number'),
+			episode_number: sql<number | null>`NULL::integer`.as('episode_number'),
+			connector_id: searchHistory.connectorId,
+			connector_name: connectors.name,
+			connector_type: connectors.type,
 			outcome: searchHistory.outcome,
-			createdAt: searchHistory.createdAt
+			created_at: searchHistory.createdAt
 		})
 		.from(searchHistory)
 		.innerJoin(connectors, eq(searchHistory.connectorId, connectors.id))
@@ -654,17 +654,17 @@ export async function getRecentCompletions(limit: number = 25): Promise<RecentCo
 	return (results as Record<string, unknown>[]).map((row) => ({
 		id: row.id as number,
 		contentType: row.content_type as 'episode' | 'movie',
-		contentId: row.contentid as number,
-		contentTitle: row.contenttitle as string | null,
+		contentId: row.content_id as number,
+		contentTitle: row.content_title as string | null,
 		seriesId: row.series_id as number | null,
 		seriesTitle: row.series_title as string | null,
-		seasonNumber: row.seasonnumber as number | null,
-		episodeNumber: row.episodenumber as number | null,
-		connectorId: row.connectorid as number,
-		connectorName: row.connectorname as string,
-		connectorType: row.connectortype as string,
+		seasonNumber: row.season_number as number | null,
+		episodeNumber: row.episode_number as number | null,
+		connectorId: row.connector_id as number,
+		connectorName: row.connector_name as string,
+		connectorType: row.connector_type as string,
 		outcome: row.outcome as string,
-		createdAt: new Date(row.createdat as string)
+		createdAt: new Date(row.created_at as string)
 	}));
 }
 
