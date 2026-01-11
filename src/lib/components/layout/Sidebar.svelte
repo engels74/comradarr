@@ -74,7 +74,7 @@ const isActive = $derived((href: string) => {
 				>
 					<!-- Active indicator bar -->
 					{#if active}
-						<div class="absolute left-0 top-1/2 h-6 w-1 -translate-y-1/2 rounded-r-full bg-primary shadow-[0_0_12px_oklch(var(--primary)/0.5)]"></div>
+						<div class="absolute left-[-0.75rem] top-1/2 h-6 w-1 -translate-y-1/2 rounded-r-full bg-primary shadow-[0_0_12px_oklch(var(--primary)/0.5)]"></div>
 					{/if}
 
 					<Icon class="h-5 w-5 shrink-0 transition-transform duration-200 {active ? '' : 'group-hover:scale-110'}" />
