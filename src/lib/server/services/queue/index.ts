@@ -44,10 +44,14 @@ export {
 export type { DispatchFailureReason, DispatchOptions, DispatchResult } from './search-dispatcher';
 export { dispatchBatch, dispatchSearch } from './search-dispatcher';
 export {
+	cleanupOrphanedSearchingItems,
 	getSearchState,
+	markSearchDispatched,
 	markSearchExhausted,
 	markSearchFailed,
-	reenqueueEligibleCooldownItems
+	reenqueueEligibleCooldownItems,
+	revertToQueued,
+	setSearching
 } from './state-transitions';
 export type {
 	ContentType,
@@ -65,6 +69,7 @@ export type {
 	QueueItem,
 	QueueStatus,
 	ReenqueueCooldownResult,
+	RevertToQueuedResult,
 	SearchState,
 	SearchType,
 	StateTransitionResult
