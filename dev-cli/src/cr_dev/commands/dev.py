@@ -36,7 +36,6 @@ from cr_dev.core.process import (
 from cr_dev.core.state import (
     DevState,
     SavedCredentials,
-    is_database_in_use,
     load_credentials,
     remove_state,
     save_credentials,
@@ -60,56 +59,31 @@ def _get_project_root() -> Path:
     return Path(__file__).parent.parent.parent.parent.parent
 
 
-def _cleanup_orphaned_connections(db_port: int = 5432) -> None:
-    """Cleanup orphaned connections to dev databases on startup.
+def _cleanup_stale_state_connections(db_port: int = 5432) -> None:
+    """Cleanup orphaned connections from a stale dev state file.
 
-    Finds all connections to comradarr_dev_* databases and terminates
-    connections for databases that don't have an active dev server.
+    If a previous dev server crashed without cleanup, this terminates
+    any remaining connections to its database. Only cleans up the specific
+    database from a stale state file to avoid affecting other active instances.
     """
-    platform = detect_platform()
-    strategy = get_strategy(platform)
+    from cr_dev.core.process import is_process_running
+    from cr_dev.core.state import load_state
 
-    # Query for all dev database connections
-    query_sql = """
-    SELECT DISTINCT datname
-    FROM pg_stat_activity
-    WHERE datname LIKE 'comradarr_dev_%'
-    """
-
-    if is_macos(platform):
-        result = subprocess.run(
-            [
-                "psql",
-                "-h",
-                "localhost",
-                "-p",
-                str(db_port),
-                "-d",
-                "postgres",
-                "-tAc",
-                query_sql,
-            ],
-            capture_output=True,
-            text=True,
-        )
-    else:
-        result = strategy.run_as_postgres_user(
-            ["psql", "-d", "postgres", "-tAc", query_sql],
-            check=False,
-        )
-
-    if result.returncode != 0 or not result.stdout.strip():
+    state = load_state()
+    if state is None:
         return
 
-    databases = [db.strip() for db in result.stdout.strip().split("\n") if db.strip()]
+    # Only cleanup if the state file exists but the process is dead
+    if is_process_running(state.pid):
+        return
 
-    for db_name in databases:
-        in_use, _ = is_database_in_use(db_name)
-        if not in_use:
-            # Terminate connections to orphaned database
-            step(f"Cleaning up orphaned connections to '{db_name}'...")
-            _terminate_db_connections(db_name, db_port)
-            success(f"Terminated orphaned connections to '{db_name}'")
+    db_name = state.db_name
+    if not db_name or not db_name.startswith("comradarr_dev_"):
+        return
+
+    step(f"Cleaning up connections from stale dev session '{db_name}'...")
+    _terminate_db_connections(db_name, db_port)
+    success(f"Terminated stale connections to '{db_name}'")
 
 
 def _create_database(config: DevConfig, platform_strategy: PlatformStrategy) -> bool:
@@ -151,7 +125,15 @@ def _create_database(config: DevConfig, platform_strategy: PlatformStrategy) -> 
         )
     else:
         result = platform_strategy.run_as_postgres_user(
-            ["psql", "-d", "postgres", "-c", create_user_sql],
+            [
+                "psql",
+                "-p",
+                str(config.db_port),
+                "-d",
+                "postgres",
+                "-c",
+                create_user_sql,
+            ],
             check=False,
         )
 
@@ -180,6 +162,8 @@ def _create_database(config: DevConfig, platform_strategy: PlatformStrategy) -> 
         check_db = platform_strategy.run_as_postgres_user(
             [
                 "psql",
+                "-p",
+                str(config.db_port),
                 "-d",
                 "postgres",
                 "-tAc",
@@ -210,6 +194,8 @@ def _create_database(config: DevConfig, platform_strategy: PlatformStrategy) -> 
             result = platform_strategy.run_as_postgres_user(
                 [
                     "psql",
+                    "-p",
+                    str(config.db_port),
                     "-d",
                     "postgres",
                     "-c",
@@ -242,7 +228,7 @@ def _create_database(config: DevConfig, platform_strategy: PlatformStrategy) -> 
         )
     else:
         _ = platform_strategy.run_as_postgres_user(
-            ["psql", "-d", db_name, "-c", grant_sql],
+            ["psql", "-p", str(config.db_port), "-d", db_name, "-c", grant_sql],
             check=False,
         )
 
@@ -278,7 +264,7 @@ def _terminate_db_connections(db_name: str, db_port: int) -> None:
         )
     else:
         _ = strategy.run_as_postgres_user(
-            ["psql", "-d", "postgres", "-c", terminate_sql],
+            ["psql", "-p", str(db_port), "-d", "postgres", "-c", terminate_sql],
             check=False,
         )
 
@@ -325,11 +311,27 @@ def drop_database(
         )
     else:
         _ = platform_strategy.run_as_postgres_user(
-            ["psql", "-d", "postgres", "-c", f"DROP DATABASE IF EXISTS {db_name}"],
+            [
+                "psql",
+                "-p",
+                str(db_port),
+                "-d",
+                "postgres",
+                "-c",
+                f"DROP DATABASE IF EXISTS {db_name}",
+            ],
             check=False,
         )
         _ = platform_strategy.run_as_postgres_user(
-            ["psql", "-d", "postgres", "-c", f"DROP ROLE IF EXISTS {db_name}"],
+            [
+                "psql",
+                "-p",
+                str(db_port),
+                "-d",
+                "postgres",
+                "-c",
+                f"DROP ROLE IF EXISTS {db_name}",
+            ],
             check=False,
         )
 
@@ -430,7 +432,7 @@ def setup_dev_server(
             return None
 
     # Cleanup orphaned connections from previous dev sessions
-    _cleanup_orphaned_connections(db_port)
+    _cleanup_stale_state_connections(db_port)
 
     if is_port_in_use(port):
         error(f"Port {port} is already in use")
@@ -592,7 +594,7 @@ def dev_command(
             raise typer.Exit(1)
 
     # Cleanup orphaned connections from previous dev sessions
-    _cleanup_orphaned_connections(db_port)
+    _cleanup_stale_state_connections(db_port)
 
     if is_port_in_use(port):
         error(f"Port {port} is already in use")
