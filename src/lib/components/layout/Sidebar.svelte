@@ -72,9 +72,9 @@ const isActive = $derived((href: string) => {
 							? 'bg-primary/15 text-primary'
 							: 'text-muted-foreground hover:bg-glass/50 hover:text-foreground'}"
 				>
-					<!-- Active indicator bar -->
+					<!-- Active indicator bar aligned with sidebar edge -->
 					{#if active}
-						<div class="absolute left-[-0.75rem] top-1/2 h-6 w-1 -translate-y-1/2 rounded-r-full bg-primary shadow-[0_0_12px_oklch(var(--primary)/0.5)]"></div>
+						<div class="absolute -left-3 top-1/2 h-6 w-1 rounded-r-full bg-primary shadow-[0_0_12px_oklch(var(--primary)/0.5)]" style="transform: translateY(-50%);"></div>
 					{/if}
 
 					<Icon class="h-5 w-5 shrink-0 transition-transform duration-200 {active ? '' : 'group-hover:scale-110'}" />
