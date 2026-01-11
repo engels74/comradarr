@@ -143,8 +143,8 @@ export async function getQueueList(filters: QueueFilters): Promise<QueueListResu
 			id: searchRegistry.id,
 			search_registry_id: searchRegistry.id,
 			connector_id: searchRegistry.connectorId,
-			connector_name: connectors.name,
-			connector_type: connectors.type,
+			connector_name: sql<string>`${connectors.name}`.as('connector_name'),
+			connector_type: sql<string>`${connectors.type}`.as('connector_type'),
 			content_type: sql<'episode'>`'episode'::text`.as('content_type'),
 			content_id: searchRegistry.contentId,
 			title:
@@ -189,8 +189,8 @@ export async function getQueueList(filters: QueueFilters): Promise<QueueListResu
 			id: searchRegistry.id,
 			search_registry_id: searchRegistry.id,
 			connector_id: searchRegistry.connectorId,
-			connector_name: connectors.name,
-			connector_type: connectors.type,
+			connector_name: sql<string>`${connectors.name}`.as('connector_name'),
+			connector_type: sql<string>`${connectors.type}`.as('connector_type'),
 			content_type: sql<'movie'>`'movie'::text`.as('content_type'),
 			content_id: searchRegistry.contentId,
 			title: sql<string>`COALESCE(${movies.title}, 'Unknown Movie')`.as('title'),
@@ -678,8 +678,8 @@ export async function getRecentCompletions(limit: number = 25): Promise<RecentCo
 			season_number: episodes.seasonNumber,
 			episode_number: episodes.episodeNumber,
 			connector_id: searchHistory.connectorId,
-			connector_name: connectors.name,
-			connector_type: connectors.type,
+			connector_name: sql<string>`${connectors.name}`.as('connector_name'),
+			connector_type: sql<string>`${connectors.type}`.as('connector_type'),
 			outcome: searchHistory.outcome,
 			created_at: searchHistory.createdAt
 		})
@@ -701,8 +701,8 @@ export async function getRecentCompletions(limit: number = 25): Promise<RecentCo
 			season_number: sql<number | null>`NULL::integer`.as('season_number'),
 			episode_number: sql<number | null>`NULL::integer`.as('episode_number'),
 			connector_id: searchHistory.connectorId,
-			connector_name: connectors.name,
-			connector_type: connectors.type,
+			connector_name: sql<string>`${connectors.name}`.as('connector_name'),
+			connector_type: sql<string>`${connectors.type}`.as('connector_type'),
 			outcome: searchHistory.outcome,
 			created_at: searchHistory.createdAt
 		})
