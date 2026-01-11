@@ -623,6 +623,7 @@ export function initializeScheduler(): void {
 
 						const searchingResult = await setSearching(item.searchRegistryId);
 						if (!searchingResult.success) {
+							await revertToQueued([item.searchRegistryId]);
 							continue;
 						}
 
