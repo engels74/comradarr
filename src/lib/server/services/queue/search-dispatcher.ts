@@ -274,7 +274,10 @@ export async function dispatchSearch(
 
 	try {
 		const commandResponse = await executeSearchCommand(client, connectorType, arrOptions);
-		await throttleEnforcer.recordRequest(connectorId);
+		// Only call recordRequest if slot wasn't atomically acquired in canDispatch
+		if (!throttleResult.slotAcquired) {
+			await throttleEnforcer.recordRequest(connectorId);
+		}
 		const durationMs = Date.now() - startTime;
 
 		logger.info('Search dispatched', {

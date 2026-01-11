@@ -12,6 +12,7 @@ import {
 	throttleProfiles,
 	throttleState
 } from '$lib/server/db/schema';
+import { isDayWindowExpired, isMinuteWindowExpired } from './throttle-state';
 
 export type QueueState = 'all' | 'queued' | 'searching' | 'cooldown' | 'pending' | 'exhausted';
 export type QueueContentType = 'all' | 'episode' | 'movie';
@@ -369,6 +370,8 @@ export async function getThrottleInfo(connectorId: number): Promise<QueueThrottl
 			pauseReason: throttleState.pauseReason,
 			requestsThisMinute: throttleState.requestsThisMinute,
 			requestsToday: throttleState.requestsToday,
+			minuteWindowStart: throttleState.minuteWindowStart,
+			dayWindowStart: throttleState.dayWindowStart,
 			requestsPerMinute: sql<number>`COALESCE(${throttleProfiles.requestsPerMinute}, 5)`.as(
 				'requests_per_minute'
 			),
@@ -388,15 +391,26 @@ export async function getThrottleInfo(connectorId: number): Promise<QueueThrottl
 	const now = new Date();
 	const isPaused = row.queuePaused || (row.pausedUntil !== null && row.pausedUntil > now);
 
+	// Reset counters if their time windows have expired (matches throttleEnforcer.getStatus behavior)
+	let requestsThisMinute = row.requestsThisMinute ?? 0;
+	if (isMinuteWindowExpired(row.minuteWindowStart, now)) {
+		requestsThisMinute = 0;
+	}
+
+	let requestsToday = row.requestsToday ?? 0;
+	if (isDayWindowExpired(row.dayWindowStart, now)) {
+		requestsToday = 0;
+	}
+
 	return {
 		connectorId: row.connectorId,
 		isPaused,
 		pausedUntil: row.pausedUntil,
 		pauseReason: row.pauseReason,
 		requestsPerMinute: row.requestsPerMinute,
-		requestsThisMinute: row.requestsThisMinute ?? 0,
+		requestsThisMinute,
 		dailyBudget: row.dailyBudget,
-		requestsToday: row.requestsToday ?? 0
+		requestsToday
 	};
 }
 
@@ -409,6 +423,8 @@ export async function getAllThrottleInfo(): Promise<Map<number, QueueThrottleInf
 			pauseReason: throttleState.pauseReason,
 			requestsThisMinute: throttleState.requestsThisMinute,
 			requestsToday: throttleState.requestsToday,
+			minuteWindowStart: throttleState.minuteWindowStart,
+			dayWindowStart: throttleState.dayWindowStart,
 			requestsPerMinute: sql<number>`COALESCE(${throttleProfiles.requestsPerMinute}, 5)`.as(
 				'requests_per_minute'
 			),
@@ -424,15 +440,27 @@ export async function getAllThrottleInfo(): Promise<Map<number, QueueThrottleInf
 
 	for (const row of result) {
 		const isPaused = row.queuePaused || (row.pausedUntil !== null && row.pausedUntil > now);
+
+		// Reset counters if their time windows have expired (matches throttleEnforcer.getStatus behavior)
+		let requestsThisMinute = row.requestsThisMinute ?? 0;
+		if (isMinuteWindowExpired(row.minuteWindowStart, now)) {
+			requestsThisMinute = 0;
+		}
+
+		let requestsToday = row.requestsToday ?? 0;
+		if (isDayWindowExpired(row.dayWindowStart, now)) {
+			requestsToday = 0;
+		}
+
 		map.set(row.connectorId, {
 			connectorId: row.connectorId,
 			isPaused,
 			pausedUntil: row.pausedUntil,
 			pauseReason: row.pauseReason,
 			requestsPerMinute: row.requestsPerMinute,
-			requestsThisMinute: row.requestsThisMinute ?? 0,
+			requestsThisMinute,
 			dailyBudget: row.dailyBudget,
-			requestsToday: row.requestsToday ?? 0
+			requestsToday
 		});
 	}
 

@@ -18,7 +18,8 @@ import {
 	resetExpiredDayWindows,
 	resetExpiredMinuteWindows,
 	resetMinuteWindow,
-	setPausedUntil
+	setPausedUntil,
+	tryAcquireRequestSlot
 } from '$lib/server/db/queries/throttle-state';
 
 export type PauseReason = 'rate_limit' | 'daily_budget_exhausted' | 'manual';
@@ -27,6 +28,7 @@ export interface ThrottleResult {
 	allowed: boolean;
 	reason?: PauseReason;
 	retryAfterMs?: number;
+	slotAcquired?: boolean;
 }
 
 export interface WindowResetResult {
@@ -48,12 +50,13 @@ export interface ThrottleStatus {
 }
 
 export class ThrottleEnforcer {
-	// Check order: paused? -> minute window -> per-minute limit -> day window -> daily budget
+	// Check order: paused? -> daily budget -> atomic per-minute slot acquisition
 	async canDispatch(connectorId: number): Promise<ThrottleResult> {
 		const now = new Date();
 		const state = await getOrCreateThrottleState(connectorId);
 		const profile = await getThrottleProfileForConnector(connectorId);
 
+		// Check 1: Is connector paused?
 		if (state.pausedUntil && state.pausedUntil > now) {
 			return {
 				allowed: false,
@@ -62,21 +65,7 @@ export class ThrottleEnforcer {
 			};
 		}
 
-		let requestsThisMinute = state.requestsThisMinute;
-		if (isMinuteWindowExpired(state.minuteWindowStart, now)) {
-			await resetMinuteWindow(connectorId);
-			requestsThisMinute = 0;
-		}
-
-		if (requestsThisMinute >= profile.requestsPerMinute) {
-			const retryAfterMs = msUntilMinuteWindowExpires(state.minuteWindowStart, now);
-			return {
-				allowed: false,
-				reason: 'rate_limit',
-				retryAfterMs: Math.max(retryAfterMs, 1000)
-			};
-		}
-
+		// Check 2: Daily budget (check before minute limit to avoid counting towards exhausted budget)
 		let requestsToday = state.requestsToday;
 		if (isDayWindowExpired(state.dayWindowStart, now)) {
 			await resetDayWindow(connectorId);
@@ -97,7 +86,27 @@ export class ThrottleEnforcer {
 			};
 		}
 
-		return { allowed: true };
+		// Check 3: Per-minute limit with atomic slot acquisition
+		// This prevents race conditions where multiple parallel requests pass the check
+		let slotResult = await tryAcquireRequestSlot(connectorId, profile.requestsPerMinute);
+
+		// If window expired, reset it and try again
+		if (slotResult.windowExpired) {
+			await resetMinuteWindow(connectorId);
+			slotResult = await tryAcquireRequestSlot(connectorId, profile.requestsPerMinute);
+		}
+
+		if (slotResult.acquired) {
+			return { allowed: true, slotAcquired: true };
+		}
+
+		// At per-minute limit
+		const retryAfterMs = msUntilMinuteWindowExpires(state.minuteWindowStart, now);
+		return {
+			allowed: false,
+			reason: 'rate_limit',
+			retryAfterMs: Math.max(retryAfterMs, 1000)
+		};
 	}
 
 	async recordRequest(connectorId: number): Promise<void> {
