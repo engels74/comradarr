@@ -41,23 +41,22 @@ def _get_child_pids(pid: int) -> list[int]:
 def kill_process_tree(pid: int, *, timeout: float = 10.0) -> bool:
     """Kill a process and all its children gracefully, then forcefully.
 
-    First collects all child PIDs recursively, then sends SIGTERM to all
-    processes (children first, then parent). If processes don't terminate
+    Sends SIGTERM to the parent process first, allowing it to propagate the
+    signal to its children for graceful shutdown. If processes don't terminate
     within the timeout, sends SIGKILL to any remaining processes.
     """
     if not is_process_running(pid):
         return True
 
-    # Collect all child PIDs before killing (children first, then parent)
-    child_pids = _get_child_pids(pid)
-    all_pids = [*child_pids, pid]  # Kill children before parent
+    # Send SIGTERM to parent only - let it propagate to children gracefully
+    try:
+        os.kill(pid, signal.SIGTERM)
+    except (OSError, ProcessLookupError):
+        pass
 
-    # Send SIGTERM to all processes
-    for target_pid in all_pids:
-        try:
-            os.kill(target_pid, signal.SIGTERM)
-        except (OSError, ProcessLookupError):
-            pass
+    # Collect child PIDs for force-kill fallback (parent first in list)
+    child_pids = _get_child_pids(pid)
+    all_pids = [pid, *child_pids]
 
     # Wait for processes to terminate
     start = time.monotonic()
@@ -67,8 +66,8 @@ def kill_process_tree(pid: int, *, timeout: float = 10.0) -> bool:
             return True
         time.sleep(0.1)
 
-    # Force kill any remaining processes
-    for target_pid in all_pids:
+    # Force kill any remaining processes (children first to avoid zombies)
+    for target_pid in reversed(all_pids):
         if is_process_running(target_pid):
             try:
                 os.kill(target_pid, signal.SIGKILL)

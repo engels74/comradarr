@@ -24,6 +24,8 @@ class BackgroundProcessManager:
         self._cleanup_callback: Callable[[], None] | None = None
         self._output_buffer: deque[str] = deque(maxlen=1000)
         self._buffer_lock: threading.Lock = threading.Lock()
+        self._db_name: str | None = None
+        self._db_port: int = 5432
 
     @property
     def dev_server_running(self) -> bool:
@@ -45,6 +47,8 @@ class BackgroundProcessManager:
         cwd: Path,
         env: dict[str, str],
         cleanup_callback: Callable[[], None] | None = None,
+        db_name: str | None = None,
+        db_port: int = 5432,
     ) -> bool:
         """Start the dev server and buffer output for polling.
 
@@ -53,6 +57,8 @@ class BackgroundProcessManager:
             cwd: Working directory
             env: Environment variables
             cleanup_callback: Optional function to call when server stops
+            db_name: Database name for connection cleanup on stop
+            db_port: Database port for connection cleanup on stop
 
         Returns:
             True if started successfully, False otherwise
@@ -72,6 +78,8 @@ class BackgroundProcessManager:
                 bufsize=1,
             )
             self._cleanup_callback = cleanup_callback
+            self._db_name = db_name
+            self._db_port = db_port
             self._stop_event.clear()
             self._output_buffer.clear()
 
@@ -90,10 +98,22 @@ class BackgroundProcessManager:
     def stop_dev_server(self, timeout: float = 10.0) -> None:
         """Stop the running dev server gracefully.
 
+        Terminates database connections first as a safety net, then sends
+        SIGTERM to allow graceful shutdown. Falls back to SIGKILL on timeout.
+
         Args:
             timeout: Seconds to wait before force killing
         """
         self._stop_event.set()
+
+        # Terminate database connections before killing process (safety net)
+        if self._db_name:
+            with suppress(Exception):
+                from cr_dev.commands.stop import (
+                    _terminate_db_connections,  # pyright: ignore[reportPrivateUsage]
+                )
+
+                _terminate_db_connections(self._db_name, self._db_port)
 
         if (
             self._dev_server_process is not None
@@ -118,6 +138,7 @@ class BackgroundProcessManager:
             self._cleanup_callback = None
 
         self._dev_server_process = None
+        self._db_name = None
         remove_state()
 
     def _stream_output(self) -> None:
