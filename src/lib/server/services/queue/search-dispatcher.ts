@@ -17,6 +17,11 @@ import type { ContentType, SearchType } from './types';
 
 const logger = createLogger('dispatcher');
 
+/**
+ * Options for dispatching a search command.
+ * All IDs are DB IDs (from search_registry.contentId), NOT *arr IDs.
+ * The dispatcher translates these to *arr IDs before calling the API.
+ */
 export interface DispatchOptions {
 	episodeIds?: number[];
 	seriesId?: number;
@@ -70,6 +75,8 @@ interface ContentInfo {
 	seasonNumber?: number;
 	episodeNumber?: number;
 	year?: number;
+	arrId: number;
+	arrSeriesId?: number;
 }
 
 async function getEpisodeInfo(contentId: number): Promise<ContentInfo | null> {
@@ -78,7 +85,9 @@ async function getEpisodeInfo(contentId: number): Promise<ContentInfo | null> {
 			title: episodes.title,
 			seasonNumber: episodes.seasonNumber,
 			episodeNumber: episodes.episodeNumber,
-			seriesTitle: series.title
+			seriesTitle: series.title,
+			arrId: episodes.arrId,
+			arrSeriesId: series.arrId
 		})
 		.from(episodes)
 		.innerJoin(seasons, eq(episodes.seasonId, seasons.id))
@@ -93,7 +102,9 @@ async function getEpisodeInfo(contentId: number): Promise<ContentInfo | null> {
 		contentTitle: epTitle,
 		seriesTitle: row.seriesTitle,
 		seasonNumber: row.seasonNumber,
-		episodeNumber: row.episodeNumber
+		episodeNumber: row.episodeNumber,
+		arrId: row.arrId,
+		arrSeriesId: row.arrSeriesId
 	};
 }
 
@@ -101,7 +112,8 @@ async function getMovieInfo(contentId: number): Promise<ContentInfo | null> {
 	const result = await db
 		.select({
 			title: movies.title,
-			year: movies.year
+			year: movies.year,
+			arrId: movies.arrId
 		})
 		.from(movies)
 		.where(eq(movies.id, contentId))
@@ -111,7 +123,8 @@ async function getMovieInfo(contentId: number): Promise<ContentInfo | null> {
 	const row = result[0]!;
 	return {
 		contentTitle: row.title ?? 'Unknown Movie',
-		...(row.year != null && { year: row.year })
+		...(row.year != null && { year: row.year }),
+		arrId: row.arrId
 	};
 }
 
@@ -231,8 +244,35 @@ export async function dispatchSearch(
 
 	const { client, type: connectorType } = connectorResult;
 
+	// Translate DB IDs to *arr IDs for the API call
+	// options.movieIds/episodeIds contain DB IDs (from search_registry.contentId),
+	// but the *arr API expects *arr IDs (movies.arrId/episodes.arrId)
+	if (!contentInfo) {
+		logger.error('Search failed - content not found in database', {
+			contentType,
+			contentId: options.movieIds?.[0] ?? options.episodeIds?.[0],
+			connectorId,
+			searchType
+		});
+		return {
+			success: false,
+			searchRegistryId,
+			connectorId,
+			error: 'Content not found in database'
+		};
+	}
+
+	const arrOptions: DispatchOptions =
+		contentType === 'movie'
+			? { movieIds: [contentInfo.arrId] }
+			: options.seriesId !== undefined &&
+					options.seasonNumber !== undefined &&
+					contentInfo.arrSeriesId !== undefined
+				? { seriesId: contentInfo.arrSeriesId, seasonNumber: options.seasonNumber }
+				: { episodeIds: [contentInfo.arrId] };
+
 	try {
-		const commandResponse = await executeSearchCommand(client, connectorType, options);
+		const commandResponse = await executeSearchCommand(client, connectorType, arrOptions);
 		await throttleEnforcer.recordRequest(connectorId);
 		const durationMs = Date.now() - startTime;
 
