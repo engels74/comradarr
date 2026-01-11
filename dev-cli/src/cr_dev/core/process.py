@@ -48,15 +48,16 @@ def kill_process_tree(pid: int, *, timeout: float = 10.0) -> bool:
     if not is_process_running(pid):
         return True
 
+    # Capture child PIDs before SIGTERM - a fast-exiting parent can orphan
+    # children before we build this list, so we need it for force-kill fallback
+    child_pids = _get_child_pids(pid)
+    all_pids = [pid, *child_pids]
+
     # Send SIGTERM to parent only - let it propagate to children gracefully
     try:
         os.kill(pid, signal.SIGTERM)
     except (OSError, ProcessLookupError):
         pass
-
-    # Collect child PIDs for force-kill fallback (parent first in list)
-    child_pids = _get_child_pids(pid)
-    all_pids = [pid, *child_pids]
 
     # Wait for processes to terminate
     start = time.monotonic()
