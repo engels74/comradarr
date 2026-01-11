@@ -3,6 +3,7 @@
   Displays movie metadata, current quality, search history, and lastSearchTime.
 -->
 <script lang="ts">
+import { ContentStatusBadge } from '$lib/components/content';
 import { Badge } from '$lib/components/ui/badge';
 import * as Card from '$lib/components/ui/card';
 import * as Table from '$lib/components/ui/table';
@@ -179,6 +180,14 @@ function formatLastSearchTime(date: Date | null): string {
 					<div class="flex items-center justify-between rounded bg-muted/50 p-3">
 						<span class="text-sm text-muted-foreground">Quality</span>
 						<span class="font-medium">{formatQuality(data.movie.quality)}</span>
+					</div>
+					<div class="flex items-center justify-between rounded bg-muted/50 p-3">
+						<span class="text-sm text-muted-foreground">Search State</span>
+						{#if data.movie.searchState}
+							<ContentStatusBadge state={data.movie.searchState} />
+						{:else}
+							<span class="text-sm text-muted-foreground">Not tracked</span>
+						{/if}
 					</div>
 					<div class="flex items-center justify-between rounded bg-muted/50 p-3">
 						<span class="text-sm text-muted-foreground">Last Search</span>
