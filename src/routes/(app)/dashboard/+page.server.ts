@@ -21,6 +21,15 @@ export interface DashboardQueryError {
 	message: string;
 }
 
+const USER_FRIENDLY_ERRORS: Record<string, string> = {
+	connectors: 'Unable to load connectors',
+	connectorStats: 'Unable to load connector statistics',
+	contentStats: 'Unable to load content statistics',
+	todayStats: "Unable to load today's search statistics",
+	recentActivity: 'Unable to load recent activity',
+	completionTrends: 'Unable to load completion trends'
+};
+
 async function safeQuery<T>(
 	queryName: string,
 	queryFn: () => Promise<T>,
@@ -30,13 +39,14 @@ async function safeQuery<T>(
 		const data = await queryFn();
 		return { data, error: null };
 	} catch (err) {
-		const message = err instanceof Error ? err.message : String(err);
+		const detailedMessage = err instanceof Error ? err.message : String(err);
 		logger.error(`Query failed: ${queryName}`, {
 			query: queryName,
-			error: message,
+			error: detailedMessage,
 			stack: err instanceof Error ? err.stack : undefined
 		});
-		return { data: fallback, error: { query: queryName, message } };
+		const userMessage = USER_FRIENDLY_ERRORS[queryName] ?? 'An error occurred loading data';
+		return { data: fallback, error: { query: queryName, message: userMessage } };
 	}
 }
 
