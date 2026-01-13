@@ -42,10 +42,18 @@ export const handle: Handle = async ({ event, resolve }) => {
 	// Check X-API-Key header before session validation
 	const apiKey = event.request.headers.get('x-api-key');
 	if (apiKey) {
+		let apiKeyResult: Awaited<ReturnType<typeof validateApiKey>> | null = null;
+		let apiKeyUser: {
+			id: number;
+			username: string;
+			displayName: string | null;
+			role: string;
+		} | null = null;
+
+		// Step 1: Validate API key and fetch user (auth errors fail gracefully)
 		try {
-			const apiKeyResult = await validateApiKey(apiKey);
+			apiKeyResult = await validateApiKey(apiKey);
 			if (apiKeyResult) {
-				// Look up user data for the API key owner
 				const userResult = await db
 					.select({
 						id: users.id,
@@ -56,52 +64,69 @@ export const handle: Handle = async ({ event, resolve }) => {
 					.from(users)
 					.where(eq(users.id, apiKeyResult.userId))
 					.limit(1);
+				apiKeyUser = userResult[0] ?? null;
+			}
+		} catch {
+			// Database error during API key/user validation - continue without API key auth
+			// Session validation or local bypass will handle authentication
+		}
 
-				const user = userResult[0];
-				if (user) {
-					event.locals.user = user;
-					event.locals.isApiKey = true;
-					event.locals.apiKeyScope = apiKeyResult.scope;
-					event.locals.apiKeyId = apiKeyResult.keyId;
-					event.locals.apiKeyRateLimitPerMinute = apiKeyResult.rateLimitPerMinute;
+		// Step 2: Check rate limit (rate limiter errors fail closed for security)
+		if (apiKeyResult && apiKeyUser) {
+			try {
+				const rateLimitResult = await apiKeyRateLimiter.canMakeRequest(
+					apiKeyResult.keyId,
+					apiKeyResult.rateLimitPerMinute
+				);
 
-					// Check if request is allowed before processing
-					const rateLimitResult = await apiKeyRateLimiter.canMakeRequest(
+				if (!rateLimitResult.allowed) {
+					const retryAfterSeconds = Math.ceil(rateLimitResult.retryAfterMs! / 1000);
+					const rateLimitStatus = await apiKeyRateLimiter.getRateLimitStatus(
 						apiKeyResult.keyId,
 						apiKeyResult.rateLimitPerMinute
 					);
 
-					if (!rateLimitResult.allowed) {
-						// Return 429 Too Many Requests with rate limit headers
-						const retryAfterSeconds = Math.ceil(rateLimitResult.retryAfterMs! / 1000);
-						const rateLimitStatus = await apiKeyRateLimiter.getRateLimitStatus(
-							apiKeyResult.keyId,
-							apiKeyResult.rateLimitPerMinute
-						);
-
-						return json(
-							{
-								error: 'Too Many Requests',
-								message: 'Rate limit exceeded. Please try again later.',
-								retryAfter: retryAfterSeconds
-							},
-							{
-								status: 429,
-								headers: {
-									'Retry-After': String(retryAfterSeconds),
-									'X-RateLimit-Limit': String(rateLimitStatus.limit ?? 'unlimited'),
-									'X-RateLimit-Remaining': String(rateLimitStatus.remaining ?? 'unlimited'),
-									'X-RateLimit-Reset': String(rateLimitStatus.resetInSeconds),
-									'X-Correlation-ID': correlationId
-								}
+					return json(
+						{
+							error: 'Too Many Requests',
+							message: 'Rate limit exceeded. Please try again later.',
+							retryAfter: retryAfterSeconds
+						},
+						{
+							status: 429,
+							headers: {
+								'Retry-After': String(retryAfterSeconds),
+								'X-RateLimit-Limit': String(rateLimitStatus.limit ?? 'unlimited'),
+								'X-RateLimit-Remaining': String(rateLimitStatus.remaining ?? 'unlimited'),
+								'X-RateLimit-Reset': String(rateLimitStatus.resetInSeconds),
+								'X-Correlation-ID': correlationId
 							}
-						);
-					}
+						}
+					);
 				}
+
+				// Rate limit passed - set up API key auth context
+				event.locals.user = apiKeyUser;
+				event.locals.isApiKey = true;
+				event.locals.apiKeyScope = apiKeyResult.scope;
+				event.locals.apiKeyId = apiKeyResult.keyId;
+				event.locals.apiKeyRateLimitPerMinute = apiKeyResult.rateLimitPerMinute;
+			} catch {
+				// Rate limiter error - fail closed by rejecting the request
+				return json(
+					{
+						error: 'Service Unavailable',
+						message: 'Rate limiting service temporarily unavailable. Please try again.'
+					},
+					{
+						status: 503,
+						headers: {
+							'Retry-After': '5',
+							'X-Correlation-ID': correlationId
+						}
+					}
+				);
 			}
-		} catch {
-			// Database error during API key validation - continue without API key auth
-			// Session validation or local bypass will handle authentication
 		}
 	}
 
@@ -116,8 +141,7 @@ export const handle: Handle = async ({ event, resolve }) => {
 				}
 			} catch {
 				// Database error during session validation - treat as unauthenticated
-				// Clear the potentially invalid session cookie
-				event.cookies.delete(SESSION_COOKIE_NAME, { path: '/' });
+				// but preserve the cookie so the session works when the DB recovers
 				event.locals.user = null;
 			}
 		} else {
