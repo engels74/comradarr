@@ -1,5 +1,6 @@
 """Database management screen for Comradarr Dev Tools."""
 
+import asyncio
 import shutil
 from typing import TYPE_CHECKING, ClassVar, override
 
@@ -210,6 +211,26 @@ class DatabaseManagementScreen(Screen[None]):
             return "init service"
         return "PostgreSQL"
 
+    async def _wait_for_postgres_ready(
+        self, strategy: object, *, timeout: float = 30.0, interval: float = 0.5
+    ) -> bool:
+        """Wait for PostgreSQL to be ready to accept connections.
+
+        Uses pg_isready to poll for readiness after service start.
+        """
+        from cr_dev.core.platform import LinuxStrategy, MacOSStrategy
+
+        if not isinstance(strategy, MacOSStrategy | LinuxStrategy):
+            return False
+
+        elapsed = 0.0
+        while elapsed < timeout:
+            if strategy.is_postgres_running():
+                return True
+            await asyncio.sleep(interval)
+            elapsed += interval
+        return False
+
     async def _ensure_postgres_ready(self) -> tuple[PlatformStrategy, str] | None:
         """Ensure PostgreSQL is installed and running.
 
@@ -291,7 +312,14 @@ class DatabaseManagementScreen(Screen[None]):
             if not strategy.start_postgres_service():
                 _ = output_log.log_error("Failed to start PostgreSQL")
                 return None
-            _ = output_log.log_success("PostgreSQL started")
+
+            _ = output_log.write("  Waiting for PostgreSQL to accept connections...")
+            if not await self._wait_for_postgres_ready(strategy):
+                _ = output_log.log_error(
+                    "PostgreSQL started but not accepting connections"
+                )
+                return None
+            _ = output_log.log_success("PostgreSQL started and ready")
 
         return (strategy, desc)
 
