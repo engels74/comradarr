@@ -42,36 +42,44 @@ export const handle: Handle = async ({ event, resolve }) => {
 	// Check X-API-Key header before session validation
 	const apiKey = event.request.headers.get('x-api-key');
 	if (apiKey) {
-		const apiKeyResult = await validateApiKey(apiKey);
-		if (apiKeyResult) {
-			// Look up user data for the API key owner
-			const userResult = await db
-				.select({
-					id: users.id,
-					username: users.username,
-					displayName: users.displayName,
-					role: users.role
-				})
-				.from(users)
-				.where(eq(users.id, apiKeyResult.userId))
-				.limit(1);
+		let apiKeyResult: Awaited<ReturnType<typeof validateApiKey>> | null = null;
+		let apiKeyUser: {
+			id: number;
+			username: string;
+			displayName: string | null;
+			role: string;
+		} | null = null;
 
-			const user = userResult[0];
-			if (user) {
-				event.locals.user = user;
-				event.locals.isApiKey = true;
-				event.locals.apiKeyScope = apiKeyResult.scope;
-				event.locals.apiKeyId = apiKeyResult.keyId;
-				event.locals.apiKeyRateLimitPerMinute = apiKeyResult.rateLimitPerMinute;
+		// Step 1: Validate API key and fetch user (auth errors fail gracefully)
+		try {
+			apiKeyResult = await validateApiKey(apiKey);
+			if (apiKeyResult) {
+				const userResult = await db
+					.select({
+						id: users.id,
+						username: users.username,
+						displayName: users.displayName,
+						role: users.role
+					})
+					.from(users)
+					.where(eq(users.id, apiKeyResult.userId))
+					.limit(1);
+				apiKeyUser = userResult[0] ?? null;
+			}
+		} catch {
+			// Database error during API key/user validation - continue without API key auth
+			// Session validation or local bypass will handle authentication
+		}
 
-				// Check if request is allowed before processing
+		// Step 2: Check rate limit (rate limiter errors fail closed for security)
+		if (apiKeyResult && apiKeyUser) {
+			try {
 				const rateLimitResult = await apiKeyRateLimiter.canMakeRequest(
 					apiKeyResult.keyId,
 					apiKeyResult.rateLimitPerMinute
 				);
 
 				if (!rateLimitResult.allowed) {
-					// Return 429 Too Many Requests with rate limit headers
 					const retryAfterSeconds = Math.ceil(rateLimitResult.retryAfterMs! / 1000);
 					const rateLimitStatus = await apiKeyRateLimiter.getRateLimitStatus(
 						apiKeyResult.keyId,
@@ -96,6 +104,28 @@ export const handle: Handle = async ({ event, resolve }) => {
 						}
 					);
 				}
+
+				// Rate limit passed - set up API key auth context
+				event.locals.user = apiKeyUser;
+				event.locals.isApiKey = true;
+				event.locals.apiKeyScope = apiKeyResult.scope;
+				event.locals.apiKeyId = apiKeyResult.keyId;
+				event.locals.apiKeyRateLimitPerMinute = apiKeyResult.rateLimitPerMinute;
+			} catch {
+				// Rate limiter error - fail closed by rejecting the request
+				return json(
+					{
+						error: 'Service Unavailable',
+						message: 'Rate limiting service temporarily unavailable. Please try again.'
+					},
+					{
+						status: 503,
+						headers: {
+							'Retry-After': '5',
+							'X-Correlation-ID': correlationId
+						}
+					}
+				);
 			}
 		}
 	}
@@ -104,9 +134,15 @@ export const handle: Handle = async ({ event, resolve }) => {
 	if (!event.locals.user) {
 		const sessionId = event.cookies.get(SESSION_COOKIE_NAME);
 		if (sessionId) {
-			event.locals.user = await validateSession(sessionId);
-			if (event.locals.user) {
-				event.locals.sessionId = sessionId;
+			try {
+				event.locals.user = await validateSession(sessionId);
+				if (event.locals.user) {
+					event.locals.sessionId = sessionId;
+				}
+			} catch {
+				// Database error during session validation - treat as unauthenticated
+				// but preserve the cookie so the session works when the DB recovers
+				event.locals.user = null;
 			}
 		} else {
 			event.locals.user = null;

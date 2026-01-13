@@ -81,10 +81,28 @@ interface ScheduledJob {
 	cron: Cron;
 }
 
-const jobs: Map<string, ScheduledJob> = new Map();
-const dynamicJobs: Map<number, Cron> = new Map();
-let scheduledBackupJob: Cron | null = null;
-let initialized = false;
+interface SchedulerState {
+	initialized: boolean;
+	jobs: Map<string, ScheduledJob>;
+	dynamicJobs: Map<number, Cron>;
+	scheduledBackupJob: Cron | null;
+}
+
+declare global {
+	var __schedulerState: SchedulerState | undefined;
+}
+
+function getSchedulerState(): SchedulerState {
+	if (!globalThis.__schedulerState) {
+		globalThis.__schedulerState = {
+			initialized: false,
+			jobs: new Map(),
+			dynamicJobs: new Map(),
+			scheduledBackupJob: null
+		};
+	}
+	return globalThis.__schedulerState;
+}
 
 async function logSkippedUnhealthyConnectors(healthyConnectors: Connector[]): Promise<void> {
 	const allEnabled = await getEnabledConnectors();
@@ -112,7 +130,9 @@ function withJobContext(jobName: string, callback: () => Promise<void>): () => P
 
 /** Initialize all scheduled jobs. Safe to call multiple times. */
 export function initializeScheduler(): void {
-	if (initialized) {
+	const state = getSchedulerState();
+
+	if (state.initialized) {
 		logger.info('Already initialized, skipping');
 		return;
 	}
@@ -151,7 +171,7 @@ export function initializeScheduler(): void {
 		})
 	);
 
-	jobs.set('throttle-window-reset', {
+	state.jobs.set('throttle-window-reset', {
 		name: 'throttle-window-reset',
 		cron: throttleResetJob
 	});
@@ -187,7 +207,7 @@ export function initializeScheduler(): void {
 		})
 	);
 
-	jobs.set('prowlarr-health-check', {
+	state.jobs.set('prowlarr-health-check', {
 		name: 'prowlarr-health-check',
 		cron: prowlarrHealthJob
 	});
@@ -280,7 +300,7 @@ export function initializeScheduler(): void {
 		})
 	);
 
-	jobs.set('connector-health-check', {
+	state.jobs.set('connector-health-check', {
 		name: 'connector-health-check',
 		cron: connectorHealthJob
 	});
@@ -338,10 +358,8 @@ export function initializeScheduler(): void {
 						continue;
 					}
 
-					const [gapsResult, upgradesResult] = await Promise.all([
-						discoverGaps(connector.id),
-						discoverUpgrades(connector.id)
-					]);
+					const gapsResult = await discoverGaps(connector.id);
+					const upgradesResult = await discoverUpgrades(connector.id);
 
 					if (gapsResult.success) {
 						summary.totalGapsFound += gapsResult.registriesCreated;
@@ -384,7 +402,7 @@ export function initializeScheduler(): void {
 		})
 	);
 
-	jobs.set('incremental-sync-sweep', {
+	state.jobs.set('incremental-sync-sweep', {
 		name: 'incremental-sync-sweep',
 		cron: incrementalSyncJob
 	});
@@ -446,10 +464,8 @@ export function initializeScheduler(): void {
 						continue;
 					}
 
-					const [gapsResult, upgradesResult] = await Promise.all([
-						discoverGaps(connector.id),
-						discoverUpgrades(connector.id)
-					]);
+					const gapsResult = await discoverGaps(connector.id);
+					const upgradesResult = await discoverUpgrades(connector.id);
 
 					if (gapsResult.success) {
 						summary.totalGapsFound += gapsResult.registriesCreated;
@@ -484,7 +500,7 @@ export function initializeScheduler(): void {
 		})
 	);
 
-	jobs.set('full-reconciliation', {
+	state.jobs.set('full-reconciliation', {
 		name: 'full-reconciliation',
 		cron: fullReconciliationJob
 	});
@@ -517,7 +533,7 @@ export function initializeScheduler(): void {
 		})
 	);
 
-	jobs.set('completion-snapshot', {
+	state.jobs.set('completion-snapshot', {
 		name: 'completion-snapshot',
 		cron: completionSnapshotJob
 	});
@@ -576,7 +592,7 @@ export function initializeScheduler(): void {
 		})
 	);
 
-	jobs.set('db-maintenance', {
+	state.jobs.set('db-maintenance', {
 		name: 'db-maintenance',
 		cron: dbMaintenanceJob
 	});
@@ -741,7 +757,7 @@ export function initializeScheduler(): void {
 		})
 	);
 
-	jobs.set('queue-processor', {
+	state.jobs.set('queue-processor', {
 		name: 'queue-processor',
 		cron: queueProcessorJob
 	});
@@ -773,7 +789,7 @@ export function initializeScheduler(): void {
 		})
 	);
 
-	jobs.set('notification-batch-processor', {
+	state.jobs.set('notification-batch-processor', {
 		name: 'notification-batch-processor',
 		cron: notificationBatchJob
 	});
@@ -802,7 +818,7 @@ export function initializeScheduler(): void {
 		})
 	);
 
-	jobs.set('queue-depth-sampler', {
+	state.jobs.set('queue-depth-sampler', {
 		name: 'queue-depth-sampler',
 		cron: queueDepthSamplerJob
 	});
@@ -836,7 +852,7 @@ export function initializeScheduler(): void {
 		})
 	);
 
-	jobs.set('analytics-hourly-aggregation', {
+	state.jobs.set('analytics-hourly-aggregation', {
 		name: 'analytics-hourly-aggregation',
 		cron: hourlyAggregationJob
 	});
@@ -874,7 +890,7 @@ export function initializeScheduler(): void {
 		})
 	);
 
-	jobs.set('analytics-daily-aggregation', {
+	state.jobs.set('analytics-daily-aggregation', {
 		name: 'analytics-daily-aggregation',
 		cron: dailyAggregationJob
 	});
@@ -885,33 +901,34 @@ export function initializeScheduler(): void {
 		});
 	});
 
-	initialized = true;
-	logger.info('Scheduled jobs initialized', { jobs: Array.from(jobs.keys()) });
+	state.initialized = true;
+	logger.info('Scheduled jobs initialized', { jobs: Array.from(state.jobs.keys()) });
 }
 
 /** Stop all scheduled jobs. Used for graceful shutdown. */
 export function stopScheduler(): void {
+	const state = getSchedulerState();
 	logger.info('Stopping all scheduled jobs');
 
-	for (const [name, job] of jobs) {
+	for (const [name, job] of state.jobs) {
 		job.cron.stop();
 		logger.info('Stopped job', { name });
 	}
-	jobs.clear();
+	state.jobs.clear();
 
-	for (const [id, cron] of dynamicJobs) {
+	for (const [id, cron] of state.dynamicJobs) {
 		cron.stop();
 		logger.info('Stopped dynamic schedule', { id });
 	}
-	dynamicJobs.clear();
+	state.dynamicJobs.clear();
 
-	if (scheduledBackupJob) {
-		scheduledBackupJob.stop();
-		scheduledBackupJob = null;
+	if (state.scheduledBackupJob) {
+		state.scheduledBackupJob.stop();
+		state.scheduledBackupJob = null;
 		logger.info('Stopped scheduled backup job');
 	}
 
-	initialized = false;
+	state.initialized = false;
 	logger.info('All scheduled jobs stopped');
 }
 
@@ -933,35 +950,37 @@ export function getSchedulerStatus(): {
 		nextRun: Date | null;
 	} | null;
 } {
+	const state = getSchedulerState();
 	return {
-		initialized,
-		jobs: Array.from(jobs.values()).map((job) => ({
+		initialized: state.initialized,
+		jobs: Array.from(state.jobs.values()).map((job) => ({
 			name: job.name,
 			isRunning: job.cron.isBusy(),
 			nextRun: job.cron.nextRun()
 		})),
-		dynamicSchedules: Array.from(dynamicJobs.entries()).map(([id, cron]) => ({
+		dynamicSchedules: Array.from(state.dynamicJobs.entries()).map(([id, cron]) => ({
 			id,
 			isRunning: cron.isBusy(),
 			nextRun: cron.nextRun()
 		})),
-		scheduledBackup: scheduledBackupJob
+		scheduledBackup: state.scheduledBackupJob
 			? {
 					enabled: true,
-					isRunning: scheduledBackupJob.isBusy(),
-					nextRun: scheduledBackupJob.nextRun()
+					isRunning: state.scheduledBackupJob.isBusy(),
+					nextRun: state.scheduledBackupJob.nextRun()
 				}
 			: null
 	};
 }
 
 export async function refreshDynamicSchedules(): Promise<void> {
+	const state = getSchedulerState();
 	logger.info('Refreshing dynamic schedules');
 
-	for (const [_id, cron] of dynamicJobs) {
+	for (const [_id, cron] of state.dynamicJobs) {
 		cron.stop();
 	}
-	dynamicJobs.clear();
+	state.dynamicJobs.clear();
 
 	const schedules = await getEnabledSchedules();
 
@@ -1056,10 +1075,8 @@ export async function refreshDynamicSchedules(): Promise<void> {
 								});
 							}
 
-							const [gapsResult, upgradesResult] = await Promise.all([
-								discoverGaps(connector.id),
-								discoverUpgrades(connector.id)
-							]);
+							const gapsResult = await discoverGaps(connector.id);
+							const upgradesResult = await discoverUpgrades(connector.id);
 
 							if (gapsResult.success) {
 								summary.totalGapsFound += gapsResult.registriesCreated;
@@ -1085,7 +1102,7 @@ export async function refreshDynamicSchedules(): Promise<void> {
 						}
 					}
 
-					const nextRun = dynamicJobs.get(schedule.id)?.nextRun();
+					const nextRun = state.dynamicJobs.get(schedule.id)?.nextRun();
 					if (nextRun) {
 						await updateNextRunAt(schedule.id, nextRun);
 					}
@@ -1101,7 +1118,7 @@ export async function refreshDynamicSchedules(): Promise<void> {
 				})
 			);
 
-			dynamicJobs.set(schedule.id, cron);
+			state.dynamicJobs.set(schedule.id, cron);
 
 			const nextRun = cron.nextRun();
 			if (nextRun) {
@@ -1115,7 +1132,7 @@ export async function refreshDynamicSchedules(): Promise<void> {
 		}
 	}
 
-	logger.info('Loaded dynamic schedules', { count: dynamicJobs.size });
+	logger.info('Loaded dynamic schedules', { count: state.dynamicJobs.size });
 }
 async function initializeScheduledBackup(): Promise<void> {
 	try {
@@ -1138,13 +1155,15 @@ async function createScheduledBackupJob(
 	cronExpression: string,
 	retentionCount: number
 ): Promise<void> {
-	if (scheduledBackupJob) {
-		scheduledBackupJob.stop();
-		scheduledBackupJob = null;
+	const state = getSchedulerState();
+
+	if (state.scheduledBackupJob) {
+		state.scheduledBackupJob.stop();
+		state.scheduledBackupJob = null;
 	}
 
 	try {
-		scheduledBackupJob = new Cron(
+		state.scheduledBackupJob = new Cron(
 			cronExpression,
 			{
 				name: 'scheduled-backup',
@@ -1191,7 +1210,7 @@ async function createScheduledBackupJob(
 			})
 		);
 
-		const nextRun = scheduledBackupJob.nextRun();
+		const nextRun = state.scheduledBackupJob.nextRun();
 		logger.info('Scheduled backup job created', {
 			cronExpression,
 			retentionCount,
@@ -1201,21 +1220,22 @@ async function createScheduledBackupJob(
 		logger.error('Failed to create scheduled backup job', {
 			error: error instanceof Error ? error.message : String(error)
 		});
-		scheduledBackupJob = null;
+		state.scheduledBackupJob = null;
 	}
 }
 
 /** Refresh the scheduled backup job from database settings. */
 export async function refreshScheduledBackup(): Promise<void> {
+	const state = getSchedulerState();
 	logger.info('Refreshing scheduled backup configuration');
 
 	try {
 		const settings = await getBackupSettings();
 
 		if (!settings.scheduledEnabled) {
-			if (scheduledBackupJob) {
-				scheduledBackupJob.stop();
-				scheduledBackupJob = null;
+			if (state.scheduledBackupJob) {
+				state.scheduledBackupJob.stop();
+				state.scheduledBackupJob = null;
 				logger.info('Scheduled backups disabled');
 			}
 			return;
