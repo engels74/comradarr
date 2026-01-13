@@ -42,61 +42,66 @@ export const handle: Handle = async ({ event, resolve }) => {
 	// Check X-API-Key header before session validation
 	const apiKey = event.request.headers.get('x-api-key');
 	if (apiKey) {
-		const apiKeyResult = await validateApiKey(apiKey);
-		if (apiKeyResult) {
-			// Look up user data for the API key owner
-			const userResult = await db
-				.select({
-					id: users.id,
-					username: users.username,
-					displayName: users.displayName,
-					role: users.role
-				})
-				.from(users)
-				.where(eq(users.id, apiKeyResult.userId))
-				.limit(1);
+		try {
+			const apiKeyResult = await validateApiKey(apiKey);
+			if (apiKeyResult) {
+				// Look up user data for the API key owner
+				const userResult = await db
+					.select({
+						id: users.id,
+						username: users.username,
+						displayName: users.displayName,
+						role: users.role
+					})
+					.from(users)
+					.where(eq(users.id, apiKeyResult.userId))
+					.limit(1);
 
-			const user = userResult[0];
-			if (user) {
-				event.locals.user = user;
-				event.locals.isApiKey = true;
-				event.locals.apiKeyScope = apiKeyResult.scope;
-				event.locals.apiKeyId = apiKeyResult.keyId;
-				event.locals.apiKeyRateLimitPerMinute = apiKeyResult.rateLimitPerMinute;
+				const user = userResult[0];
+				if (user) {
+					event.locals.user = user;
+					event.locals.isApiKey = true;
+					event.locals.apiKeyScope = apiKeyResult.scope;
+					event.locals.apiKeyId = apiKeyResult.keyId;
+					event.locals.apiKeyRateLimitPerMinute = apiKeyResult.rateLimitPerMinute;
 
-				// Check if request is allowed before processing
-				const rateLimitResult = await apiKeyRateLimiter.canMakeRequest(
-					apiKeyResult.keyId,
-					apiKeyResult.rateLimitPerMinute
-				);
-
-				if (!rateLimitResult.allowed) {
-					// Return 429 Too Many Requests with rate limit headers
-					const retryAfterSeconds = Math.ceil(rateLimitResult.retryAfterMs! / 1000);
-					const rateLimitStatus = await apiKeyRateLimiter.getRateLimitStatus(
+					// Check if request is allowed before processing
+					const rateLimitResult = await apiKeyRateLimiter.canMakeRequest(
 						apiKeyResult.keyId,
 						apiKeyResult.rateLimitPerMinute
 					);
 
-					return json(
-						{
-							error: 'Too Many Requests',
-							message: 'Rate limit exceeded. Please try again later.',
-							retryAfter: retryAfterSeconds
-						},
-						{
-							status: 429,
-							headers: {
-								'Retry-After': String(retryAfterSeconds),
-								'X-RateLimit-Limit': String(rateLimitStatus.limit ?? 'unlimited'),
-								'X-RateLimit-Remaining': String(rateLimitStatus.remaining ?? 'unlimited'),
-								'X-RateLimit-Reset': String(rateLimitStatus.resetInSeconds),
-								'X-Correlation-ID': correlationId
+					if (!rateLimitResult.allowed) {
+						// Return 429 Too Many Requests with rate limit headers
+						const retryAfterSeconds = Math.ceil(rateLimitResult.retryAfterMs! / 1000);
+						const rateLimitStatus = await apiKeyRateLimiter.getRateLimitStatus(
+							apiKeyResult.keyId,
+							apiKeyResult.rateLimitPerMinute
+						);
+
+						return json(
+							{
+								error: 'Too Many Requests',
+								message: 'Rate limit exceeded. Please try again later.',
+								retryAfter: retryAfterSeconds
+							},
+							{
+								status: 429,
+								headers: {
+									'Retry-After': String(retryAfterSeconds),
+									'X-RateLimit-Limit': String(rateLimitStatus.limit ?? 'unlimited'),
+									'X-RateLimit-Remaining': String(rateLimitStatus.remaining ?? 'unlimited'),
+									'X-RateLimit-Reset': String(rateLimitStatus.resetInSeconds),
+									'X-Correlation-ID': correlationId
+								}
 							}
-						}
-					);
+						);
+					}
 				}
 			}
+		} catch {
+			// Database error during API key validation - continue without API key auth
+			// Session validation or local bypass will handle authentication
 		}
 	}
 
@@ -104,9 +109,16 @@ export const handle: Handle = async ({ event, resolve }) => {
 	if (!event.locals.user) {
 		const sessionId = event.cookies.get(SESSION_COOKIE_NAME);
 		if (sessionId) {
-			event.locals.user = await validateSession(sessionId);
-			if (event.locals.user) {
-				event.locals.sessionId = sessionId;
+			try {
+				event.locals.user = await validateSession(sessionId);
+				if (event.locals.user) {
+					event.locals.sessionId = sessionId;
+				}
+			} catch {
+				// Database error during session validation - treat as unauthenticated
+				// Clear the potentially invalid session cookie
+				event.cookies.delete(SESSION_COOKIE_NAME, { path: '/' });
+				event.locals.user = null;
 			}
 		} else {
 			event.locals.user = null;
