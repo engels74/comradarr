@@ -187,18 +187,35 @@ export const load: PageServerLoad = async ({ parent }) => {
 		}))
 	}));
 
+	// Calculate queue context for queue-processor job
+	const totalQueueDepth = Array.from(statsMap.values()).reduce(
+		(sum, stat) => sum + stat.queueDepth,
+		0
+	);
+	const healthyConnectorCount = connectors.filter(
+		(c) => c.enabled && (c.healthStatus === 'healthy' || c.healthStatus === 'degraded')
+	).length;
+
 	const scheduledJobs: SerializedScheduledJob[] = schedulerStatus.jobs.map((job) => {
 		const metadata = JOB_METADATA[job.name] ?? {
 			displayName: job.name,
 			description: 'Scheduled task'
 		};
-		return {
+
+		const baseJob = {
 			name: job.name,
 			displayName: metadata.displayName,
 			description: metadata.description,
 			isRunning: job.isRunning,
 			nextRun: job.nextRun?.toISOString() ?? null
 		};
+
+		// Add context for queue-processor
+		if (job.name === 'queue-processor') {
+			return { ...baseJob, context: { totalQueueDepth, healthyConnectorCount } };
+		}
+
+		return baseJob;
 	});
 
 	return {

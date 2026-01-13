@@ -91,6 +91,16 @@ export interface SerializedConnectorCompletion {
 // =============================================================================
 
 /**
+ * Optional context for jobs that need additional state information.
+ */
+export interface ScheduledJobContext {
+	/** Total items across all connector queues */
+	totalQueueDepth?: number;
+	/** Number of enabled connectors with healthy/degraded status */
+	healthyConnectorCount?: number;
+}
+
+/**
  * Serialized scheduled job for display in the upcoming schedule panel.
  */
 export interface SerializedScheduledJob {
@@ -104,4 +114,6 @@ export interface SerializedScheduledJob {
 	isRunning: boolean;
 	/** ISO timestamp of next run, or null if not scheduled */
 	nextRun: string | null;
+	/** Optional context for jobs that need it (e.g., queue-processor) */
+	context?: ScheduledJobContext;
 }

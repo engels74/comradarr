@@ -109,6 +109,33 @@ function isUpcomingSoon(isoTimestamp: string | null): boolean {
 	return diffMs > 0 && diffMs < 5 * 60 * 1000;
 }
 
+function shouldShowSoonBadge(job: SerializedScheduledJob): boolean {
+	if (!isUpcomingSoon(job.nextRun)) return false;
+
+	// For queue-processor, only show "Soon" if there's work to do
+	if (job.name === 'queue-processor' && job.context) {
+		return job.context.totalQueueDepth! > 0 && job.context.healthyConnectorCount! > 0;
+	}
+
+	return true;
+}
+
+function getQueueProcessorStatus(job: SerializedScheduledJob): string | null {
+	if (job.name !== 'queue-processor' || !job.context) return null;
+
+	const { totalQueueDepth, healthyConnectorCount } = job.context;
+
+	if (healthyConnectorCount === 0) {
+		return 'No healthy connectors';
+	}
+
+	if (totalQueueDepth === 0) {
+		return 'Queue empty';
+	}
+
+	return `${totalQueueDepth} item${totalQueueDepth === 1 ? '' : 's'} queued`;
+}
+
 const sortedJobs = $derived(
 	[...scheduledJobs].sort((a, b) => {
 		if (a.isRunning && !b.isRunning) return -1;
@@ -183,7 +210,7 @@ const otherJobs = $derived(
 										>
 											Running
 										</Badge>
-									{:else if isUpcomingSoon(job.nextRun)}
+									{:else if shouldShowSoonBadge(job)}
 										<Badge
 											variant="outline"
 											class="bg-amber-500/20 text-amber-600 dark:text-amber-400 text-xs"
@@ -193,6 +220,9 @@ const otherJobs = $derived(
 									{/if}
 								</div>
 								<p class="text-sm text-muted-foreground">{job.description}</p>
+								{#if getQueueProcessorStatus(job)}
+									<p class="text-xs text-muted-foreground/75 mt-0.5">{getQueueProcessorStatus(job)}</p>
+								{/if}
 							</div>
 							<div class="text-right shrink-0">
 								<p class="text-sm font-semibold {job.isRunning ? 'text-blue-600 dark:text-blue-400' : 'text-foreground'}">
