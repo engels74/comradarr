@@ -1,5 +1,7 @@
 """Database management screen for Comradarr Dev Tools."""
 
+import asyncio
+import shutil
 from typing import TYPE_CHECKING, ClassVar, override
 
 from textual import work
@@ -19,6 +21,8 @@ if TYPE_CHECKING:
     from collections.abc import Callable
 
     from textual.app import ComposeResult
+
+    from cr_dev.core.platform import PlatformStrategy
 
 
 class DatabaseManagementScreen(Screen[None]):
@@ -190,12 +194,145 @@ class DatabaseManagementScreen(Screen[None]):
 
         _ = self._confirm_and_delete_all(db_names)
 
+    def _get_postgres_description(self, platform: object, strategy: object) -> str:
+        """Get a human-readable description of the PostgreSQL installation."""
+        from cr_dev.core.platform import (
+            LinuxStrategy,
+            MacOSStrategy,
+            Platform,
+        )
+
+        if isinstance(platform, Platform) and isinstance(strategy, MacOSStrategy):
+            formula = platform.homebrew_postgres or "postgresql"
+            return f"Homebrew {formula}"
+        elif isinstance(strategy, LinuxStrategy):
+            if strategy.use_systemd:
+                return "systemd service"
+            return "init service"
+        return "PostgreSQL"
+
+    async def _wait_for_postgres_ready(
+        self, strategy: object, *, timeout: float = 30.0, interval: float = 0.5
+    ) -> bool:
+        """Wait for PostgreSQL to be ready to accept connections.
+
+        Uses pg_isready to poll for readiness after service start.
+        """
+        from cr_dev.core.platform import LinuxStrategy, MacOSStrategy
+
+        if not isinstance(strategy, MacOSStrategy | LinuxStrategy):
+            return False
+
+        elapsed = 0.0
+        while elapsed < timeout:
+            if strategy.is_postgres_running():
+                return True
+            await asyncio.sleep(interval)
+            elapsed += interval
+        return False
+
+    async def _ensure_postgres_ready(self) -> tuple[PlatformStrategy, str] | None:
+        """Ensure PostgreSQL is installed and running.
+
+        Returns (strategy, description) if ready, None if user cancelled.
+        The description is a human-readable string like "Homebrew postgresql@17".
+        """
+        from cr_dev.core.platform import OS, detect_platform, get_strategy, is_macos
+
+        output_log = self._get_output_log()
+        platform = detect_platform()
+
+        # Check for unsupported platform
+        if platform.os == OS.UNSUPPORTED:
+            _ = output_log.log_error("Unsupported platform")
+            _ = output_log.write("  Database management requires macOS or Linux")
+            return None
+
+        # Check if PostgreSQL is installed
+        psql_installed = shutil.which("psql") is not None
+        homebrew_postgres = platform.homebrew_postgres if is_macos(platform) else None
+
+        if not psql_installed and not homebrew_postgres:
+            _ = output_log.write("")
+            _ = output_log.log_warning("PostgreSQL is not installed")
+
+            if is_macos(platform):
+                install_desc = "Install PostgreSQL via Homebrew?"
+            else:
+                install_desc = "Install PostgreSQL via apt?"
+
+            should_install = await self.app.push_screen_wait(  # pyright: ignore[reportUnknownMemberType]
+                ConfirmDialog(install_desc, default=True)
+            )
+
+            if not should_install:
+                _ = output_log.log_info("Installation cancelled")
+                return None
+
+            try:
+                strategy = get_strategy(platform)
+            except ValueError as e:
+                _ = output_log.log_error(f"Cannot get platform strategy: {e}")
+                return None
+
+            desc = self._get_postgres_description(platform, strategy)
+            _ = output_log.log_step(f"Installing PostgreSQL ({desc})...")
+
+            if not strategy.install_postgres():
+                _ = output_log.log_error("Failed to install PostgreSQL")
+                return None
+
+            _ = output_log.log_success("PostgreSQL installed")
+        else:
+            try:
+                strategy = get_strategy(platform)
+            except ValueError as e:
+                _ = output_log.log_error(f"Cannot get platform strategy: {e}")
+                return None
+
+        desc = self._get_postgres_description(platform, strategy)
+
+        # Check if PostgreSQL is running
+        if not strategy.is_postgres_running():
+            _ = output_log.write("")
+            _ = output_log.log_warning(f"PostgreSQL is not running ({desc})")
+
+            should_start = await self.app.push_screen_wait(  # pyright: ignore[reportUnknownMemberType]
+                ConfirmDialog(
+                    "PostgreSQL is not running. Start it now?",
+                    default=True,
+                )
+            )
+
+            if not should_start:
+                _ = output_log.log_info("Operation cancelled")
+                return None
+
+            _ = output_log.log_step(f"Starting PostgreSQL ({desc})...")
+            if not strategy.start_postgres_service():
+                _ = output_log.log_error("Failed to start PostgreSQL")
+                return None
+
+            _ = output_log.write("  Waiting for PostgreSQL to accept connections...")
+            if not await self._wait_for_postgres_ready(strategy):
+                _ = output_log.log_error(
+                    "PostgreSQL started but not accepting connections"
+                )
+                return None
+            _ = output_log.log_success("PostgreSQL started and ready")
+
+        return (strategy, desc)
+
     @work(exclusive=True)
     async def _confirm_and_delete(self, db_name: str) -> None:
         """Confirm and delete a database."""
         from cr_dev.core.state import is_database_in_use
 
         output_log = self._get_output_log()
+
+        result = await self._ensure_postgres_ready()
+        if result is None:
+            return
 
         in_use, state = is_database_in_use(db_name)
 
@@ -239,6 +376,10 @@ class DatabaseManagementScreen(Screen[None]):
         from cr_dev.core.state import is_database_in_use
 
         output_log = self._get_output_log()
+
+        result = await self._ensure_postgres_ready()
+        if result is None:
+            return
 
         # Show warning with list of all databases
         _ = output_log.write("")
@@ -321,7 +462,6 @@ class DatabaseManagementScreen(Screen[None]):
     async def _delete_database(self, db_name: str) -> None:
         """Delete a database."""
         from cr_dev.commands.dev import drop_database
-        from cr_dev.core.platform import detect_platform, get_strategy
         from cr_dev.core.state import remove_credentials
 
         status_bar = self._get_status_bar()
@@ -331,23 +471,18 @@ class DatabaseManagementScreen(Screen[None]):
         status_bar.set_busy(f"Deleting '{db_name}'...")
 
         try:
-            platform = detect_platform()
-            strategy = get_strategy(platform)
+            result = await self._ensure_postgres_ready()
+            if result is None:
+                return
 
-            if not strategy.is_postgres_running():
-                _ = output_log.log_warning(
-                    "PostgreSQL is not running. Only removing credentials."
-                )
+            strategy, desc = result
+
+            def do_drop() -> None:
+                _ = drop_database(db_name, 5432, strategy)
                 remove_credentials(db_name)
-                _ = output_log.log_success(f"Credentials for '{db_name}' removed")
-            else:
 
-                def do_drop() -> None:
-                    _ = drop_database(db_name, 5432, strategy)
-                    remove_credentials(db_name)
-
-                _ = await runner.run_command(do_drop)
-                _ = output_log.log_success(f"Database '{db_name}' deleted")
+            _ = await runner.run_command(do_drop)
+            _ = output_log.log_success(f"Database '{db_name}' deleted ({desc})")
 
             _ = self._refresh_table()
         except Exception as e:
