@@ -338,10 +338,8 @@ export function initializeScheduler(): void {
 						continue;
 					}
 
-					const [gapsResult, upgradesResult] = await Promise.all([
-						discoverGaps(connector.id),
-						discoverUpgrades(connector.id)
-					]);
+					const gapsResult = await discoverGaps(connector.id);
+					const upgradesResult = await discoverUpgrades(connector.id);
 
 					if (gapsResult.success) {
 						summary.totalGapsFound += gapsResult.registriesCreated;
@@ -446,10 +444,8 @@ export function initializeScheduler(): void {
 						continue;
 					}
 
-					const [gapsResult, upgradesResult] = await Promise.all([
-						discoverGaps(connector.id),
-						discoverUpgrades(connector.id)
-					]);
+					const gapsResult = await discoverGaps(connector.id);
+					const upgradesResult = await discoverUpgrades(connector.id);
 
 					if (gapsResult.success) {
 						summary.totalGapsFound += gapsResult.registriesCreated;
@@ -1056,10 +1052,8 @@ export async function refreshDynamicSchedules(): Promise<void> {
 								});
 							}
 
-							const [gapsResult, upgradesResult] = await Promise.all([
-								discoverGaps(connector.id),
-								discoverUpgrades(connector.id)
-							]);
+							const gapsResult = await discoverGaps(connector.id);
+							const upgradesResult = await discoverUpgrades(connector.id);
 
 							if (gapsResult.success) {
 								summary.totalGapsFound += gapsResult.registriesCreated;
