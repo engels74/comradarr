@@ -81,3 +81,18 @@ class OutputLog(RichLog):
             text = Text.from_ansi(line)
             _ = self.write(text)
         return self
+
+    def get_all_text(self) -> str:
+        """Extract all log content as plain text."""
+        if not self.lines:
+            return ""
+        return "\n".join(strip.text.rstrip() for strip in self.lines)
+
+    def copy_all(self) -> bool:
+        """Copy all log content to clipboard. Returns success status."""
+        from cr_dev.tui.utils import copy_to_clipboard
+
+        text = self.get_all_text()
+        if not text:
+            return False
+        return copy_to_clipboard(text)

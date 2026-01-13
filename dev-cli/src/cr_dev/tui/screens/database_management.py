@@ -36,6 +36,7 @@ class DatabaseManagementScreen(Screen[None]):
         Binding("escape", "go_back", "Back", show=True),
         Binding("b", "go_back", "Back", show=False),
         Binding("ctrl+l", "clear_log", "Clear Log", show=False),
+        Binding("ctrl+y", "copy_output_log", "Copy Log", show=True),
     ]
 
     @override
@@ -95,6 +96,14 @@ class DatabaseManagementScreen(Screen[None]):
     def action_clear_log(self) -> None:
         """Clear the output log."""
         _ = self._get_output_log().clear()
+
+    def action_copy_output_log(self) -> None:
+        """Copy all output log content to clipboard."""
+        output_log = self._get_output_log()
+        if output_log.copy_all():
+            self.notify("Copied log to clipboard", timeout=2)
+        else:
+            self.notify("No log content to copy", severity="warning", timeout=2)
 
     def action_focus_previous_menu_item(self) -> None:
         """Focus the previous menu item."""

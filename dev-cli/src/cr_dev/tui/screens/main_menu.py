@@ -64,6 +64,7 @@ class MainMenuScreen(Screen[None]):
         Binding("]", "focus_item_14", show=False),
         Binding("\\", "focus_item_15", show=False),
         Binding("ctrl+l", "clear_log", "Clear Log", show=False),
+        Binding("ctrl+y", "copy_output_log", "Copy Log", show=True),
         Binding("c", "show_credentials", "Copy Creds", show=True),
     ]
 
@@ -214,6 +215,14 @@ class MainMenuScreen(Screen[None]):
     def action_clear_log(self) -> None:
         """Clear the output log."""
         _ = self._get_output_log().clear()
+
+    def action_copy_output_log(self) -> None:
+        """Copy all output log content to clipboard."""
+        output_log = self._get_output_log()
+        if output_log.copy_all():
+            self.notify("Copied log to clipboard", timeout=2)
+        else:
+            self.notify("No log content to copy", severity="warning", timeout=2)
 
     def action_focus_previous_menu_item(self) -> None:
         """Focus the previous menu item."""
