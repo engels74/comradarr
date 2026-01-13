@@ -50,7 +50,7 @@ def _detect_homebrew_postgres() -> str | None:
     if not shutil.which("brew"):
         return None
 
-    for version in ["17", "16", "15", "14"]:
+    for version in ["18", "17", "16", "15", "14"]:
         formula = f"postgresql@{version}"
         result = subprocess.run(
             ["brew", "list", "--formula", formula],
