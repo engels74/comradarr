@@ -174,8 +174,6 @@ function getTypeColors(type: string): { bg: string; text: string; border: string
 										<span class="text-xs font-medium">{trendInfo.label}</span>
 									</div>
 								</div>
-							{:else}
-								<span class="text-xs text-muted-foreground italic"> Trend data collecting... </span>
 							{/if}
 						</div>
 
