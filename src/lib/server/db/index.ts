@@ -1,4 +1,5 @@
 import { SQL } from 'bun';
+import { sql } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/bun-sql';
 import * as schema from './schema';
 
@@ -32,6 +33,25 @@ export async function closePool(): Promise<void> {
 	if (globalThis.__dbClient) {
 		await globalThis.__dbClient.close();
 		globalThis.__dbClient = undefined;
+	}
+}
+
+/**
+ * Warm up the connection pool by executing a simple query.
+ * This ensures at least one connection is established and ready before accepting requests.
+ * Prevents race conditions where first queries fail due to lazy connection initialization.
+ */
+export async function warmupPool(): Promise<void> {
+	const startTime = performance.now();
+	try {
+		await db.execute(sql`SELECT 1`);
+		const latencyMs = Math.round(performance.now() - startTime);
+		console.log(`[db] Connection pool warmed up (${latencyMs}ms)`);
+	} catch (error) {
+		// Log only the message to avoid exposing sensitive connection details (URLs/credentials)
+		const message = error instanceof Error ? error.message : 'Unknown error';
+		console.error('[db] Failed to warm up connection pool:', message);
+		throw error;
 	}
 }
 
