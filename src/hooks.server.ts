@@ -23,8 +23,9 @@ const SESSION_COOKIE_NAME = 'session';
  * Only runs in non-test environments to avoid interference with tests.
  */
 if (process.env.NODE_ENV !== 'test') {
-	// Warm up database connection pool FIRST to prevent race conditions
-	// where first queries fail due to lazy connection initialization
+	// Warm up database connection pool to reduce likelihood of race conditions
+	// where first queries fail due to lazy connection initialization.
+	// Note: This is async and best-effort; not guaranteed to complete before first request.
 	warmupPool()
 		.then(() => {
 			// Log level persists across restarts via database

@@ -48,7 +48,9 @@ export async function warmupPool(): Promise<void> {
 		const latencyMs = Math.round(performance.now() - startTime);
 		console.log(`[db] Connection pool warmed up (${latencyMs}ms)`);
 	} catch (error) {
-		console.error('[db] Failed to warm up connection pool:', error);
+		// Log only the message to avoid exposing sensitive connection details (URLs/credentials)
+		const message = error instanceof Error ? error.message : 'Unknown error';
+		console.error('[db] Failed to warm up connection pool:', message);
 		throw error;
 	}
 }
