@@ -1,9 +1,18 @@
 """Output log widget for displaying command output."""
 
+from enum import Enum
 from typing import ClassVar
 
 from rich.text import Text
 from textual.widgets import RichLog
+
+
+class CopyResult(Enum):
+    """Result of a clipboard copy operation."""
+
+    SUCCESS = "success"
+    EMPTY = "empty"
+    CLIPBOARD_FAILED = "clipboard_failed"
 
 
 class OutputLog(RichLog):
@@ -81,3 +90,20 @@ class OutputLog(RichLog):
             text = Text.from_ansi(line)
             _ = self.write(text)
         return self
+
+    def get_all_text(self) -> str:
+        """Extract all log content as plain text."""
+        if not self.lines:
+            return ""
+        return "\n".join(strip.text.rstrip() for strip in self.lines)
+
+    def copy_all(self) -> CopyResult:
+        """Copy all log content to clipboard. Returns result indicating success or failure type."""
+        from cr_dev.tui.utils import copy_to_clipboard
+
+        text = self.get_all_text()
+        if not text:
+            return CopyResult.EMPTY
+        if copy_to_clipboard(text):
+            return CopyResult.SUCCESS
+        return CopyResult.CLIPBOARD_FAILED
