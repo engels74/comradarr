@@ -3,7 +3,7 @@ import { json } from '@sveltejs/kit';
 import { eq } from 'drizzle-orm';
 import { getClientIP, isLocalNetworkIP, validateSession } from '$lib/server/auth';
 import { type RequestContext, runWithContext } from '$lib/server/context';
-import { db } from '$lib/server/db';
+import { db, warmupPool } from '$lib/server/db';
 import { logApiKeyUsage, validateApiKey } from '$lib/server/db/queries/api-keys';
 import { getSecuritySettings } from '$lib/server/db/queries/settings';
 import { users } from '$lib/server/db/schema';
@@ -23,13 +23,25 @@ const SESSION_COOKIE_NAME = 'session';
  * Only runs in non-test environments to avoid interference with tests.
  */
 if (process.env.NODE_ENV !== 'test') {
-	// Log level persists across restarts via database
-	initializeLogLevel().catch(() => {
-		// Silently handle errors - logger will fall back to env/default
-	});
+	// Warm up database connection pool FIRST to prevent race conditions
+	// where first queries fail due to lazy connection initialization
+	warmupPool()
+		.then(() => {
+			// Log level persists across restarts via database
+			initializeLogLevel().catch(() => {
+				// Silently handle errors - logger will fall back to env/default
+			});
 
-	// Scheduler is idempotent (safe to call multiple times)
-	initializeScheduler();
+			// Scheduler is idempotent (safe to call multiple times)
+			initializeScheduler();
+		})
+		.catch((error) => {
+			console.error('[startup] Database warmup failed:', error);
+			// Allow server to start anyway - requests will fail gracefully
+			// This mirrors existing behavior where DB errors don't prevent startup
+			initializeLogLevel().catch(() => {});
+			initializeScheduler();
+		});
 }
 
 export const handle: Handle = async ({ event, resolve }) => {
