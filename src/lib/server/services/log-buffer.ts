@@ -33,65 +33,92 @@ export interface LogQueryResult {
 }
 
 const DEFAULT_BUFFER_SIZE = 10000;
-let bufferSize = DEFAULT_BUFFER_SIZE;
-let logBuffer: BufferedLogEntry[] = [];
-let writePosition = 0;
-let totalEntriesWritten = 0;
-let hasWrapped = false;
+
+interface LogBufferState {
+	bufferSize: number;
+	buffer: BufferedLogEntry[];
+	writePosition: number;
+	totalEntriesWritten: number;
+	hasWrapped: boolean;
+}
+
+declare global {
+	var __logBufferState: LogBufferState | undefined;
+}
+
+function getLogBufferState(): LogBufferState {
+	if (!globalThis.__logBufferState) {
+		globalThis.__logBufferState = {
+			bufferSize: DEFAULT_BUFFER_SIZE,
+			buffer: [],
+			writePosition: 0,
+			totalEntriesWritten: 0,
+			hasWrapped: false
+		};
+	}
+	return globalThis.__logBufferState;
+}
 
 // Clears existing entries if size is reduced
 export function configureBufferSize(size: number): void {
+	const state = getLogBufferState();
+
 	if (size < 100) {
 		throw new Error('Buffer size must be at least 100 entries');
 	}
 
-	if (size < bufferSize) {
+	if (size < state.bufferSize) {
 		// Clear and reset when reducing size
 		clearLogBuffer();
 	}
 
-	bufferSize = size;
+	state.bufferSize = size;
 }
 
 export function getBufferConfig(): { size: number; used: number; totalWritten: number } {
+	const state = getLogBufferState();
 	return {
-		size: bufferSize,
-		used: hasWrapped ? bufferSize : writePosition,
-		totalWritten: totalEntriesWritten
+		size: state.bufferSize,
+		used: state.hasWrapped ? state.bufferSize : state.writePosition,
+		totalWritten: state.totalEntriesWritten
 	};
 }
 
 export function clearLogBuffer(): void {
-	logBuffer = [];
-	writePosition = 0;
-	totalEntriesWritten = 0;
-	hasWrapped = false;
+	const state = getLogBufferState();
+	state.buffer = [];
+	state.writePosition = 0;
+	state.totalEntriesWritten = 0;
+	state.hasWrapped = false;
 }
 
 export function addLogEntry(entry: Omit<BufferedLogEntry, 'id'>): void {
+	const state = getLogBufferState();
 	const bufferedEntry: BufferedLogEntry = {
 		...entry,
-		id: ++totalEntriesWritten
+		id: ++state.totalEntriesWritten
 	};
 
-	if (writePosition >= bufferSize) {
-		writePosition = 0;
-		hasWrapped = true;
+	if (state.writePosition >= state.bufferSize) {
+		state.writePosition = 0;
+		state.hasWrapped = true;
 	}
 
-	logBuffer[writePosition] = bufferedEntry;
-	writePosition++;
+	state.buffer[state.writePosition] = bufferedEntry;
+	state.writePosition++;
 }
 
 function getAllEntriesOrdered(): BufferedLogEntry[] {
-	if (!hasWrapped) {
-		return logBuffer.slice(0, writePosition);
+	const state = getLogBufferState();
+
+	if (!state.hasWrapped) {
+		return state.buffer.slice(0, state.writePosition);
 	}
 
 	// When wrapped, entries from writePosition to end are older
 	// than entries from 0 to writePosition
-	const olderEntries = logBuffer.slice(writePosition);
-	const newerEntries = logBuffer.slice(0, writePosition);
+	const olderEntries = state.buffer.slice(state.writePosition);
+	const newerEntries = state.buffer.slice(0, state.writePosition);
 	return [...olderEntries, ...newerEntries];
 }
 
@@ -167,13 +194,15 @@ export function queryLogs(filter?: LogFilter, pagination?: LogPagination): LogQu
 }
 
 export function getLogEntryById(id: number): BufferedLogEntry | null {
-	return logBuffer.find((entry) => entry?.id === id) ?? null;
+	const state = getLogBufferState();
+	return state.buffer.find((entry) => entry?.id === id) ?? null;
 }
 
 export function getUniqueModules(): string[] {
+	const state = getLogBufferState();
 	const modules = new Set<string>();
 
-	for (const entry of logBuffer) {
+	for (const entry of state.buffer) {
 		if (entry) {
 			modules.add(entry.module);
 		}
@@ -183,6 +212,7 @@ export function getUniqueModules(): string[] {
 }
 
 export function getLogLevelCounts(): Record<LogLevel, number> {
+	const state = getLogBufferState();
 	const counts: Record<LogLevel, number> = {
 		error: 0,
 		warn: 0,
@@ -191,7 +221,7 @@ export function getLogLevelCounts(): Record<LogLevel, number> {
 		trace: 0
 	};
 
-	for (const entry of logBuffer) {
+	for (const entry of state.buffer) {
 		if (entry) {
 			counts[entry.level]++;
 		}
@@ -201,6 +231,7 @@ export function getLogLevelCounts(): Record<LogLevel, number> {
 }
 
 export function exportLogsAsJson(filter?: LogFilter): string {
-	const result = queryLogs(filter, { limit: bufferSize, offset: 0 });
+	const state = getLogBufferState();
+	const result = queryLogs(filter, { limit: state.bufferSize, offset: 0 });
 	return JSON.stringify(result.entries, null, 2);
 }
