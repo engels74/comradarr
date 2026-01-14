@@ -56,16 +56,16 @@ export async function getRecentActivity(limit: number = 20): Promise<ActivityIte
 			id: sql<string>`'search-' || ${searchHistory.id}::text`.as('id'),
 			type: sql<'search'>`'search'::text`.as('type'),
 			timestamp: sql<Date>`${searchHistory.createdAt}`.as('timestamp'),
-			outcome: searchHistory.outcome,
+			outcome: sql<string | null>`${searchHistory.outcome}`.as('outcome'),
 			contentType: sql<'episode'>`'episode'::text`.as('content_type'),
-			contentTitle: episodes.title,
-			seriesTitle: series.title,
-			seasonNumber: episodes.seasonNumber,
-			episodeNumber: episodes.episodeNumber,
+			contentTitle: sql<string>`${episodes.title}`.as('content_title'),
+			seriesTitle: sql<string>`${series.title}`.as('series_title'),
+			seasonNumber: sql<number>`${episodes.seasonNumber}`.as('season_number'),
+			episodeNumber: sql<number>`${episodes.episodeNumber}`.as('episode_number'),
 			searchType: sql<null>`NULL::text`.as('search_type'),
-			connectorId: searchHistory.connectorId,
-			connectorName: connectors.name,
-			connectorType: connectors.type
+			connectorId: sql<number>`${searchHistory.connectorId}`.as('connector_id'),
+			connectorName: sql<string>`${connectors.name}`.as('connector_name'),
+			connectorType: sql<string>`${connectors.type}`.as('connector_type')
 		})
 		.from(searchHistory)
 		.innerJoin(connectors, eq(searchHistory.connectorId, connectors.id))
@@ -80,16 +80,16 @@ export async function getRecentActivity(limit: number = 20): Promise<ActivityIte
 			id: sql<string>`'search-' || ${searchHistory.id}::text`.as('id'),
 			type: sql<'search'>`'search'::text`.as('type'),
 			timestamp: sql<Date>`${searchHistory.createdAt}`.as('timestamp'),
-			outcome: searchHistory.outcome,
+			outcome: sql<string | null>`${searchHistory.outcome}`.as('outcome'),
 			contentType: sql<'movie'>`'movie'::text`.as('content_type'),
-			contentTitle: movies.title,
+			contentTitle: sql<string>`${movies.title}`.as('content_title'),
 			seriesTitle: sql<null>`NULL::text`.as('series_title'),
 			seasonNumber: sql<null>`NULL::integer`.as('season_number'),
 			episodeNumber: sql<null>`NULL::integer`.as('episode_number'),
 			searchType: sql<null>`NULL::text`.as('search_type'),
-			connectorId: searchHistory.connectorId,
-			connectorName: connectors.name,
-			connectorType: connectors.type
+			connectorId: sql<number>`${searchHistory.connectorId}`.as('connector_id'),
+			connectorName: sql<string>`${connectors.name}`.as('connector_name'),
+			connectorType: sql<string>`${connectors.type}`.as('connector_type')
 		})
 		.from(searchHistory)
 		.innerJoin(connectors, eq(searchHistory.connectorId, connectors.id))
@@ -104,14 +104,14 @@ export async function getRecentActivity(limit: number = 20): Promise<ActivityIte
 			timestamp: sql<Date>`${searchRegistry.createdAt}`.as('timestamp'),
 			outcome: sql<null>`NULL::text`.as('outcome'),
 			contentType: sql<'episode'>`'episode'::text`.as('content_type'),
-			contentTitle: episodes.title,
-			seriesTitle: series.title,
-			seasonNumber: episodes.seasonNumber,
-			episodeNumber: episodes.episodeNumber,
-			searchType: searchRegistry.searchType,
-			connectorId: searchRegistry.connectorId,
-			connectorName: connectors.name,
-			connectorType: connectors.type
+			contentTitle: sql<string>`${episodes.title}`.as('content_title'),
+			seriesTitle: sql<string>`${series.title}`.as('series_title'),
+			seasonNumber: sql<number>`${episodes.seasonNumber}`.as('season_number'),
+			episodeNumber: sql<number>`${episodes.episodeNumber}`.as('episode_number'),
+			searchType: sql<string>`${searchRegistry.searchType}`.as('search_type'),
+			connectorId: sql<number>`${searchRegistry.connectorId}`.as('connector_id'),
+			connectorName: sql<string>`${connectors.name}`.as('connector_name'),
+			connectorType: sql<string>`${connectors.type}`.as('connector_type')
 		})
 		.from(searchRegistry)
 		.innerJoin(connectors, eq(searchRegistry.connectorId, connectors.id))
@@ -134,14 +134,14 @@ export async function getRecentActivity(limit: number = 20): Promise<ActivityIte
 			timestamp: sql<Date>`${searchRegistry.createdAt}`.as('timestamp'),
 			outcome: sql<null>`NULL::text`.as('outcome'),
 			contentType: sql<'movie'>`'movie'::text`.as('content_type'),
-			contentTitle: movies.title,
+			contentTitle: sql<string>`${movies.title}`.as('content_title'),
 			seriesTitle: sql<null>`NULL::text`.as('series_title'),
 			seasonNumber: sql<null>`NULL::integer`.as('season_number'),
 			episodeNumber: sql<null>`NULL::integer`.as('episode_number'),
-			searchType: searchRegistry.searchType,
-			connectorId: searchRegistry.connectorId,
-			connectorName: connectors.name,
-			connectorType: connectors.type
+			searchType: sql<string>`${searchRegistry.searchType}`.as('search_type'),
+			connectorId: sql<number>`${searchRegistry.connectorId}`.as('connector_id'),
+			connectorName: sql<string>`${connectors.name}`.as('connector_name'),
+			connectorType: sql<string>`${connectors.type}`.as('connector_type')
 		})
 		.from(searchRegistry)
 		.innerJoin(connectors, eq(searchRegistry.connectorId, connectors.id))
@@ -167,9 +167,9 @@ export async function getRecentActivity(limit: number = 20): Promise<ActivityIte
 			seasonNumber: sql<null>`NULL::integer`.as('season_number'),
 			episodeNumber: sql<null>`NULL::integer`.as('episode_number'),
 			searchType: sql<null>`NULL::text`.as('search_type'),
-			connectorId: syncState.connectorId,
-			connectorName: connectors.name,
-			connectorType: connectors.type
+			connectorId: sql<number>`${syncState.connectorId}`.as('connector_id'),
+			connectorName: sql<string>`${connectors.name}`.as('connector_name'),
+			connectorType: sql<string>`${connectors.type}`.as('connector_type')
 		})
 		.from(syncState)
 		.innerJoin(connectors, eq(syncState.connectorId, connectors.id))
@@ -192,20 +192,20 @@ export async function getRecentActivity(limit: number = 20): Promise<ActivityIte
 
 	const results = await db.execute(unionQuery);
 
-	// Map rows to typed ActivityItem
+	// Map rows to typed ActivityItem, normalizing NULL → undefined
 	return (results as Record<string, unknown>[]).map((row) => ({
 		id: row.id as string,
 		type: row.type as 'search' | 'discovery' | 'sync',
 		timestamp: new Date(row.timestamp as string),
-		outcome: row.outcome as string | undefined,
-		contentType: row.content_type as 'episode' | 'movie' | undefined,
-		contentTitle: row.contenttitle as string | undefined,
-		seriesTitle: row.series_title as string | undefined,
-		seasonNumber: row.seasonnumber as number | undefined,
-		episodeNumber: row.episodenumber as number | undefined,
-		searchType: row.search_type as 'gap' | 'upgrade' | undefined,
-		connectorId: row.connectorid as number | undefined,
-		connectorName: row.connectorname as string | undefined,
-		connectorType: row.connectortype as string | undefined
+		outcome: (row.outcome as string | null) ?? undefined,
+		contentType: (row.content_type as 'episode' | 'movie' | null) ?? undefined,
+		contentTitle: (row.content_title as string | null) ?? undefined,
+		seriesTitle: (row.series_title as string | null) ?? undefined,
+		seasonNumber: (row.season_number as number | null) ?? undefined,
+		episodeNumber: (row.episode_number as number | null) ?? undefined,
+		searchType: (row.search_type as 'gap' | 'upgrade' | null) ?? undefined,
+		connectorId: (row.connector_id as number | null) ?? undefined,
+		connectorName: (row.connector_name as string | null) ?? undefined,
+		connectorType: (row.connector_type as string | null) ?? undefined
 	}));
 }

@@ -751,18 +751,18 @@ export async function getTodaySearchStats(): Promise<TodaySearchStats> {
 	const result = await db
 		.select({
 			total: count(),
-			successful: sql<number>`COUNT(*) FILTER (WHERE ${searchHistory.outcome} = 'success')::int`
+			successful: sql<number>`COALESCE(COUNT(*) FILTER (WHERE ${searchHistory.outcome} = 'success'), 0)::int`
 		})
 		.from(searchHistory)
 		.where(sql`${searchHistory.createdAt} >= ${todayStart.toISOString()}`);
 
-	const completedToday = result[0]?.total ?? 0;
-	const successfulToday = result[0]?.successful ?? 0;
+	const completedToday = Number(result[0]?.total) || 0;
+	const successfulToday = Number(result[0]?.successful) || 0;
 	const successRate = completedToday > 0 ? Math.round((successfulToday / completedToday) * 100) : 0;
 
 	return {
 		completedToday,
 		successfulToday,
-		successRate
+		successRate: Number.isNaN(successRate) ? 0 : successRate
 	};
 }
