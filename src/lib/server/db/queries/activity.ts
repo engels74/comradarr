@@ -192,20 +192,20 @@ export async function getRecentActivity(limit: number = 20): Promise<ActivityIte
 
 	const results = await db.execute(unionQuery);
 
-	// Map rows to typed ActivityItem
+	// Map rows to typed ActivityItem, normalizing NULL → undefined
 	return (results as Record<string, unknown>[]).map((row) => ({
 		id: row.id as string,
 		type: row.type as 'search' | 'discovery' | 'sync',
 		timestamp: new Date(row.timestamp as string),
-		outcome: row.outcome as string | undefined,
-		contentType: row.content_type as 'episode' | 'movie' | undefined,
-		contentTitle: row.content_title as string | undefined,
-		seriesTitle: row.series_title as string | undefined,
-		seasonNumber: row.season_number as number | undefined,
-		episodeNumber: row.episode_number as number | undefined,
-		searchType: row.search_type as 'gap' | 'upgrade' | undefined,
-		connectorId: row.connector_id as number | undefined,
-		connectorName: row.connector_name as string | undefined,
-		connectorType: row.connector_type as string | undefined
+		outcome: (row.outcome as string | null) ?? undefined,
+		contentType: (row.content_type as 'episode' | 'movie' | null) ?? undefined,
+		contentTitle: (row.content_title as string | null) ?? undefined,
+		seriesTitle: (row.series_title as string | null) ?? undefined,
+		seasonNumber: (row.season_number as number | null) ?? undefined,
+		episodeNumber: (row.episode_number as number | null) ?? undefined,
+		searchType: (row.search_type as 'gap' | 'upgrade' | null) ?? undefined,
+		connectorId: (row.connector_id as number | null) ?? undefined,
+		connectorName: (row.connector_name as string | null) ?? undefined,
+		connectorType: (row.connector_type as string | null) ?? undefined
 	}));
 }
