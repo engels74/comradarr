@@ -34,7 +34,7 @@
 	"devDependencies": {
 		"@biomejs/biome": "^2.3.11",
 		"@internationalized/date": "^3.10.1",
-		"@j178/prek": "^0.2.27",
+		"@j178/prek": "^0.3.0",
 		"@resvg/resvg-js": "^2.6.2",
 		"@sveltejs/adapter-auto": "^7.0.0",
 		"@sveltejs/kit": "^2.49.4",
