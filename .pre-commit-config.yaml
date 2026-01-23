@@ -34,8 +34,8 @@ repos:
       # Biome formatting and linting on commit
       - id: biome
         name: Format and lint with Biome
-        entry: biome check --write
-        language: bun
+        entry: bunx biome check --write
+        language: system
         types_or:
           - javascript
           - ts
