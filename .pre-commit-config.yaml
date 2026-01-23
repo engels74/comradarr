@@ -36,7 +36,7 @@ repos:
         name: Format and lint with Biome
         entry: biome check --write
         language: bun
-        additional_dependencies: ['@biomejs/biome']
+        language_version: system
         types_or:
           - javascript
           - ts
