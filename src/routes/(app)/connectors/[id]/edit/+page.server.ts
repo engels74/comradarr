@@ -215,7 +215,7 @@ export const actions: Actions = {
 		const formData = await request.formData();
 		const data = {
 			name: formData.get('name'),
-			type: formData.get('type'),
+			type: formData.get('type')?.toString() ?? connector.type,
 			url: formData.get('url'),
 			apiKey: formData.get('apiKey')?.toString() || undefined, // Empty string becomes undefined
 			enabled: formData.get('enabled') === 'true'
