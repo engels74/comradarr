@@ -950,7 +950,7 @@ describe('SonarrClient.getWantedMissing()', () => {
 		globalThis.fetch = createMockFetch(
 			vi.fn().mockImplementation(async () => {
 				callCount++;
-				let response;
+				let response: typeof page1Response;
 				if (callCount === 1) response = page1Response;
 				else if (callCount === 2) response = page2Response;
 				else response = page3Response;

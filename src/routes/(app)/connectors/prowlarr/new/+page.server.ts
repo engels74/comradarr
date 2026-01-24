@@ -10,6 +10,7 @@ import {
 	getProwlarrInstance,
 	prowlarrInstanceNameExists
 } from '$lib/server/db/queries/prowlarr';
+import type { ProwlarrInstance } from '$lib/server/db/schema';
 import { createLogger } from '$lib/server/logger';
 import { ProwlarrClient, prowlarrHealthMonitor } from '$lib/server/services/prowlarr';
 
@@ -168,7 +169,7 @@ export const actions: Actions = {
 		}
 
 		// Create the instance (API key is encrypted automatically)
-		let createdInstance;
+		let createdInstance: ProwlarrInstance;
 		try {
 			createdInstance = await createProwlarrInstance({
 				name: config.name,
