@@ -168,6 +168,20 @@ async function discoverEpisodeUpgrades(
 
 			registriesCreated += inserted.length;
 		}
+
+		// Progress logging for large batches
+		const processedCount = i + batch.length;
+		if (
+			processedCount > 0 &&
+			processedCount % 500 === 0 &&
+			processedCount < episodeUpgrades.length
+		) {
+			logger.info('Upgrade discovery progress', {
+				connectorId,
+				processedItems: processedCount,
+				totalItems: episodeUpgrades.length
+			});
+		}
 	}
 
 	return {
@@ -243,6 +257,16 @@ async function discoverMovieUpgrades(
 				.returning({ id: searchRegistry.id });
 
 			registriesCreated += inserted.length;
+		}
+
+		// Progress logging for large batches
+		const processedCount = i + batch.length;
+		if (processedCount > 0 && processedCount % 500 === 0 && processedCount < movieUpgrades.length) {
+			logger.info('Upgrade discovery progress', {
+				connectorId,
+				processedItems: processedCount,
+				totalItems: movieUpgrades.length
+			});
 		}
 	}
 

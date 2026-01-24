@@ -164,6 +164,16 @@ async function discoverEpisodeGaps(
 
 			registriesCreated += inserted.length;
 		}
+
+		// Progress logging for large batches
+		const processedCount = i + batch.length;
+		if (processedCount > 0 && processedCount % 500 === 0 && processedCount < episodeGaps.length) {
+			logger.info('Gap discovery progress', {
+				connectorId,
+				processedItems: processedCount,
+				totalItems: episodeGaps.length
+			});
+		}
 	}
 
 	return {
@@ -235,6 +245,16 @@ async function discoverMovieGaps(connectorId: number, batchSize: number): Promis
 				.returning({ id: searchRegistry.id });
 
 			registriesCreated += inserted.length;
+		}
+
+		// Progress logging for large batches
+		const processedCount = i + batch.length;
+		if (processedCount > 0 && processedCount % 500 === 0 && processedCount < movieGaps.length) {
+			logger.info('Gap discovery progress', {
+				connectorId,
+				processedItems: processedCount,
+				totalItems: movieGaps.length
+			});
 		}
 	}
 

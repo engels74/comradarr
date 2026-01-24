@@ -181,6 +181,20 @@ async function enqueueEpisodes(
 			.returning({ id: requestQueue.id });
 
 		totalEnqueued += inserted.length;
+
+		// Progress logging for large batches
+		const processedCount = i + batch.length;
+		if (
+			processedCount > 0 &&
+			processedCount % 500 === 0 &&
+			processedCount < itemsToEnqueue.length
+		) {
+			logger.info('Enqueue progress', {
+				connectorId,
+				processedItems: processedCount,
+				totalItems: itemsToEnqueue.length
+			});
+		}
 	}
 
 	return {
@@ -277,6 +291,20 @@ async function enqueueMovies(
 			.returning({ id: requestQueue.id });
 
 		totalEnqueued += inserted.length;
+
+		// Progress logging for large batches
+		const processedCount = i + batch.length;
+		if (
+			processedCount > 0 &&
+			processedCount % 500 === 0 &&
+			processedCount < itemsToEnqueue.length
+		) {
+			logger.info('Enqueue progress', {
+				connectorId,
+				processedItems: processedCount,
+				totalItems: itemsToEnqueue.length
+			});
+		}
 	}
 
 	return {

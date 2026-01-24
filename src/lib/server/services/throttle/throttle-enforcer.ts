@@ -119,6 +119,22 @@ export class ThrottleEnforcer {
 		if (slotResult.acquired) {
 			const remainingBudget =
 				profile.dailyBudget !== null ? profile.dailyBudget - requestsToday - 1 : null;
+
+			// Warn when daily budget approaches 80% threshold (log every 10 requests to avoid spam)
+			if (profile.dailyBudget !== null) {
+				const usedCount = requestsToday + 1;
+				const usagePercent = (usedCount / profile.dailyBudget) * 100;
+				if (usagePercent >= 80 && usedCount % 10 === 0) {
+					logger.info('Daily budget approaching limit', {
+						connectorId,
+						usedPercent: Math.round(usagePercent),
+						used: usedCount,
+						budget: profile.dailyBudget,
+						remaining: profile.dailyBudget - usedCount
+					});
+				}
+			}
+
 			logger.debug('Search dispatch allowed', { connectorId, remainingBudget });
 			return { allowed: true, slotAcquired: true };
 		}

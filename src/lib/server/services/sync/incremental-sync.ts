@@ -19,11 +19,10 @@ export async function runIncrementalSync(
 ): Promise<SyncResult> {
 	const startTime = Date.now();
 
-	logger.debug('Starting incremental sync', {
+	logger.info('Starting incremental sync', {
 		connectorId: connector.id,
 		connectorName: connector.name,
-		type: connector.type,
-		skipRetry: options?.skipRetry ?? false
+		type: connector.type
 	});
 
 	if (!connector.enabled) {

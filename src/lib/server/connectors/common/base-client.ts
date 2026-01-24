@@ -93,7 +93,17 @@ export class BaseArrClient {
 				throw error;
 			}
 
-			logger.debug('API response', { method, endpoint, statusCode: response.status, durationMs });
+			// Warn on slow API responses (>5 seconds)
+			if (durationMs > 5000) {
+				logger.warn('Slow API response', {
+					method,
+					endpoint,
+					statusCode: response.status,
+					durationMs
+				});
+			} else {
+				logger.debug('API response', { method, endpoint, statusCode: response.status, durationMs });
+			}
 
 			return (await response.json()) as T;
 		} catch (error) {
