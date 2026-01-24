@@ -52,16 +52,29 @@ export class NotificationDispatcher {
 		};
 
 		if (channels.length === 0) {
+			logger.debug('No channels configured for event', { eventType });
 			return result;
 		}
 
+		logger.debug('Dispatching notification', { eventType, channelCount: channels.length });
+
 		const sendPromises = channels.map(async (channel) => {
 			if (channel.quietHoursEnabled && isInQuietHours(channel)) {
+				logger.debug('Notification suppressed due to quiet hours', {
+					channelId: channel.id,
+					channelName: channel.name,
+					eventType
+				});
 				const stored = await this.storeForBatching(channel, eventType, eventData);
 				return { type: 'quiet_hours' as const, success: stored };
 			}
 
 			if (channel.batchingEnabled) {
+				logger.debug('Notification queued for batching', {
+					channelId: channel.id,
+					channelName: channel.name,
+					eventType
+				});
 				const stored = await this.storeForBatching(channel, eventType, eventData);
 				return { type: 'batched' as const, success: stored };
 			}
@@ -98,6 +111,15 @@ export class NotificationDispatcher {
 				}
 			}
 		}
+
+		logger.info('Notification dispatch completed', {
+			eventType,
+			totalChannels: result.totalChannels,
+			successCount: result.successCount,
+			failureCount: result.failureCount,
+			batchedCount: result.batchedCount,
+			quietHoursSuppressedCount: result.quietHoursSuppressedCount
+		});
 
 		return result;
 	}

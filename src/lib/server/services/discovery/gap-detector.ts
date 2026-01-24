@@ -1,9 +1,11 @@
 import { and, eq, isNull, sql } from 'drizzle-orm';
 import { db } from '$lib/server/db';
 import { connectors, episodes, movies, searchRegistry } from '$lib/server/db/schema';
+import { createLogger } from '$lib/server/logger';
 import { cleanupResolvedGapRegistries } from '../sync/search-state-cleanup';
 import type { DiscoveryOptions, DiscoveryStats, GapDiscoveryResult } from './types';
 
+const logger = createLogger('gap-detector');
 const DEFAULT_BATCH_SIZE = 1000;
 
 /** Idempotent - uses onConflictDoNothing so running multiple times won't create duplicates. */
@@ -14,6 +16,8 @@ export async function discoverGaps(
 	const startTime = Date.now();
 	const batchSize = options.batchSize ?? DEFAULT_BATCH_SIZE;
 
+	logger.info('Gap discovery started', { connectorId, batchSize });
+
 	try {
 		const connector = await db
 			.select({ id: connectors.id, type: connectors.type })
@@ -22,6 +26,7 @@ export async function discoverGaps(
 			.limit(1);
 
 		if (connector.length === 0) {
+			logger.warn('Connector not found for gap discovery', { connectorId });
 			return {
 				success: false,
 				connectorId,
@@ -38,6 +43,9 @@ export async function discoverGaps(
 		const connectorType = connector[0]!.type as 'sonarr' | 'radarr' | 'whisparr';
 
 		const registriesResolved = await cleanupResolvedGapRegistries(connectorId);
+		if (registriesResolved > 0) {
+			logger.debug('Resolved gap registries cleaned up', { connectorId, registriesResolved });
+		}
 
 		let stats: DiscoveryStats;
 		if (connectorType === 'radarr') {
@@ -50,6 +58,16 @@ export async function discoverGaps(
 		const registriesCreated = stats.episodeRegistriesCreated + stats.movieRegistriesCreated;
 		const registriesSkipped = gapsFound - registriesCreated;
 
+		logger.info('Gap discovery completed', {
+			connectorId,
+			connectorType,
+			gapsFound,
+			registriesCreated,
+			registriesSkipped,
+			registriesResolved,
+			durationMs: Date.now() - startTime
+		});
+
 		return {
 			success: true,
 			connectorId,
@@ -61,6 +79,12 @@ export async function discoverGaps(
 			durationMs: Date.now() - startTime
 		};
 	} catch (error) {
+		const errorMessage = error instanceof Error ? error.message : String(error);
+		logger.error('Gap discovery failed', {
+			connectorId,
+			error: errorMessage,
+			durationMs: Date.now() - startTime
+		});
 		return {
 			success: false,
 			connectorId,
@@ -70,7 +94,7 @@ export async function discoverGaps(
 			registriesSkipped: 0,
 			registriesResolved: 0,
 			durationMs: Date.now() - startTime,
-			error: error instanceof Error ? error.message : String(error)
+			error: errorMessage
 		};
 	}
 }

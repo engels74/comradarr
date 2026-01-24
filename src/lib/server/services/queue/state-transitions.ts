@@ -5,6 +5,7 @@
 import { and, eq, inArray, lte, sql } from 'drizzle-orm';
 import { db } from '$lib/server/db';
 import { episodes, requestQueue, searchRegistry } from '$lib/server/db/schema';
+import { createLogger } from '$lib/server/logger';
 import {
 	calculateBacklogNextEligibleTime,
 	calculateNextEligibleTimeWithConfig,
@@ -19,6 +20,8 @@ import type {
 	SearchState,
 	StateTransitionResult
 } from './types';
+
+const logger = createLogger('state-transitions');
 
 export { calculateNextEligibleTimeWithConfig, shouldMarkExhausted } from './backoff';
 
@@ -44,6 +47,7 @@ export async function markSearchFailed(
 			.limit(1);
 
 		if (current.length === 0) {
+			logger.warn('Search registry entry not found', { searchRegistryId });
 			return {
 				success: false,
 				searchRegistryId,
@@ -57,6 +61,11 @@ export async function markSearchFailed(
 		const previousState = entry.state as SearchState;
 
 		if (previousState !== 'searching') {
+			logger.warn('Invalid state transition attempt', {
+				searchRegistryId,
+				currentState: previousState,
+				expectedState: 'searching'
+			});
 			return {
 				success: false,
 				searchRegistryId,
@@ -97,6 +106,12 @@ export async function markSearchFailed(
 					})
 					.where(eq(searchRegistry.id, searchRegistryId));
 
+				logger.info('Search marked exhausted', {
+					searchRegistryId,
+					attemptCount: newAttemptCount,
+					failureCategory
+				});
+
 				return {
 					success: true,
 					searchRegistryId,
@@ -126,6 +141,13 @@ export async function markSearchFailed(
 				})
 				.where(eq(searchRegistry.id, searchRegistryId));
 
+			logger.info('Search entered backlog tier', {
+				searchRegistryId,
+				backlogTier: newTier,
+				nextEligible: nextEligible.toISOString(),
+				failureCategory
+			});
+
 			return {
 				success: true,
 				searchRegistryId,
@@ -151,6 +173,13 @@ export async function markSearchFailed(
 			})
 			.where(eq(searchRegistry.id, searchRegistryId));
 
+		logger.debug('Search marked failed, entering cooldown', {
+			searchRegistryId,
+			attemptCount: newAttemptCount,
+			failureCategory,
+			nextEligible: nextEligible.toISOString()
+		});
+
 		return {
 			success: true,
 			searchRegistryId,
@@ -160,12 +189,14 @@ export async function markSearchFailed(
 			nextEligible
 		};
 	} catch (error) {
+		const errorMessage = error instanceof Error ? error.message : String(error);
+		logger.error('Mark search failed error', { searchRegistryId, error: errorMessage });
 		return {
 			success: false,
 			searchRegistryId,
 			previousState: 'searching',
 			newState: 'searching',
-			error: error instanceof Error ? error.message : String(error)
+			error: errorMessage
 		};
 	}
 }
@@ -323,6 +354,14 @@ export async function reenqueueEligibleCooldownItems(
 		const itemsReenqueued = updated.length;
 		const itemsSkipped = totalCount - itemsReenqueued;
 
+		if (itemsReenqueued > 0) {
+			logger.info('Cooldown items re-enqueued', {
+				connectorId: connectorId ?? 'all',
+				itemsReenqueued,
+				itemsStillCooling: itemsSkipped
+			});
+		}
+
 		const result: ReenqueueCooldownResult = {
 			success: true,
 			itemsReenqueued,
@@ -336,12 +375,18 @@ export async function reenqueueEligibleCooldownItems(
 
 		return result;
 	} catch (error) {
+		const errorMessage = error instanceof Error ? error.message : String(error);
+		logger.error('Re-enqueue cooldown items failed', {
+			connectorId: connectorId ?? 'all',
+			error: errorMessage
+		});
+
 		const result: ReenqueueCooldownResult = {
 			success: false,
 			itemsReenqueued: 0,
 			itemsSkipped: 0,
 			durationMs: Date.now() - startTime,
-			error: error instanceof Error ? error.message : String(error)
+			error: errorMessage
 		};
 
 		if (connectorId !== undefined) {
@@ -381,6 +426,10 @@ export async function setSearching(searchRegistryId: number): Promise<StateTrans
 
 		if (result.length === 0) {
 			const current = await getSearchState(searchRegistryId);
+			logger.debug('Failed to set searching state', {
+				searchRegistryId,
+				currentState: current ?? 'not found'
+			});
 			return {
 				success: false,
 				searchRegistryId,
@@ -392,6 +441,7 @@ export async function setSearching(searchRegistryId: number): Promise<StateTrans
 			};
 		}
 
+		logger.debug('Search state set to searching', { searchRegistryId });
 		return {
 			success: true,
 			searchRegistryId,
@@ -399,12 +449,14 @@ export async function setSearching(searchRegistryId: number): Promise<StateTrans
 			newState: 'searching'
 		};
 	} catch (error) {
+		const errorMessage = error instanceof Error ? error.message : String(error);
+		logger.error('Set searching state failed', { searchRegistryId, error: errorMessage });
 		return {
 			success: false,
 			searchRegistryId,
 			previousState: 'queued',
 			newState: 'queued',
-			error: error instanceof Error ? error.message : String(error)
+			error: errorMessage
 		};
 	}
 }
@@ -423,6 +475,7 @@ export async function markSearchDispatched(
 			.limit(1);
 
 		if (current.length === 0) {
+			logger.warn('Search registry entry not found for dispatch', { searchRegistryId });
 			return {
 				success: false,
 				searchRegistryId,
@@ -436,6 +489,10 @@ export async function markSearchDispatched(
 		const previousState = entry.state as SearchState;
 
 		if (previousState !== 'searching') {
+			logger.warn('Invalid state for mark dispatched', {
+				searchRegistryId,
+				currentState: previousState
+			});
 			return {
 				success: false,
 				searchRegistryId,
@@ -447,6 +504,7 @@ export async function markSearchDispatched(
 
 		await db.delete(searchRegistry).where(eq(searchRegistry.id, searchRegistryId));
 
+		logger.debug('Search marked as dispatched', { searchRegistryId });
 		return {
 			success: true,
 			searchRegistryId,
@@ -454,12 +512,14 @@ export async function markSearchDispatched(
 			newState: 'searching'
 		};
 	} catch (error) {
+		const errorMessage = error instanceof Error ? error.message : String(error);
+		logger.error('Mark search dispatched failed', { searchRegistryId, error: errorMessage });
 		return {
 			success: false,
 			searchRegistryId,
 			previousState: 'searching',
 			newState: 'searching',
-			error: error instanceof Error ? error.message : String(error)
+			error: errorMessage
 		};
 	}
 }
@@ -576,17 +636,24 @@ export async function cleanupOrphanedSearchingItems(
 			)
 			.onConflictDoNothing();
 
+		logger.info('Orphaned searching items cleaned up', {
+			reverted: orphaned.length,
+			maxAgeMinutes
+		});
+
 		return {
 			success: true,
 			reverted: orphaned.length,
 			requeued: orphaned.length
 		};
 	} catch (error) {
+		const errorMessage = error instanceof Error ? error.message : String(error);
+		logger.error('Cleanup orphaned items failed', { error: errorMessage });
 		return {
 			success: false,
 			reverted: 0,
 			requeued: 0,
-			error: error instanceof Error ? error.message : String(error)
+			error: errorMessage
 		};
 	}
 }

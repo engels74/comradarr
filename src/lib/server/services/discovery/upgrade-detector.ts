@@ -3,9 +3,11 @@
 import { and, eq, isNull, sql } from 'drizzle-orm';
 import { db } from '$lib/server/db';
 import { connectors, episodes, movies, searchRegistry } from '$lib/server/db/schema';
+import { createLogger } from '$lib/server/logger';
 import { cleanupResolvedUpgradeRegistries } from '../sync/search-state-cleanup';
 import type { DiscoveryOptions, DiscoveryStats, UpgradeDiscoveryResult } from './types';
 
+const logger = createLogger('upgrade-detector');
 const DEFAULT_BATCH_SIZE = 1000;
 
 /** Idempotent - uses onConflictDoNothing so running multiple times won't create duplicates. */
@@ -16,6 +18,8 @@ export async function discoverUpgrades(
 	const startTime = Date.now();
 	const batchSize = options.batchSize ?? DEFAULT_BATCH_SIZE;
 
+	logger.info('Upgrade discovery started', { connectorId, batchSize });
+
 	try {
 		const connector = await db
 			.select({ id: connectors.id, type: connectors.type })
@@ -24,6 +28,7 @@ export async function discoverUpgrades(
 			.limit(1);
 
 		if (connector.length === 0) {
+			logger.warn('Connector not found for upgrade discovery', { connectorId });
 			return {
 				success: false,
 				connectorId,
@@ -41,6 +46,9 @@ export async function discoverUpgrades(
 
 		// Clean up registries where qualityCutoffNotMet became false (requirement 4.4)
 		const registriesResolved = await cleanupResolvedUpgradeRegistries(connectorId);
+		if (registriesResolved > 0) {
+			logger.debug('Resolved upgrade registries cleaned up', { connectorId, registriesResolved });
+		}
 
 		let stats: DiscoveryStats;
 		if (connectorType === 'radarr') {
@@ -53,6 +61,16 @@ export async function discoverUpgrades(
 		const registriesCreated = stats.episodeRegistriesCreated + stats.movieRegistriesCreated;
 		const registriesSkipped = upgradesFound - registriesCreated;
 
+		logger.info('Upgrade discovery completed', {
+			connectorId,
+			connectorType,
+			upgradesFound,
+			registriesCreated,
+			registriesSkipped,
+			registriesResolved,
+			durationMs: Date.now() - startTime
+		});
+
 		return {
 			success: true,
 			connectorId,
@@ -64,6 +82,12 @@ export async function discoverUpgrades(
 			durationMs: Date.now() - startTime
 		};
 	} catch (error) {
+		const errorMessage = error instanceof Error ? error.message : String(error);
+		logger.error('Upgrade discovery failed', {
+			connectorId,
+			error: errorMessage,
+			durationMs: Date.now() - startTime
+		});
 		return {
 			success: false,
 			connectorId,
@@ -73,7 +97,7 @@ export async function discoverUpgrades(
 			registriesSkipped: 0,
 			registriesResolved: 0,
 			durationMs: Date.now() - startTime,
-			error: error instanceof Error ? error.message : String(error)
+			error: errorMessage
 		};
 	}
 }
