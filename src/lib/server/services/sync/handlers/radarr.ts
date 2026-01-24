@@ -2,14 +2,20 @@ import { sql } from 'drizzle-orm';
 import type { RadarrClient } from '$lib/server/connectors/radarr/client';
 import { db } from '$lib/server/db';
 import { movies } from '$lib/server/db/schema';
+import { createLogger } from '$lib/server/logger';
 import { mapMovieToDb } from '../mappers';
 
+const logger = createLogger('sync-radarr');
+
 export async function syncRadarrMovies(client: RadarrClient, connectorId: number): Promise<number> {
+	const startTime = Date.now();
 	const apiMovies = await client.getMovies();
 
 	if (apiMovies.length === 0) {
 		return 0;
 	}
+
+	logger.info('Syncing movies from Radarr', { connectorId, movieCount: apiMovies.length });
 
 	const movieRecords = apiMovies.map((movie) => mapMovieToDb(connectorId, movie));
 
@@ -31,6 +37,9 @@ export async function syncRadarrMovies(client: RadarrClient, connectorId: number
 				updatedAt: sql`now()`
 			}
 		});
+
+	const durationMs = Date.now() - startTime;
+	logger.info('Radarr sync completed', { connectorId, movieCount: apiMovies.length, durationMs });
 
 	return apiMovies.length;
 }

@@ -364,6 +364,14 @@ export async function dispatchBatch(
 		options: DispatchOptions;
 	}>
 ): Promise<DispatchResult[]> {
+	if (dispatches.length === 0) {
+		return [];
+	}
+
+	const startTime = Date.now();
+	const connectorId = dispatches[0]!.connectorId;
+	logger.info('Processing search batch', { batchSize: dispatches.length, connectorId });
+
 	const results: DispatchResult[] = [];
 
 	for (const dispatch of dispatches) {
@@ -392,6 +400,19 @@ export async function dispatchBatch(
 			break;
 		}
 	}
+
+	const durationMs = Date.now() - startTime;
+	const successCount = results.filter((r) => r.success).length;
+	const failureCount = results.filter((r) => !r.success && !r.rateLimited).length;
+	const skippedDueToRateLimit = results.filter((r) => r.rateLimited).length;
+
+	logger.info('Search batch completed', {
+		totalDispatched: results.length,
+		successCount,
+		failureCount,
+		skippedDueToRateLimit,
+		durationMs
+	});
 
 	return results;
 }

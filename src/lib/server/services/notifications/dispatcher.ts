@@ -189,6 +189,7 @@ export class NotificationDispatcher {
 			return null;
 		}
 
+		const startTime = Date.now();
 		let historyId: number | undefined;
 		if (!options?.skipHistory) {
 			try {
@@ -214,6 +215,16 @@ export class NotificationDispatcher {
 
 			if (historyId !== undefined) {
 				await this.updateHistory(historyId, result);
+			}
+
+			if (result.success) {
+				const durationMs = Date.now() - startTime;
+				logger.info('Notification delivered', {
+					channelName: channel.name,
+					channelType: channel.type,
+					eventType: payload.eventType,
+					durationMs
+				});
 			}
 
 			return result;

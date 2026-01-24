@@ -74,6 +74,8 @@ export class NotificationBatcher {
 			return result;
 		}
 
+		logger.debug('Processing notification batches', { channelCount: channels.length });
+
 		for (const channel of channels) {
 			try {
 				const channelResult = await this.processBatchesForChannel(channel);
@@ -90,6 +92,15 @@ export class NotificationBatcher {
 					error: error instanceof Error ? error.message : String(error)
 				});
 			}
+		}
+
+		if (result.batchesSent > 0 || result.errors > 0) {
+			logger.info('Notification batches processed', {
+				channelsProcessed: result.channelsProcessed,
+				batchesSent: result.batchesSent,
+				notificationsBatched: result.notificationsBatched,
+				errors: result.errors
+			});
 		}
 
 		return result;
@@ -159,10 +170,19 @@ export class NotificationBatcher {
 		const oldestAgeMs = Date.now() - new Date(oldest.createdAt).getTime();
 
 		if (oldestAgeMs < windowSeconds * 1000) {
+			logger.debug('Batch window not elapsed', {
+				channelName: channel.name,
+				eventType,
+				oldestAgeMs
+			});
 			return null;
 		}
 
 		if (channel.quietHoursEnabled && isInQuietHours(channel)) {
+			logger.debug('Batch skipped - quiet hours', {
+				channelName: channel.name,
+				eventType
+			});
 			return null;
 		}
 
@@ -176,6 +196,13 @@ export class NotificationBatcher {
 			if (sendResult.success) {
 				const ids = toBatch.map((n) => n.id);
 				await markNotificationsAsBatched(ids, batchId);
+
+				logger.info('Notification batch sent', {
+					channelName: channel.name,
+					eventType,
+					notificationCount: toBatch.length,
+					batchId
+				});
 
 				return {
 					channelId: channel.id,

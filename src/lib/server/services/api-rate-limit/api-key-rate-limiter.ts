@@ -9,6 +9,9 @@ import {
 	resetExpiredMinuteWindows,
 	resetMinuteWindow
 } from '$lib/server/db/queries/api-key-rate-limit';
+import { createLogger } from '$lib/server/logger';
+
+const logger = createLogger('api-rate-limiter');
 
 export interface ApiKeyRateLimitResult {
 	allowed: boolean;
@@ -43,14 +46,22 @@ export class ApiKeyRateLimiter {
 		}
 
 		if (requestsThisMinute >= rateLimitPerMinute) {
-			const retryAfterMs = msUntilMinuteWindowExpires(state.minuteWindowStart, now);
+			const retryAfterMs = Math.max(msUntilMinuteWindowExpires(state.minuteWindowStart, now), 1000);
+			logger.warn('API key rate limited', {
+				apiKeyId,
+				limit: rateLimitPerMinute,
+				used: requestsThisMinute,
+				retryAfterMs
+			});
 			return {
 				allowed: false,
 				reason: 'rate_limit',
-				retryAfterMs: Math.max(retryAfterMs, 1000)
+				retryAfterMs
 			};
 		}
 
+		const remaining = rateLimitPerMinute - requestsThisMinute;
+		logger.debug('API key request allowed', { apiKeyId, remaining });
 		return { allowed: true };
 	}
 
@@ -90,7 +101,11 @@ export class ApiKeyRateLimiter {
 	}
 
 	async resetExpiredWindows(): Promise<number> {
-		return resetExpiredMinuteWindows();
+		const windowsReset = await resetExpiredMinuteWindows();
+		if (windowsReset > 0) {
+			logger.info('Rate limit windows reset', { windowsReset });
+		}
+		return windowsReset;
 	}
 }
 
