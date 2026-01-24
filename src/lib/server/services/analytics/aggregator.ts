@@ -128,12 +128,15 @@ export async function aggregateHourlyStats(hourBucket: Date): Promise<Aggregatio
 			statsUpdated++;
 		}
 
+		const durationMs = Date.now() - startTime;
+		logger.info('Hourly analytics aggregated', { eventsProcessed, durationMs });
+
 		return {
 			success: true,
 			hourlyStatsUpdated: statsUpdated,
 			dailyStatsUpdated: 0,
 			eventsProcessed,
-			durationMs: Date.now() - startTime
+			durationMs
 		};
 	} catch (error) {
 		logger.error('Hourly aggregation failed', {
@@ -235,12 +238,15 @@ export async function aggregateDailyStats(dateBucket: Date): Promise<Aggregation
 			statsUpdated++;
 		}
 
+		const durationMs = Date.now() - startTime;
+		logger.info('Daily analytics aggregated', { durationMs });
+
 		return {
 			success: true,
 			hourlyStatsUpdated: 0,
 			dailyStatsUpdated: statsUpdated,
 			eventsProcessed: 0,
-			durationMs: Date.now() - startTime
+			durationMs
 		};
 	} catch (error) {
 		logger.error('Daily aggregation failed', {
@@ -268,7 +274,12 @@ export async function cleanupOldEvents(retentionDays: number = 7): Promise<numbe
 			.where(lt(analyticsEvents.createdAt, cutoff))
 			.returning({ id: analyticsEvents.id });
 
-		return deleted.length;
+		const eventsDeleted = deleted.length;
+		if (eventsDeleted > 0) {
+			logger.info('Old analytics events cleaned up', { eventsDeleted });
+		}
+
+		return eventsDeleted;
 	} catch (error) {
 		logger.error('Failed to cleanup old events', {
 			error: error instanceof Error ? error.message : String(error)

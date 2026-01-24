@@ -209,6 +209,10 @@ export class NotificationDispatcher {
 		}
 
 		try {
+			logger.debug('Sending to notification channel', {
+				channelName: channel.name,
+				channelType: channel.type
+			});
 			const sensitiveConfig = await getDecryptedSensitiveConfig(channel);
 			const sender = getSender(channel.type);
 			const result = await sender.send(channel, sensitiveConfig, payload);

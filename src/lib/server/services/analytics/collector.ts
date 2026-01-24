@@ -33,6 +33,8 @@ class AnalyticsCollector {
 				})
 				.returning({ id: analyticsEvents.id });
 
+			logger.debug('Analytics event recorded', { eventType, connectorId });
+
 			return {
 				success: true,
 				eventId: result[0]?.id

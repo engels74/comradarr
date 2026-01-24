@@ -117,7 +117,9 @@ export class ThrottleEnforcer {
 		}
 
 		if (slotResult.acquired) {
-			logger.debug('Dispatch slot acquired', { connectorId });
+			const remainingBudget =
+				profile.dailyBudget !== null ? profile.dailyBudget - requestsToday - 1 : null;
+			logger.debug('Search dispatch allowed', { connectorId, remainingBudget });
 			return { allowed: true, slotAcquired: true };
 		}
 
