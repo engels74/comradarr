@@ -52,16 +52,29 @@ export class NotificationDispatcher {
 		};
 
 		if (channels.length === 0) {
+			logger.debug('No channels configured for event', { eventType });
 			return result;
 		}
 
+		logger.debug('Dispatching notification', { eventType, channelCount: channels.length });
+
 		const sendPromises = channels.map(async (channel) => {
 			if (channel.quietHoursEnabled && isInQuietHours(channel)) {
+				logger.debug('Notification suppressed due to quiet hours', {
+					channelId: channel.id,
+					channelName: channel.name,
+					eventType
+				});
 				const stored = await this.storeForBatching(channel, eventType, eventData);
 				return { type: 'quiet_hours' as const, success: stored };
 			}
 
 			if (channel.batchingEnabled) {
+				logger.debug('Notification queued for batching', {
+					channelId: channel.id,
+					channelName: channel.name,
+					eventType
+				});
 				const stored = await this.storeForBatching(channel, eventType, eventData);
 				return { type: 'batched' as const, success: stored };
 			}
@@ -98,6 +111,15 @@ export class NotificationDispatcher {
 				}
 			}
 		}
+
+		logger.info('Notification dispatch completed', {
+			eventType,
+			totalChannels: result.totalChannels,
+			successCount: result.successCount,
+			failureCount: result.failureCount,
+			batchedCount: result.batchedCount,
+			quietHoursSuppressedCount: result.quietHoursSuppressedCount
+		});
 
 		return result;
 	}
@@ -167,6 +189,7 @@ export class NotificationDispatcher {
 			return null;
 		}
 
+		const startTime = Date.now();
 		let historyId: number | undefined;
 		if (!options?.skipHistory) {
 			try {
@@ -186,12 +209,26 @@ export class NotificationDispatcher {
 		}
 
 		try {
+			logger.debug('Sending to notification channel', {
+				channelName: channel.name,
+				channelType: channel.type
+			});
 			const sensitiveConfig = await getDecryptedSensitiveConfig(channel);
 			const sender = getSender(channel.type);
 			const result = await sender.send(channel, sensitiveConfig, payload);
 
 			if (historyId !== undefined) {
 				await this.updateHistory(historyId, result);
+			}
+
+			if (result.success) {
+				const durationMs = Date.now() - startTime;
+				logger.info('Notification delivered', {
+					channelName: channel.name,
+					channelType: channel.type,
+					eventType: payload.eventType,
+					durationMs
+				});
 			}
 
 			return result;

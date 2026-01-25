@@ -21,11 +21,10 @@ export async function runFullReconciliation(
 ): Promise<ReconciliationResult> {
 	const startTime = Date.now();
 
-	logger.debug('Starting full reconciliation', {
+	logger.info('Starting full reconciliation', {
 		connectorId: connector.id,
 		connectorName: connector.name,
-		type: connector.type,
-		skipRetry: options?.skipRetry ?? false
+		type: connector.type
 	});
 
 	// Validate connector is enabled

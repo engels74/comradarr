@@ -151,6 +151,8 @@ export class RadarrClient extends BaseArrClient {
 	}
 
 	async sendMoviesSearch(movieIds: number[]): Promise<CommandResponse> {
+		logger.info('Sending movies search command', { movieIds, count: movieIds.length });
+
 		const response = await this.requestWithRetry<unknown>('command', {
 			method: 'POST',
 			body: {
@@ -163,6 +165,8 @@ export class RadarrClient extends BaseArrClient {
 		if (!result.success) {
 			throw new Error(result.error);
 		}
+
+		logger.info('Movies search command accepted', { commandId: result.data.id });
 		return result.data;
 	}
 

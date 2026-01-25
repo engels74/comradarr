@@ -4,8 +4,11 @@ import type { SonarrSeries } from '$lib/server/connectors/sonarr/types';
 import type { WhisparrClient } from '$lib/server/connectors/whisparr/client';
 import { db } from '$lib/server/db';
 import { episodes, seasons, series } from '$lib/server/db/schema';
+import { createLogger } from '$lib/server/logger';
 import { mapEpisodeToDb, mapSeasonToDb, mapSeriesToDb } from '../mappers';
 import type { SyncOptions } from '../types';
+
+const logger = createLogger('sync-sonarr');
 
 const DEFAULT_CONCURRENCY = 5;
 const DEFAULT_REQUEST_DELAY_MS = 100;
@@ -55,6 +58,7 @@ export async function syncSonarrContent(
 	connectorId: number,
 	options?: SyncOptions
 ): Promise<number> {
+	const startTime = Date.now();
 	const concurrency = options?.concurrency ?? DEFAULT_CONCURRENCY;
 	const requestDelayMs = options?.requestDelayMs ?? DEFAULT_REQUEST_DELAY_MS;
 
@@ -63,6 +67,8 @@ export async function syncSonarrContent(
 	if (apiSeriesList.length === 0) {
 		return 0;
 	}
+
+	logger.info('Syncing series from Sonarr', { connectorId, seriesCount: apiSeriesList.length });
 
 	const seriesIdMap = await upsertSeries(connectorId, apiSeriesList);
 	const seasonIdMap = await upsertSeasons(apiSeriesList, seriesIdMap);
@@ -82,6 +88,14 @@ export async function syncSonarrContent(
 	);
 
 	const totalEpisodes = await upsertEpisodes(connectorId, episodeResults, seriesIdMap, seasonIdMap);
+
+	const durationMs = Date.now() - startTime;
+	logger.info('Sonarr sync completed', {
+		connectorId,
+		seriesCount: apiSeriesList.length,
+		episodeCount: totalEpisodes,
+		durationMs
+	});
 
 	return totalEpisodes;
 }

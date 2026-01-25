@@ -21,6 +21,9 @@ import {
 	setPausedUntil,
 	tryAcquireRequestSlot
 } from '$lib/server/db/queries/throttle-state';
+import { createLogger } from '$lib/server/logger';
+
+const logger = createLogger('throttle-enforcer');
 
 export type PauseReason = 'rate_limit' | 'daily_budget_exhausted' | 'manual';
 
@@ -58,10 +61,16 @@ export class ThrottleEnforcer {
 
 		// Check 1: Is connector paused?
 		if (state.pausedUntil && state.pausedUntil > now) {
+			const retryAfterMs = state.pausedUntil.getTime() - now.getTime();
+			logger.debug('Dispatch blocked - connector paused', {
+				connectorId,
+				reason: state.pauseReason,
+				retryAfterMs
+			});
 			return {
 				allowed: false,
 				reason: (state.pauseReason as PauseReason) ?? 'manual',
-				retryAfterMs: state.pausedUntil.getTime() - now.getTime()
+				retryAfterMs
 			};
 		}
 
@@ -78,6 +87,13 @@ export class ThrottleEnforcer {
 			tomorrow.setUTCDate(tomorrow.getUTCDate() + 1);
 			tomorrow.setUTCHours(0, 0, 0, 0);
 			await setPausedUntil(connectorId, tomorrow, 'daily_budget_exhausted');
+
+			logger.info('Daily budget exhausted', {
+				connectorId,
+				budget: profile.dailyBudget,
+				used: requestsToday,
+				resumesAt: tomorrow.toISOString()
+			});
 
 			return {
 				allowed: false,
@@ -101,11 +117,35 @@ export class ThrottleEnforcer {
 		}
 
 		if (slotResult.acquired) {
+			const remainingBudget =
+				profile.dailyBudget !== null ? profile.dailyBudget - requestsToday - 1 : null;
+
+			// Warn when daily budget approaches 80% threshold (log every 10 requests to avoid spam)
+			if (profile.dailyBudget !== null) {
+				const usedCount = requestsToday + 1;
+				const usagePercent = (usedCount / profile.dailyBudget) * 100;
+				if (usagePercent >= 80 && usedCount % 10 === 0) {
+					logger.info('Daily budget approaching limit', {
+						connectorId,
+						usedPercent: Math.round(usagePercent),
+						used: usedCount,
+						budget: profile.dailyBudget,
+						remaining: profile.dailyBudget - usedCount
+					});
+				}
+			}
+
+			logger.debug('Search dispatch allowed', { connectorId, remainingBudget });
 			return { allowed: true, slotAcquired: true };
 		}
 
 		// At per-minute limit - use tracked window start (fresh if reset, original otherwise)
 		const retryAfterMs = msUntilMinuteWindowExpires(minuteWindowStart, now);
+		logger.debug('Dispatch blocked - per-minute limit reached', {
+			connectorId,
+			limit: profile.requestsPerMinute,
+			retryAfterMs
+		});
 		return {
 			allowed: false,
 			reason: 'rate_limit',
@@ -123,6 +163,14 @@ export class ThrottleEnforcer {
 		const pauseSeconds = retryAfterSeconds ?? profile.rateLimitPauseSeconds;
 		const now = new Date();
 		const pauseUntil = new Date(now.getTime() + pauseSeconds * 1000);
+
+		logger.warn('Rate limit received from API', {
+			connectorId,
+			pauseSeconds,
+			pauseUntil: pauseUntil.toISOString(),
+			fromHeader: retryAfterSeconds !== undefined
+		});
+
 		await setPausedUntil(connectorId, pauseUntil, 'rate_limit');
 	}
 
@@ -196,10 +244,16 @@ export class ThrottleEnforcer {
 
 	async pauseDispatch(connectorId: number, durationSeconds: number): Promise<void> {
 		const pauseUntil = new Date(Date.now() + durationSeconds * 1000);
+		logger.info('Connector dispatch paused', {
+			connectorId,
+			durationSeconds,
+			pauseUntil: pauseUntil.toISOString()
+		});
 		await setPausedUntil(connectorId, pauseUntil, 'manual');
 	}
 
 	async resumeDispatch(connectorId: number): Promise<void> {
+		logger.info('Connector dispatch resumed', { connectorId });
 		await setPausedUntil(connectorId, null, null);
 	}
 }

@@ -10,6 +10,7 @@ import {
 	upsertIndexerHealth
 } from '$lib/server/db/queries/prowlarr';
 import type { ProwlarrInstance } from '$lib/server/db/schema';
+import { createLogger } from '$lib/server/logger';
 import { ProwlarrClient } from './client.js';
 import type {
 	CachedIndexerHealth,
@@ -18,6 +19,8 @@ import type {
 	HealthSummary,
 	ProwlarrHealthStatus
 } from './types.js';
+
+const logger = createLogger('prowlarr-health');
 
 const DEFAULT_CHECK_INTERVAL_MS = 5 * 60 * 1000;
 const DEFAULT_STALE_THRESHOLD_MS = 10 * 60 * 1000;
@@ -35,8 +38,11 @@ export class ProwlarrHealthMonitor {
 		const instances = await getEnabledProwlarrInstances();
 
 		if (instances.length === 0) {
+			logger.debug('No enabled Prowlarr instances to check');
 			return [];
 		}
+
+		logger.debug('Checking Prowlarr instances', { count: instances.length });
 
 		// Check instances sequentially to avoid overwhelming Prowlarr
 		const results: HealthCheckResult[] = [];
@@ -44,6 +50,15 @@ export class ProwlarrHealthMonitor {
 			const result = await this.checkInstance(instance);
 			results.push(result);
 		}
+
+		const healthySummary = results.filter((r) => r.status === 'healthy').length;
+		const rateLimitedTotal = results.reduce((sum, r) => sum + r.indexersRateLimited, 0);
+
+		logger.info('Prowlarr health check completed', {
+			instancesChecked: results.length,
+			healthyInstances: healthySummary,
+			totalRateLimitedIndexers: rateLimitedTotal
+		});
 
 		return results;
 	}
@@ -64,6 +79,10 @@ export class ProwlarrHealthMonitor {
 			// First ping to verify connectivity
 			const isOnline = await client.ping();
 			if (!isOnline) {
+				logger.warn('Prowlarr instance offline', {
+					instanceId: instance.id,
+					instanceName: instance.name
+				});
 				await updateProwlarrHealth(instance.id, 'offline');
 				return {
 					instanceId: instance.id,
@@ -95,6 +114,23 @@ export class ProwlarrHealthMonitor {
 			// Update instance health in database
 			await updateProwlarrHealth(instance.id, status);
 
+			if (rateLimitedCount > 0) {
+				logger.warn('Indexers rate limited', {
+					instanceId: instance.id,
+					instanceName: instance.name,
+					rateLimitedCount,
+					totalIndexers: indexerHealth.length
+				});
+			}
+
+			logger.debug('Instance health checked', {
+				instanceId: instance.id,
+				instanceName: instance.name,
+				status,
+				indexersChecked: indexerHealth.length,
+				rateLimitedCount
+			});
+
 			return {
 				instanceId: instance.id,
 				instanceName: instance.name,
@@ -106,6 +142,13 @@ export class ProwlarrHealthMonitor {
 		} catch (error) {
 			// Categorize error and determine status
 			const { status, errorMessage } = this.categorizeError(error);
+
+			logger.error('Prowlarr health check failed', {
+				instanceId: instance.id,
+				instanceName: instance.name,
+				status,
+				error: errorMessage
+			});
 
 			// Update instance health to reflect error
 			await updateProwlarrHealth(instance.id, status);

@@ -15,7 +15,10 @@ import {
 	recordFailedLogin,
 	recordSuccessfulLogin
 } from '$lib/server/db/queries/auth';
+import { createLogger } from '$lib/server/logger';
 import type { Actions, PageServerLoad } from './$types';
+
+const logger = createLogger('auth');
 
 /** Cookie name for session token (must match hooks.server.ts) */
 const SESSION_COOKIE_NAME = 'session';
@@ -49,6 +52,7 @@ export const actions: Actions = {
 		}
 
 		const { username, password } = result.output;
+		const ipAddress = getClientAddress();
 
 		const user = await getUserByUsername(username);
 
@@ -64,6 +68,11 @@ export const actions: Actions = {
 		if (isLocked) {
 			const remainingSeconds = getRemainingLockoutTime(user);
 			const remainingMinutes = Math.ceil((remainingSeconds ?? 0) / 60);
+			logger.warn('Login attempt on locked account', {
+				username,
+				ipAddress,
+				lockoutMinutesRemaining: remainingMinutes
+			});
 			return fail(400, {
 				error: `Account is locked. Try again in ${remainingMinutes} minute${remainingMinutes !== 1 ? 's' : ''}.`,
 				username
@@ -75,6 +84,10 @@ export const actions: Actions = {
 			const loginResult = await recordFailedLogin(user.id);
 
 			if (loginResult.isLocked) {
+				logger.warn('Account locked after failed attempts', {
+					username,
+					lockoutMinutes: loginResult.lockoutMinutes
+				});
 				return fail(400, {
 					error: `Too many failed attempts. Account is locked for ${loginResult.lockoutMinutes} minutes.`,
 					username
@@ -82,6 +95,11 @@ export const actions: Actions = {
 			}
 
 			const remainingAttempts = MAX_FAILED_ATTEMPTS - loginResult.attemptCount;
+			logger.warn('Login failed - invalid credentials', {
+				username,
+				ipAddress,
+				attemptsRemaining: remainingAttempts
+			});
 			const warningMessage =
 				remainingAttempts <= 2
 					? ` (${remainingAttempts} attempt${remainingAttempts !== 1 ? 's' : ''} remaining)`
@@ -96,7 +114,6 @@ export const actions: Actions = {
 		await recordSuccessfulLogin(user.id);
 
 		const userAgent = request.headers.get('user-agent') ?? undefined;
-		const ipAddress = getClientAddress();
 		const sessionId = await createSession(user.id, userAgent, ipAddress);
 
 		cookies.set(SESSION_COOKIE_NAME, sessionId, {
@@ -106,6 +123,8 @@ export const actions: Actions = {
 			sameSite: 'lax',
 			maxAge: SESSION_MAX_AGE
 		});
+
+		logger.info('User logged in', { username, ipAddress });
 
 		redirect(303, '/');
 	}

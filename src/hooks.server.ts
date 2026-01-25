@@ -7,9 +7,11 @@ import { db, warmupPool } from '$lib/server/db';
 import { logApiKeyUsage, validateApiKey } from '$lib/server/db/queries/api-keys';
 import { getSecuritySettings } from '$lib/server/db/queries/settings';
 import { users } from '$lib/server/db/schema';
-import { initializeLogLevel } from '$lib/server/logger';
+import { createLogger, initializeLogLevel } from '$lib/server/logger';
 import { initializeScheduler } from '$lib/server/scheduler';
 import { apiKeyRateLimiter } from '$lib/server/services/api-rate-limit';
+
+const logger = createLogger('auth');
 
 /** Cookie name for session token */
 const SESSION_COOKIE_NAME = 'session';
@@ -78,6 +80,11 @@ export const handle: Handle = async ({ event, resolve }) => {
 					.where(eq(users.id, apiKeyResult.userId))
 					.limit(1);
 				apiKeyUser = userResult[0] ?? null;
+			} else {
+				logger.warn('API key authentication failed', {
+					endpoint: event.url.pathname,
+					reason: 'invalid_key'
+				});
 			}
 		} catch {
 			// Database error during API key/user validation - continue without API key auth
@@ -98,6 +105,8 @@ export const handle: Handle = async ({ event, resolve }) => {
 						apiKeyResult.keyId,
 						apiKeyResult.rateLimitPerMinute
 					);
+
+					logger.warn('API key rate limited', { keyId: apiKeyResult.keyId });
 
 					return json(
 						{
@@ -124,6 +133,12 @@ export const handle: Handle = async ({ event, resolve }) => {
 				event.locals.apiKeyScope = apiKeyResult.scope;
 				event.locals.apiKeyId = apiKeyResult.keyId;
 				event.locals.apiKeyRateLimitPerMinute = apiKeyResult.rateLimitPerMinute;
+
+				logger.debug('API key authenticated', {
+					keyId: apiKeyResult.keyId,
+					scope: apiKeyResult.scope,
+					endpoint: event.url.pathname
+				});
 			} catch {
 				// Rate limiter error - fail closed by rejecting the request
 				return json(

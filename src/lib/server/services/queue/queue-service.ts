@@ -1,6 +1,7 @@
 import { and, asc, desc, eq, inArray, isNull, sql } from 'drizzle-orm';
 import { db } from '$lib/server/db';
 import { connectors, episodes, movies, requestQueue, searchRegistry } from '$lib/server/db/schema';
+import { createLogger } from '$lib/server/logger';
 import { QUEUE_CONFIG } from './config';
 import { calculatePriority } from './priority-calculator';
 import type {
@@ -16,6 +17,8 @@ import type {
 	SearchType
 } from './types';
 
+const logger = createLogger('queue-service');
+
 /** Idempotent - running multiple times won't create duplicates. */
 export async function enqueuePendingItems(
 	connectorId: number,
@@ -25,6 +28,8 @@ export async function enqueuePendingItems(
 	const batchSize = options.batchSize ?? QUEUE_CONFIG.DEFAULT_BATCH_SIZE;
 	const scheduledAt = options.scheduledAt ?? new Date();
 
+	logger.debug('Enqueue started', { connectorId, batchSize });
+
 	try {
 		const connector = await db
 			.select({ id: connectors.id, type: connectors.type })
@@ -33,6 +38,7 @@ export async function enqueuePendingItems(
 			.limit(1);
 
 		if (connector.length === 0) {
+			logger.warn('Connector not found for enqueue', { connectorId });
 			return {
 				success: false,
 				connectorId,
@@ -58,6 +64,16 @@ export async function enqueuePendingItems(
 			totalSkipped = result.skipped;
 		}
 
+		if (totalEnqueued > 0) {
+			logger.info('Items enqueued', {
+				connectorId,
+				connectorType,
+				itemsEnqueued: totalEnqueued,
+				itemsSkipped: totalSkipped,
+				durationMs: Date.now() - startTime
+			});
+		}
+
 		return {
 			success: true,
 			connectorId,
@@ -66,13 +82,15 @@ export async function enqueuePendingItems(
 			durationMs: Date.now() - startTime
 		};
 	} catch (error) {
+		const errorMessage = error instanceof Error ? error.message : String(error);
+		logger.error('Enqueue failed', { connectorId, error: errorMessage });
 		return {
 			success: false,
 			connectorId,
 			itemsEnqueued: 0,
 			itemsSkipped: 0,
 			durationMs: Date.now() - startTime,
-			error: error instanceof Error ? error.message : String(error)
+			error: errorMessage
 		};
 	}
 }
@@ -163,6 +181,20 @@ async function enqueueEpisodes(
 			.returning({ id: requestQueue.id });
 
 		totalEnqueued += inserted.length;
+
+		// Progress logging for large batches
+		const processedCount = i + batch.length;
+		if (
+			processedCount > 0 &&
+			processedCount % 500 === 0 &&
+			processedCount < itemsToEnqueue.length
+		) {
+			logger.info('Enqueue progress', {
+				connectorId,
+				processedItems: processedCount,
+				totalItems: itemsToEnqueue.length
+			});
+		}
 	}
 
 	return {
@@ -259,6 +291,20 @@ async function enqueueMovies(
 			.returning({ id: requestQueue.id });
 
 		totalEnqueued += inserted.length;
+
+		// Progress logging for large batches
+		const processedCount = i + batch.length;
+		if (
+			processedCount > 0 &&
+			processedCount % 500 === 0 &&
+			processedCount < itemsToEnqueue.length
+		) {
+			logger.info('Enqueue progress', {
+				connectorId,
+				processedItems: processedCount,
+				totalItems: itemsToEnqueue.length
+			});
+		}
 	}
 
 	return {
@@ -287,6 +333,7 @@ export async function dequeuePriorityItems(
 			.limit(1);
 
 		if (connector.length === 0) {
+			logger.warn('Connector not found for dequeue', { connectorId });
 			return {
 				success: false,
 				connectorId,
@@ -297,6 +344,7 @@ export async function dequeuePriorityItems(
 		}
 
 		if (connector[0]!.queuePaused) {
+			logger.debug('Queue paused, skipping dequeue', { connectorId });
 			return {
 				success: true,
 				connectorId,
@@ -353,6 +401,12 @@ export async function dequeuePriorityItems(
 			scheduledAt: item.scheduledAt
 		}));
 
+		logger.info('Items dequeued', {
+			connectorId,
+			itemsDequeued: items.length,
+			durationMs: Date.now() - startTime
+		});
+
 		return {
 			success: true,
 			connectorId,
@@ -360,12 +414,14 @@ export async function dequeuePriorityItems(
 			durationMs: Date.now() - startTime
 		};
 	} catch (error) {
+		const errorMessage = error instanceof Error ? error.message : String(error);
+		logger.error('Dequeue failed', { connectorId, error: errorMessage });
 		return {
 			success: false,
 			connectorId,
 			items: [],
 			durationMs: Date.now() - startTime,
-			error: error instanceof Error ? error.message : String(error)
+			error: errorMessage
 		};
 	}
 }
@@ -384,6 +440,7 @@ export async function pauseQueue(connectorId: number): Promise<QueueControlResul
 			.returning({ id: connectors.id });
 
 		if (result.length === 0) {
+			logger.warn('Connector not found for pause', { connectorId });
 			return {
 				success: false,
 				connectorId,
@@ -393,6 +450,7 @@ export async function pauseQueue(connectorId: number): Promise<QueueControlResul
 			};
 		}
 
+		logger.info('Queue paused', { connectorId });
 		return {
 			success: true,
 			connectorId,
@@ -400,12 +458,14 @@ export async function pauseQueue(connectorId: number): Promise<QueueControlResul
 			durationMs: Date.now() - startTime
 		};
 	} catch (error) {
+		const errorMessage = error instanceof Error ? error.message : String(error);
+		logger.error('Pause queue failed', { connectorId, error: errorMessage });
 		return {
 			success: false,
 			connectorId,
 			itemsAffected: 0,
 			durationMs: Date.now() - startTime,
-			error: error instanceof Error ? error.message : String(error)
+			error: errorMessage
 		};
 	}
 }
@@ -424,6 +484,7 @@ export async function resumeQueue(connectorId: number): Promise<QueueControlResu
 			.returning({ id: connectors.id });
 
 		if (result.length === 0) {
+			logger.warn('Connector not found for resume', { connectorId });
 			return {
 				success: false,
 				connectorId,
@@ -433,6 +494,7 @@ export async function resumeQueue(connectorId: number): Promise<QueueControlResu
 			};
 		}
 
+		logger.info('Queue resumed', { connectorId });
 		return {
 			success: true,
 			connectorId,
@@ -440,12 +502,14 @@ export async function resumeQueue(connectorId: number): Promise<QueueControlResu
 			durationMs: Date.now() - startTime
 		};
 	} catch (error) {
+		const errorMessage = error instanceof Error ? error.message : String(error);
+		logger.error('Resume queue failed', { connectorId, error: errorMessage });
 		return {
 			success: false,
 			connectorId,
 			itemsAffected: 0,
 			durationMs: Date.now() - startTime,
-			error: error instanceof Error ? error.message : String(error)
+			error: errorMessage
 		};
 	}
 }
@@ -493,6 +557,7 @@ export async function clearQueue(connectorId?: number): Promise<QueueControlResu
 				.where(and(inArray(searchRegistry.id, registryIds), eq(searchRegistry.state, 'queued')));
 		}
 
+		logger.info('Queue cleared', { connectorId: connectorId ?? 'all', itemsCleared: deletedCount });
 		return {
 			success: true,
 			connectorId: connectorId ?? null,
@@ -500,12 +565,14 @@ export async function clearQueue(connectorId?: number): Promise<QueueControlResu
 			durationMs: Date.now() - startTime
 		};
 	} catch (error) {
+		const errorMessage = error instanceof Error ? error.message : String(error);
+		logger.error('Clear queue failed', { connectorId: connectorId ?? 'all', error: errorMessage });
 		return {
 			success: false,
 			connectorId: connectorId ?? null,
 			itemsAffected: 0,
 			durationMs: Date.now() - startTime,
-			error: error instanceof Error ? error.message : String(error)
+			error: errorMessage
 		};
 	}
 }

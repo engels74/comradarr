@@ -1,3 +1,4 @@
+import { createLogger } from '$lib/server/logger';
 import {
 	type ArrClientError,
 	AuthenticationError,
@@ -17,6 +18,8 @@ import type {
 	RetryConfig,
 	SystemStatus
 } from './types.js';
+
+const logger = createLogger('arr-client');
 
 const DEFAULT_TIMEOUT = 30000;
 const DEFAULT_USER_AGENT = 'Comradarr/1.0';
@@ -45,6 +48,10 @@ export class BaseArrClient {
 	protected async request<T>(endpoint: string, options: RequestOptions = {}): Promise<T> {
 		const url = this.buildUrl(endpoint);
 		const timeout = options.timeout ?? this.timeout;
+		const method = options.method ?? 'GET';
+		const startTime = performance.now();
+
+		logger.debug('API request', { method, endpoint, baseUrl: this.baseUrl });
 
 		const controller = new AbortController();
 		const timeoutId = setTimeout(() => controller.abort(), timeout);
@@ -55,7 +62,7 @@ export class BaseArrClient {
 
 		try {
 			const requestInit: RequestInit = {
-				method: options.method ?? 'GET',
+				method,
 				headers: {
 					'X-Api-Key': this.apiKey,
 					'Content-Type': 'application/json',
@@ -70,6 +77,7 @@ export class BaseArrClient {
 			}
 
 			const response = await fetch(url, requestInit);
+			const durationMs = Math.round(performance.now() - startTime);
 
 			clearTimeout(timeoutId);
 
@@ -77,10 +85,31 @@ export class BaseArrClient {
 				throw this.handleErrorResponse(response, endpoint);
 			}
 
+			// Warn on slow API responses (>5 seconds)
+			if (durationMs > 5000) {
+				logger.warn('Slow API response', {
+					method,
+					endpoint,
+					statusCode: response.status,
+					durationMs
+				});
+			} else {
+				logger.debug('API response', { method, endpoint, statusCode: response.status, durationMs });
+			}
+
 			return (await response.json()) as T;
 		} catch (error) {
 			clearTimeout(timeoutId);
-			throw this.categorizeError(error, timeout);
+			const categorized = this.categorizeError(error, timeout);
+			const durationMs = Math.round(performance.now() - startTime);
+			logger.warn('API request failed', {
+				method,
+				endpoint,
+				durationMs,
+				errorType: categorized.name,
+				errorMessage: categorized.message
+			});
+			throw categorized;
 		}
 	}
 

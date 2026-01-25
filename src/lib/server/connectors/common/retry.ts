@@ -1,5 +1,8 @@
+import { createLogger } from '$lib/server/logger';
 import { isRetryableError, RateLimitError } from './errors.js';
 import type { RetryConfig } from './types.js';
+
+const logger = createLogger('arr-retry');
 
 export const DEFAULT_RETRY_CONFIG: Required<RetryConfig> = {
 	maxRetries: 3,
@@ -36,7 +39,11 @@ export async function withRetry<T>(fn: () => Promise<T>, config?: RetryConfig): 
 
 	for (let attempt = 0; attempt <= resolvedConfig.maxRetries; attempt++) {
 		try {
-			return await fn();
+			const result = await fn();
+			if (attempt > 0) {
+				logger.info('Retry succeeded', { attempt, maxRetries: resolvedConfig.maxRetries });
+			}
+			return result;
 		} catch (error) {
 			lastError = error;
 
@@ -44,14 +51,33 @@ export async function withRetry<T>(fn: () => Promise<T>, config?: RetryConfig): 
 			const shouldRetry = isRetryableError(error);
 
 			if (isLastAttempt || !shouldRetry) {
+				if (attempt > 0) {
+					logger.warn('All retry attempts exhausted', {
+						attempts: attempt + 1,
+						errorType: error instanceof Error ? error.name : 'unknown',
+						errorMessage: error instanceof Error ? error.message : String(error)
+					});
+				}
 				throw error;
 			}
 
 			let delay: number;
 			if (error instanceof RateLimitError && error.retryAfter !== undefined) {
 				delay = error.retryAfter * 1000;
+				logger.debug('Rate limited, waiting for retry-after', {
+					attempt: attempt + 1,
+					maxRetries: resolvedConfig.maxRetries,
+					delayMs: delay,
+					retryAfterSeconds: error.retryAfter
+				});
 			} else {
 				delay = calculateBackoffDelay(attempt, resolvedConfig);
+				logger.debug('Retrying after error', {
+					attempt: attempt + 1,
+					maxRetries: resolvedConfig.maxRetries,
+					delayMs: delay,
+					errorType: error instanceof Error ? error.name : 'unknown'
+				});
 			}
 
 			await sleep(delay);
