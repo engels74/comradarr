@@ -65,6 +65,8 @@ export const load: PageServerLoad = async ({ url, depends }) => {
 			type: string;
 			queuedCount: number;
 			searchingCount: number;
+			minuteWindowStart: string | null;
+			minuteWindowExpiry: string | null;
 		}
 	> = {};
 
@@ -77,7 +79,9 @@ export const load: PageServerLoad = async ({ url, depends }) => {
 			name: connector?.name ?? 'Unknown',
 			type: connector?.type ?? 'unknown',
 			queuedCount: counts?.queuedCount ?? 0,
-			searchingCount: counts?.searchingCount ?? 0
+			searchingCount: counts?.searchingCount ?? 0,
+			minuteWindowStart: info.minuteWindowStart?.toISOString() ?? null,
+			minuteWindowExpiry: info.minuteWindowExpiry?.toISOString() ?? null
 		};
 	}
 
