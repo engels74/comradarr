@@ -1,7 +1,10 @@
 import { SQL } from 'bun';
 import { sql } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/bun-sql';
+import { createLogger } from '$lib/server/logger';
 import * as schema from './schema';
+
+const logger = createLogger('db');
 
 declare global {
 	var __dbClient: SQL | undefined;
@@ -9,7 +12,7 @@ declare global {
 
 function getOrCreateClient(): SQL {
 	if (!globalThis.__dbClient) {
-		console.log('[db] Creating new SQL client');
+		logger.info('Creating new SQL client');
 		globalThis.__dbClient = new SQL({
 			url: process.env.DATABASE_URL!,
 			max: 20,
@@ -18,7 +21,7 @@ function getOrCreateClient(): SQL {
 			connectionTimeout: 30
 		});
 	} else {
-		console.log('[db] Reusing existing SQL client');
+		logger.debug('Reusing existing SQL client');
 	}
 	return globalThis.__dbClient;
 }
@@ -46,11 +49,11 @@ export async function warmupPool(): Promise<void> {
 	try {
 		await db.execute(sql`SELECT 1`);
 		const latencyMs = Math.round(performance.now() - startTime);
-		console.log(`[db] Connection pool warmed up (${latencyMs}ms)`);
+		logger.info('Connection pool warmed up', { latencyMs });
 	} catch (error) {
-		// Log only the message to avoid exposing sensitive connection details (URLs/credentials)
-		const message = error instanceof Error ? error.message : 'Unknown error';
-		console.error('[db] Failed to warm up connection pool:', message);
+		logger.error('Failed to warm up connection pool', {
+			error: error instanceof Error ? error.message : 'Unknown error'
+		});
 		throw error;
 	}
 }
@@ -61,11 +64,15 @@ const createShutdownHandler = (signal: 'SIGTERM' | 'SIGINT') => {
 	const handler = () => {
 		if (shuttingDown) return;
 		shuttingDown = true;
-		console.log(`[db] Received ${signal}, closing connection pool...`);
+		logger.info('Received shutdown signal', { signal });
 
 		closePool()
-			.then(() => console.log('[db] Connection pool closed'))
-			.catch((err) => console.error('[db] Error closing pool:', err))
+			.then(() => logger.info('Connection pool closed'))
+			.catch((err) =>
+				logger.error('Error closing connection pool', {
+					error: err instanceof Error ? err.message : 'Unknown error'
+				})
+			)
 			.finally(() => {
 				process.off(signal, handler);
 				setTimeout(() => process.kill(process.pid, signal), 100);

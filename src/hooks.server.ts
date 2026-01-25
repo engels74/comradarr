@@ -166,10 +166,12 @@ export const handle: Handle = async ({ event, resolve }) => {
 				event.locals.user = await validateSession(sessionId);
 				if (event.locals.user) {
 					event.locals.sessionId = sessionId;
+					logger.debug('Session authenticated', { userId: event.locals.user.id });
 				}
 			} catch {
 				// Database error during session validation - treat as unauthenticated
 				// but preserve the cookie so the session works when the DB recovers
+				logger.debug('Session validation failed - database error');
 				event.locals.user = null;
 			}
 		} else {
@@ -192,6 +194,7 @@ export const handle: Handle = async ({ event, resolve }) => {
 						displayName: 'Local Network',
 						role: 'admin'
 					};
+					logger.debug('Local network bypass authenticated', { clientIP });
 				}
 			}
 		} catch {

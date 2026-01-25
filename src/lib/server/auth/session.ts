@@ -6,6 +6,9 @@
 import { eq, lt } from 'drizzle-orm';
 import { db } from '$lib/server/db';
 import { sessions, users } from '$lib/server/db/schema';
+import { createLogger } from '$lib/server/logger';
+
+const logger = createLogger('session');
 
 const SESSION_DURATION_MS = 7 * 24 * 60 * 60 * 1000;
 const SESSION_ID_LENGTH = 64;
@@ -39,11 +42,14 @@ export async function createSession(
 		ipAddress: ipAddress ?? null
 	});
 
+	logger.debug('Session created', { userId, expiresAt: expiresAt.toISOString() });
+
 	return sessionId;
 }
 
 export async function validateSession(sessionId: string): Promise<SessionUser | null> {
 	if (!sessionId || sessionId.length !== SESSION_ID_LENGTH) {
+		logger.debug('Invalid session format');
 		return null;
 	}
 
@@ -64,10 +70,12 @@ export async function validateSession(sessionId: string): Promise<SessionUser | 
 
 	const row = result[0];
 	if (!row) {
+		logger.debug('Session not found');
 		return null;
 	}
 
 	if (row.session.expiresAt < new Date()) {
+		logger.debug('Session expired', { userId: row.user.id });
 		await deleteSession(sessionId);
 		return null;
 	}
@@ -77,19 +85,24 @@ export async function validateSession(sessionId: string): Promise<SessionUser | 
 		.set({ lastAccessedAt: new Date() })
 		.where(eq(sessions.id, sessionId))
 		.execute()
-		.catch(() => {
-			/* ignore errors - non-critical update */
+		.catch((error) => {
+			logger.warn('Failed to update session activity', {
+				error: error instanceof Error ? error.message : 'Unknown error'
+			});
 		});
 
+	logger.trace('Session validated', { userId: row.user.id });
 	return row.user;
 }
 
 export async function deleteSession(sessionId: string): Promise<void> {
 	await db.delete(sessions).where(eq(sessions.id, sessionId));
+	logger.debug('Session deleted');
 }
 
 export async function deleteAllUserSessions(userId: number): Promise<void> {
 	await db.delete(sessions).where(eq(sessions.userId, userId));
+	logger.info('All user sessions deleted', { userId });
 }
 
 export async function cleanupExpiredSessions(): Promise<number> {
@@ -98,5 +111,6 @@ export async function cleanupExpiredSessions(): Promise<number> {
 		.where(lt(sessions.expiresAt, new Date()))
 		.returning({ id: sessions.id });
 
+	logger.info('Expired sessions cleaned up', { count: result.length });
 	return result.length;
 }

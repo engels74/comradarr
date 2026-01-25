@@ -115,6 +115,7 @@ export const actions: Actions = {
 
 		const userAgent = request.headers.get('user-agent') ?? undefined;
 		const sessionId = await createSession(user.id, userAgent, ipAddress);
+		logger.debug('Session created for user', { userId: user.id, username });
 
 		cookies.set(SESSION_COOKIE_NAME, sessionId, {
 			path: '/',

@@ -39,11 +39,6 @@ export class RadarrClient extends BaseArrClient {
 	async getMovies(): Promise<RadarrMovie[]> {
 		const response = await this.requestWithRetry<unknown[]>('movie');
 
-		logger.debug('API response received', {
-			responseLength: Array.isArray(response) ? response.length : 'not an array',
-			responseType: typeof response
-		});
-
 		// Guard against non-array responses (e.g., error objects)
 		if (!Array.isArray(response)) {
 			throw new Error(`Expected array response from /movie endpoint, got ${typeof response}`);
