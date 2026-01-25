@@ -262,6 +262,8 @@ function formatRelativeTime(date: Date | string | null): string {
 
 									if (result.type === 'success' && result.data?.success) {
 										toastStore.success(result.data.message as string);
+									} else if (result.type === 'failure' && result.data?.error) {
+										toastStore.error(result.data.error as string);
 									}
 								};
 							}}
@@ -284,6 +286,8 @@ function formatRelativeTime(date: Date | string | null): string {
 
 										if (result.type === 'success' && result.data?.success) {
 											toastStore.success(result.data.message as string);
+										} else if (result.type === 'failure' && result.data?.error) {
+											toastStore.error(result.data.error as string);
 										}
 									};
 								}}
@@ -304,6 +308,8 @@ function formatRelativeTime(date: Date | string | null): string {
 
 										if (result.type === 'success' && result.data?.success) {
 											toastStore.success(result.data.message as string);
+										} else if (result.type === 'failure' && result.data?.error) {
+											toastStore.error(result.data.error as string);
 										}
 									};
 								}}
@@ -511,6 +517,8 @@ function formatRelativeTime(date: Date | string | null): string {
 
 								if (result.type === 'success' && result.data?.success) {
 									toastStore.success(result.data.message as string);
+								} else if (result.type === 'failure' && result.data?.error) {
+									toastStore.error(result.data.error as string);
 								}
 							};
 						}}

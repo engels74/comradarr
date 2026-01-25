@@ -86,6 +86,7 @@ export async function attemptReconnect(
 
 		if (!isReachable) {
 			const nextReconnectAt = calculateNextReconnectTime(attemptNumber);
+			await updateConnectorHealth(connector.id, 'offline');
 			await incrementReconnectAttempts(
 				connector.id,
 				nextReconnectAt,
@@ -220,6 +221,7 @@ export async function triggerManualReconnect(connectorId: number): Promise<Recon
 	await updateReconnectState(connectorId, {
 		reconnectAttempts: 0,
 		nextReconnectAt: null,
+		reconnectStartedAt: new Date(),
 		lastReconnectError: null,
 		reconnectPaused: false
 	});
@@ -253,6 +255,7 @@ export async function pauseConnectorReconnect(connectorId: number): Promise<void
 }
 
 export async function resumeConnectorReconnect(connectorId: number): Promise<void> {
+	await ensureSyncStateExists(connectorId);
 	const state = await getReconnectState(connectorId);
 	const nextReconnectAt = calculateNextReconnectTime(state?.reconnectAttempts ?? 0);
 
