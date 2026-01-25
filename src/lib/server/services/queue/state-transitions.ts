@@ -293,6 +293,8 @@ export async function markSearchExhausted(
 			})
 			.where(eq(searchRegistry.id, searchRegistryId));
 
+		logger.info('Search marked exhausted', { searchRegistryId, previousState });
+
 		return {
 			success: true,
 			searchRegistryId,
@@ -577,6 +579,13 @@ export async function revertToQueued(searchRegistryIds: number[]): Promise<Rever
 					}))
 				)
 				.onConflictDoNothing();
+		}
+
+		if (searchingItems.length > 0 || allToRequeue.length > 0) {
+			logger.debug('Items reverted to queued', {
+				reverted: searchingItems.length,
+				requeued: allToRequeue.length
+			});
 		}
 
 		return {
