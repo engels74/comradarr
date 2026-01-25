@@ -234,7 +234,7 @@ export async function initializeReconnectForOfflineConnector(connectorId: number
 
 	const currentState = await getReconnectState(connectorId);
 
-	if (currentState?.reconnectStartedAt !== null) {
+	if (currentState && currentState.reconnectStartedAt !== null) {
 		return;
 	}
 

@@ -145,13 +145,15 @@ const truncatedUrl = $derived(() => {
 					use:enhance={() => {
 						isReconnecting = true;
 						return async ({ result, update }) => {
-							await update();
-							isReconnecting = false;
-
-							if (result.type === 'success' && result.data?.success) {
-								toastStore.success(result.data.message as string);
-							} else if (result.type === 'success' && result.data?.error) {
-								toastStore.error(result.data.error as string);
+							try {
+								await update();
+								if (result.type === 'success' && result.data?.success) {
+									toastStore.success(result.data.message as string);
+								} else if (result.type === 'success' && result.data?.error) {
+									toastStore.error(result.data.error as string);
+								}
+							} finally {
+								isReconnecting = false;
 							}
 						};
 					}}

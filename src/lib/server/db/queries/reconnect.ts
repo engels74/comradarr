@@ -182,15 +182,5 @@ export async function incrementReconnectAttempts(
 }
 
 export async function ensureSyncStateExists(connectorId: number): Promise<void> {
-	const existing = await db
-		.select({ id: syncState.id })
-		.from(syncState)
-		.where(eq(syncState.connectorId, connectorId))
-		.limit(1);
-
-	if (existing.length === 0) {
-		await db.insert(syncState).values({
-			connectorId
-		});
-	}
+	await db.insert(syncState).values({ connectorId }).onConflictDoNothing();
 }

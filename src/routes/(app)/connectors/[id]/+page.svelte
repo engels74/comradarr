@@ -257,13 +257,15 @@ function formatRelativeTime(date: Date | string | null): string {
 							use:enhance={() => {
 								isReconnecting = true;
 								return async ({ result, update }) => {
-									await update();
-									isReconnecting = false;
-
+									try {
+										await update();
 									if (result.type === 'success' && result.data?.success) {
 										toastStore.success(result.data.message as string);
 									} else if (result.type === 'failure' && result.data?.error) {
 										toastStore.error(result.data.error as string);
+									}
+									} finally {
+										isReconnecting = false;
 									}
 								};
 							}}
@@ -281,13 +283,15 @@ function formatRelativeTime(date: Date | string | null): string {
 								use:enhance={() => {
 									isResumingReconnect = true;
 									return async ({ result, update }) => {
-										await update();
-										isResumingReconnect = false;
-
+										try {
+											await update();
 										if (result.type === 'success' && result.data?.success) {
 											toastStore.success(result.data.message as string);
 										} else if (result.type === 'failure' && result.data?.error) {
 											toastStore.error(result.data.error as string);
+										}
+										} finally {
+											isResumingReconnect = false;
 										}
 									};
 								}}
@@ -303,13 +307,15 @@ function formatRelativeTime(date: Date | string | null): string {
 								use:enhance={() => {
 									isPausingReconnect = true;
 									return async ({ result, update }) => {
-										await update();
-										isPausingReconnect = false;
-
+										try {
+											await update();
 										if (result.type === 'success' && result.data?.success) {
 											toastStore.success(result.data.message as string);
 										} else if (result.type === 'failure' && result.data?.error) {
 											toastStore.error(result.data.error as string);
+										}
+										} finally {
+											isPausingReconnect = false;
 										}
 									};
 								}}
@@ -437,12 +443,13 @@ function formatRelativeTime(date: Date | string | null): string {
 					use:enhance={() => {
 						isTestingConnection = true;
 						return async ({ result, update }) => {
-							await update();
-							isTestingConnection = false;
-
-							// Show toast on success
-							if (result.type === 'success' && result.data?.success) {
-								toastStore.success(result.data.message as string);
+							try {
+								await update();
+								if (result.type === 'success' && result.data?.success) {
+									toastStore.success(result.data.message as string);
+								}
+							} finally {
+								isTestingConnection = false;
 							}
 						};
 					}}
@@ -459,12 +466,13 @@ function formatRelativeTime(date: Date | string | null): string {
 					use:enhance={() => {
 						isTriggeringSync = true;
 						return async ({ result, update }) => {
-							await update();
-							isTriggeringSync = false;
-
-							// Show toast on success
-							if (result.type === 'success' && result.data?.success) {
-								toastStore.success(result.data.message as string);
+							try {
+								await update();
+								if (result.type === 'success' && result.data?.success) {
+									toastStore.success(result.data.message as string);
+								}
+							} finally {
+								isTriggeringSync = false;
 							}
 						};
 					}}
@@ -486,12 +494,13 @@ function formatRelativeTime(date: Date | string | null): string {
 						use:enhance={() => {
 							isClearingFailedSearches = true;
 							return async ({ result, update }) => {
-								await update();
-								isClearingFailedSearches = false;
-
-								// Show toast on success
-								if (result.type === 'success' && result.data?.success) {
-									toastStore.success(result.data.message as string);
+								try {
+									await update();
+									if (result.type === 'success' && result.data?.success) {
+										toastStore.success(result.data.message as string);
+									}
+								} finally {
+									isClearingFailedSearches = false;
 								}
 							};
 						}}
@@ -512,13 +521,15 @@ function formatRelativeTime(date: Date | string | null): string {
 						use:enhance={() => {
 							isReconnecting = true;
 							return async ({ result, update }) => {
-								await update();
-								isReconnecting = false;
-
-								if (result.type === 'success' && result.data?.success) {
-									toastStore.success(result.data.message as string);
-								} else if (result.type === 'failure' && result.data?.error) {
-									toastStore.error(result.data.error as string);
+								try {
+									await update();
+									if (result.type === 'success' && result.data?.success) {
+										toastStore.success(result.data.message as string);
+									} else if (result.type === 'failure' && result.data?.error) {
+										toastStore.error(result.data.error as string);
+									}
+								} finally {
+									isReconnecting = false;
 								}
 							};
 						}}
@@ -611,15 +622,16 @@ function formatRelativeTime(date: Date | string | null): string {
 								use:enhance={() => {
 									isDeleting = true;
 									return async ({ result, update }) => {
-										await update();
-										isDeleting = false;
-
-										// Show toast and navigate on success
-										if (result.type === 'success' && result.data?.success) {
-											toastStore.success(result.data.message as string);
-											if (result.data.redirectTo) {
-												goto(result.data.redirectTo as string);
+										try {
+											await update();
+											if (result.type === 'success' && result.data?.success) {
+												toastStore.success(result.data.message as string);
+												if (result.data.redirectTo) {
+													goto(result.data.redirectTo as string);
+												}
 											}
+										} finally {
+											isDeleting = false;
 										}
 									};
 								}}

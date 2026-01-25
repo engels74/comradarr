@@ -95,10 +95,17 @@ export const actions: Actions = {
 
 	reconnect: async ({ request }) => {
 		const data = await request.formData();
-		const id = Number(data.get('id'));
+		const rawId = data.get('id');
 
-		if (Number.isNaN(id)) {
-			logger.warn('Reconnect failed - invalid ID', { rawId: data.get('id') });
+		if (!rawId || typeof rawId !== 'string' || rawId.trim() === '') {
+			logger.warn('Reconnect failed - missing ID');
+			return { success: false, error: 'Invalid connector ID' };
+		}
+
+		const id = Number(rawId);
+
+		if (Number.isNaN(id) || id <= 0) {
+			logger.warn('Reconnect failed - invalid ID', { rawId });
 			return { success: false, error: 'Invalid connector ID' };
 		}
 

@@ -261,8 +261,6 @@ export function initializeScheduler(): void {
 					const isReachable = await client.ping();
 
 					if (!isReachable) {
-						const wasOnline =
-							connector.healthStatus !== 'offline' && connector.healthStatus !== 'unhealthy';
 						await updateConnectorHealth(connector.id, 'offline');
 						results.push({
 							id: connector.id,
@@ -271,9 +269,7 @@ export function initializeScheduler(): void {
 							newStatus: 'offline',
 							error: 'Connection failed'
 						});
-						if (wasOnline) {
-							await initializeReconnectForOfflineConnector(connector.id);
-						}
+						await initializeReconnectForOfflineConnector(connector.id);
 						continue;
 					}
 
@@ -304,8 +300,6 @@ export function initializeScheduler(): void {
 						errorMsg = error instanceof Error ? error.message : 'Unknown error';
 					}
 
-					const wasOnline =
-						connector.healthStatus !== 'offline' && connector.healthStatus !== 'unhealthy';
 					await updateConnectorHealth(connector.id, newStatus);
 					results.push({
 						id: connector.id,
@@ -314,7 +308,7 @@ export function initializeScheduler(): void {
 						newStatus,
 						error: errorMsg
 					});
-					if (wasOnline && (newStatus === 'offline' || newStatus === 'unhealthy')) {
+					if (newStatus === 'offline' || newStatus === 'unhealthy') {
 						await initializeReconnectForOfflineConnector(connector.id);
 					}
 				}
