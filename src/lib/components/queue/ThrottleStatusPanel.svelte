@@ -131,7 +131,7 @@ function formatPauseTime(pausedUntil: string | null, currentTime: number): strin
 				{@const capacityPct = getCapacityPercentage(connector)}
 				{@const dailyProgress = getDailyProgress(connector)}
 				{@const pauseTime = formatPauseTime(connector.pausedUntil, now)}
-				{@const available = Math.max(0, connector.requestsPerMinute - connector.requestsThisMinute)}
+				{@const available = status.available}
 
 				<Card.Root
 					variant="glass"
@@ -198,7 +198,7 @@ function formatPauseTime(pausedUntil: string | null, currentTime: number): strin
 											stroke-linecap="round"
 											class="text-warning transition-[stroke-dashoffset] duration-1000 ease-linear"
 											stroke-dasharray={2 * Math.PI * 11}
-											stroke-dashoffset={2 * Math.PI * 11 * (1 - (status.countdownSeconds ?? 0) / status.countdownTotal)}
+											stroke-dashoffset={2 * Math.PI * 11 * Math.min(Math.max(status.countdownSeconds ?? 0, 0), status.countdownTotal) / status.countdownTotal}
 										/>
 									</svg>
 									<span class="absolute inset-0 flex items-center justify-center text-[10px] font-mono font-medium text-warning">
