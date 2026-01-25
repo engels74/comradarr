@@ -325,6 +325,12 @@ export async function dequeuePriorityItems(
 	);
 	const scheduledBefore = options.scheduledBefore ?? new Date();
 
+	logger.debug('Dequeue attempt started', {
+		connectorId,
+		limit,
+		scheduledBefore: scheduledBefore.toISOString()
+	});
+
 	try {
 		const connector = await db
 			.select({ id: connectors.id, queuePaused: connectors.queuePaused })
@@ -376,6 +382,10 @@ export async function dequeuePriorityItems(
 			.limit(limit);
 
 		if (itemsToDequeue.length === 0) {
+			logger.debug('No items found in queue', {
+				connectorId,
+				scheduledBefore: scheduledBefore.toISOString()
+			});
 			return {
 				success: true,
 				connectorId,
