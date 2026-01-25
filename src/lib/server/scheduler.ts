@@ -160,7 +160,20 @@ async function processConnectorQueue(connector: {
 		rateLimited: 0
 	};
 
+	logger.debug('Processing connector queue', {
+		connectorId: connector.id,
+		connectorName: connector.name
+	});
+
 	const dequeueResult = await dequeuePriorityItems(connector.id, { limit: 5 });
+
+	logger.debug('Dequeue result', {
+		connectorId: connector.id,
+		connectorName: connector.name,
+		success: dequeueResult.success,
+		itemCount: dequeueResult.items.length,
+		error: dequeueResult.error
+	});
 
 	if (!dequeueResult.success || dequeueResult.items.length === 0) {
 		return result;

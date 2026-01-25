@@ -1,10 +1,7 @@
 <script lang="ts">
 import BanIcon from '@lucide/svelte/icons/ban';
-import ClockIcon from '@lucide/svelte/icons/clock';
-import GaugeIcon from '@lucide/svelte/icons/gauge';
-import Loader2Icon from '@lucide/svelte/icons/loader-2';
 import PauseCircleIcon from '@lucide/svelte/icons/pause-circle';
-import ZapIcon from '@lucide/svelte/icons/zap';
+import RadioIcon from '@lucide/svelte/icons/radio';
 import * as Card from '$lib/components/ui/card';
 import { cn } from '$lib/utils.js';
 import RateLimitHelpTooltip from './RateLimitHelpTooltip.svelte';
@@ -29,74 +26,79 @@ $effect(() => {
 	return () => clearInterval(interval);
 });
 
-const typeColors: Record<string, { badge: string; accent: string }> = {
+const typeColors: Record<string, { badge: string; accent: string; capacityBar: string }> = {
 	sonarr: {
 		badge:
 			'bg-[oklch(var(--accent-sonarr)/0.15)] text-[oklch(var(--accent-sonarr))] border border-[oklch(var(--accent-sonarr)/0.3)]',
-		accent: 'bg-[oklch(var(--accent-sonarr))]'
+		accent: 'bg-[oklch(var(--accent-sonarr))]',
+		capacityBar: 'oklch(var(--accent-sonarr))'
 	},
 	radarr: {
 		badge:
 			'bg-[oklch(var(--accent-radarr)/0.15)] text-[oklch(var(--accent-radarr))] border border-[oklch(var(--accent-radarr)/0.3)]',
-		accent: 'bg-[oklch(var(--accent-radarr))]'
+		accent: 'bg-[oklch(var(--accent-radarr))]',
+		capacityBar: 'oklch(var(--accent-radarr))'
 	},
 	whisparr: {
 		badge:
 			'bg-[oklch(var(--accent-whisparr)/0.15)] text-[oklch(var(--accent-whisparr))] border border-[oklch(var(--accent-whisparr)/0.3)]',
-		accent: 'bg-[oklch(var(--accent-whisparr))]'
+		accent: 'bg-[oklch(var(--accent-whisparr))]',
+		capacityBar: 'oklch(var(--accent-whisparr))'
 	}
 };
 
 const defaultColors = {
 	badge: 'bg-muted text-muted-foreground border border-border',
-	accent: 'bg-primary'
+	accent: 'bg-primary',
+	capacityBar: 'oklch(var(--primary))'
 };
 
-type StatusType = 'searching' | 'ready' | 'at_limit' | 'paused' | 'daily_exhausted';
+type ChannelState = 'transmitting' | 'standby' | 'cooldown' | 'offline' | 'exhausted';
 
-function getStatus(
-	info: SerializedThrottleInfo,
-	currentTime: number
-): {
-	type: StatusType;
-	label: string;
-	color: string;
-	icon: typeof ZapIcon;
-} {
-	if (info.searchingCount > 0) {
-		return {
-			type: 'searching',
-			label: `${info.searchingCount} searching`,
-			color: 'text-yellow-600 dark:text-yellow-400',
-			icon: Loader2Icon
-		};
-	}
+interface ChannelStatus {
+	state: ChannelState;
+	countdownSeconds: number | null;
+	countdownTotal: number;
+	available: number;
+}
+
+function getChannelStatus(info: SerializedThrottleInfo, currentTime: number): ChannelStatus {
+	const available = Math.max(0, info.requestsPerMinute - info.requestsThisMinute);
+
 	if (info.pauseReason === 'daily_budget_exhausted') {
-		return {
-			type: 'daily_exhausted',
-			label: 'Daily Limit',
-			color: 'text-destructive',
-			icon: BanIcon
-		};
+		return { state: 'exhausted', countdownSeconds: null, countdownTotal: 60, available: 0 };
 	}
+
 	if (info.isPaused) {
-		return { type: 'paused', label: 'Paused', color: 'text-warning', icon: PauseCircleIcon };
+		return { state: 'offline', countdownSeconds: null, countdownTotal: 60, available };
 	}
+
+	if (info.searchingCount > 0) {
+		return { state: 'transmitting', countdownSeconds: null, countdownTotal: 60, available };
+	}
+
 	if (info.requestsThisMinute >= info.requestsPerMinute && info.minuteWindowExpiry) {
 		const remaining = Math.max(
 			0,
 			Math.ceil((new Date(info.minuteWindowExpiry).getTime() - currentTime) / 1000)
 		);
 		if (remaining > 0) {
-			return {
-				type: 'at_limit',
-				label: `Resets in ${remaining}s`,
-				color: 'text-warning',
-				icon: ClockIcon
-			};
+			return { state: 'cooldown', countdownSeconds: remaining, countdownTotal: 60, available: 0 };
 		}
 	}
-	return { type: 'ready', label: 'Ready', color: 'text-success', icon: ZapIcon };
+
+	return { state: 'standby', countdownSeconds: null, countdownTotal: 60, available };
+}
+
+function getDailyProgress(info: SerializedThrottleInfo): number | null {
+	if (!info.dailyBudget) return null;
+	return Math.min((info.requestsToday / info.dailyBudget) * 100, 100);
+}
+
+function getCapacityPercentage(info: SerializedThrottleInfo): number {
+	if (info.requestsPerMinute === 0) return 0;
+	const available = Math.max(0, info.requestsPerMinute - info.requestsThisMinute);
+	return (available / info.requestsPerMinute) * 100;
 }
 
 function formatPauseTime(pausedUntil: string | null, currentTime: number): string {
@@ -109,37 +111,6 @@ function formatPauseTime(pausedUntil: string | null, currentTime: number): strin
 	if (minutes < 60) return `${minutes}m`;
 	const hours = Math.floor(minutes / 60);
 	return `${hours}h ${minutes % 60}m`;
-}
-
-function getNextSearchIndicator(info: SerializedThrottleInfo, currentTime: number): string | null {
-	if (info.searchingCount > 0) return null;
-	if (info.pauseReason === 'daily_budget_exhausted') {
-		return 'Resets at midnight';
-	}
-	if (info.isPaused) return null;
-	if (info.requestsThisMinute >= info.requestsPerMinute && info.minuteWindowExpiry) {
-		const remaining = Math.max(
-			0,
-			Math.ceil((new Date(info.minuteWindowExpiry).getTime() - currentTime) / 1000)
-		);
-		if (remaining > 0) {
-			return `in ${remaining}s`;
-		}
-	}
-	if (info.queuedCount > 0) {
-		return 'Now';
-	}
-	return null;
-}
-
-function getMinuteProgress(info: SerializedThrottleInfo): number {
-	if (info.requestsPerMinute === 0) return 0;
-	return Math.min((info.requestsThisMinute / info.requestsPerMinute) * 100, 100);
-}
-
-function getDailyProgress(info: SerializedThrottleInfo): number | null {
-	if (!info.dailyBudget) return null;
-	return Math.min((info.requestsToday / info.dailyBudget) * 100, 100);
 }
 </script>
 
@@ -155,21 +126,21 @@ function getDailyProgress(info: SerializedThrottleInfo): number | null {
 
 		<div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4">
 			{#each connectors as connector (connector.connectorId)}
-				{@const status = getStatus(connector, now)}
-				{@const StatusIcon = status.icon}
+				{@const status = getChannelStatus(connector, now)}
 				{@const colors = typeColors[connector.type] ?? defaultColors}
-				{@const minuteProgress = getMinuteProgress(connector)}
+				{@const capacityPct = getCapacityPercentage(connector)}
 				{@const dailyProgress = getDailyProgress(connector)}
 				{@const pauseTime = formatPauseTime(connector.pausedUntil, now)}
-				{@const nextSearch = getNextSearchIndicator(connector, now)}
+				{@const available = status.available}
 
 				<Card.Root
 					variant="glass"
 					class={cn(
 						'p-4 transition-all duration-300',
-						status.type === 'searching' && 'ring-2 ring-yellow-500/50 ring-offset-1 ring-offset-background'
+						status.state === 'transmitting' && 'ring-2 ring-yellow-500/50 ring-offset-1 ring-offset-background'
 					)}
 				>
+					<!-- Header: Type badge + Name + Status indicator -->
 					<div class="flex items-center justify-between mb-3">
 						<div class="flex items-center gap-2 min-w-0">
 							<span
@@ -181,42 +152,112 @@ function getDailyProgress(info: SerializedThrottleInfo): number | null {
 								{connector.name}
 							</span>
 						</div>
-						<div class="flex items-center gap-1.5 flex-shrink-0">
-							<StatusIcon
-								class={cn(
-									'h-4 w-4',
-									status.color,
-									status.type === 'searching' && 'animate-spin'
-								)}
-							/>
-							<span class={cn('text-xs font-medium', status.color)}>
-								{status.label}
-								{#if pauseTime && status.type === 'paused'}
-									<span class="text-muted-foreground">({pauseTime})</span>
-								{/if}
-							</span>
+
+						<!-- Status indicator -->
+						<div class="flex items-center gap-2 flex-shrink-0">
+							{#if status.state === 'transmitting'}
+								<!-- Pulsing radio icon with ping animation -->
+								<div class="relative">
+									<RadioIcon class="h-4 w-4 text-yellow-500" />
+									<span class="absolute inset-0 animate-ping rounded-full bg-yellow-500/30"></span>
+								</div>
+								<span class="text-xs font-medium text-yellow-600 dark:text-yellow-400">
+									Searching
+								</span>
+							{:else if status.state === 'standby'}
+								<!-- Green dot + available count -->
+								<span class="relative flex h-2.5 w-2.5">
+									<span class="absolute inline-flex h-full w-full rounded-full bg-success opacity-75"></span>
+									<span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-success"></span>
+								</span>
+								<span class="text-xs font-medium text-success">
+									{available}/{connector.requestsPerMinute}
+								</span>
+							{:else if status.state === 'cooldown'}
+								<!-- Circular countdown timer -->
+								<div class="relative h-7 w-7">
+									<svg class="h-7 w-7 -rotate-90" viewBox="0 0 28 28">
+										<!-- Background circle -->
+										<circle
+											cx="14"
+											cy="14"
+											r="11"
+											fill="none"
+											stroke="currentColor"
+											stroke-width="2.5"
+											class="text-muted/30"
+										/>
+										<!-- Progress arc -->
+										<circle
+											cx="14"
+											cy="14"
+											r="11"
+											fill="none"
+											stroke="currentColor"
+											stroke-width="2.5"
+											stroke-linecap="round"
+											class="text-warning transition-[stroke-dashoffset] duration-1000 ease-linear"
+											stroke-dasharray={2 * Math.PI * 11}
+											stroke-dashoffset={2 * Math.PI * 11 * Math.min(Math.max(status.countdownSeconds ?? 0, 0), status.countdownTotal) / status.countdownTotal}
+										/>
+									</svg>
+									<span class="absolute inset-0 flex items-center justify-center text-[10px] font-mono font-medium text-warning">
+										{status.countdownSeconds}
+									</span>
+								</div>
+							{:else if status.state === 'exhausted'}
+								<!-- Ban icon -->
+								<BanIcon class="h-4 w-4 text-destructive" />
+								<span class="text-xs font-medium text-destructive">Daily Limit</span>
+							{:else if status.state === 'offline'}
+								<!-- Pause icon -->
+								<PauseCircleIcon class="h-4 w-4 text-warning" />
+								<span class="text-xs font-medium text-warning">
+									Paused
+									{#if pauseTime}
+										<span class="text-muted-foreground">({pauseTime})</span>
+									{/if}
+								</span>
+							{/if}
 						</div>
 					</div>
 
 					<div class="space-y-3">
+						<!-- Capacity bar (inverted: full = available) -->
 						<div>
-							<div class="flex items-center justify-between text-xs mb-1">
-								<span class="text-muted-foreground">Requests/min</span>
-								<span class="font-mono">
-									{connector.requestsThisMinute}/{connector.requestsPerMinute}
-								</span>
+							<div class="flex items-center justify-between text-xs mb-1.5">
+								<span class="text-muted-foreground">Capacity</span>
+								{#if status.state === 'cooldown' && status.countdownSeconds !== null}
+									<span class="text-warning font-medium">
+										refills in {status.countdownSeconds}s
+									</span>
+								{:else}
+									<span class="font-mono">
+										{available}/{connector.requestsPerMinute}
+									</span>
+								{/if}
 							</div>
-							<div class="h-1.5 bg-muted rounded-full overflow-hidden">
+							<!-- Bar with tick marks for limits <= 10 -->
+							<div class="relative h-2 bg-muted rounded-full overflow-hidden">
 								<div
-									class={cn(
-										'h-full transition-all duration-300',
-										minuteProgress >= 100 ? 'bg-warning' : 'bg-primary'
-									)}
-									style="width: {minuteProgress}%"
+									class="h-full transition-all duration-300 rounded-full"
+									style="width: {capacityPct}%; background: {colors.capacityBar}"
 								></div>
+								<!-- Tick marks for small limits -->
+								{#if connector.requestsPerMinute <= 10 && connector.requestsPerMinute > 1}
+									<div class="absolute inset-0 flex">
+										{#each Array(connector.requestsPerMinute - 1) as _, i}
+											<div
+												class="h-full border-r border-background/50"
+												style="width: {100 / connector.requestsPerMinute}%"
+											></div>
+										{/each}
+									</div>
+								{/if}
 							</div>
 						</div>
 
+						<!-- Daily budget -->
 						{#if dailyProgress !== null}
 							<div>
 								<div class="flex items-center justify-between text-xs mb-1">
@@ -244,39 +285,26 @@ function getDailyProgress(info: SerializedThrottleInfo): number | null {
 							</div>
 						{/if}
 
+						<!-- Queue status -->
 						<div class="flex items-center justify-between text-xs pt-1 border-t border-glass-border/30">
 							<span class="text-muted-foreground">Queue</span>
 							<span>
 								{#if connector.searchingCount > 0}
 									<span class="text-yellow-600 dark:text-yellow-400 font-medium">
-										{connector.searchingCount} searching
+										{connector.searchingCount} active
 									</span>
 									{#if connector.queuedCount > 0}
-										<span class="text-muted-foreground">, </span>
+										<span class="text-muted-foreground"> · </span>
 									{/if}
 								{/if}
 								{#if connector.queuedCount > 0}
-									<span>{connector.queuedCount} waiting</span>
+									<span class="text-muted-foreground">{connector.queuedCount} waiting</span>
 								{/if}
 								{#if connector.searchingCount === 0 && connector.queuedCount === 0}
-									<span class="text-muted-foreground">Empty</span>
+									<span class="text-muted-foreground italic">idle</span>
 								{/if}
 							</span>
 						</div>
-
-						{#if nextSearch}
-							<div class="flex items-center justify-between text-xs">
-								<span class="text-muted-foreground">Next search</span>
-								<span class={cn(
-									'font-medium',
-									nextSearch === 'Now' && 'text-success',
-									nextSearch.startsWith('in ') && 'text-warning',
-									nextSearch.startsWith('Resets') && 'text-destructive'
-								)}>
-									{nextSearch}
-								</span>
-							</div>
-						{/if}
 					</div>
 				</Card.Root>
 			{/each}
