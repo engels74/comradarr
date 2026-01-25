@@ -26,7 +26,7 @@ export interface UpgradeDiscoveryResult {
 	connectorId: number;
 	/** Type of the connector */
 	connectorType: 'sonarr' | 'radarr' | 'whisparr';
-	/** Total number of upgrade candidates found (monitored=true, qualityCutoffNotMet=true, hasFile=true) */
+	/** Total number of upgrade candidates found (monitored=true, hasFile=true) */
 	upgradesFound: number;
 	/** Number of new search registry entries created */
 	registriesCreated: number;
