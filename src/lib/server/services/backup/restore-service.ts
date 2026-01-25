@@ -17,7 +17,7 @@ import {
 	type TableExport
 } from './types';
 
-const logger = createLogger('restore');
+const logger = createLogger('restore-service');
 
 const tableNameToSchema: Record<string, (typeof schema)[keyof typeof schema]> = {
 	throttle_profiles: schema.throttleProfiles,

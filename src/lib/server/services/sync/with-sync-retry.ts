@@ -10,7 +10,7 @@ import {
 	updateHealthFromSyncResult
 } from './health';
 
-const logger = createLogger('sync');
+const logger = createLogger('sync-retry');
 
 export interface SyncRetryOptions {
 	/** Override the default max retries (default: SYNC_CONFIG.MAX_SYNC_RETRIES) */

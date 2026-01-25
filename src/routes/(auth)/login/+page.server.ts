@@ -70,6 +70,7 @@ export const actions: Actions = {
 			const remainingMinutes = Math.ceil((remainingSeconds ?? 0) / 60);
 			logger.warn('Login attempt on locked account', {
 				username,
+				userId: user.id,
 				ipAddress,
 				lockoutMinutesRemaining: remainingMinutes
 			});
@@ -86,6 +87,7 @@ export const actions: Actions = {
 			if (loginResult.isLocked) {
 				logger.warn('Account locked after failed attempts', {
 					username,
+					userId: user.id,
 					lockoutMinutes: loginResult.lockoutMinutes
 				});
 				return fail(400, {
@@ -97,6 +99,7 @@ export const actions: Actions = {
 			const remainingAttempts = MAX_FAILED_ATTEMPTS - loginResult.attemptCount;
 			logger.warn('Login failed - invalid credentials', {
 				username,
+				userId: user.id,
 				ipAddress,
 				attemptsRemaining: remainingAttempts
 			});
@@ -125,7 +128,7 @@ export const actions: Actions = {
 			maxAge: SESSION_MAX_AGE
 		});
 
-		logger.info('User logged in', { username, ipAddress });
+		logger.info('User logged in', { username, userId: user.id, ipAddress });
 
 		redirect(303, '/');
 	}

@@ -8,9 +8,13 @@ import { db } from '$lib/server/db';
 import { sessions, users } from '$lib/server/db/schema';
 import { createLogger } from '$lib/server/logger';
 
-const logger = createLogger('session');
+const logger = createLogger('session-manager');
 
 const SESSION_DURATION_MS = 7 * 24 * 60 * 60 * 1000;
+
+function sessionPrefix(id: string): string {
+	return id.slice(0, 8);
+}
 const SESSION_ID_LENGTH = 64;
 
 function generateSessionId(): string {
@@ -42,14 +46,18 @@ export async function createSession(
 		ipAddress: ipAddress ?? null
 	});
 
-	logger.debug('Session created', { userId, expiresAt: expiresAt.toISOString() });
+	logger.debug('Session created', {
+		userId,
+		sessionIdPrefix: sessionPrefix(sessionId),
+		expiresAt: expiresAt.toISOString()
+	});
 
 	return sessionId;
 }
 
 export async function validateSession(sessionId: string): Promise<SessionUser | null> {
 	if (!sessionId || sessionId.length !== SESSION_ID_LENGTH) {
-		logger.debug('Invalid session format');
+		logger.debug('Invalid session format', { provided: sessionId?.length ?? 0 });
 		return null;
 	}
 
@@ -70,12 +78,15 @@ export async function validateSession(sessionId: string): Promise<SessionUser | 
 
 	const row = result[0];
 	if (!row) {
-		logger.debug('Session not found');
+		logger.debug('Session not found', { sessionIdPrefix: sessionPrefix(sessionId) });
 		return null;
 	}
 
 	if (row.session.expiresAt < new Date()) {
-		logger.debug('Session expired', { userId: row.user.id });
+		logger.debug('Session expired', {
+			userId: row.user.id,
+			sessionIdPrefix: sessionPrefix(sessionId)
+		});
 		await deleteSession(sessionId);
 		return null;
 	}
@@ -87,17 +98,21 @@ export async function validateSession(sessionId: string): Promise<SessionUser | 
 		.execute()
 		.catch((error) => {
 			logger.warn('Failed to update session activity', {
+				sessionIdPrefix: sessionPrefix(sessionId),
 				error: error instanceof Error ? error.message : 'Unknown error'
 			});
 		});
 
-	logger.trace('Session validated', { userId: row.user.id });
+	logger.trace('Session validated', {
+		userId: row.user.id,
+		sessionIdPrefix: sessionPrefix(sessionId)
+	});
 	return row.user;
 }
 
 export async function deleteSession(sessionId: string): Promise<void> {
 	await db.delete(sessions).where(eq(sessions.id, sessionId));
-	logger.debug('Session deleted');
+	logger.debug('Session deleted', { sessionIdPrefix: sessionPrefix(sessionId) });
 }
 
 export async function deleteAllUserSessions(userId: number): Promise<void> {

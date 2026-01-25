@@ -13,7 +13,7 @@ import { reconcileSonarrContent } from './handlers/sonarr-reconcile';
 import type { ReconciliationResult, SyncOptions } from './types';
 import { withSyncRetry } from './with-sync-retry';
 
-const logger = createLogger('sync');
+const logger = createLogger('sync-reconciliation');
 
 export async function runFullReconciliation(
 	connector: Connector,

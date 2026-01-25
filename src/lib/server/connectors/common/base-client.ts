@@ -53,6 +53,10 @@ export class BaseArrClient {
 
 		logger.debug('API request', { method, endpoint, baseUrl: this.baseUrl });
 
+		if (options.body !== undefined) {
+			logger.trace('Request body', { endpoint, body: options.body });
+		}
+
 		const controller = new AbortController();
 		const timeoutId = setTimeout(() => controller.abort(), timeout);
 
@@ -107,7 +111,10 @@ export class BaseArrClient {
 				endpoint,
 				durationMs,
 				errorType: categorized.name,
-				errorMessage: categorized.message
+				errorCategory: categorized.category,
+				errorMessage: categorized.message,
+				...('statusCode' in categorized && { statusCode: categorized.statusCode }),
+				...('retryAfter' in categorized && { retryAfterSeconds: categorized.retryAfter })
 			});
 			throw categorized;
 		}

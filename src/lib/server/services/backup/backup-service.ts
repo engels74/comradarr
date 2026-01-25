@@ -17,7 +17,7 @@ import {
 	type TableExport
 } from './types';
 
-const logger = createLogger('backup');
+const logger = createLogger('backup-service');
 
 const DEFAULT_BACKUP_DIR = './backups';
 const BACKUP_EXTENSION = '.json';

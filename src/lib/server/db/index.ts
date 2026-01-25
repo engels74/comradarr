@@ -12,13 +12,16 @@ declare global {
 
 function getOrCreateClient(): SQL {
 	if (!globalThis.__dbClient) {
-		logger.info('Creating new SQL client');
-		globalThis.__dbClient = new SQL({
-			url: process.env.DATABASE_URL!,
+		const poolConfig = {
 			max: 20,
 			idleTimeout: 30,
 			maxLifetime: 60 * 30,
 			connectionTimeout: 30
+		};
+		logger.info('Creating new SQL client', poolConfig);
+		globalThis.__dbClient = new SQL({
+			url: process.env.DATABASE_URL!,
+			...poolConfig
 		});
 	} else {
 		logger.debug('Reusing existing SQL client');

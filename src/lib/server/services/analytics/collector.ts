@@ -15,7 +15,7 @@ import type {
 	UpgradeDiscoveredPayload
 } from './types';
 
-const logger = createLogger('analytics');
+const logger = createLogger('analytics-collector');
 
 class AnalyticsCollector {
 	async recordEvent(
