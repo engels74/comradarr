@@ -53,6 +53,8 @@ async function flushBuffer(): Promise<number> {
 		const inserted = await insertLogBatch(entriesToFlush);
 		return inserted;
 	} catch {
+		// Restore entries to buffer on failure to prevent data loss
+		state.buffer.unshift(...entriesToFlush);
 		return 0;
 	}
 }

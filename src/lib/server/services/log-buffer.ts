@@ -294,9 +294,12 @@ export async function queryLogsHybrid(
 
 		const dbResult = await queryPersistedLogs(dbFilter, { limit: dbLimit, offset: dbOffset });
 
-		const memoryIds = new Set(memoryResult.entries.map((e) => e.id));
+		// De-duplicate using timestamp+module+message since memory IDs and DB IDs are independent sequences
+		const memoryKeys = new Set(
+			memoryResult.entries.map((e) => `${e.timestamp}|${e.module}|${e.message}`)
+		);
 		const uniqueDbEntries = dbResult.entries
-			.filter((e) => !memoryIds.has(e.id))
+			.filter((e) => !memoryKeys.has(`${e.timestamp}|${e.module}|${e.message}`))
 			.map((e) => ({
 				...e,
 				id: -e.id
