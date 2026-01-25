@@ -86,6 +86,15 @@ import { throttleEnforcer } from '$lib/server/services/throttle';
 
 const logger = createLogger('job-scheduler');
 
+interface ConnectorProcessResult {
+	connectorId: number;
+	connectorName: string;
+	dispatched: number;
+	succeeded: number;
+	failed: number;
+	rateLimited: number;
+}
+
 interface ScheduledJob {
 	name: string;
 	cron: Cron;
@@ -136,6 +145,129 @@ function withJobContext(jobName: string, callback: () => Promise<void>): () => P
 
 		return runWithContext(context, callback);
 	};
+}
+
+async function processConnectorQueue(connector: {
+	id: number;
+	name: string;
+}): Promise<ConnectorProcessResult> {
+	const result: ConnectorProcessResult = {
+		connectorId: connector.id,
+		connectorName: connector.name,
+		dispatched: 0,
+		succeeded: 0,
+		failed: 0,
+		rateLimited: 0
+	};
+
+	const dequeueResult = await dequeuePriorityItems(connector.id, { limit: 5 });
+
+	if (!dequeueResult.success || dequeueResult.items.length === 0) {
+		return result;
+	}
+
+	let rateLimitedAtIndex = -1;
+
+	for (let i = 0; i < dequeueResult.items.length; i++) {
+		const item = dequeueResult.items[i]!;
+
+		const searchingResult = await setSearching(item.searchRegistryId);
+		if (!searchingResult.success) {
+			await revertToQueued([item.searchRegistryId]);
+			continue;
+		}
+
+		result.dispatched++;
+
+		const dispatchOptions =
+			item.contentType === 'movie'
+				? { movieIds: [item.contentId] }
+				: { episodeIds: [item.contentId] };
+
+		const dispatchStartTime = Date.now();
+		const dispatchResult = await dispatchSearch(
+			item.connectorId,
+			item.searchRegistryId,
+			item.contentType,
+			item.searchType,
+			dispatchOptions
+		);
+		const responseTimeMs = Date.now() - dispatchStartTime;
+
+		if (dispatchResult.success) {
+			result.succeeded++;
+			await markSearchDispatched(item.searchRegistryId);
+			await analyticsCollector.recordSearchDispatched(
+				item.connectorId,
+				item.searchRegistryId,
+				item.contentType,
+				item.searchType,
+				dispatchResult.commandId!,
+				responseTimeMs
+			);
+		} else {
+			result.failed++;
+
+			const failureCategory: FailureCategory = dispatchResult.rateLimited
+				? 'rate_limited'
+				: dispatchResult.error?.includes('timeout')
+					? 'timeout'
+					: dispatchResult.error?.includes('network')
+						? 'network_error'
+						: 'server_error';
+
+			await analyticsCollector.recordSearchFailed(
+				item.connectorId,
+				item.searchRegistryId,
+				item.contentType,
+				item.searchType,
+				failureCategory,
+				dispatchResult.error,
+				responseTimeMs
+			);
+
+			if (dispatchResult.rateLimited) {
+				result.rateLimited++;
+				if (dispatchResult.connectorPaused) {
+					await markSearchFailed({
+						searchRegistryId: item.searchRegistryId,
+						failureCategory
+					});
+				}
+				rateLimitedAtIndex = i;
+				break;
+			}
+
+			await markSearchFailed({
+				searchRegistryId: item.searchRegistryId,
+				failureCategory
+			});
+		}
+	}
+
+	if (rateLimitedAtIndex >= 0) {
+		const remainingItems = dequeueResult.items
+			.slice(rateLimitedAtIndex)
+			.map((item) => item.searchRegistryId);
+		if (remainingItems.length > 0) {
+			const revertResult = await revertToQueued(remainingItems);
+			if (revertResult.success) {
+				logger.debug('Reverted remaining items to queue after rate limit', {
+					connectorId: connector.id,
+					reverted: revertResult.reverted,
+					requeued: revertResult.requeued
+				});
+			} else {
+				logger.error('Failed to revert items to queue after rate limit', {
+					connectorId: connector.id,
+					error: revertResult.error,
+					itemCount: remainingItems.length
+				});
+			}
+		}
+	}
+
+	return result;
 }
 
 /** Initialize all scheduled jobs. Safe to call multiple times. */
@@ -694,120 +826,22 @@ export function initializeScheduler(): void {
 
 			const connectors = await getHealthyConnectors();
 
-			for (const connector of connectors) {
-				try {
-					const dequeueResult = await dequeuePriorityItems(connector.id, { limit: 5 });
+			if (connectors.length > 0) {
+				const results = await Promise.allSettled(
+					connectors.map((connector) => processConnectorQueue(connector))
+				);
 
-					if (!dequeueResult.success || dequeueResult.items.length === 0) {
-						continue;
+				for (const result of results) {
+					if (result.status === 'fulfilled') {
+						summary.dispatched += result.value.dispatched;
+						summary.succeeded += result.value.succeeded;
+						summary.failed += result.value.failed;
+						summary.rateLimited += result.value.rateLimited;
+					} else {
+						logger.error('Error processing queue for connector', {
+							error: result.reason instanceof Error ? result.reason.message : String(result.reason)
+						});
 					}
-
-					let rateLimitedAtIndex = -1;
-
-					for (let i = 0; i < dequeueResult.items.length; i++) {
-						const item = dequeueResult.items[i]!;
-
-						const searchingResult = await setSearching(item.searchRegistryId);
-						if (!searchingResult.success) {
-							await revertToQueued([item.searchRegistryId]);
-							continue;
-						}
-
-						summary.dispatched++;
-
-						const dispatchOptions =
-							item.contentType === 'movie'
-								? { movieIds: [item.contentId] }
-								: { episodeIds: [item.contentId] };
-
-						const dispatchStartTime = Date.now();
-						const dispatchResult = await dispatchSearch(
-							item.connectorId,
-							item.searchRegistryId,
-							item.contentType,
-							item.searchType,
-							dispatchOptions
-						);
-						const responseTimeMs = Date.now() - dispatchStartTime;
-
-						if (dispatchResult.success) {
-							summary.succeeded++;
-							await markSearchDispatched(item.searchRegistryId);
-							await analyticsCollector.recordSearchDispatched(
-								item.connectorId,
-								item.searchRegistryId,
-								item.contentType,
-								item.searchType,
-								dispatchResult.commandId!,
-								responseTimeMs
-							);
-						} else {
-							summary.failed++;
-
-							const failureCategory: FailureCategory = dispatchResult.rateLimited
-								? 'rate_limited'
-								: dispatchResult.error?.includes('timeout')
-									? 'timeout'
-									: dispatchResult.error?.includes('network')
-										? 'network_error'
-										: 'server_error';
-
-							await analyticsCollector.recordSearchFailed(
-								item.connectorId,
-								item.searchRegistryId,
-								item.contentType,
-								item.searchType,
-								failureCategory,
-								dispatchResult.error,
-								responseTimeMs
-							);
-
-							if (dispatchResult.rateLimited) {
-								summary.rateLimited++;
-								if (dispatchResult.connectorPaused) {
-									await markSearchFailed({
-										searchRegistryId: item.searchRegistryId,
-										failureCategory
-									});
-								}
-								rateLimitedAtIndex = i;
-								break;
-							}
-
-							await markSearchFailed({
-								searchRegistryId: item.searchRegistryId,
-								failureCategory
-							});
-						}
-					}
-
-					if (rateLimitedAtIndex >= 0) {
-						const remainingItems = dequeueResult.items
-							.slice(rateLimitedAtIndex)
-							.map((item) => item.searchRegistryId);
-						if (remainingItems.length > 0) {
-							const revertResult = await revertToQueued(remainingItems);
-							if (revertResult.success) {
-								logger.debug('Reverted remaining items to queue after rate limit', {
-									connectorId: connector.id,
-									reverted: revertResult.reverted,
-									requeued: revertResult.requeued
-								});
-							} else {
-								logger.error('Failed to revert items to queue after rate limit', {
-									connectorId: connector.id,
-									error: revertResult.error,
-									itemCount: remainingItems.length
-								});
-							}
-						}
-					}
-				} catch (error) {
-					logger.error('Error processing queue for connector', {
-						connectorId: connector.id,
-						name: connector.name,
-						error: error instanceof Error ? error.message : String(error)
-					});
 				}
 			}
 

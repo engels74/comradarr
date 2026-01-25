@@ -80,6 +80,8 @@ export interface QueueThrottleInfo {
 	requestsThisMinute: number;
 	dailyBudget: number | null;
 	requestsToday: number;
+	minuteWindowStart: Date | null;
+	minuteWindowExpiry: Date | null;
 }
 
 export interface ConnectorQueueCounts {
@@ -392,14 +394,20 @@ export async function getThrottleInfo(connectorId: number): Promise<QueueThrottl
 	const isPaused = row.queuePaused || (row.pausedUntil !== null && row.pausedUntil > now);
 
 	// Reset counters if their time windows have expired (matches throttleEnforcer.getStatus behavior)
+	const minuteWindowExpired = isMinuteWindowExpired(row.minuteWindowStart, now);
 	let requestsThisMinute = row.requestsThisMinute ?? 0;
-	if (isMinuteWindowExpired(row.minuteWindowStart, now)) {
+	if (minuteWindowExpired) {
 		requestsThisMinute = 0;
 	}
 
 	let requestsToday = row.requestsToday ?? 0;
 	if (isDayWindowExpired(row.dayWindowStart, now)) {
 		requestsToday = 0;
+	}
+
+	let minuteWindowExpiry: Date | null = null;
+	if (row.minuteWindowStart && !minuteWindowExpired) {
+		minuteWindowExpiry = new Date(row.minuteWindowStart.getTime() + 60000);
 	}
 
 	return {
@@ -410,7 +418,9 @@ export async function getThrottleInfo(connectorId: number): Promise<QueueThrottl
 		requestsPerMinute: row.requestsPerMinute,
 		requestsThisMinute,
 		dailyBudget: row.dailyBudget,
-		requestsToday
+		requestsToday,
+		minuteWindowStart: minuteWindowExpired ? null : row.minuteWindowStart,
+		minuteWindowExpiry
 	};
 }
 
@@ -442,14 +452,20 @@ export async function getAllThrottleInfo(): Promise<Map<number, QueueThrottleInf
 		const isPaused = row.queuePaused || (row.pausedUntil !== null && row.pausedUntil > now);
 
 		// Reset counters if their time windows have expired (matches throttleEnforcer.getStatus behavior)
+		const minuteWindowExpired = isMinuteWindowExpired(row.minuteWindowStart, now);
 		let requestsThisMinute = row.requestsThisMinute ?? 0;
-		if (isMinuteWindowExpired(row.minuteWindowStart, now)) {
+		if (minuteWindowExpired) {
 			requestsThisMinute = 0;
 		}
 
 		let requestsToday = row.requestsToday ?? 0;
 		if (isDayWindowExpired(row.dayWindowStart, now)) {
 			requestsToday = 0;
+		}
+
+		let minuteWindowExpiry: Date | null = null;
+		if (row.minuteWindowStart && !minuteWindowExpired) {
+			minuteWindowExpiry = new Date(row.minuteWindowStart.getTime() + 60000);
 		}
 
 		map.set(row.connectorId, {
@@ -460,7 +476,9 @@ export async function getAllThrottleInfo(): Promise<Map<number, QueueThrottleInf
 			requestsPerMinute: row.requestsPerMinute,
 			requestsThisMinute,
 			dailyBudget: row.dailyBudget,
-			requestsToday
+			requestsToday,
+			minuteWindowStart: minuteWindowExpired ? null : row.minuteWindowStart,
+			minuteWindowExpiry
 		});
 	}
 

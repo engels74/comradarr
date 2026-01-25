@@ -43,6 +43,8 @@ export interface SerializedThrottleInfo {
 	type: string;
 	queuedCount: number;
 	searchingCount: number;
+	minuteWindowStart: string | null;
+	minuteWindowExpiry: string | null;
 }
 
 /**
