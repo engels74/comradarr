@@ -82,15 +82,7 @@ export class BaseArrClient {
 			clearTimeout(timeoutId);
 
 			if (!response.ok) {
-				const error = this.handleErrorResponse(response, endpoint);
-				logger.warn('API error response', {
-					method,
-					endpoint,
-					statusCode: response.status,
-					durationMs,
-					errorType: error.name
-				});
-				throw error;
+				throw this.handleErrorResponse(response, endpoint);
 			}
 
 			// Warn on slow API responses (>5 seconds)
