@@ -71,16 +71,16 @@ function getStatus(
 			icon: Loader2Icon
 		};
 	}
-	if (info.isPaused) {
-		return { type: 'paused', label: 'Paused', color: 'text-warning', icon: PauseCircleIcon };
-	}
-	if (info.dailyBudget && info.requestsToday >= info.dailyBudget) {
+	if (info.pauseReason === 'daily_budget_exhausted') {
 		return {
 			type: 'daily_exhausted',
 			label: 'Daily Limit',
 			color: 'text-destructive',
 			icon: BanIcon
 		};
+	}
+	if (info.isPaused) {
+		return { type: 'paused', label: 'Paused', color: 'text-warning', icon: PauseCircleIcon };
 	}
 	if (info.requestsThisMinute >= info.requestsPerMinute && info.minuteWindowExpiry) {
 		const remaining = Math.max(
@@ -113,10 +113,10 @@ function formatPauseTime(pausedUntil: string | null, currentTime: number): strin
 
 function getNextSearchIndicator(info: SerializedThrottleInfo, currentTime: number): string | null {
 	if (info.searchingCount > 0) return null;
-	if (info.isPaused) return null;
-	if (info.dailyBudget && info.requestsToday >= info.dailyBudget) {
+	if (info.pauseReason === 'daily_budget_exhausted') {
 		return 'Resets at midnight';
 	}
+	if (info.isPaused) return null;
 	if (info.requestsThisMinute >= info.requestsPerMinute && info.minuteWindowExpiry) {
 		const remaining = Math.max(
 			0,

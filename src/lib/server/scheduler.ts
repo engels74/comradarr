@@ -831,7 +831,9 @@ export function initializeScheduler(): void {
 					connectors.map((connector) => processConnectorQueue(connector))
 				);
 
-				for (const result of results) {
+				for (let i = 0; i < results.length; i++) {
+					const result = results[i]!;
+					const connector = connectors[i]!;
 					if (result.status === 'fulfilled') {
 						summary.dispatched += result.value.dispatched;
 						summary.succeeded += result.value.succeeded;
@@ -839,6 +841,8 @@ export function initializeScheduler(): void {
 						summary.rateLimited += result.value.rateLimited;
 					} else {
 						logger.error('Error processing queue for connector', {
+							connectorId: connector.id,
+							connectorName: connector.name,
 							error: result.reason instanceof Error ? result.reason.message : String(result.reason)
 						});
 					}
