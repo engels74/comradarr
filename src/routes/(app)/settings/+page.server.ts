@@ -251,10 +251,11 @@ function parseThrottleFormData(formData: FormData) {
 
 function parseNotificationBaseFields(formData: FormData) {
 	const batchingWindowStr = formData.get('batchingWindowSeconds')?.toString();
+	const enabledField = formData.get('enabled');
 
 	return {
 		name: formData.get('name')?.toString() ?? '',
-		enabled: formData.get('enabled') !== 'false',
+		enabled: enabledField === null ? undefined : enabledField !== 'false',
 		enabledEvents: formData.getAll('enabledEvents').map((v) => v.toString()),
 		batchingEnabled: formData.get('batchingEnabled') === 'on',
 		batchingWindowSeconds: batchingWindowStr ? Number(batchingWindowStr) : 60,
@@ -1280,7 +1281,11 @@ export const actions: Actions = {
 			logPersistenceEnabled: formData.get('logPersistenceEnabled') === 'on'
 		};
 
-		if (data.historyRetentionDaysSearch < 1 || data.historyRetentionDaysSearch > 365) {
+		if (
+			Number.isNaN(data.historyRetentionDaysSearch) ||
+			data.historyRetentionDaysSearch < 1 ||
+			data.historyRetentionDaysSearch > 365
+		) {
 			return fail(400, {
 				action: 'maintenanceUpdate',
 				error: 'Search history retention must be between 1 and 365 days',
@@ -1288,7 +1293,11 @@ export const actions: Actions = {
 			});
 		}
 
-		if (data.logRetentionDays < 1 || data.logRetentionDays > 365) {
+		if (
+			Number.isNaN(data.logRetentionDays) ||
+			data.logRetentionDays < 1 ||
+			data.logRetentionDays > 365
+		) {
 			return fail(400, {
 				action: 'maintenanceUpdate',
 				error: 'Log retention must be between 1 and 365 days',
@@ -1397,7 +1406,7 @@ export const actions: Actions = {
 			type: type as NotificationChannelType,
 			config,
 			sensitiveConfig,
-			enabled: baseData.enabled,
+			enabled: baseData.enabled ?? true,
 			enabledEvents: baseData.enabledEvents as NotificationEventType[],
 			batchingEnabled: baseData.batchingEnabled,
 			batchingWindowSeconds: baseData.batchingWindowSeconds,
@@ -1515,8 +1524,6 @@ export const actions: Actions = {
 
 		const updateData: Parameters<typeof updateNotificationChannel>[1] = {
 			name: baseData.name,
-			config,
-			enabled: baseData.enabled,
 			enabledEvents: baseData.enabledEvents as NotificationEventType[],
 			batchingEnabled: baseData.batchingEnabled,
 			batchingWindowSeconds: baseData.batchingWindowSeconds,
@@ -1524,11 +1531,19 @@ export const actions: Actions = {
 			quietHoursTimezone: baseData.quietHoursTimezone
 		};
 
+		if (baseData.enabled !== undefined) {
+			updateData.enabled = baseData.enabled;
+		}
+
 		if (baseData.quietHoursStart) {
 			updateData.quietHoursStart = baseData.quietHoursStart;
 		}
 		if (baseData.quietHoursEnd) {
 			updateData.quietHoursEnd = baseData.quietHoursEnd;
+		}
+
+		if (Object.keys(config).length > 0) {
+			updateData.config = config;
 		}
 
 		if (Object.keys(sensitiveConfig).length > 0) {

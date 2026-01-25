@@ -59,7 +59,15 @@ const tabs = [
 
 type TabId = (typeof tabs)[number]['id'];
 
-const activeTab = $derived((page.url.searchParams.get('tab') as TabId) ?? 'general');
+const validTabIds = new Set<string>(tabs.map((t) => t.id));
+
+const activeTab = $derived.by(() => {
+	const tabParam = page.url.searchParams.get('tab');
+	if (tabParam && validTabIds.has(tabParam)) {
+		return tabParam as TabId;
+	}
+	return 'general';
+});
 const activeTabConfig = $derived(tabs.find((t) => t.id === activeTab) ?? tabs[0]);
 
 let mobileMenuOpen = $state(false);
