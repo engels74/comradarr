@@ -456,3 +456,56 @@ export async function updateBackupSettings(input: BackupSettings): Promise<void>
 		}
 	});
 }
+
+export interface MaintenanceSettings {
+	historyRetentionDaysSearch: number;
+	logRetentionDays: number;
+	logPersistenceEnabled: boolean;
+}
+
+export async function getMaintenanceSettings(): Promise<MaintenanceSettings> {
+	const keys = Object.keys(MAINTENANCE_SETTINGS_DEFAULTS) as Array<
+		keyof typeof MAINTENANCE_SETTINGS_DEFAULTS
+	>;
+	const settings = await getSettings(keys);
+
+	return {
+		historyRetentionDaysSearch: Number(
+			settings.history_retention_days_search ??
+				MAINTENANCE_SETTINGS_DEFAULTS.history_retention_days_search
+		),
+		logRetentionDays: Number(
+			settings.log_retention_days ?? MAINTENANCE_SETTINGS_DEFAULTS.log_retention_days
+		),
+		logPersistenceEnabled:
+			(settings.log_persistence_enabled ??
+				MAINTENANCE_SETTINGS_DEFAULTS.log_persistence_enabled) === 'true'
+	};
+}
+
+export async function updateMaintenanceSettings(input: MaintenanceSettings): Promise<void> {
+	const updates: Array<{ key: string; value: string }> = [
+		{ key: 'history_retention_days_search', value: String(input.historyRetentionDaysSearch) },
+		{ key: 'log_retention_days', value: String(input.logRetentionDays) },
+		{ key: 'log_persistence_enabled', value: input.logPersistenceEnabled ? 'true' : 'false' }
+	];
+
+	await db.transaction(async (tx) => {
+		for (const { key, value } of updates) {
+			await tx
+				.insert(appSettings)
+				.values({
+					key,
+					value,
+					updatedAt: new Date()
+				})
+				.onConflictDoUpdate({
+					target: appSettings.key,
+					set: {
+						value,
+						updatedAt: new Date()
+					}
+				});
+		}
+	});
+}

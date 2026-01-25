@@ -1,47 +1,77 @@
 <script lang="ts">
-/**
- * General settings page.
- */
-
+import BellIcon from '@lucide/svelte/icons/bell';
+import CogIcon from '@lucide/svelte/icons/cog';
+import CompassIcon from '@lucide/svelte/icons/compass';
+import MenuIcon from '@lucide/svelte/icons/menu';
 import SettingsIcon from '@lucide/svelte/icons/settings';
-import { untrack } from 'svelte';
-import { enhance } from '$app/forms';
+import ShieldIcon from '@lucide/svelte/icons/shield';
+import { goto } from '$app/navigation';
+import { page } from '$app/state';
 import { Button } from '$lib/components/ui/button';
-import * as Card from '$lib/components/ui/card';
-import { Checkbox } from '$lib/components/ui/checkbox';
-import { Input } from '$lib/components/ui/input';
-import { Label } from '$lib/components/ui/label';
-import { toastStore } from '$lib/components/ui/toast';
-import { logLevelDescriptions, logLevelLabels, logLevels } from '$lib/schemas/settings';
+import * as DropdownMenu from '$lib/components/ui/dropdown-menu';
+import * as Tabs from '$lib/components/ui/tabs';
+import AccessTab from './_components/AccessTab.svelte';
+import AlertsTab from './_components/AlertsTab.svelte';
+import AutomationTab from './_components/AutomationTab.svelte';
+import DiscoveryTab from './_components/DiscoveryTab.svelte';
+import GeneralTab from './_components/GeneralTab.svelte';
 import type { PageProps } from './$types';
 
 let { data, form }: PageProps = $props();
 
-let isSubmitting = $state(false);
-
-// Form state with initial values from loaded settings
-// Use untrack to explicitly capture initial value without reactive tracking
-let checkForUpdates = $state(untrack(() => data.settings.checkForUpdates));
-
-// Update checkForUpdates when form is submitted with errors (preserve user's choice)
-$effect(() => {
-	if (form && 'checkForUpdates' in form) {
-		checkForUpdates = form.checkForUpdates as boolean;
+const tabs = [
+	{
+		id: 'general',
+		label: 'General',
+		icon: SettingsIcon,
+		accent: 'oklch(0.7 0.15 250)',
+		description: 'App identity & preferences'
+	},
+	{
+		id: 'discovery',
+		label: 'Discovery',
+		icon: CompassIcon,
+		accent: 'oklch(0.7 0.18 145)',
+		description: 'Search behavior & priorities'
+	},
+	{
+		id: 'access',
+		label: 'Access',
+		icon: ShieldIcon,
+		accent: 'oklch(0.7 0.16 30)',
+		description: 'Security & API keys'
+	},
+	{
+		id: 'automation',
+		label: 'Automation',
+		icon: CogIcon,
+		accent: 'oklch(0.7 0.14 280)',
+		description: 'Throttle, backup & maintenance'
+	},
+	{
+		id: 'alerts',
+		label: 'Alerts',
+		icon: BellIcon,
+		accent: 'oklch(0.7 0.17 60)',
+		description: 'Notification channels'
 	}
-});
+] as const;
 
-// Common select styling - glass variant
-const selectClass =
-	'flex h-9 w-full rounded-lg border border-glass-border/30 bg-glass/50 backdrop-blur-sm px-3 py-1 text-base transition-all placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary/50 hover:bg-glass/70 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm';
+type TabId = (typeof tabs)[number]['id'];
 
-// Get all IANA timezones
-const timezones = Intl.supportedValuesOf('timeZone');
+const activeTab = $derived((page.url.searchParams.get('tab') as TabId) ?? 'general');
+const activeTabConfig = $derived(tabs.find((t) => t.id === activeTab) ?? tabs[0]);
 
-/**
- * Get form value with fallback to loaded data.
- */
-function getFormValue(formValue: string | undefined, settingsValue: string): string {
-	return formValue ?? settingsValue;
+let mobileMenuOpen = $state(false);
+
+function setTab(tabId: string) {
+	const url = new URL(page.url);
+	if (tabId === 'general') {
+		url.searchParams.delete('tab');
+	} else {
+		url.searchParams.set('tab', tabId);
+	}
+	goto(url.toString(), { replaceState: true, noScroll: true });
 }
 </script>
 
@@ -49,151 +79,133 @@ function getFormValue(formValue: string | undefined, settingsValue: string): str
 	<title>Settings - Comradarr</title>
 </svelte:head>
 
-<div class="container mx-auto p-6 lg:p-8 max-w-2xl">
+<!-- Ambient glow background -->
+<div
+	class="fixed inset-0 pointer-events-none transition-all duration-700 ease-out z-0"
+	style="background: radial-gradient(ellipse 80% 50% at 50% -20%, color-mix(in oklch, {activeTabConfig.accent} 8%, transparent), transparent);"
+></div>
+
+<!-- Grain texture overlay -->
+<div
+	class="fixed inset-0 pointer-events-none z-[9999] opacity-[0.015]"
+	style="background-image: url(&quot;data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E&quot;);"
+></div>
+
+<div class="container relative z-10 mx-auto p-6 lg:p-8 max-w-4xl">
 	<!-- Page Header -->
 	<header class="mb-8 animate-float-up" style="animation-delay: 0ms;">
 		<div class="flex items-center gap-3">
-			<div class="p-2.5 rounded-xl bg-muted/50">
-				<SettingsIcon class="h-6 w-6 text-muted-foreground" />
+			<div
+				class="p-2.5 rounded-xl transition-colors duration-500"
+				style="background-color: color-mix(in oklch, {activeTabConfig.accent} 15%, transparent);"
+			>
+				<SettingsIcon
+					class="h-6 w-6 transition-colors duration-500"
+					style="color: {activeTabConfig.accent};"
+				/>
 			</div>
 			<div>
 				<h1 class="font-display text-3xl font-semibold tracking-tight md:text-4xl">Settings</h1>
-				<p class="text-muted-foreground mt-2">Configure application settings</p>
+				<p class="text-muted-foreground mt-1 text-sm md:text-base">
+					{activeTabConfig.description}
+				</p>
 			</div>
 		</div>
 	</header>
 
-	<Card.Root variant="glass" class="animate-float-up" style="animation-delay: 100ms;">
-		<Card.Header>
-			<Card.Title class="text-xl">General Settings</Card.Title>
-			<Card.Description>
-				Configure the application name, timezone, logging, and update preferences.
-			</Card.Description>
-		</Card.Header>
-		<Card.Content>
-			<form
-				method="POST"
-				action="?/update"
-				use:enhance={() => {
-					isSubmitting = true;
-					return async ({ result, update }) => {
-						await update();
-						isSubmitting = false;
-						if (result.type === 'success' && result.data?.success) {
-							toastStore.success((result.data.message as string) || 'Settings saved successfully');
-						}
-					};
-				}}
-			>
-				<div class="grid gap-6">
-					<!-- Error Message -->
-					{#if form?.error}
+	<!-- Mobile Tab Selector -->
+	<div class="md:hidden mb-6 animate-float-up" style="animation-delay: 50ms;">
+		<DropdownMenu.Root bind:open={mobileMenuOpen}>
+			<DropdownMenu.Trigger>
+				{#snippet child({ props })}
+					<Button
+						variant="outline"
+						class="w-full justify-between bg-glass/50 backdrop-blur-sm border-glass-border/30 hover:bg-glass/70"
+						{...props}
+					>
+						<span class="flex items-center gap-2">
+							<activeTabConfig.icon class="h-4 w-4" style="color: {activeTabConfig.accent};" />
+							{activeTabConfig.label}
+						</span>
+						<MenuIcon class="h-4 w-4 text-muted-foreground" />
+					</Button>
+				{/snippet}
+			</DropdownMenu.Trigger>
+			<DropdownMenu.Content class="w-[calc(100vw-3rem)] max-w-sm">
+				{#each tabs as tab}
+					<DropdownMenu.Item
+						class="flex items-center gap-3 py-3 cursor-pointer {activeTab === tab.id
+							? 'bg-accent'
+							: ''}"
+						onclick={() => {
+							setTab(tab.id);
+							mobileMenuOpen = false;
+						}}
+					>
 						<div
-							class="bg-destructive/15 text-destructive rounded-md border border-destructive/20 p-3 text-sm"
-							role="alert"
+							class="p-1.5 rounded-lg"
+							style="background-color: color-mix(in oklch, {tab.accent} 15%, transparent);"
 						>
-							{form.error}
+							<tab.icon class="h-4 w-4" style="color: {tab.accent};" />
 						</div>
-					{/if}
-
-					<!-- Application Name -->
-					<div class="grid gap-2">
-						<Label for="appName">Application Name</Label>
-						<Input
-							id="appName"
-							name="appName"
-							type="text"
-							placeholder="Comradarr"
-							required
-							disabled={isSubmitting}
-							value={getFormValue(form?.appName?.toString(), data.settings.appName)}
-						/>
-						<p class="text-xs text-muted-foreground">
-							The display name for this application instance.
-						</p>
-					</div>
-
-					<!-- Timezone -->
-					<div class="grid gap-2">
-						<Label for="timezone">Timezone</Label>
-						<select
-							id="timezone"
-							name="timezone"
-							required
-							disabled={isSubmitting}
-							class={selectClass}
-						>
-							{#each timezones as tz}
-								<option
-									value={tz}
-									selected={getFormValue(form?.timezone?.toString(), data.settings.timezone) === tz}
-								>
-									{tz}
-								</option>
-							{/each}
-						</select>
-						<p class="text-xs text-muted-foreground">
-							The timezone used for scheduling and displaying dates/times.
-						</p>
-					</div>
-
-					<!-- Log Level -->
-					<div class="grid gap-2">
-						<Label for="logLevel">Log Level</Label>
-						<select
-							id="logLevel"
-							name="logLevel"
-							required
-							disabled={isSubmitting}
-							class={selectClass}
-						>
-							{#each logLevels as level}
-								<option
-									value={level}
-									selected={getFormValue(form?.logLevel?.toString(), data.settings.logLevel) ===
-										level}
-								>
-									{logLevelLabels[level]} - {logLevelDescriptions[level]}
-								</option>
-							{/each}
-						</select>
-						<p class="text-xs text-muted-foreground">
-							Controls the verbosity of application logging. More verbose levels include all
-							messages from less verbose levels.
-						</p>
-					</div>
-
-					<!-- Check for Updates -->
-					<div class="grid gap-2">
-						<div class="flex items-center space-x-3">
-							<Checkbox
-								id="checkForUpdates"
-								name="checkForUpdates"
-								bind:checked={checkForUpdates}
-								disabled={isSubmitting}
-							/>
-							<Label for="checkForUpdates" class="text-sm font-medium cursor-pointer">
-								Check for updates
-							</Label>
+						<div class="flex flex-col">
+							<span class="font-medium">{tab.label}</span>
+							<span class="text-xs text-muted-foreground">{tab.description}</span>
 						</div>
-						<p class="text-xs text-muted-foreground ml-7">
-							When enabled, the application will periodically check for new versions and notify you
-							when updates are available.
-						</p>
-					</div>
+					</DropdownMenu.Item>
+				{/each}
+			</DropdownMenu.Content>
+		</DropdownMenu.Root>
+	</div>
 
-					<!-- Submit -->
-					<div class="flex gap-3 pt-4">
-						<Button type="submit" disabled={isSubmitting}>
-							{#if isSubmitting}
-								Saving...
-							{:else}
-								Save Settings
-							{/if}
-						</Button>
-					</div>
-				</div>
-			</form>
-		</Card.Content>
-	</Card.Root>
+	<!-- Desktop Tabs -->
+	<Tabs.Root value={activeTab} onValueChange={setTab} class="animate-float-up" style="animation-delay: 100ms;">
+		<Tabs.List
+			class="hidden md:inline-flex w-full h-auto p-1.5 bg-glass/50 backdrop-blur-sm border border-glass-border/30 rounded-xl mb-6"
+		>
+			{#each tabs as tab}
+				<Tabs.Trigger
+					value={tab.id}
+					class="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg transition-all duration-200 data-[state=active]:bg-background data-[state=active]:shadow-sm data-[state=inactive]:hover:bg-glass/50"
+				>
+					<tab.icon
+						class="h-4 w-4 transition-colors duration-300"
+						style="color: {activeTab === tab.id ? tab.accent : 'currentColor'};"
+					/>
+					<span class="font-medium">{tab.label}</span>
+				</Tabs.Trigger>
+			{/each}
+		</Tabs.List>
+
+		<Tabs.Content value="general" class="mt-0 focus-visible:outline-none focus-visible:ring-0">
+			<GeneralTab data={data.general} {form} accentColor={tabs[0].accent} />
+		</Tabs.Content>
+
+		<Tabs.Content value="discovery" class="mt-0 focus-visible:outline-none focus-visible:ring-0">
+			<DiscoveryTab data={data.search} {form} accentColor={tabs[1].accent} />
+		</Tabs.Content>
+
+		<Tabs.Content value="access" class="mt-0 focus-visible:outline-none focus-visible:ring-0">
+			<AccessTab
+				security={data.security}
+				apiKeys={data.apiKeys}
+				{form}
+				accentColor={tabs[2].accent}
+			/>
+		</Tabs.Content>
+
+		<Tabs.Content value="automation" class="mt-0 focus-visible:outline-none focus-visible:ring-0">
+			<AutomationTab
+				throttle={data.throttle}
+				backup={data.backup}
+				maintenance={data.maintenance}
+				{form}
+				accentColor={tabs[3].accent}
+			/>
+		</Tabs.Content>
+
+		<Tabs.Content value="alerts" class="mt-0 focus-visible:outline-none focus-visible:ring-0">
+			<AlertsTab channels={data.notifications.channels} {form} accentColor={tabs[4].accent} />
+		</Tabs.Content>
+	</Tabs.Root>
 </div>
