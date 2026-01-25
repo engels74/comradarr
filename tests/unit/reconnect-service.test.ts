@@ -730,7 +730,7 @@ describe('processReconnections', () => {
 		const result = await processReconnections();
 
 		// attemptNumber should be reconnectAttempts (3) + 1 = 4
-		expect(result.results[0].attemptNumber).toBe(4);
+		expect(result.results[0]?.attemptNumber).toBe(4);
 	});
 
 	it('aggregates succeeded/failed counts', async () => {

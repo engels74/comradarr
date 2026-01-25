@@ -193,7 +193,7 @@ describe('Reconnect Backoff Properties', () => {
 			const expectedBaseDelays = [30_000, 60_000, 120_000, 240_000, 480_000, 600_000];
 
 			for (let attempt = 0; attempt <= 5; attempt++) {
-				const baseDelay = expectedBaseDelays[attempt];
+				const baseDelay = expectedBaseDelays[attempt]!;
 				const minExpected = baseDelay * (1 - RECONNECT_CONFIG.JITTER);
 				const maxExpected = baseDelay * (1 + RECONNECT_CONFIG.JITTER);
 
