@@ -190,6 +190,6 @@ export const SEARCH_SETTINGS_DEFAULTS: SearchSettingsOutput = {
 	},
 	backlogConfig: {
 		enabled: true,
-		tierDelaysDays: [7, 14, 30, 60, 90]
+		tierDelaysDays: [7, 14, 21, 28, 30]
 	}
 };
