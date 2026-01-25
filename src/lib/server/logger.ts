@@ -1,6 +1,10 @@
 import { type LogLevel, logLevels } from '$lib/schemas/settings';
 import { getCorrelationId } from '$lib/server/context';
 import { addLogEntry, type BufferedLogEntry } from '$lib/server/services/log-buffer';
+import {
+	add as addToPersistedBuffer,
+	isLogPersistenceEnabled
+} from '$lib/server/services/log-persistence';
 
 export interface LogEntry {
 	timestamp: string;
@@ -169,6 +173,17 @@ export class Logger {
 			...(Object.keys(restContext).length > 0 && { context: restContext })
 		};
 		addLogEntry(bufferEntry);
+
+		if (isLogPersistenceEnabled()) {
+			addToPersistedBuffer({
+				timestamp: new Date(timestamp),
+				level,
+				module: this.module,
+				message,
+				...(correlationId !== undefined && { correlationId }),
+				...(Object.keys(restContext).length > 0 && { context: restContext })
+			});
+		}
 	}
 
 	error(message: string, context?: Record<string, unknown>): void {

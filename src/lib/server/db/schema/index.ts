@@ -23,6 +23,7 @@
  * - analyticsHourlyStats: Hourly aggregated statistics
  * - analyticsDailyStats: Daily aggregated statistics
  * - appSettings: Application-wide configuration settings
+ * - applicationLogs: Persistent application logs
  */
 
 import {
@@ -861,3 +862,34 @@ export const appSettings = pgTable('app_settings', {
 
 export type AppSetting = typeof appSettings.$inferSelect;
 export type NewAppSetting = typeof appSettings.$inferInsert;
+
+// =============================================================================
+// Application Logs Table
+// =============================================================================
+
+/**
+ * Stores application logs for persistence across restarts.
+ * Complements the in-memory circular buffer with persistent storage.
+ */
+export const applicationLogs = pgTable(
+	'application_logs',
+	{
+		id: integer('id').primaryKey().generatedAlwaysAsIdentity(),
+		timestamp: timestamp('timestamp', { withTimezone: true }).notNull().defaultNow(),
+		level: varchar('level', { length: 10 }).notNull(),
+		module: varchar('module', { length: 100 }).notNull(),
+		message: text('message').notNull(),
+		correlationId: varchar('correlation_id', { length: 36 }),
+		context: jsonb('context'),
+		createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow()
+	},
+	(table) => [
+		index('application_logs_level_time_idx').on(table.level, table.timestamp.desc()),
+		index('application_logs_module_time_idx').on(table.module, table.timestamp.desc()),
+		index('application_logs_correlation_idx').on(table.correlationId),
+		index('application_logs_created_idx').on(table.createdAt)
+	]
+);
+
+export type ApplicationLog = typeof applicationLogs.$inferSelect;
+export type NewApplicationLog = typeof applicationLogs.$inferInsert;

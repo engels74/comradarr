@@ -235,3 +235,88 @@ export function exportLogsAsJson(filter?: LogFilter): string {
 	const result = queryLogs(filter, { limit: state.bufferSize, offset: 0 });
 	return JSON.stringify(result.entries, null, 2);
 }
+
+export interface HybridLogQueryResult {
+	entries: BufferedLogEntry[];
+	total: number;
+	hasMore: boolean;
+	source: 'memory' | 'database' | 'hybrid';
+}
+
+export async function queryLogsHybrid(
+	filter?: LogFilter,
+	pagination?: LogPagination
+): Promise<HybridLogQueryResult> {
+	const limit = pagination?.limit ?? 100;
+	const offset = pagination?.offset ?? 0;
+
+	const memoryResult = queryLogs(filter, { limit, offset });
+
+	if (memoryResult.entries.length >= limit) {
+		return {
+			...memoryResult,
+			source: 'memory'
+		};
+	}
+
+	try {
+		const { queryPersistedLogs, isLogPersistenceEnabled } = await import(
+			'$lib/server/services/log-persistence'
+		);
+
+		if (!isLogPersistenceEnabled()) {
+			return {
+				...memoryResult,
+				source: 'memory'
+			};
+		}
+
+		const dbFilter = filter
+			? {
+					...(filter.levels && { levels: filter.levels }),
+					...(filter.module && { module: filter.module }),
+					...(filter.search && { search: filter.search }),
+					...(filter.correlationId && { correlationId: filter.correlationId }),
+					...(filter.since && { since: new Date(filter.since) }),
+					...(filter.until && { until: new Date(filter.until) })
+				}
+			: undefined;
+
+		const dbOffset = Math.max(0, offset - memoryResult.total);
+		const dbLimit = limit - memoryResult.entries.length;
+
+		if (dbLimit <= 0) {
+			return {
+				...memoryResult,
+				source: 'memory'
+			};
+		}
+
+		const dbResult = await queryPersistedLogs(dbFilter, { limit: dbLimit, offset: dbOffset });
+
+		const memoryIds = new Set(memoryResult.entries.map((e) => e.id));
+		const uniqueDbEntries = dbResult.entries
+			.filter((e) => !memoryIds.has(e.id))
+			.map((e) => ({
+				...e,
+				id: -e.id
+			}));
+
+		const combinedEntries = [...memoryResult.entries, ...uniqueDbEntries];
+		combinedEntries.sort((a, b) => b.timestamp.localeCompare(a.timestamp));
+
+		const combinedTotal = memoryResult.total + dbResult.total;
+
+		return {
+			entries: combinedEntries.slice(0, limit),
+			total: combinedTotal,
+			hasMore: offset + limit < combinedTotal,
+			source: uniqueDbEntries.length > 0 ? 'hybrid' : 'memory'
+		};
+	} catch {
+		return {
+			...memoryResult,
+			source: 'memory'
+		};
+	}
+}

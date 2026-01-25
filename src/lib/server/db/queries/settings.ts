@@ -45,7 +45,11 @@ export const SEARCH_SETTINGS_DEFAULTS = {
 
 export const MAINTENANCE_SETTINGS_DEFAULTS = {
 	// History retention in days (search_history table)
-	history_retention_days_search: '90'
+	history_retention_days_search: '90',
+	// Log retention in days (application_logs table)
+	log_retention_days: '14',
+	// Whether log persistence is enabled
+	log_persistence_enabled: 'true'
 } as const;
 
 export const BACKUP_SETTINGS_DEFAULTS = {

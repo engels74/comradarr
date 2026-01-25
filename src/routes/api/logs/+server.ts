@@ -25,7 +25,8 @@ import {
 	getLogLevelCounts,
 	getUniqueModules,
 	type LogFilter,
-	queryLogs
+	queryLogs,
+	queryLogsHybrid
 } from '$lib/server/services/log-buffer';
 import type { RequestHandler } from './$types';
 
@@ -44,6 +45,7 @@ export const GET: RequestHandler = async ({ url, locals }) => {
 	const since = url.searchParams.get('since') ?? undefined;
 	const until = url.searchParams.get('until') ?? undefined;
 	const format = url.searchParams.get('format');
+	const source = url.searchParams.get('source') ?? 'hybrid';
 
 	let limit = DEFAULT_LIMIT;
 	if (limitParam) {
@@ -91,15 +93,30 @@ export const GET: RequestHandler = async ({ url, locals }) => {
 		});
 	}
 
-	const result = queryLogs(filter, { limit, offset });
 	const bufferConfig = getBufferConfig();
 	const levelCounts = getLogLevelCounts();
 	const modules = getUniqueModules();
+
+	if (source === 'hybrid') {
+		const result = await queryLogsHybrid(filter, { limit, offset });
+		return json({
+			entries: result.entries,
+			total: result.total,
+			hasMore: result.hasMore,
+			source: result.source,
+			buffer: bufferConfig,
+			levelCounts,
+			modules
+		});
+	}
+
+	const result = queryLogs(filter, { limit, offset });
 
 	return json({
 		entries: result.entries,
 		total: result.total,
 		hasMore: result.hasMore,
+		source: 'memory',
 		buffer: bufferConfig,
 		levelCounts,
 		modules
