@@ -78,9 +78,40 @@ let isTestingConnection = $state(false);
 let isTriggeringSync = $state(false);
 let isClearingFailedSearches = $state(false);
 let isDeleting = $state(false);
+let isReconnecting = $state(false);
+let isPausingReconnect = $state(false);
+let isResumingReconnect = $state(false);
 
 // Dialog state
 let deleteDialogOpen = $state(false);
+
+// Derived state
+const isOfflineOrUnhealthy = $derived(
+	data.connector.healthStatus === 'offline' || data.connector.healthStatus === 'unhealthy'
+);
+
+const hasActiveReconnect = $derived(
+	data.reconnectState !== null && data.reconnectState.reconnectStartedAt !== null
+);
+
+// Format relative time for next reconnect
+function formatRelativeTime(date: Date | string | null): string {
+	if (!date) return 'N/A';
+	const d = typeof date === 'string' ? new Date(date) : date;
+	const now = new Date();
+	const diffMs = d.getTime() - now.getTime();
+
+	if (diffMs < 0) return 'Now';
+
+	const diffSec = Math.floor(diffMs / 1000);
+	if (diffSec < 60) return `${diffSec}s`;
+
+	const diffMin = Math.floor(diffSec / 60);
+	if (diffMin < 60) return `${diffMin}m`;
+
+	const diffHrs = Math.floor(diffMin / 60);
+	return `${diffHrs}h ${diffMin % 60}m`;
+}
 </script>
 
 <svelte:head>
@@ -189,6 +220,115 @@ let deleteDialogOpen = $state(false);
 				</div>
 			</Card.Content>
 		</Card.Root>
+
+		<!-- Reconnect Status Card (shown when offline/unhealthy) -->
+		{#if isOfflineOrUnhealthy && hasActiveReconnect}
+			<Card.Root class="border-warning/50">
+				<Card.Header>
+					<Card.Title class="text-warning">Reconnect Status</Card.Title>
+				</Card.Header>
+				<Card.Content class="space-y-4">
+					<div class="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 text-sm">
+						<span class="text-muted-foreground">Attempts</span>
+						<span class="font-medium">{data.reconnectState?.reconnectAttempts ?? 0}</span>
+
+						<span class="text-muted-foreground">Next Retry</span>
+						<span class={data.reconnectState?.reconnectPaused ? 'text-muted-foreground' : ''}>
+							{#if data.reconnectState?.reconnectPaused}
+								Paused
+							{:else}
+								{formatRelativeTime(data.reconnectState?.nextReconnectAt ?? null)}
+							{/if}
+						</span>
+
+						{#if data.reconnectState?.lastReconnectError}
+							<span class="text-muted-foreground">Last Error</span>
+							<span class="text-red-600 dark:text-red-400 text-xs break-words">
+								{data.reconnectState.lastReconnectError}
+							</span>
+						{/if}
+					</div>
+
+					<div class="flex flex-wrap gap-2 pt-2 border-t border-border">
+						<!-- Manual Reconnect -->
+						<form
+							method="POST"
+							action="?/reconnect"
+							use:enhance={() => {
+								isReconnecting = true;
+								return async ({ result, update }) => {
+									try {
+										await update();
+									if (result.type === 'success' && result.data?.success) {
+										toastStore.success(result.data.message as string);
+									} else if (result.type === 'failure' && result.data?.error) {
+										toastStore.error(result.data.error as string);
+									}
+									} finally {
+										isReconnecting = false;
+									}
+								};
+							}}
+						>
+							<Button type="submit" variant="default" size="sm" disabled={isReconnecting}>
+								{isReconnecting ? 'Reconnecting...' : 'Reconnect Now'}
+							</Button>
+						</form>
+
+						<!-- Pause/Resume Auto-Reconnect -->
+						{#if data.reconnectState?.reconnectPaused}
+							<form
+								method="POST"
+								action="?/resumeReconnect"
+								use:enhance={() => {
+									isResumingReconnect = true;
+									return async ({ result, update }) => {
+										try {
+											await update();
+										if (result.type === 'success' && result.data?.success) {
+											toastStore.success(result.data.message as string);
+										} else if (result.type === 'failure' && result.data?.error) {
+											toastStore.error(result.data.error as string);
+										}
+										} finally {
+											isResumingReconnect = false;
+										}
+									};
+								}}
+							>
+								<Button type="submit" variant="outline" size="sm" disabled={isResumingReconnect}>
+									{isResumingReconnect ? 'Resuming...' : 'Resume Auto-Reconnect'}
+								</Button>
+							</form>
+						{:else}
+							<form
+								method="POST"
+								action="?/pauseReconnect"
+								use:enhance={() => {
+									isPausingReconnect = true;
+									return async ({ result, update }) => {
+										try {
+											await update();
+										if (result.type === 'success' && result.data?.success) {
+											toastStore.success(result.data.message as string);
+										} else if (result.type === 'failure' && result.data?.error) {
+											toastStore.error(result.data.error as string);
+										}
+										} finally {
+											isPausingReconnect = false;
+										}
+									};
+								}}
+							>
+								<Button type="submit" variant="outline" size="sm" disabled={isPausingReconnect}>
+									{isPausingReconnect ? 'Pausing...' : 'Pause Auto-Reconnect'}
+								</Button>
+							</form>
+						{/if}
+					</div>
+				</Card.Content>
+			</Card.Root>
+		{/if}
 
 		<!-- Statistics Card -->
 		<Card.Root>
@@ -303,12 +443,13 @@ let deleteDialogOpen = $state(false);
 					use:enhance={() => {
 						isTestingConnection = true;
 						return async ({ result, update }) => {
-							await update();
-							isTestingConnection = false;
-
-							// Show toast on success
-							if (result.type === 'success' && result.data?.success) {
-								toastStore.success(result.data.message as string);
+							try {
+								await update();
+								if (result.type === 'success' && result.data?.success) {
+									toastStore.success(result.data.message as string);
+								}
+							} finally {
+								isTestingConnection = false;
 							}
 						};
 					}}
@@ -325,12 +466,13 @@ let deleteDialogOpen = $state(false);
 					use:enhance={() => {
 						isTriggeringSync = true;
 						return async ({ result, update }) => {
-							await update();
-							isTriggeringSync = false;
-
-							// Show toast on success
-							if (result.type === 'success' && result.data?.success) {
-								toastStore.success(result.data.message as string);
+							try {
+								await update();
+								if (result.type === 'success' && result.data?.success) {
+									toastStore.success(result.data.message as string);
+								}
+							} finally {
+								isTriggeringSync = false;
 							}
 						};
 					}}
@@ -352,12 +494,13 @@ let deleteDialogOpen = $state(false);
 						use:enhance={() => {
 							isClearingFailedSearches = true;
 							return async ({ result, update }) => {
-								await update();
-								isClearingFailedSearches = false;
-
-								// Show toast on success
-								if (result.type === 'success' && result.data?.success) {
-									toastStore.success(result.data.message as string);
+								try {
+									await update();
+									if (result.type === 'success' && result.data?.success) {
+										toastStore.success(result.data.message as string);
+									}
+								} finally {
+									isClearingFailedSearches = false;
 								}
 							};
 						}}
@@ -366,6 +509,33 @@ let deleteDialogOpen = $state(false);
 							{isClearingFailedSearches
 								? 'Clearing...'
 								: `Clear Failed Searches (${failedSearchCount})`}
+						</Button>
+					</form>
+				{/if}
+
+				<!-- Reconnect (only show if offline/unhealthy and no active reconnect cycle) -->
+				{#if isOfflineOrUnhealthy && !hasActiveReconnect}
+					<form
+						method="POST"
+						action="?/reconnect"
+						use:enhance={() => {
+							isReconnecting = true;
+							return async ({ result, update }) => {
+								try {
+									await update();
+									if (result.type === 'success' && result.data?.success) {
+										toastStore.success(result.data.message as string);
+									} else if (result.type === 'failure' && result.data?.error) {
+										toastStore.error(result.data.error as string);
+									}
+								} finally {
+									isReconnecting = false;
+								}
+							};
+						}}
+					>
+						<Button type="submit" variant="outline" disabled={isReconnecting}>
+							{isReconnecting ? 'Reconnecting...' : 'Reconnect'}
 						</Button>
 					</form>
 				{/if}
@@ -452,15 +622,16 @@ let deleteDialogOpen = $state(false);
 								use:enhance={() => {
 									isDeleting = true;
 									return async ({ result, update }) => {
-										await update();
-										isDeleting = false;
-
-										// Show toast and navigate on success
-										if (result.type === 'success' && result.data?.success) {
-											toastStore.success(result.data.message as string);
-											if (result.data.redirectTo) {
-												goto(result.data.redirectTo as string);
+										try {
+											await update();
+											if (result.type === 'success' && result.data?.success) {
+												toastStore.success(result.data.message as string);
+												if (result.data.redirectTo) {
+													goto(result.data.redirectTo as string);
+												}
 											}
+										} finally {
+											isDeleting = false;
 										}
 									};
 								}}

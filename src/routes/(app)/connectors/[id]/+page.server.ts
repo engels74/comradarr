@@ -21,8 +21,14 @@ import {
 	getSyncState,
 	updateConnectorHealth
 } from '$lib/server/db/queries/connectors';
+import { getReconnectState } from '$lib/server/db/queries/reconnect';
 import type { Connector } from '$lib/server/db/schema';
 import { createLogger } from '$lib/server/logger';
+import {
+	pauseConnectorReconnect,
+	resumeConnectorReconnect,
+	triggerManualReconnect
+} from '$lib/server/services/reconnect';
 import { runIncrementalSync } from '$lib/server/services/sync';
 import type { Actions, PageServerLoad } from './$types';
 
@@ -90,20 +96,27 @@ export const load: PageServerLoad = async ({ params }) => {
 		error(404, 'Connector not found');
 	}
 
-	const [syncStateData, detailedStats, searchStateDistribution, recentSearchHistory] =
-		await Promise.all([
-			getSyncState(id),
-			getConnectorDetailedStats(id),
-			getSearchStateDistribution(id),
-			getRecentSearchHistory(id, 15)
-		]);
+	const [
+		syncStateData,
+		detailedStats,
+		searchStateDistribution,
+		recentSearchHistory,
+		reconnectStateData
+	] = await Promise.all([
+		getSyncState(id),
+		getConnectorDetailedStats(id),
+		getSearchStateDistribution(id),
+		getRecentSearchHistory(id, 15),
+		getReconnectState(id)
+	]);
 
 	return {
 		connector,
 		syncState: syncStateData,
 		detailedStats,
 		searchStateDistribution,
-		recentSearchHistory
+		recentSearchHistory,
+		reconnectState: reconnectStateData
 	};
 };
 
@@ -299,5 +312,101 @@ export const actions: Actions = {
 			message: 'Connector deleted successfully',
 			redirectTo: '/connectors'
 		};
+	},
+
+	reconnect: async ({ params }) => {
+		const id = Number(params.id);
+
+		if (Number.isNaN(id)) {
+			logger.warn('Reconnect failed - invalid ID', { rawId: params.id });
+			return fail(400, { error: 'Invalid connector ID' });
+		}
+
+		try {
+			const result = await triggerManualReconnect(id);
+
+			if (result.success) {
+				logger.info('Manual reconnection successful', {
+					connectorId: id,
+					connectorName: result.connectorName,
+					newStatus: result.newStatus
+				});
+
+				return {
+					success: true,
+					message: `Reconnection successful! Status: ${result.newStatus}`
+				};
+			} else {
+				logger.warn('Manual reconnection failed', {
+					connectorId: id,
+					connectorName: result.connectorName,
+					error: result.error,
+					nextReconnectAt: result.nextReconnectAt?.toISOString()
+				});
+
+				return fail(400, {
+					error: result.error ?? 'Reconnection failed',
+					nextReconnectAt: result.nextReconnectAt?.toISOString()
+				});
+			}
+		} catch (err) {
+			logger.error('Reconnect error', {
+				connectorId: id,
+				error: err instanceof Error ? err.message : String(err)
+			});
+			return fail(500, { error: 'Reconnection failed unexpectedly' });
+		}
+	},
+
+	pauseReconnect: async ({ params }) => {
+		const id = Number(params.id);
+
+		if (Number.isNaN(id)) {
+			logger.warn('Pause reconnect failed - invalid ID', { rawId: params.id });
+			return fail(400, { error: 'Invalid connector ID' });
+		}
+
+		try {
+			await pauseConnectorReconnect(id);
+
+			logger.info('Auto-reconnect paused', { connectorId: id });
+
+			return {
+				success: true,
+				message: 'Auto-reconnect paused'
+			};
+		} catch (err) {
+			logger.error('Pause reconnect error', {
+				connectorId: id,
+				error: err instanceof Error ? err.message : String(err)
+			});
+			return fail(500, { error: 'Failed to pause auto-reconnect' });
+		}
+	},
+
+	resumeReconnect: async ({ params }) => {
+		const id = Number(params.id);
+
+		if (Number.isNaN(id)) {
+			logger.warn('Resume reconnect failed - invalid ID', { rawId: params.id });
+			return fail(400, { error: 'Invalid connector ID' });
+		}
+
+		try {
+			await resumeConnectorReconnect(id);
+
+			logger.info('Auto-reconnect resumed', { connectorId: id });
+
+			return {
+				success: true,
+				message: 'Auto-reconnect resumed'
+			};
+		} catch (err) {
+			logger.error('Resume reconnect error', {
+				connectorId: id,
+				error: err instanceof Error ? err.message : String(err)
+			});
+			return fail(500, { error: 'Failed to resume auto-reconnect' });
+		}
 	}
 };

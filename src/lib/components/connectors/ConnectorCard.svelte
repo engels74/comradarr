@@ -3,6 +3,7 @@ import { enhance } from '$app/forms';
 import { StatusBadge } from '$lib/components/shared';
 import { Button } from '$lib/components/ui/button';
 import * as Card from '$lib/components/ui/card';
+import { toastStore } from '$lib/components/ui/toast';
 import type { ConnectorStats } from '$lib/server/db/queries/connectors';
 import type { Connector } from '$lib/server/db/schema';
 import { cn } from '$lib/utils.js';
@@ -14,6 +15,12 @@ interface Props {
 }
 
 let { connector, stats, class: className }: Props = $props();
+
+let isReconnecting = $state(false);
+
+const isOfflineOrUnhealthy = $derived(
+	connector.healthStatus === 'offline' || connector.healthStatus === 'unhealthy'
+);
 
 /**
  * Connector type styles with OKLCH accent colors
@@ -127,6 +134,42 @@ const truncatedUrl = $derived(() => {
 			</div>
 		{:else}
 			<div class="text-xs text-muted-foreground italic opacity-75">Never synced</div>
+		{/if}
+
+		<!-- Reconnect Button for offline/unhealthy connectors -->
+		{#if isOfflineOrUnhealthy}
+			<div class="pt-2 border-t border-glass-border/20">
+				<form
+					method="POST"
+					action="?/reconnect"
+					use:enhance={() => {
+						isReconnecting = true;
+						return async ({ result, update }) => {
+							try {
+								await update();
+								if (result.type === 'success' && result.data?.success) {
+									toastStore.success(result.data.message as string);
+								} else if (result.type === 'success' && result.data?.error) {
+									toastStore.error(result.data.error as string);
+								}
+							} finally {
+								isReconnecting = false;
+							}
+						};
+					}}
+				>
+					<input type="hidden" name="id" value={connector.id} />
+					<Button
+						type="submit"
+						variant="outline"
+						size="sm"
+						class="w-full text-xs"
+						disabled={isReconnecting}
+					>
+						{isReconnecting ? 'Reconnecting...' : 'Reconnect'}
+					</Button>
+				</form>
+			</div>
 		{/if}
 	</Card.Content>
 </Card.Root>

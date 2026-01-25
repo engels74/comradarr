@@ -316,6 +316,12 @@ export const syncState = pgTable('sync_state', {
 	lastReconciliation: timestamp('last_reconciliation', { withTimezone: true }),
 	cursor: jsonb('cursor'), // Pagination/incremental sync cursor
 	consecutiveFailures: integer('consecutive_failures').notNull().default(0),
+	// Reconnect tracking fields
+	reconnectAttempts: integer('reconnect_attempts').notNull().default(0),
+	nextReconnectAt: timestamp('next_reconnect_at', { withTimezone: true }),
+	reconnectStartedAt: timestamp('reconnect_started_at', { withTimezone: true }),
+	lastReconnectError: text('last_reconnect_error'),
+	reconnectPaused: boolean('reconnect_paused').notNull().default(false),
 	createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 	updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow()
 });
