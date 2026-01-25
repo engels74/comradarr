@@ -1,5 +1,5 @@
-// Searches all monitored content with files for potential upgrades.
-// The *arr API's qualityCutoffNotMet flag is checked during sync cleanup to remove resolved registries.
+// Searches for monitored content with files that need quality upgrades (qualityCutoffNotMet=true).
+// When qualityCutoffNotMet becomes false (upgrade achieved), the registry is cleaned up.
 
 import { and, eq, isNull, sql } from 'drizzle-orm';
 import { db } from '$lib/server/db';
@@ -126,6 +126,7 @@ async function discoverEpisodeUpgrades(
 				eq(episodes.connectorId, connectorId),
 				eq(episodes.monitored, true),
 				eq(episodes.hasFile, true),
+				eq(episodes.qualityCutoffNotMet, true),
 				isNull(searchRegistry.id) // No existing registry entry
 			)
 		);
@@ -137,7 +138,8 @@ async function discoverEpisodeUpgrades(
 			and(
 				eq(episodes.connectorId, connectorId),
 				eq(episodes.monitored, true),
-				eq(episodes.hasFile, true)
+				eq(episodes.hasFile, true),
+				eq(episodes.qualityCutoffNotMet, true)
 			)
 		);
 
@@ -214,6 +216,7 @@ async function discoverMovieUpgrades(
 				eq(movies.connectorId, connectorId),
 				eq(movies.monitored, true),
 				eq(movies.hasFile, true),
+				eq(movies.qualityCutoffNotMet, true),
 				isNull(searchRegistry.id) // No existing registry entry
 			)
 		);
@@ -222,7 +225,12 @@ async function discoverMovieUpgrades(
 		.select({ count: sql<number>`count(*)::int` })
 		.from(movies)
 		.where(
-			and(eq(movies.connectorId, connectorId), eq(movies.monitored, true), eq(movies.hasFile, true))
+			and(
+				eq(movies.connectorId, connectorId),
+				eq(movies.monitored, true),
+				eq(movies.hasFile, true),
+				eq(movies.qualityCutoffNotMet, true)
+			)
 		);
 
 	const totalMovieUpgrades = totalMovieUpgradesResult[0]?.count ?? 0;
@@ -281,7 +289,8 @@ export async function getUpgradeStats(
 			and(
 				eq(episodes.connectorId, connectorId),
 				eq(episodes.monitored, true),
-				eq(episodes.hasFile, true)
+				eq(episodes.hasFile, true),
+				eq(episodes.qualityCutoffNotMet, true)
 			)
 		);
 
@@ -289,7 +298,12 @@ export async function getUpgradeStats(
 		.select({ count: sql<number>`count(*)::int` })
 		.from(movies)
 		.where(
-			and(eq(movies.connectorId, connectorId), eq(movies.monitored, true), eq(movies.hasFile, true))
+			and(
+				eq(movies.connectorId, connectorId),
+				eq(movies.monitored, true),
+				eq(movies.hasFile, true),
+				eq(movies.qualityCutoffNotMet, true)
+			)
 		);
 
 	return {
