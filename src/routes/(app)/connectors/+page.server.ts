@@ -14,6 +14,7 @@ import {
 	updateProwlarrInstance
 } from '$lib/server/db/queries/prowlarr';
 import { createLogger } from '$lib/server/logger';
+import { triggerManualReconnect } from '$lib/server/services/reconnect';
 import type { Actions, PageServerLoad } from './$types';
 
 const logger = createLogger('connectors');
@@ -90,5 +91,49 @@ export const actions: Actions = {
 		logger.info('Prowlarr instance toggled', { instanceId: id, enabled });
 
 		return { success: true };
+	},
+
+	reconnect: async ({ request }) => {
+		const data = await request.formData();
+		const id = Number(data.get('id'));
+
+		if (Number.isNaN(id)) {
+			logger.warn('Reconnect failed - invalid ID', { rawId: data.get('id') });
+			return { success: false, error: 'Invalid connector ID' };
+		}
+
+		try {
+			const result = await triggerManualReconnect(id);
+
+			if (result.success) {
+				logger.info('Manual reconnection successful', {
+					connectorId: id,
+					connectorName: result.connectorName,
+					newStatus: result.newStatus
+				});
+
+				return {
+					success: true,
+					message: `Reconnection successful! Status: ${result.newStatus}`
+				};
+			} else {
+				logger.warn('Manual reconnection failed', {
+					connectorId: id,
+					connectorName: result.connectorName,
+					error: result.error
+				});
+
+				return {
+					success: false,
+					error: result.error ?? 'Reconnection failed'
+				};
+			}
+		} catch (err) {
+			logger.error('Reconnect error', {
+				connectorId: id,
+				error: err instanceof Error ? err.message : String(err)
+			});
+			return { success: false, error: 'Reconnection failed unexpectedly' };
+		}
 	}
 };

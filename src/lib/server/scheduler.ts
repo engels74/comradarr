@@ -9,6 +9,7 @@
  * - throttle-window-reset: Every minute - resets expired throttle and API key rate limit windows
  * - prowlarr-health-check: Every 5 minutes - checks Prowlarr indexer health
  * - connector-health-check: Every 5 minutes - checks *arr connector health
+ * - connector-reconnect: Every 30 seconds - attempts reconnection to offline/unhealthy connectors
  * - incremental-sync-sweep: Every 15 minutes - syncs content, discovers gaps/upgrades, enqueues items
  * - full-reconciliation: Daily at 3 AM - complete sync with deletion of removed items
  * - completion-snapshot: Daily at 4 AM - captures library completion stats for trend sparklines
@@ -72,6 +73,10 @@ import {
 	revertToQueued,
 	setSearching
 } from '$lib/server/services/queue';
+import {
+	initializeReconnectForOfflineConnector,
+	processReconnections
+} from '$lib/server/services/reconnect';
 import { runFullReconciliation, runIncrementalSync } from '$lib/server/services/sync';
 import {
 	determineHealthFromChecks,
@@ -256,6 +261,8 @@ export function initializeScheduler(): void {
 					const isReachable = await client.ping();
 
 					if (!isReachable) {
+						const wasOnline =
+							connector.healthStatus !== 'offline' && connector.healthStatus !== 'unhealthy';
 						await updateConnectorHealth(connector.id, 'offline');
 						results.push({
 							id: connector.id,
@@ -264,6 +271,9 @@ export function initializeScheduler(): void {
 							newStatus: 'offline',
 							error: 'Connection failed'
 						});
+						if (wasOnline) {
+							await initializeReconnectForOfflineConnector(connector.id);
+						}
 						continue;
 					}
 
@@ -294,6 +304,8 @@ export function initializeScheduler(): void {
 						errorMsg = error instanceof Error ? error.message : 'Unknown error';
 					}
 
+					const wasOnline =
+						connector.healthStatus !== 'offline' && connector.healthStatus !== 'unhealthy';
 					await updateConnectorHealth(connector.id, newStatus);
 					results.push({
 						id: connector.id,
@@ -302,6 +314,9 @@ export function initializeScheduler(): void {
 						newStatus,
 						error: errorMsg
 					});
+					if (wasOnline && (newStatus === 'offline' || newStatus === 'unhealthy')) {
+						await initializeReconnectForOfflineConnector(connector.id);
+					}
 				}
 			}
 
@@ -314,6 +329,43 @@ export function initializeScheduler(): void {
 	state.jobs.set('connector-health-check', {
 		name: 'connector-health-check',
 		cron: connectorHealthJob
+	});
+
+	const connectorReconnectJob = new Cron(
+		'*/30 * * * * *',
+		{
+			name: 'connector-reconnect',
+			protect: true,
+			catch: (err) => {
+				logger.error('Connector reconnect failed', {
+					error: err instanceof Error ? err.message : String(err)
+				});
+			}
+		},
+		withJobContext('connector-reconnect', async () => {
+			const results = await processReconnections();
+
+			if (results.processed > 0) {
+				logger.info('Connector reconnections processed', {
+					processed: results.processed,
+					succeeded: results.succeeded,
+					failed: results.failed,
+					details: results.results.map((r) => ({
+						id: r.connectorId,
+						name: r.connectorName,
+						success: r.success,
+						newStatus: r.newStatus,
+						attempt: r.attemptNumber,
+						error: r.error
+					}))
+				});
+			}
+		})
+	);
+
+	state.jobs.set('connector-reconnect', {
+		name: 'connector-reconnect',
+		cron: connectorReconnectJob
 	});
 
 	const incrementalSyncJob = new Cron(
