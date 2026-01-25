@@ -414,15 +414,15 @@ export async function getMostSearchedItems(limit: number = 10): Promise<MostSear
 	const episodeQuery = db
 		.select({
 			contentType: sql<'episode'>`'episode'::text`.as('content_type'),
-			contentId: searchHistory.contentId,
+			contentId: sql<number>`${searchHistory.contentId}`.as('content_id'),
 			title:
 				sql<string>`COALESCE(${episodes.title}, 'Episode ' || ${episodes.seasonNumber} || 'x' || LPAD(${episodes.episodeNumber}::text, 2, '0'))`.as(
 					'title'
 				),
-			seriesTitle: series.title,
-			seasonNumber: episodes.seasonNumber,
-			episodeNumber: episodes.episodeNumber,
-			connectorName: connectors.name,
+			seriesTitle: sql<string | null>`${series.title}`.as('series_title'),
+			seasonNumber: sql<number | null>`${episodes.seasonNumber}`.as('season_number'),
+			episodeNumber: sql<number | null>`${episodes.episodeNumber}`.as('episode_number'),
+			connectorName: sql<string>`${connectors.name}`.as('connector_name'),
 			searchCount: count().as('search_count'),
 			lastSearched: sql<Date>`MAX(${searchHistory.createdAt})`.as('last_searched')
 		})
@@ -445,12 +445,12 @@ export async function getMostSearchedItems(limit: number = 10): Promise<MostSear
 	const movieQuery = db
 		.select({
 			contentType: sql<'movie'>`'movie'::text`.as('content_type'),
-			contentId: searchHistory.contentId,
-			title: movies.title,
+			contentId: sql<number>`${searchHistory.contentId}`.as('content_id'),
+			title: sql<string>`${movies.title}`.as('title'),
 			seriesTitle: sql<string | null>`NULL::text`.as('series_title'),
 			seasonNumber: sql<number | null>`NULL::integer`.as('season_number'),
 			episodeNumber: sql<number | null>`NULL::integer`.as('episode_number'),
-			connectorName: connectors.name,
+			connectorName: sql<string>`${connectors.name}`.as('connector_name'),
 			searchCount: count().as('search_count'),
 			lastSearched: sql<Date>`MAX(${searchHistory.createdAt})`.as('last_searched')
 		})
@@ -473,12 +473,12 @@ export async function getMostSearchedItems(limit: number = 10): Promise<MostSear
 
 	return (results as Record<string, unknown>[]).map((row) => ({
 		contentType: row.content_type as 'episode' | 'movie',
-		contentId: row.contentid as number,
+		contentId: row.content_id as number,
 		title: row.title as string,
 		seriesTitle: row.series_title as string | null,
-		seasonNumber: row.seasonnumber as number | null,
-		episodeNumber: row.episodenumber as number | null,
-		connectorName: row.connectorname as string,
+		seasonNumber: row.season_number as number | null,
+		episodeNumber: row.episode_number as number | null,
+		connectorName: row.connector_name as string,
 		searchCount: Number(row.search_count),
 		lastSearched: new Date(row.last_searched as string)
 	}));
@@ -489,17 +489,17 @@ export async function getHardestToFindItems(limit: number = 10): Promise<Hardest
 	const episodeQuery = db
 		.select({
 			contentType: sql<'episode'>`'episode'::text`.as('content_type'),
-			contentId: searchRegistry.contentId,
+			contentId: sql<number>`${searchRegistry.contentId}`.as('content_id'),
 			title:
 				sql<string>`COALESCE(${episodes.title}, 'Episode ' || ${episodes.seasonNumber} || 'x' || LPAD(${episodes.episodeNumber}::text, 2, '0'))`.as(
 					'title'
 				),
-			seriesTitle: series.title,
-			seasonNumber: episodes.seasonNumber,
-			episodeNumber: episodes.episodeNumber,
-			connectorName: connectors.name,
-			attemptCount: searchRegistry.attemptCount,
-			state: searchRegistry.state,
+			seriesTitle: sql<string | null>`${series.title}`.as('series_title'),
+			seasonNumber: sql<number | null>`${episodes.seasonNumber}`.as('season_number'),
+			episodeNumber: sql<number | null>`${episodes.episodeNumber}`.as('episode_number'),
+			connectorName: sql<string>`${connectors.name}`.as('connector_name'),
+			attemptCount: sql<number>`${searchRegistry.attemptCount}`.as('attempt_count'),
+			state: sql<string>`${searchRegistry.state}`.as('state'),
 			daysSinceCreated: sql<number>`EXTRACT(DAY FROM NOW() - ${searchRegistry.createdAt})::int`.as(
 				'days_since_created'
 			)
@@ -515,14 +515,14 @@ export async function getHardestToFindItems(limit: number = 10): Promise<Hardest
 	const movieQuery = db
 		.select({
 			contentType: sql<'movie'>`'movie'::text`.as('content_type'),
-			contentId: searchRegistry.contentId,
-			title: movies.title,
+			contentId: sql<number>`${searchRegistry.contentId}`.as('content_id'),
+			title: sql<string>`${movies.title}`.as('title'),
 			seriesTitle: sql<string | null>`NULL::text`.as('series_title'),
 			seasonNumber: sql<number | null>`NULL::integer`.as('season_number'),
 			episodeNumber: sql<number | null>`NULL::integer`.as('episode_number'),
-			connectorName: connectors.name,
-			attemptCount: searchRegistry.attemptCount,
-			state: searchRegistry.state,
+			connectorName: sql<string>`${connectors.name}`.as('connector_name'),
+			attemptCount: sql<number>`${searchRegistry.attemptCount}`.as('attempt_count'),
+			state: sql<string>`${searchRegistry.state}`.as('state'),
 			daysSinceCreated: sql<number>`EXTRACT(DAY FROM NOW() - ${searchRegistry.createdAt})::int`.as(
 				'days_since_created'
 			)
@@ -545,13 +545,13 @@ export async function getHardestToFindItems(limit: number = 10): Promise<Hardest
 
 	return (results as Record<string, unknown>[]).map((row) => ({
 		contentType: row.content_type as 'episode' | 'movie',
-		contentId: row.contentid as number,
+		contentId: row.content_id as number,
 		title: row.title as string,
 		seriesTitle: row.series_title as string | null,
-		seasonNumber: row.seasonnumber as number | null,
-		episodeNumber: row.episodenumber as number | null,
-		connectorName: row.connectorname as string,
-		attemptCount: row.attemptcount as number,
+		seasonNumber: row.season_number as number | null,
+		episodeNumber: row.episode_number as number | null,
+		connectorName: row.connector_name as string,
+		attemptCount: row.attempt_count as number,
 		state: row.state as string,
 		daysSinceCreated: row.days_since_created as number
 	}));
