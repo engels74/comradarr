@@ -9,7 +9,7 @@ import {
 import { createLogger } from '$lib/server/logger';
 import type { AggregationResult } from './types';
 
-const logger = createLogger('analytics');
+const logger = createLogger('analytics-aggregator');
 
 function truncateToHour(date: Date): Date {
 	const result = new Date(date);

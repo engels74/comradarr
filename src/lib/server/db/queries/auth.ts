@@ -9,6 +9,9 @@ import {
 } from '$lib/server/auth/lockout';
 import { db } from '$lib/server/db';
 import { sessions, type User, users } from '$lib/server/db/schema';
+import { createLogger } from '$lib/server/logger';
+
+const logger = createLogger('auth-db');
 
 export {
 	MAX_FAILED_ATTEMPTS,
@@ -76,6 +79,11 @@ export async function recordFailedLogin(userId: number): Promise<FailedLoginResu
 	if (shouldTriggerLockout(newCount)) {
 		const lockUntil = calculateLockoutExpiry();
 		await lockUserAccount(userId, lockUntil);
+		logger.warn('Account locked due to failed attempts', {
+			userId,
+			failedAttempts: newCount,
+			lockUntil: lockUntil.toISOString()
+		});
 		return {
 			isLocked: true,
 			lockoutMinutes: LOCKOUT_DURATION_MINUTES,
@@ -130,6 +138,8 @@ export async function checkAndResetLockout(user: User): Promise<boolean> {
 			updatedAt: now
 		})
 		.where(eq(users.id, user.id));
+
+	logger.info('Account lockout expired', { userId: user.id });
 
 	return false;
 }

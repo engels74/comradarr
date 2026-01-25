@@ -1,6 +1,9 @@
 /** API authentication and scope enforcement utilities. */
 
 import { error } from '@sveltejs/kit';
+import { createLogger } from '$lib/server/logger';
+
+const logger = createLogger('api-auth');
 
 export type ApiKeyScope = 'read' | 'full';
 
@@ -37,6 +40,7 @@ export function requireScope(locals: App.Locals, required: ApiKeyScope): void {
 
 	// 'read' scope can only do read operations
 	if (required === 'full' && keyScope === 'read') {
+		logger.warn('Insufficient API key scope', { required: 'full', actual: keyScope });
 		error(403, {
 			message: 'API key has read-only access. Full access required for this operation.',
 			code: 'INSUFFICIENT_SCOPE'

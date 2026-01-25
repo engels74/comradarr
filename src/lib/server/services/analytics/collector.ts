@@ -15,7 +15,7 @@ import type {
 	UpgradeDiscoveredPayload
 } from './types';
 
-const logger = createLogger('analytics');
+const logger = createLogger('analytics-collector');
 
 class AnalyticsCollector {
 	async recordEvent(
@@ -191,6 +191,13 @@ class AnalyticsCollector {
 
 				await this.recordEvent(sample.connectorId, 'queue_depth_sampled', payload);
 				samples.push(sample);
+			}
+
+			if (samples.length > 0) {
+				logger.debug('Queue depth sampled', {
+					connectors: samples.length,
+					totalDepth: samples.reduce((sum, s) => sum + s.queueDepth, 0)
+				});
 			}
 		} catch (error) {
 			logger.error('Failed to sample queue depth', {

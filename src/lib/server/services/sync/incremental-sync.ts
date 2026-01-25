@@ -11,7 +11,7 @@ import { syncSonarrContent } from './handlers/sonarr';
 import type { SyncOptions, SyncResult } from './types';
 import { withSyncRetry } from './with-sync-retry';
 
-const logger = createLogger('sync');
+const logger = createLogger('sync-incremental');
 
 export async function runIncrementalSync(
 	connector: Connector,

@@ -110,6 +110,19 @@ function redactHeaders(headers: Record<string, string>): Record<string, string> 
 	return redacted;
 }
 
+export function sanitizeUrl(url: string): string {
+	try {
+		const parsed = new URL(url);
+		if (parsed.username || parsed.password) {
+			parsed.username = parsed.username ? '[REDACTED]' : '';
+			parsed.password = parsed.password ? '[REDACTED]' : '';
+		}
+		return parsed.toString();
+	} catch {
+		return url;
+	}
+}
+
 export class Logger {
 	private readonly module: string;
 

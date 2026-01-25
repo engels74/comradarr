@@ -107,7 +107,10 @@ export class BaseArrClient {
 				endpoint,
 				durationMs,
 				errorType: categorized.name,
-				errorMessage: categorized.message
+				errorCategory: categorized.category,
+				errorMessage: categorized.message,
+				...('statusCode' in categorized && { statusCode: categorized.statusCode }),
+				...('retryAfter' in categorized && { retryAfterSeconds: categorized.retryAfter })
 			});
 			throw categorized;
 		}

@@ -74,7 +74,7 @@ import {
 } from '$lib/server/services/sync/health-utils';
 import { throttleEnforcer } from '$lib/server/services/throttle';
 
-const logger = createLogger('scheduler');
+const logger = createLogger('job-scheduler');
 
 interface ScheduledJob {
 	name: string;
