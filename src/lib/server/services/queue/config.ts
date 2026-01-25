@@ -123,9 +123,9 @@ export const BACKLOG_CONFIG = {
 	ENABLED: true,
 
 	/** Delay in days for each backlog tier [tier1, tier2, tier3, tier4, tier5] */
-	TIER_DELAYS_DAYS: [7, 14, 30, 60, 90] as const,
+	TIER_DELAYS_DAYS: [7, 14, 21, 28, 30] as const,
 
-	/** Maximum backlog tier (items stay at this tier indefinitely with 90-day retries) */
+	/** Maximum backlog tier (items stay at this tier indefinitely with 30-day retries) */
 	MAX_TIER: 5
 } as const;
 

@@ -1,4 +1,5 @@
-// qualityCutoffNotMet flag comes from *arr API and already accounts for Custom Format scores
+// Searches for monitored content with files that need quality upgrades (qualityCutoffNotMet=true).
+// When qualityCutoffNotMet becomes false (upgrade achieved), the registry is cleaned up.
 
 import { and, eq, isNull, sql } from 'drizzle-orm';
 import { db } from '$lib/server/db';
