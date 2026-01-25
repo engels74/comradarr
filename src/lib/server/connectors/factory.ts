@@ -1,5 +1,5 @@
 import type { Connector } from '$lib/server/db/schema';
-import { createLogger } from '$lib/server/logger';
+import { createLogger, sanitizeUrl } from '$lib/server/logger';
 import type { BaseArrClient } from './common/base-client.js';
 import type { BaseClientConfig } from './common/types.js';
 import { RadarrClient } from './radarr/client.js';
@@ -22,7 +22,7 @@ export function createConnectorClient(
 	logger.debug('Creating connector client', {
 		connectorId: connector.id,
 		type: connector.type,
-		url: connector.url
+		url: sanitizeUrl(connector.url)
 	});
 
 	switch (connector.type) {

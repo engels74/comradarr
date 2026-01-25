@@ -53,10 +53,6 @@ export class BaseArrClient {
 
 		logger.debug('API request', { method, endpoint, baseUrl: this.baseUrl });
 
-		if (options.body !== undefined) {
-			logger.trace('Request body', { endpoint, body: options.body });
-		}
-
 		const controller = new AbortController();
 		const timeoutId = setTimeout(() => controller.abort(), timeout);
 
