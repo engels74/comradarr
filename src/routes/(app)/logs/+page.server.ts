@@ -9,7 +9,7 @@ import {
 	getLogLevelCounts,
 	getUniqueModules,
 	type LogFilter,
-	queryLogs
+	queryLogsHybrid
 } from '$lib/server/services/log-buffer';
 import type { PageServerLoad } from './$types';
 
@@ -42,7 +42,7 @@ export const load: PageServerLoad = async ({ url, depends }) => {
 		...(correlationId && { correlationId })
 	};
 
-	const result = queryLogs(filter, { limit, offset });
+	const result = await queryLogsHybrid(filter, { limit, offset });
 
 	const bufferConfig = getBufferConfig();
 	const levelCounts = getLogLevelCounts();
@@ -52,6 +52,7 @@ export const load: PageServerLoad = async ({ url, depends }) => {
 		entries: result.entries,
 		total: result.total,
 		hasMore: result.hasMore,
+		source: result.source,
 		buffer: bufferConfig,
 		levelCounts,
 		modules,

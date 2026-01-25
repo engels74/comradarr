@@ -37,7 +37,7 @@ import {
 	updateConnectorHealth
 } from '$lib/server/db/queries/connectors';
 import { getEnabledSchedules, updateNextRunAt } from '$lib/server/db/queries/schedules';
-import { getBackupSettings } from '$lib/server/db/queries/settings';
+import { getBackupSettings, getSettingWithDefault } from '$lib/server/db/queries/settings';
 import type { Connector } from '$lib/server/db/schema';
 import { createLogger } from '$lib/server/logger';
 import {
@@ -50,7 +50,12 @@ import { apiKeyRateLimiter } from '$lib/server/services/api-rate-limit';
 import { cleanupOldScheduledBackups, createBackup } from '$lib/server/services/backup';
 import { discoverGaps, discoverUpgrades } from '$lib/server/services/discovery';
 import {
+	enableLogPersistence,
+	shutdown as shutdownLogPersistence
+} from '$lib/server/services/log-persistence';
+import {
 	cleanupOrphanedSearchState,
+	pruneApplicationLogs,
 	pruneSearchHistory,
 	runDatabaseMaintenance
 } from '$lib/server/services/maintenance';
@@ -138,6 +143,12 @@ export function initializeScheduler(): void {
 	}
 
 	logger.info('Initializing scheduled jobs');
+
+	initializeLogPersistence().catch((err) => {
+		logger.error('Failed to initialize log persistence', {
+			error: err instanceof Error ? err.message : String(err)
+		});
+	});
 
 	const throttleResetJob = new Cron(
 		'* * * * *',
@@ -589,6 +600,19 @@ export function initializeScheduler(): void {
 			} else {
 				logger.error('History pruning failed', { error: historyResult.error });
 			}
+
+			const logResult = await pruneApplicationLogs();
+
+			if (logResult.success) {
+				if (logResult.logsDeleted > 0) {
+					logger.info('Log pruning completed', {
+						logsDeleted: logResult.logsDeleted,
+						durationMs: logResult.durationMs
+					});
+				}
+			} else {
+				logger.error('Log pruning failed', { error: logResult.error });
+			}
 		})
 	);
 
@@ -906,7 +930,7 @@ export function initializeScheduler(): void {
 }
 
 /** Stop all scheduled jobs. Used for graceful shutdown. */
-export function stopScheduler(): void {
+export async function stopScheduler(): Promise<void> {
 	const state = getSchedulerState();
 	logger.info('Stopping all scheduled jobs');
 
@@ -926,6 +950,17 @@ export function stopScheduler(): void {
 		state.scheduledBackupJob.stop();
 		state.scheduledBackupJob = null;
 		logger.info('Stopped scheduled backup job');
+	}
+
+	try {
+		const flushed = await shutdownLogPersistence();
+		if (flushed > 0) {
+			logger.info('Flushed pending logs', { count: flushed });
+		}
+	} catch (err) {
+		logger.error('Failed to flush pending logs', {
+			error: err instanceof Error ? err.message : String(err)
+		});
 	}
 
 	state.initialized = false;
@@ -1134,6 +1169,24 @@ export async function refreshDynamicSchedules(): Promise<void> {
 
 	logger.info('Loaded dynamic schedules', { count: state.dynamicJobs.size });
 }
+async function initializeLogPersistence(): Promise<void> {
+	try {
+		const enabled = await getSettingWithDefault('log_persistence_enabled');
+
+		if (enabled !== 'true') {
+			logger.info('Log persistence is disabled');
+			return;
+		}
+
+		enableLogPersistence();
+		logger.info('Log persistence enabled');
+	} catch (error) {
+		logger.error('Failed to initialize log persistence', {
+			error: error instanceof Error ? error.message : String(error)
+		});
+	}
+}
+
 async function initializeScheduledBackup(): Promise<void> {
 	try {
 		const settings = await getBackupSettings();
