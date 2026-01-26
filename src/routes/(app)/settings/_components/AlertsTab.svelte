@@ -1,8 +1,4 @@
 <script lang="ts">
-/**
- * Notification settings page.
- */
-
 import BellIcon from '@lucide/svelte/icons/bell';
 import BellRingIcon from '@lucide/svelte/icons/bell-ring';
 import HashIcon from '@lucide/svelte/icons/hash';
@@ -49,10 +45,15 @@ import {
 	webhookFieldDescriptions,
 	webhookFieldLabels
 } from '$lib/schemas/notification-channel';
-import type { ChannelWithStats } from './+page.server';
-import type { PageProps } from './$types';
+import type { ChannelWithStats } from '../+page.server';
 
-let { data, form }: PageProps = $props();
+interface Props {
+	channels: ChannelWithStats[];
+	form: Record<string, unknown> | null;
+	accentColor: string;
+}
+
+let { channels, form, accentColor }: Props = $props();
 
 let isSubmitting = $state(false);
 let createDialogOpen = $state(false);
@@ -63,17 +64,32 @@ let editingChannel = $state<ChannelWithStats | null>(null);
 let deletingChannel = $state<ChannelWithStats | null>(null);
 let testingChannelId = $state<number | null>(null);
 
-// Form state for create dialog
 let createSelectedEvents = $state<string[]>([]);
 let createBatchingEnabled = $state(false);
 let createQuietHoursEnabled = $state(false);
 
-// Form state for edit dialog
 let editSelectedEvents = $state<string[]>([]);
 let editBatchingEnabled = $state(false);
 let editQuietHoursEnabled = $state(false);
 
-// Close dialogs on successful submission and show toast
+const inputClass = 'w-full';
+const selectClass =
+	'flex h-10 w-full rounded-lg border border-glass-border/30 bg-glass/50 backdrop-blur-sm px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary/50 hover:bg-glass/70 disabled:cursor-not-allowed disabled:opacity-50';
+
+const commonTimezones = [
+	'UTC',
+	'America/New_York',
+	'America/Chicago',
+	'America/Denver',
+	'America/Los_Angeles',
+	'Europe/London',
+	'Europe/Paris',
+	'Europe/Berlin',
+	'Asia/Tokyo',
+	'Asia/Shanghai',
+	'Australia/Sydney'
+];
+
 $effect(() => {
 	if (form?.success) {
 		createDialogOpen = false;
@@ -82,18 +98,15 @@ $effect(() => {
 		selectedType = null;
 		editingChannel = null;
 		deletingChannel = null;
-		// Reset form states
 		createSelectedEvents = [];
 		createBatchingEnabled = false;
 		createQuietHoursEnabled = false;
-		// Show success toast
 		if (form.message) {
-			toastStore.success(form.message);
+			toastStore.success(form.message as string);
 		}
 	}
 });
 
-// Sync edit form state when editing channel changes
 $effect(() => {
 	if (editingChannel) {
 		const events = editingChannel.enabledEvents as string[] | null;
@@ -103,9 +116,6 @@ $effect(() => {
 	}
 });
 
-/**
- * Get icon component for channel type.
- */
 function getChannelIcon(type: string) {
 	switch (type) {
 		case 'discord':
@@ -129,25 +139,16 @@ function getChannelIcon(type: string) {
 	}
 }
 
-/**
- * Open edit dialog for a channel.
- */
 function openEditDialog(channel: ChannelWithStats) {
 	editingChannel = channel;
 	editDialogOpen = true;
 }
 
-/**
- * Open delete confirmation dialog.
- */
 function openDeleteDialog(channel: ChannelWithStats) {
 	deletingChannel = channel;
 	deleteDialogOpen = true;
 }
 
-/**
- * Reset create dialog state.
- */
 function resetCreateDialog() {
 	selectedType = null;
 	createSelectedEvents = [];
@@ -155,9 +156,6 @@ function resetCreateDialog() {
 	createQuietHoursEnabled = false;
 }
 
-/**
- * Toggle event in selected events array.
- */
 function toggleCreateEvent(event: string, checked: boolean) {
 	if (checked) {
 		createSelectedEvents = [...createSelectedEvents, event];
@@ -173,52 +171,12 @@ function toggleEditEvent(event: string, checked: boolean) {
 		editSelectedEvents = editSelectedEvents.filter((e) => e !== event);
 	}
 }
-
-// Common input styling
-const inputClass = 'w-full';
-const selectClass =
-	'flex h-10 w-full rounded-lg border border-glass-border/30 bg-glass/50 backdrop-blur-sm px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary/50 hover:bg-glass/70 disabled:cursor-not-allowed disabled:opacity-50';
-
-// Common timezones for quiet hours
-const commonTimezones = [
-	'UTC',
-	'America/New_York',
-	'America/Chicago',
-	'America/Denver',
-	'America/Los_Angeles',
-	'Europe/London',
-	'Europe/Paris',
-	'Europe/Berlin',
-	'Asia/Tokyo',
-	'Asia/Shanghai',
-	'Australia/Sydney'
-];
 </script>
 
-<svelte:head>
-	<title>Notifications - Comradarr</title>
-</svelte:head>
-
-<div class="container mx-auto p-6 lg:p-8 max-w-4xl">
-	<!-- Page Header -->
-	<header class="mb-8 animate-float-up" style="animation-delay: 0ms;">
-		<div class="flex items-center gap-3">
-			<div class="p-2.5 rounded-xl bg-muted/50">
-				<BellIcon class="h-6 w-6 text-muted-foreground" />
-			</div>
-			<div>
-				<h1 class="font-display text-3xl font-semibold tracking-tight md:text-4xl">Notifications</h1>
-				<p class="text-muted-foreground mt-2">
-					Configure notification channels and event filtering
-				</p>
-			</div>
-		</div>
-	</header>
-
-	<!-- Success/Error Messages -->
+<div class="space-y-6">
 	{#if form?.success && !createDialogOpen && !editDialogOpen}
 		<div
-			class="mb-6 bg-green-500/15 text-green-600 dark:text-green-400 rounded-md border border-green-500/20 p-3 text-sm"
+			class="bg-green-500/15 text-green-600 dark:text-green-400 rounded-md border border-green-500/20 p-3 text-sm"
 			role="status"
 		>
 			{form.message}
@@ -227,15 +185,18 @@ const commonTimezones = [
 
 	{#if form?.error && !createDialogOpen && !editDialogOpen && !deleteDialogOpen}
 		<div
-			class="mb-6 bg-destructive/15 text-destructive rounded-md border border-destructive/20 p-3 text-sm"
+			class="bg-destructive/15 text-destructive rounded-md border border-destructive/20 p-3 text-sm"
 			role="alert"
 		>
 			{form.error}
 		</div>
 	{/if}
 
-	<!-- Notification Channels Card -->
-	<Card.Root variant="glass" class="animate-float-up" style="animation-delay: 100ms;">
+	<Card.Root variant="glass" class="relative overflow-hidden">
+		<div
+			class="absolute top-0 left-0 right-0 h-px opacity-60"
+			style="background: linear-gradient(to right, transparent, {accentColor}, transparent);"
+		></div>
 		<Card.Header>
 			<div class="flex items-center justify-between">
 				<div>
@@ -256,7 +217,6 @@ const commonTimezones = [
 					</Dialog.Trigger>
 					<Dialog.Content class="max-w-lg max-h-[90vh] overflow-y-auto">
 						{#if !selectedType}
-							<!-- Channel Type Selection -->
 							<Dialog.Header>
 								<Dialog.Title>Add Notification Channel</Dialog.Title>
 								<Dialog.Description>Select a notification service to configure</Dialog.Description>
@@ -284,14 +244,13 @@ const commonTimezones = [
 								{/each}
 							</div>
 						{:else}
-							<!-- Channel Configuration Form -->
 							<Dialog.Header>
 								<Dialog.Title>Configure {channelTypeLabels[selectedType]}</Dialog.Title>
 								<Dialog.Description>{channelTypeDescriptions[selectedType]}</Dialog.Description>
 							</Dialog.Header>
 							<form
 								method="POST"
-								action="?/create"
+								action="?/notificationsCreate"
 								use:enhance={() => {
 									isSubmitting = true;
 									return async ({ update }) => {
@@ -303,7 +262,7 @@ const commonTimezones = [
 								<input type="hidden" name="type" value={selectedType} />
 
 								<div class="grid gap-4 py-4">
-									{#if form?.action === 'create' && form?.error}
+									{#if form?.action === 'notificationsCreate' && form?.error}
 										<div
 											class="bg-destructive/15 text-destructive rounded-md border border-destructive/20 p-3 text-sm"
 											role="alert"
@@ -312,7 +271,6 @@ const commonTimezones = [
 										</div>
 									{/if}
 
-									<!-- Channel Name -->
 									<div class="grid gap-2">
 										<Label for="create-name">{baseChannelLabels.name}</Label>
 										<Input
@@ -329,7 +287,6 @@ const commonTimezones = [
 
 									<Separator />
 
-									<!-- Type-specific fields -->
 									{#if selectedType === 'discord'}
 										<div class="grid gap-2">
 											<Label for="create-webhookUrl">{discordFieldLabels.webhookUrl}</Label>
@@ -567,7 +524,7 @@ const commonTimezones = [
 													id="create-password"
 													name="password"
 													type="password"
-													placeholder="••••••••"
+													placeholder="*****"
 													disabled={isSubmitting}
 													class={inputClass}
 												/>
@@ -641,7 +598,6 @@ const commonTimezones = [
 
 									<Separator />
 
-									<!-- Event Selection -->
 									<div class="grid gap-2">
 										<Label>{baseChannelLabels.enabledEvents}</Label>
 										<p class="text-xs text-muted-foreground">
@@ -671,7 +627,6 @@ const commonTimezones = [
 
 									<Separator />
 
-									<!-- Batching Configuration -->
 									<div class="grid gap-3">
 										<div class="flex items-center space-x-3">
 											<Checkbox
@@ -709,7 +664,6 @@ const commonTimezones = [
 										{/if}
 									</div>
 
-									<!-- Quiet Hours Configuration -->
 									<div class="grid gap-3">
 										<div class="flex items-center space-x-3">
 											<Checkbox
@@ -804,7 +758,7 @@ const commonTimezones = [
 			</div>
 		</Card.Header>
 		<Card.Content>
-			{#if data.channels.length === 0}
+			{#if channels.length === 0}
 				<div class="glass-panel p-8 text-center">
 					<div class="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-muted/50 mb-4">
 						<BellIcon class="h-6 w-6 text-muted-foreground opacity-50" />
@@ -820,18 +774,16 @@ const commonTimezones = [
 				</div>
 			{:else}
 				<div class="space-y-4">
-					{#each data.channels as channel (channel.id)}
+					{#each channels as channel (channel.id)}
 						{@const Icon = getChannelIcon(channel.type)}
 						<div
 							class="flex items-center justify-between p-4 rounded-xl border border-glass-border/20 bg-glass/30 backdrop-blur-sm hover:bg-glass/50 transition-all duration-200"
 						>
 							<div class="flex items-center gap-4">
-								<!-- Channel Type Icon -->
 								<div class="flex-shrink-0">
 									<Icon class="h-6 w-6 text-muted-foreground" />
 								</div>
 
-								<!-- Channel Info -->
 								<div class="flex-1 min-w-0">
 									<div class="flex items-center gap-2 mb-1">
 										<span class="font-semibold">{channel.name}</span>
@@ -857,12 +809,10 @@ const commonTimezones = [
 								</div>
 							</div>
 
-							<!-- Actions -->
 							<div class="flex items-center gap-1">
-								<!-- Toggle Enabled -->
 								<form
 									method="POST"
-									action="?/toggle"
+									action="?/notificationsToggle"
 									use:enhance={() => {
 										return async ({ update }) => {
 											await update();
@@ -880,15 +830,17 @@ const commonTimezones = [
 									</Button>
 								</form>
 
-								<!-- Test -->
 								<form
 									method="POST"
-									action="?/test"
+									action="?/notificationsTest"
 									use:enhance={() => {
 										testingChannelId = channel.id;
-										return async ({ update }) => {
+										return async ({ result, update }) => {
 											await update();
 											testingChannelId = null;
+											if (result.type === 'success' && result.data?.success) {
+												toastStore.success((result.data.message as string) || 'Test notification sent');
+											}
 										};
 									}}
 								>
@@ -908,12 +860,10 @@ const commonTimezones = [
 									</Button>
 								</form>
 
-								<!-- Edit -->
 								<Button variant="ghost" size="sm" onclick={() => openEditDialog(channel)}>
 									<PencilIcon class="h-4 w-4" />
 								</Button>
 
-								<!-- Delete -->
 								<Button variant="ghost" size="sm" onclick={() => openDeleteDialog(channel)}>
 									<Trash2Icon class="h-4 w-4" />
 								</Button>
@@ -938,7 +888,7 @@ const commonTimezones = [
 			{@const config = editingChannel.config as Record<string, unknown> | null}
 			<form
 				method="POST"
-				action="?/update"
+				action="?/notificationsUpdate"
 				use:enhance={() => {
 					isSubmitting = true;
 					return async ({ update }) => {
@@ -951,7 +901,7 @@ const commonTimezones = [
 				<input type="hidden" name="type" value={channelType} />
 
 				<div class="grid gap-4 py-4">
-					{#if form?.action === 'update' && form?.error}
+					{#if form?.action === 'notificationsUpdate' && form?.error}
 						<div
 							class="bg-destructive/15 text-destructive rounded-md border border-destructive/20 p-3 text-sm"
 							role="alert"
@@ -960,7 +910,6 @@ const commonTimezones = [
 						</div>
 					{/if}
 
-					<!-- Channel Name -->
 					<div class="grid gap-2">
 						<Label for="edit-name">{baseChannelLabels.name}</Label>
 						<Input
@@ -976,7 +925,6 @@ const commonTimezones = [
 
 					<Separator />
 
-					<!-- Type-specific fields -->
 					{#if channelType === 'discord'}
 						<div class="grid gap-2">
 							<Label for="edit-webhookUrl">{discordFieldLabels.webhookUrl}</Label>
@@ -1041,16 +989,9 @@ const commonTimezones = [
 						</div>
 						<div class="grid gap-2">
 							<Label for="edit-parseMode">{telegramFieldLabels.parseMode}</Label>
-							<select
-								id="edit-parseMode"
-								name="parseMode"
-								class={selectClass}
-								disabled={isSubmitting}
-							>
+							<select id="edit-parseMode" name="parseMode" class={selectClass} disabled={isSubmitting}>
 								<option value="HTML" selected={config?.parseMode === 'HTML'}>HTML</option>
-								<option value="Markdown" selected={config?.parseMode === 'Markdown'}
-									>Markdown</option
-								>
+								<option value="Markdown" selected={config?.parseMode === 'Markdown'}>Markdown</option>
 								<option value="MarkdownV2" selected={config?.parseMode === 'MarkdownV2'}
 									>MarkdownV2</option
 								>
@@ -1162,9 +1103,7 @@ const commonTimezones = [
 								checked={!!config?.secure}
 								disabled={isSubmitting}
 							/>
-							<Label for="edit-secure" class="text-sm cursor-pointer"
-								>{emailFieldLabels.secure}</Label
-							>
+							<Label for="edit-secure" class="text-sm cursor-pointer">{emailFieldLabels.secure}</Label>
 						</div>
 						<div class="grid gap-4 sm:grid-cols-2">
 							<div class="grid gap-2">
@@ -1275,7 +1214,6 @@ const commonTimezones = [
 
 					<Separator />
 
-					<!-- Event Selection -->
 					<div class="grid gap-2">
 						<Label>{baseChannelLabels.enabledEvents}</Label>
 						<div class="grid grid-cols-2 gap-2 mt-2">
@@ -1299,7 +1237,6 @@ const commonTimezones = [
 
 					<Separator />
 
-					<!-- Batching Configuration -->
 					<div class="grid gap-3">
 						<div class="flex items-center space-x-3">
 							<Checkbox
@@ -1331,7 +1268,6 @@ const commonTimezones = [
 						{/if}
 					</div>
 
-					<!-- Quiet Hours Configuration -->
 					<div class="grid gap-3">
 						<div class="flex items-center space-x-3">
 							<Checkbox
@@ -1423,7 +1359,7 @@ const commonTimezones = [
 		{#if deletingChannel}
 			<form
 				method="POST"
-				action="?/delete"
+				action="?/notificationsDelete"
 				use:enhance={() => {
 					isSubmitting = true;
 					return async ({ update }) => {
@@ -1433,7 +1369,7 @@ const commonTimezones = [
 				}}
 			>
 				<input type="hidden" name="id" value={deletingChannel.id} />
-				{#if form?.action === 'delete' && form?.error}
+				{#if form?.action === 'notificationsDelete' && form?.error}
 					<div
 						class="bg-destructive/15 text-destructive rounded-md border border-destructive/20 p-3 text-sm mb-4"
 						role="alert"
