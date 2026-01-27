@@ -12,7 +12,7 @@ import * as Tooltip from '$lib/components/ui/tooltip';
 			</span>
 		</Tooltip.Trigger>
 		<Tooltip.Portal>
-			<Tooltip.Content side="left" class="max-w-xs p-4">
+			<Tooltip.Content side="left" class="max-w-xs p-4 bg-popover text-popover-foreground border border-border" arrowClasses="bg-popover">
 				<div class="space-y-2">
 					<p class="font-medium">Rate Limiting Explained</p>
 					<p class="text-sm text-muted-foreground">
