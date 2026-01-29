@@ -1,14 +1,16 @@
 <script lang="ts">
+import ClockIcon from '@lucide/svelte/icons/clock';
 import { createVirtualizer } from '@tanstack/svelte-virtual';
 import { Badge } from '$lib/components/ui/badge';
 import { Checkbox } from '$lib/components/ui/checkbox';
 import { cn } from '$lib/utils.js';
 import QueueStateBadge from './QueueStateBadge.svelte';
-import type { SerializedQueueItem, SerializedThrottleInfo } from './types';
+import type { QueueSchedulerStatus, SerializedQueueItem, SerializedThrottleInfo } from './types';
 
 interface Props {
 	items: SerializedQueueItem[];
 	throttleInfo: Record<number, SerializedThrottleInfo>;
+	schedulerStatus?: QueueSchedulerStatus;
 	maxHeight?: string | undefined;
 	selectedIds?: Set<number> | undefined;
 	onSelectionChange?: ((ids: Set<number>) => void) | undefined;
@@ -17,6 +19,7 @@ interface Props {
 let {
 	items,
 	throttleInfo,
+	schedulerStatus,
 	maxHeight = '70vh',
 	selectedIds = new Set(),
 	onSelectionChange
@@ -123,50 +126,75 @@ function getContentLink(item: SerializedQueueItem): string {
 	return `/content/movie/${item.contentId}`;
 }
 
-function estimateDispatchTime(item: SerializedQueueItem, index: number): string {
+interface DispatchEstimate {
+	text: string;
+	showClock: boolean;
+	isMono: boolean;
+}
+
+function estimateDispatchTime(item: SerializedQueueItem, index: number): DispatchEstimate {
 	const info = throttleInfo[item.connectorId];
 
 	if (item.state === 'searching') {
-		return 'In progress';
+		return { text: 'In progress', showClock: false, isMono: false };
 	}
 
 	if (item.state === 'cooldown' && item.nextEligible) {
 		const until = new Date(item.nextEligible);
-		return `Retry ${formatRelativeTime(until)}`;
+		return { text: `Retry ${formatRelativeTime(until)}`, showClock: false, isMono: false };
 	}
 
 	if (item.state === 'exhausted') {
-		return 'Max attempts';
+		return { text: 'Max attempts', showClock: false, isMono: false };
 	}
 
 	if (item.state === 'pending') {
-		return 'Awaiting sweep';
+		if (schedulerStatus?.sweep.nextRun) {
+			const diff = new Date(schedulerStatus.sweep.nextRun).getTime() - Date.now();
+			if (diff > 0) {
+				const minutes = Math.ceil(diff / 60000);
+				return {
+					text: minutes < 60 ? `${minutes}m` : `${Math.floor(minutes / 60)}h ${minutes % 60}m`,
+					showClock: true,
+					isMono: true
+				};
+			}
+		}
+		return { text: 'Enqueuing soon', showClock: true, isMono: false };
 	}
 
 	if (item.state !== 'queued') {
-		return '-';
+		return { text: '-', showClock: false, isMono: false };
 	}
 
 	if (!info) {
-		if (!item.scheduledAt) return 'Unknown';
-		return formatRelativeTime(new Date(item.scheduledAt));
+		if (!item.scheduledAt) return { text: 'Unknown', showClock: false, isMono: false };
+		return {
+			text: formatRelativeTime(new Date(item.scheduledAt)),
+			showClock: false,
+			isMono: false
+		};
 	}
 
 	if (info.isPaused) {
 		if (info.pausedUntil) {
-			return `Paused until ${formatTime(new Date(info.pausedUntil))}`;
+			return {
+				text: `Paused until ${formatTime(new Date(info.pausedUntil))}`,
+				showClock: false,
+				isMono: false
+			};
 		}
-		return 'Paused';
+		return { text: 'Paused', showClock: false, isMono: false };
 	}
 	const requestsPerMinute = info.requestsPerMinute || 5;
 	const minutesAhead = Math.ceil((index + 1) / requestsPerMinute);
 
 	if (minutesAhead <= 1) {
-		return 'Next';
+		return { text: 'Next', showClock: false, isMono: false };
 	}
 
 	const dispatchTime = new Date(Date.now() + minutesAhead * 60000);
-	return formatRelativeTime(dispatchTime);
+	return { text: formatRelativeTime(dispatchTime), showClock: false, isMono: false };
 }
 
 function formatRelativeTime(date: Date): string {
@@ -312,14 +340,24 @@ const MAX_ATTEMPTS = 5;
 
 							<!-- Estimated Dispatch -->
 							<div class="w-28 flex-shrink-0 text-right">
-								<span
-									class={cn(
-										'text-sm',
-										item.state === 'searching' && 'text-yellow-600 dark:text-yellow-400 font-medium'
-									)}
-								>
-									{estimateDispatchTime(item, virtualItem.index)}
-								</span>
+								{#snippet dispatchDisplay()}
+									{@const dispatch = estimateDispatchTime(item, virtualItem.index)}
+									<span
+										class={cn(
+											'text-sm inline-flex items-center justify-end gap-1',
+											item.state === 'searching' && 'text-yellow-600 dark:text-yellow-400 font-medium',
+											item.state === 'pending' && 'text-muted-foreground',
+											dispatch.isMono && 'font-mono'
+										)}
+										title={item.state === 'pending' ? 'Will be added to queue on next sweep' : undefined}
+									>
+										{#if dispatch.showClock}
+											<ClockIcon class="h-3 w-3 flex-shrink-0" />
+										{/if}
+										{dispatch.text}
+									</span>
+								{/snippet}
+								{@render dispatchDisplay()}
 							</div>
 						</div>
 					{/if}

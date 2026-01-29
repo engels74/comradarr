@@ -7,6 +7,7 @@ import {
 	QueueControls,
 	QueueFilters,
 	QueueProgressSummary,
+	QueueStateIndicator,
 	QueueTable,
 	RecentCompletions,
 	ThrottleStatusPanel
@@ -108,18 +109,10 @@ function goToPage(pageNum: number) {
 
 <div class="container mx-auto p-6 lg:p-8">
 	<!-- Header -->
-	<header class="flex items-center justify-between mb-8 animate-float-up" style="animation-delay: 0ms;">
+	<header class="flex items-center justify-between mb-6 animate-float-up" style="animation-delay: 0ms;">
 		<div>
 			<h1 class="font-display text-3xl font-semibold tracking-tight md:text-4xl">Queue</h1>
-			<p class="text-muted-foreground mt-2">
-				{#if data.statusCounts.searching > 0}
-					{data.statusCounts.searching} searching, {data.statusCounts.queued} waiting
-				{:else if data.statusCounts.queued > 0}
-					{data.statusCounts.queued} item{data.statusCounts.queued !== 1 ? 's' : ''} waiting for rate limit
-				{:else}
-					View and manage the search queue
-				{/if}
-			</p>
+			<p class="text-muted-foreground mt-2">View and manage the search queue</p>
 		</div>
 		<QueueControls
 			pauseStatus={data.pauseStatus}
@@ -128,9 +121,23 @@ function goToPage(pageNum: number) {
 		/>
 	</header>
 
+	<!-- Queue State Indicator -->
+	<QueueStateIndicator
+		statusCounts={data.statusCounts}
+		throttleInfo={data.throttleInfo}
+		schedulerStatus={data.schedulerStatus}
+		pauseStatus={data.pauseStatus}
+		onActionStart={handleActionStart}
+		onActionComplete={handleActionComplete}
+		class="mb-6 animate-float-up"
+		style="animation-delay: 25ms;"
+	/>
+
 	<!-- Throttle Status Panel -->
 	<ThrottleStatusPanel
 		throttleInfo={data.throttleInfo}
+		pendingCount={data.statusCounts.pending}
+		nextSweepRun={data.schedulerStatus.sweep.nextRun}
 		class="mb-6 animate-float-up"
 		style="animation-delay: 50ms;"
 	/>
@@ -179,6 +186,7 @@ function goToPage(pageNum: number) {
 		<QueueTable
 			items={data.queue}
 			throttleInfo={data.throttleInfo}
+			schedulerStatus={data.schedulerStatus}
 			{selectedIds}
 			onSelectionChange={handleSelectionChange}
 		/>

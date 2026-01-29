@@ -3,6 +3,33 @@
  */
 
 /**
+ * Scheduler job status for display.
+ */
+export interface SchedulerJobStatus {
+	nextRun: string | null;
+	isRunning: boolean;
+}
+
+/**
+ * Scheduler status for queue page.
+ */
+export interface QueueSchedulerStatus {
+	sweep: SchedulerJobStatus;
+	processor: SchedulerJobStatus;
+}
+
+/**
+ * Global queue state for the state indicator.
+ */
+export type GlobalQueueState =
+	| 'processing'
+	| 'waiting-sweep'
+	| 'waiting-rate'
+	| 'paused'
+	| 'throttled'
+	| 'idle';
+
+/**
  * Serialized queue item for display.
  */
 export interface SerializedQueueItem {
