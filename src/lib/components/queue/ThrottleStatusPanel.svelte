@@ -9,11 +9,19 @@ import type { SerializedThrottleInfo } from './types';
 
 interface Props {
 	throttleInfo: Record<number, SerializedThrottleInfo>;
+	pendingCount?: number;
+	nextSweepRun?: string | null;
 	class?: string;
 	style?: string;
 }
 
-let { throttleInfo, class: className = '', style = '' }: Props = $props();
+let {
+	throttleInfo,
+	pendingCount = 0,
+	nextSweepRun = null,
+	class: className = '',
+	style = ''
+}: Props = $props();
 
 const connectors = $derived(Object.values(throttleInfo));
 
@@ -112,6 +120,19 @@ function formatPauseTime(pausedUntil: string | null, currentTime: number): strin
 	const hours = Math.floor(minutes / 60);
 	return `${hours}h ${minutes % 60}m`;
 }
+
+function formatSweepTime(nextRun: string | null, currentTime: number): string | null {
+	if (!nextRun) return null;
+	const diff = new Date(nextRun).getTime() - currentTime;
+	if (diff <= 0) return null;
+
+	const minutes = Math.ceil(diff / 60000);
+	if (minutes < 60) return `${minutes}m`;
+	const hours = Math.floor(minutes / 60);
+	return `${hours}h ${minutes % 60}m`;
+}
+
+const sweepTimeFormatted = $derived(formatSweepTime(nextSweepRun, now));
 </script>
 
 {#if connectors.length > 0}
@@ -288,22 +309,29 @@ function formatPauseTime(pausedUntil: string | null, currentTime: number): strin
 						<!-- Queue status -->
 						<div class="flex items-center justify-between text-xs pt-1 border-t border-glass-border/30">
 							<span class="text-muted-foreground">Queue</span>
-							<span>
-								{#if connector.searchingCount > 0}
-									<span class="text-yellow-600 dark:text-yellow-400 font-medium">
-										{connector.searchingCount} active
+							<div class="flex items-center gap-2">
+								{#if pendingCount > 0 && connector.searchingCount === 0 && connector.queuedCount === 0 && sweepTimeFormatted}
+									<span class="text-muted-foreground/80 text-[10px]">
+										{pendingCount} pending → {sweepTimeFormatted}
 									</span>
-									{#if connector.queuedCount > 0}
-										<span class="text-muted-foreground"> · </span>
+								{/if}
+								<span>
+									{#if connector.searchingCount > 0}
+										<span class="text-yellow-600 dark:text-yellow-400 font-medium">
+											{connector.searchingCount} active
+										</span>
+										{#if connector.queuedCount > 0}
+											<span class="text-muted-foreground"> · </span>
+										{/if}
 									{/if}
-								{/if}
-								{#if connector.queuedCount > 0}
-									<span class="text-muted-foreground">{connector.queuedCount} waiting</span>
-								{/if}
-								{#if connector.searchingCount === 0 && connector.queuedCount === 0}
-									<span class="text-muted-foreground italic">idle</span>
-								{/if}
-							</span>
+									{#if connector.queuedCount > 0}
+										<span class="text-muted-foreground">{connector.queuedCount} waiting</span>
+									{/if}
+									{#if connector.searchingCount === 0 && connector.queuedCount === 0}
+										<span class="text-muted-foreground italic">idle</span>
+									{/if}
+								</span>
+							</div>
 						</div>
 					</div>
 				</Card.Root>

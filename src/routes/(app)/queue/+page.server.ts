@@ -11,6 +11,7 @@
  */
 
 import { fail } from '@sveltejs/kit';
+import { getHealthyConnectors } from '$lib/server/db/queries/connectors';
 import {
 	clearQueueForConnectors,
 	getAllThrottleInfo,
@@ -26,6 +27,8 @@ import {
 	resumeQueueForConnectors,
 	updateQueueItemPriority
 } from '$lib/server/db/queries/queue';
+import { getSchedulerStatus } from '$lib/server/scheduler';
+import { enqueuePendingItems } from '$lib/server/services/queue';
 import type { Actions, PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ url, depends }) => {
@@ -49,6 +52,10 @@ export const load: PageServerLoad = async ({ url, depends }) => {
 		getRecentCompletions(25),
 		getPerConnectorQueueCounts()
 	]);
+
+	const schedulerStatus = getSchedulerStatus();
+	const sweepJob = schedulerStatus.jobs.find((j) => j.name === 'incremental-sync-sweep');
+	const processorJob = schedulerStatus.jobs.find((j) => j.name === 'queue-processor');
 
 	const throttleInfo: Record<
 		number,
@@ -101,7 +108,17 @@ export const load: PageServerLoad = async ({ url, depends }) => {
 		recentCompletions: recentCompletions.map((completion) => ({
 			...completion,
 			createdAt: completion.createdAt.toISOString()
-		}))
+		})),
+		schedulerStatus: {
+			sweep: {
+				nextRun: sweepJob?.nextRun?.toISOString() ?? null,
+				isRunning: sweepJob?.isRunning ?? false
+			},
+			processor: {
+				nextRun: processorJob?.nextRun?.toISOString() ?? null,
+				isRunning: processorJob?.isRunning ?? false
+			}
+		}
 	};
 };
 
@@ -224,6 +241,45 @@ export const actions: Actions = {
 			success: true,
 			action: 'removeFromQueue',
 			message: `Removed ${affected} item${affected !== 1 ? 's' : ''} from queue`
+		};
+	},
+
+	triggerSweep: async () => {
+		const connectors = await getHealthyConnectors();
+
+		if (connectors.length === 0) {
+			return fail(400, { error: 'No healthy connectors available' });
+		}
+
+		let totalEnqueued = 0;
+		const errors: string[] = [];
+
+		for (const connector of connectors) {
+			const result = await enqueuePendingItems(connector.id);
+			if (result.success) {
+				totalEnqueued += result.itemsEnqueued;
+			} else if (result.error) {
+				errors.push(`${connector.name}: ${result.error}`);
+			}
+		}
+
+		if (errors.length > 0 && totalEnqueued === 0) {
+			return fail(500, { error: `Sweep failed: ${errors.join('; ')}` });
+		}
+
+		let message: string;
+		if (totalEnqueued > 0 && errors.length > 0) {
+			message = `Enqueued ${totalEnqueued} item${totalEnqueued !== 1 ? 's' : ''} (${errors.length} connector${errors.length !== 1 ? 's' : ''} failed)`;
+		} else if (totalEnqueued > 0) {
+			message = `Enqueued ${totalEnqueued} item${totalEnqueued !== 1 ? 's' : ''}`;
+		} else {
+			message = 'No pending items to enqueue';
+		}
+
+		return {
+			success: true,
+			action: 'triggerSweep',
+			message
 		};
 	}
 };
