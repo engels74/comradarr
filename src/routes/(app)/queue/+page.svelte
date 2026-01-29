@@ -6,7 +6,6 @@ import {
 	QueueBulkActions,
 	QueueControls,
 	QueueFilters,
-	QueueProgressSummary,
 	QueueStateIndicator,
 	QueueTable,
 	RecentCompletions,
@@ -142,15 +141,8 @@ function goToPage(pageNum: number) {
 		style="animation-delay: 50ms;"
 	/>
 
-	<!-- Queue Progress Summary -->
-	<QueueProgressSummary
-		statusCounts={data.statusCounts}
-		class="mb-6 animate-float-up"
-		style="animation-delay: 75ms;"
-	/>
-
 	<!-- Filters -->
-	<div class="animate-float-up" style="animation-delay: 100ms;">
+	<div class="animate-float-up" style="animation-delay: 75ms;">
 		<QueueFilters connectors={data.connectors} statusCounts={data.statusCounts} />
 	</div>
 
