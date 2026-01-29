@@ -95,12 +95,20 @@ const segments: PipelineSegment[] = $derived.by(() => {
 		}
 	];
 
-	return segmentConfigs
-		.filter((s) => s.count > 0)
-		.map((s) => ({
-			...s,
-			percent: Math.max((s.count / total) * 100, 2)
-		}));
+	const filtered = segmentConfigs.filter((s) => s.count > 0);
+	if (filtered.length === 0) return [];
+
+	const MIN_PERCENT = 2;
+	const rawPercents = filtered.map((s) => (s.count / total) * 100);
+	const withMinimums = rawPercents.map((p) => Math.max(p, MIN_PERCENT));
+	const rawSum = withMinimums.reduce((acc, p) => acc + p, 0);
+
+	const normalized = rawSum > 100 ? withMinimums.map((p) => (p / rawSum) * 100) : withMinimums;
+
+	return filtered.map((s, i) => ({
+		...s,
+		percent: normalized[i]!
+	}));
 });
 
 const visibleStates = $derived(segments.filter((s) => s.count > 0));

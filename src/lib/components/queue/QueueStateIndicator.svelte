@@ -288,12 +288,18 @@ let isTriggering = $state(false);
 					use:enhance={() => {
 						isTriggering = true;
 						onActionStart?.();
-						return async ({ result }) => {
+						return async ({ result, update }) => {
 							isTriggering = false;
 							if (result.type === 'success' && result.data) {
 								const data = result.data as { message?: string };
 								onActionComplete?.(data.message ?? 'Sweep triggered');
+							} else if (result.type === 'failure' && result.data) {
+								const data = result.data as { error?: string };
+								onActionComplete?.(data.error ?? 'Sweep failed');
+							} else if (result.type === 'error') {
+								onActionComplete?.('An error occurred');
 							}
+							await update();
 						};
 					}}
 				>

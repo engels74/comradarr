@@ -252,21 +252,34 @@ export const actions: Actions = {
 		}
 
 		let totalEnqueued = 0;
+		const errors: string[] = [];
 
 		for (const connector of connectors) {
 			const result = await enqueuePendingItems(connector.id);
 			if (result.success) {
 				totalEnqueued += result.itemsEnqueued;
+			} else if (result.error) {
+				errors.push(`${connector.name}: ${result.error}`);
 			}
+		}
+
+		if (errors.length > 0 && totalEnqueued === 0) {
+			return fail(500, { error: `Sweep failed: ${errors.join('; ')}` });
+		}
+
+		let message: string;
+		if (totalEnqueued > 0 && errors.length > 0) {
+			message = `Enqueued ${totalEnqueued} item${totalEnqueued !== 1 ? 's' : ''} (${errors.length} connector${errors.length !== 1 ? 's' : ''} failed)`;
+		} else if (totalEnqueued > 0) {
+			message = `Enqueued ${totalEnqueued} item${totalEnqueued !== 1 ? 's' : ''}`;
+		} else {
+			message = 'No pending items to enqueue';
 		}
 
 		return {
 			success: true,
 			action: 'triggerSweep',
-			message:
-				totalEnqueued > 0
-					? `Enqueued ${totalEnqueued} item${totalEnqueued !== 1 ? 's' : ''}`
-					: 'No pending items to enqueue'
+			message
 		};
 	}
 };
