@@ -6,6 +6,7 @@ import ClockIcon from '@lucide/svelte/icons/clock';
 import DatabaseIcon from '@lucide/svelte/icons/database';
 import GaugeIcon from '@lucide/svelte/icons/gauge';
 import HeartPulseIcon from '@lucide/svelte/icons/heart-pulse';
+import PlugIcon from '@lucide/svelte/icons/plug';
 import RefreshCwIcon from '@lucide/svelte/icons/refresh-cw';
 import TimerIcon from '@lucide/svelte/icons/timer';
 import { Badge } from '$lib/components/ui/badge';
@@ -45,6 +46,8 @@ function getJobIcon(jobName: string) {
 			return TimerIcon;
 		case 'completion-snapshot':
 			return CameraIcon;
+		case 'connector-reconnect':
+			return PlugIcon;
 		default:
 			return ClockIcon;
 	}
@@ -76,6 +79,12 @@ function getJobColors(jobName: string) {
 				bg: 'bg-amber-500/10',
 				text: 'text-amber-600 dark:text-amber-400',
 				border: 'border-amber-500/20'
+			};
+		case 'connector-reconnect':
+			return {
+				bg: 'bg-cyan-500/10',
+				text: 'text-cyan-600 dark:text-cyan-400',
+				border: 'border-cyan-500/20'
 			};
 		default:
 			return {
