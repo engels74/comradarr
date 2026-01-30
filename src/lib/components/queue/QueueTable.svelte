@@ -152,7 +152,7 @@ function estimateDispatchTime(item: SerializedQueueItem, index: number): Dispatc
 		if (schedulerStatus?.sweep.nextRun) {
 			const diff = new Date(schedulerStatus.sweep.nextRun).getTime() - Date.now();
 			if (diff > 0) {
-				const seconds = Math.floor(diff / 1000);
+				const seconds = Math.max(1, Math.floor(diff / 1000));
 				if (seconds < 60) {
 					return { text: `${seconds}s`, showClock: true, isMono: true };
 				}
@@ -209,7 +209,7 @@ function formatRelativeTime(date: Date): string {
 		return 'Now';
 	}
 
-	const seconds = Math.floor(diff / 1000);
+	const seconds = Math.max(1, Math.floor(diff / 1000));
 	if (seconds < 60) {
 		return `in ${seconds}s`;
 	}

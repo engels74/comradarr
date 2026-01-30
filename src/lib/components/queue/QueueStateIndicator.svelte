@@ -115,7 +115,7 @@ const sweepTimeFormatted = $derived.by(() => {
 	const diff = new Date(schedulerStatus.sweep.nextRun).getTime() - now;
 	if (diff <= 0) return null;
 
-	const seconds = Math.floor(diff / 1000);
+	const seconds = Math.max(1, Math.floor(diff / 1000));
 	if (seconds < 60) return `${seconds}s`;
 
 	const minutes = Math.ceil(diff / 60000);

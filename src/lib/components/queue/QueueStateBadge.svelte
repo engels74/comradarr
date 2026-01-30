@@ -61,7 +61,7 @@ const cooldownRemaining = $derived.by(() => {
 	const diff = until.getTime() - now;
 	if (diff <= 0) return null;
 
-	const seconds = Math.floor(diff / 1000);
+	const seconds = Math.max(1, Math.floor(diff / 1000));
 	if (seconds < 60) return `${seconds}s`;
 
 	const minutes = Math.ceil(diff / 60000);
