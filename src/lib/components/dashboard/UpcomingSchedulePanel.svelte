@@ -98,8 +98,8 @@ function formatRelativeTime(isoTimestamp: string | null, currentTime: number): s
 	const diffMinutes = Math.floor(diffSeconds / 60);
 	const diffHours = Math.floor(diffMinutes / 60);
 
-	if (diffMinutes < 1) return 'in < 1 min';
-	if (diffMinutes < 60) return `in ${diffMinutes} min`;
+	if (diffSeconds < 60) return `in ${diffSeconds}s`;
+	if (diffMinutes < 60) return `in ${diffMinutes}m`;
 	if (diffHours < 24) {
 		const mins = diffMinutes % 60;
 		if (mins > 0) return `in ${diffHours}h ${mins}m`;
