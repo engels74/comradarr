@@ -25,7 +25,8 @@ import { toastStore } from '$lib/components/ui/toast';
 import {
 	AGGRESSIVE_PRESET,
 	CONSERVATIVE_PRESET,
-	MODERATE_PRESET
+	MODERATE_PRESET,
+	type ThrottlePreset
 } from '$lib/config/throttle-presets';
 import { throttleProfileDescriptions, throttleProfileLabels } from '$lib/schemas/throttle-profile';
 import type { BackupSettings, MaintenanceSettings } from '$lib/server/db/queries/settings';
@@ -64,6 +65,7 @@ let editingProfile = $state<ProfileWithUsage | null>(null);
 let deletingProfile = $state<ProfileWithUsage | null>(null);
 let createIsDefault = $state(false);
 let editIsDefault = $state(false);
+let templatePreset = $state<ThrottlePreset | null>(null);
 
 // Backup state
 let deletingBackupId = $state<string | null>(null);
@@ -82,6 +84,7 @@ $effect(() => {
 		editingProfile = null;
 		deletingProfile = null;
 		createIsDefault = false;
+		templatePreset = null;
 		if (form.message) {
 			toastStore.success(form.message as string);
 		}
@@ -167,6 +170,17 @@ function openDeleteDialog(profile: ProfileWithUsage) {
 	deleteDialogOpen = true;
 }
 
+function openCreateFromTemplate(preset: ThrottlePreset) {
+	templatePreset = preset;
+	createIsDefault = false;
+	createDialogOpen = true;
+}
+
+function resetCreateDialog() {
+	templatePreset = null;
+	createIsDefault = false;
+}
+
 function getFormValue(formValue: string | undefined, settingsValue: string): string {
 	return formValue ?? settingsValue;
 }
@@ -189,18 +203,18 @@ function getNumericFormValue(formValue: number | undefined, settingsValue: numbe
 				Preset Profiles
 			</Card.Title>
 			<Card.Description>
-				Reference presets for common use cases. These are read-only templates.
+				Reference presets for common use cases. Use a template to create a custom profile with preset values.
 			</Card.Description>
 		</Card.Header>
 		<Card.Content>
 			<div class="grid gap-4 md:grid-cols-3">
-				<div class="rounded-xl border border-glass-border/30 p-4 bg-glass/30 backdrop-blur-sm">
+				<div class="rounded-xl border border-glass-border/30 p-4 bg-glass/30 backdrop-blur-sm flex flex-col">
 					<div class="flex items-center gap-2 mb-3">
 						<ShieldIcon class="h-5 w-5 text-blue-500" />
 						<span class="font-semibold">{CONSERVATIVE_PRESET.name}</span>
 					</div>
 					<p class="text-xs text-muted-foreground mb-3">{CONSERVATIVE_PRESET.description}</p>
-					<div class="space-y-1 text-sm">
+					<div class="space-y-1 text-sm flex-1">
 						<div class="flex justify-between">
 							<span class="text-muted-foreground">Requests/min:</span>
 							<span class="font-medium">{CONSERVATIVE_PRESET.requestsPerMinute}</span>
@@ -219,16 +233,24 @@ function getNumericFormValue(formValue: number | undefined, settingsValue: numbe
 							>
 						</div>
 					</div>
+					<Button
+						variant="outline"
+						size="sm"
+						class="mt-4 w-full"
+						onclick={() => openCreateFromTemplate(CONSERVATIVE_PRESET)}
+					>
+						Use Template
+					</Button>
 				</div>
 
-				<div class="rounded-xl border border-glass-border/30 p-4 bg-glass/30 backdrop-blur-sm">
+				<div class="rounded-xl border border-glass-border/30 p-4 bg-glass/30 backdrop-blur-sm flex flex-col">
 					<div class="flex items-center gap-2 mb-3">
 						<ZapIcon class="h-5 w-5 text-yellow-500" />
 						<span class="font-semibold">{MODERATE_PRESET.name}</span>
 						<Badge variant="secondary" class="text-xs">Default Fallback</Badge>
 					</div>
 					<p class="text-xs text-muted-foreground mb-3">{MODERATE_PRESET.description}</p>
-					<div class="space-y-1 text-sm">
+					<div class="space-y-1 text-sm flex-1">
 						<div class="flex justify-between">
 							<span class="text-muted-foreground">Requests/min:</span>
 							<span class="font-medium">{MODERATE_PRESET.requestsPerMinute}</span>
@@ -246,15 +268,23 @@ function getNumericFormValue(formValue: number | undefined, settingsValue: numbe
 							<span class="font-medium">{formatSeconds(MODERATE_PRESET.batchCooldownSeconds)}</span>
 						</div>
 					</div>
+					<Button
+						variant="outline"
+						size="sm"
+						class="mt-4 w-full"
+						onclick={() => openCreateFromTemplate(MODERATE_PRESET)}
+					>
+						Use Template
+					</Button>
 				</div>
 
-				<div class="rounded-xl border border-glass-border/30 p-4 bg-glass/30 backdrop-blur-sm">
+				<div class="rounded-xl border border-glass-border/30 p-4 bg-glass/30 backdrop-blur-sm flex flex-col">
 					<div class="flex items-center gap-2 mb-3">
 						<RocketIcon class="h-5 w-5 text-red-500" />
 						<span class="font-semibold">{AGGRESSIVE_PRESET.name}</span>
 					</div>
 					<p class="text-xs text-muted-foreground mb-3">{AGGRESSIVE_PRESET.description}</p>
-					<div class="space-y-1 text-sm">
+					<div class="space-y-1 text-sm flex-1">
 						<div class="flex justify-between">
 							<span class="text-muted-foreground">Requests/min:</span>
 							<span class="font-medium">{AGGRESSIVE_PRESET.requestsPerMinute}</span>
@@ -273,6 +303,14 @@ function getNumericFormValue(formValue: number | undefined, settingsValue: numbe
 							>
 						</div>
 					</div>
+					<Button
+						variant="outline"
+						size="sm"
+						class="mt-4 w-full"
+						onclick={() => openCreateFromTemplate(AGGRESSIVE_PRESET)}
+					>
+						Use Template
+					</Button>
 				</div>
 			</div>
 		</Card.Content>
@@ -292,7 +330,7 @@ function getNumericFormValue(formValue: number | undefined, settingsValue: numbe
 						Create and manage your own throttle profiles with custom rate limits.
 					</Card.Description>
 				</div>
-				<Dialog.Root bind:open={createDialogOpen}>
+				<Dialog.Root bind:open={createDialogOpen} onOpenChange={(open) => !open && resetCreateDialog()}>
 					<Dialog.Trigger>
 						<Button>
 							<PlusIcon class="h-4 w-4 mr-2" />
@@ -303,7 +341,11 @@ function getNumericFormValue(formValue: number | undefined, settingsValue: numbe
 						<Dialog.Header>
 							<Dialog.Title>Create Throttle Profile</Dialog.Title>
 							<Dialog.Description>
-								Create a new custom throttle profile with your own rate limits.
+								{#if templatePreset}
+									Creating a new profile from the <strong>{templatePreset.name}</strong> template. Customize the values below.
+								{:else}
+									Create a new custom throttle profile with your own rate limits.
+								{/if}
 							</Dialog.Description>
 						</Dialog.Header>
 						<form
@@ -334,6 +376,7 @@ function getNumericFormValue(formValue: number | undefined, settingsValue: numbe
 										name="name"
 										type="text"
 										placeholder="My Custom Profile"
+										value={templatePreset ? `${templatePreset.name} (Custom)` : ''}
 										required
 										disabled={isSubmitting}
 										class={inputClass}
@@ -348,6 +391,7 @@ function getNumericFormValue(formValue: number | undefined, settingsValue: numbe
 										name="description"
 										type="text"
 										placeholder="Optional description"
+										value={templatePreset?.description ?? ''}
 										disabled={isSubmitting}
 										class={inputClass}
 									/>
@@ -369,7 +413,7 @@ function getNumericFormValue(formValue: number | undefined, settingsValue: numbe
 											type="number"
 											min="1"
 											max="60"
-											value="5"
+											value={templatePreset?.requestsPerMinute ?? 5}
 											required
 											disabled={isSubmitting}
 											class={inputClass}
@@ -385,6 +429,7 @@ function getNumericFormValue(formValue: number | undefined, settingsValue: numbe
 											min="10"
 											max="10000"
 											placeholder="Empty = unlimited"
+											value={templatePreset?.dailyBudget ?? ''}
 											disabled={isSubmitting}
 											class={inputClass}
 										/>
@@ -400,7 +445,7 @@ function getNumericFormValue(formValue: number | undefined, settingsValue: numbe
 											type="number"
 											min="1"
 											max="50"
-											value="10"
+											value={templatePreset?.batchSize ?? 10}
 											required
 											disabled={isSubmitting}
 											class={inputClass}
@@ -417,7 +462,7 @@ function getNumericFormValue(formValue: number | undefined, settingsValue: numbe
 											type="number"
 											min="10"
 											max="3600"
-											value="60"
+											value={templatePreset?.batchCooldownSeconds ?? 60}
 											required
 											disabled={isSubmitting}
 											class={inputClass}
@@ -435,7 +480,7 @@ function getNumericFormValue(formValue: number | undefined, settingsValue: numbe
 										type="number"
 										min="60"
 										max="3600"
-										value="300"
+										value={templatePreset?.rateLimitPauseSeconds ?? 300}
 										required
 										disabled={isSubmitting}
 										class={inputClass}
