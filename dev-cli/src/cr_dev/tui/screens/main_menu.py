@@ -456,7 +456,6 @@ class MainMenuScreen(Screen[None]):
         self,
         persist: bool = False,
         db_name: str | None = None,
-        reconnect: str | None = None,
     ) -> None:
         """Start dev server using background process manager."""
         import asyncio
@@ -476,7 +475,6 @@ class MainMenuScreen(Screen[None]):
                 lambda: setup_dev_server(
                     persist=persist,
                     db_name=db_name,
-                    reconnect=reconnect,
                 ),
             )
         finally:
@@ -687,7 +685,7 @@ class MainMenuScreen(Screen[None]):
         selected = await self.app.push_screen_wait(DatabaseSelectDialog(saved_dbs))  # pyright: ignore[reportUnknownMemberType]
         if selected:
             self._show_command_start(f"Reconnecting to '{selected}'...")
-            _ = self._start_dev_server_async(reconnect=selected)
+            _ = self._start_dev_server_async(db_name=selected)
 
     def action_show_credentials(self) -> None:
         """Show the credentials dialog."""

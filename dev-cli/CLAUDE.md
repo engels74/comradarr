@@ -53,7 +53,7 @@ cli.py          # Main Typer app with subcommands
 menu.py         # Launches Textual TUI
 commands/       # CLI command modules
   db.py         # Database: install, start, stop, status, setup, teardown, reset, env
-  dev.py        # Dev server: ephemeral/persistent/reconnect modes
+  dev.py        # Dev server: ephemeral/named database modes
   test.py       # Test runner: all, unit, integration
   stop.py       # Graceful dev server shutdown
 ```
@@ -80,8 +80,8 @@ commands/       # CLI command modules
 
 **Dev Server Modes**:
 - Ephemeral: Creates random `comradarr_dev_XXXXXXXX` database, dropped on exit
-- Persistent: Named database preserved across sessions, credentials saved
-- Reconnect: Reuses saved credentials to reconnect to existing database
+- Ephemeral (persisted): `--persist` keeps the random database on exit
+- Named: `--db-name <name>` creates or auto-reconnects to a named database (always persisted)
 
 **TUI/CLI Dual Mode**: `core/logging.py` detects whether output should go to Rich console or Textual's output widget via `get_textual_log()`.
 

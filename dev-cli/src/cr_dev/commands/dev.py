@@ -1,4 +1,4 @@
-"""Development server command with ephemeral/persistent/reconnect modes."""
+"""Development server command with ephemeral and named database modes."""
 
 import atexit
 import os
@@ -411,7 +411,6 @@ class DevServerSetupResult:
 def setup_dev_server(
     persist: bool = False,
     db_name: str | None = None,
-    reconnect: str | None = None,
     admin_password: str | None = None,
     port: int = 5173,
     db_port: int = 5432,
@@ -447,31 +446,17 @@ def setup_dev_server(
     if admin_password:
         config.admin_password = admin_password
 
-    if reconnect:
-        creds = load_credentials(reconnect)
-        if not creds:
-            error(f"No saved credentials for database: {reconnect}")
-            return None
-
-        config.db_name = reconnect
-        config.db_password = creds.password
-        config.secret_key = creds.secret_key
-        config.admin_password = creds.admin_password
-        config.reconnect = True
-
-        info(f"Reconnecting to database: {reconnect}")
-
-    elif db_name:
+    if db_name:
         if not validate_db_name(db_name):
             error(f"Invalid database name: {db_name}")
             return None
 
         config.db_name = db_name
-        config.persist = persist
+        config.persist = True  # Named databases are always persisted
 
         existing_creds = load_credentials(db_name)
         if existing_creds:
-            info(f"Database '{db_name}' exists, reconnecting...")
+            info(f"Reconnecting to existing database '{db_name}'...")
             config.db_password = existing_creds.password
             config.secret_key = existing_creds.secret_key
             config.admin_password = existing_creds.admin_password
@@ -482,9 +467,18 @@ def setup_dev_server(
                 return None
             success(f"Database '{db_name}' created")
 
+    elif persist:
+        config.db_name = config.generate_db_name()
+        config.persist = True
+
+        step(f"Creating database '{config.db_name}'...")
+        if not _create_database(config, strategy):
+            return None
+        success(f"Database '{config.db_name}' created")
+
     else:
         config.db_name = config.generate_db_name()
-        config.persist = persist
+        config.persist = False
 
         step(f"Creating ephemeral database '{config.db_name}'...")
         if not _create_database(config, strategy):
@@ -564,10 +558,8 @@ def dev_command(
         bool, typer.Option("--persist", help="Persist database on exit")
     ] = False,
     db_name: Annotated[
-        str | None, typer.Option("--db-name", help="Custom database name")
-    ] = None,
-    reconnect: Annotated[
-        str | None, typer.Option("--reconnect", help="Reconnect to existing database")
+        str | None,
+        typer.Option("--db-name", help="Custom database name (always persisted)"),
     ] = None,
     admin_password: Annotated[
         str | None, typer.Option("--admin-password", help="Set admin password")
@@ -609,32 +601,17 @@ def dev_command(
     if admin_password:
         config.admin_password = admin_password
 
-    if reconnect:
-        creds = load_credentials(reconnect)
-        if not creds:
-            error(f"No saved credentials for database: {reconnect}")
-            raise typer.Exit(1)
-
-        config.db_name = reconnect
-        config.db_password = creds.password
-        config.secret_key = creds.secret_key
-        config.admin_password = creds.admin_password
-        config.reconnect = True
-
-        info(f"Reconnecting to database: {reconnect}")
-
-    elif db_name:
+    if db_name:
         if not validate_db_name(db_name):
             error(f"Invalid database name: {db_name}")
             raise typer.Exit(1)
 
         config.db_name = db_name
-        config.persist = persist
+        config.persist = True  # Named databases are always persisted
 
         existing_creds = load_credentials(db_name)
         if existing_creds:
-            if not typer.confirm(f"Database '{db_name}' already exists. Reconnect?"):
-                raise typer.Exit(0)
+            info(f"Reconnecting to existing database '{db_name}'...")
             config.db_password = existing_creds.password
             config.secret_key = existing_creds.secret_key
             config.admin_password = existing_creds.admin_password
@@ -645,9 +622,18 @@ def dev_command(
                 raise typer.Exit(1)
             success(f"Database '{db_name}' created")
 
+    elif persist:
+        config.db_name = config.generate_db_name()
+        config.persist = True
+
+        step(f"Creating database '{config.db_name}'...")
+        if not _create_database(config, strategy):
+            raise typer.Exit(1)
+        success(f"Database '{config.db_name}' created")
+
     else:
         config.db_name = config.generate_db_name()
-        config.persist = persist
+        config.persist = False
 
         step(f"Creating ephemeral database '{config.db_name}'...")
         if not _create_database(config, strategy):
