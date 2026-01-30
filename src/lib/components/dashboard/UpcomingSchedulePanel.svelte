@@ -21,6 +21,15 @@ interface Props {
 
 let { scheduledJobs, class: className = '' }: Props = $props();
 
+let now = $state(Date.now());
+
+$effect(() => {
+	const interval = setInterval(() => {
+		now = Date.now();
+	}, 1000);
+	return () => clearInterval(interval);
+});
+
 function getJobIcon(jobName: string) {
 	switch (jobName) {
 		case 'incremental-sync-sweep':
@@ -77,12 +86,11 @@ function getJobColors(jobName: string) {
 	}
 }
 
-function formatRelativeTime(isoTimestamp: string | null): string {
+function formatRelativeTime(isoTimestamp: string | null, currentTime: number): string {
 	if (!isoTimestamp) return 'Not scheduled';
 
-	const now = Date.now();
 	const target = new Date(isoTimestamp).getTime();
-	const diffMs = target - now;
+	const diffMs = target - currentTime;
 
 	if (diffMs < 0) return 'Running...';
 
@@ -101,16 +109,15 @@ function formatRelativeTime(isoTimestamp: string | null): string {
 	return `in ${days}d`;
 }
 
-function isUpcomingSoon(isoTimestamp: string | null): boolean {
+function isUpcomingSoon(isoTimestamp: string | null, currentTime: number): boolean {
 	if (!isoTimestamp) return false;
-	const now = Date.now();
 	const target = new Date(isoTimestamp).getTime();
-	const diffMs = target - now;
+	const diffMs = target - currentTime;
 	return diffMs > 0 && diffMs < 5 * 60 * 1000;
 }
 
-function shouldShowSoonBadge(job: SerializedScheduledJob): boolean {
-	if (!isUpcomingSoon(job.nextRun)) return false;
+function shouldShowSoonBadge(job: SerializedScheduledJob, currentTime: number): boolean {
+	if (!isUpcomingSoon(job.nextRun, currentTime)) return false;
 
 	// For queue-processor, only show "Soon" if there's work to do
 	if (job.name === 'queue-processor' && job.context) {
@@ -210,7 +217,7 @@ const otherJobs = $derived(
 										>
 											Running
 										</Badge>
-									{:else if shouldShowSoonBadge(job)}
+									{:else if shouldShowSoonBadge(job, now)}
 										<Badge
 											variant="outline"
 											class="bg-amber-500/20 text-amber-600 dark:text-amber-400 text-xs"
@@ -226,7 +233,7 @@ const otherJobs = $derived(
 							</div>
 							<div class="text-right shrink-0">
 								<p class="text-sm font-semibold {job.isRunning ? 'text-blue-600 dark:text-blue-400' : 'text-foreground'}">
-									{job.isRunning ? 'Running now' : formatRelativeTime(job.nextRun)}
+									{job.isRunning ? 'Running now' : formatRelativeTime(job.nextRun, now)}
 								</p>
 							</div>
 						</div>
@@ -277,7 +284,7 @@ const otherJobs = $derived(
 										<span class="text-sm font-medium truncate block">{job.displayName}</span>
 									</div>
 									<span class="text-xs text-muted-foreground whitespace-nowrap shrink-0">
-										{job.isRunning ? 'Running...' : formatRelativeTime(job.nextRun)}
+										{job.isRunning ? 'Running...' : formatRelativeTime(job.nextRun, now)}
 									</span>
 								</div>
 							{/each}
@@ -290,7 +297,7 @@ const otherJobs = $derived(
 								{@const Icon = getJobIcon(job.name)}
 								<div
 									class="p-1.5 rounded-full {colors.bg} transition-all duration-200 hover:scale-110"
-									title={`${job.displayName}: ${job.isRunning ? 'Running' : formatRelativeTime(job.nextRun)}`}
+									title={`${job.displayName}: ${job.isRunning ? 'Running' : formatRelativeTime(job.nextRun, now)}`}
 								>
 									{#if job.isRunning}
 										<Icon class="h-3 w-3 {colors.text} animate-spin" />
