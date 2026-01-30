@@ -110,6 +110,20 @@ function formatCountdown(seconds: number | null): { minutes: string; seconds: st
 
 const countdown = $derived(formatCountdown(secondsUntilSweep));
 
+const sweepTimeFormatted = $derived.by(() => {
+	if (!schedulerStatus.sweep.nextRun) return null;
+	const diff = new Date(schedulerStatus.sweep.nextRun).getTime() - now;
+	if (diff <= 0) return null;
+
+	const seconds = Math.floor(diff / 1000);
+	if (seconds < 60) return `${seconds}s`;
+
+	const minutes = Math.ceil(diff / 60000);
+	if (minutes < 60) return `${minutes}m`;
+	const hours = Math.floor(minutes / 60);
+	return `${hours}h ${minutes % 60}m`;
+});
+
 const stateConfig = $derived.by(() => {
 	switch (globalState) {
 		case 'processing':
@@ -240,7 +254,11 @@ let isTriggering = $state(false);
 						</p>
 					{:else if globalState === 'idle'}
 						<p class="text-sm text-muted-foreground">
-							No items in queue
+							{#if sweepTimeFormatted}
+								Next sweep in <span class="font-mono tabular-nums">{sweepTimeFormatted}</span>
+							{:else}
+								No items in queue
+							{/if}
 						</p>
 					{/if}
 				</div>
