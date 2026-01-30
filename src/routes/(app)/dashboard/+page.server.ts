@@ -80,6 +80,10 @@ const JOB_METADATA: Record<string, { displayName: string; description: string }>
 		displayName: 'Rate Limit Reset',
 		description: 'Resets throttle counters'
 	},
+	'connector-reconnect': {
+		displayName: 'Auto Reconnect',
+		description: 'Reconnects offline connectors'
+	},
 	'notification-batch-processor': {
 		displayName: 'Notifications',
 		description: 'Processes notification batches'
