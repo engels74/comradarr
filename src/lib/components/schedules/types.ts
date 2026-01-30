@@ -146,8 +146,10 @@ export function formatRelativeTime(isoDate: string): string {
 
 	if (diffMs < 0) return 'now';
 
+	const diffSecs = Math.floor(diffMs / 1000);
+	if (diffSecs < 60) return diffSecs <= 0 ? 'now' : `in ${diffSecs}s`;
+
 	const diffMins = Math.floor(diffMs / 60000);
-	if (diffMins < 1) return 'now';
 	if (diffMins < 60) return `in ${diffMins} min`;
 
 	const diffHours = Math.floor(diffMins / 60);

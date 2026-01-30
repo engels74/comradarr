@@ -115,6 +115,9 @@ function formatPauseTime(pausedUntil: string | null, currentTime: number): strin
 	const diff = until.getTime() - currentTime;
 	if (diff <= 0) return '';
 
+	const seconds = Math.max(1, Math.floor(diff / 1000));
+	if (seconds < 60) return `${seconds}s`;
+
 	const minutes = Math.ceil(diff / 60000);
 	if (minutes < 60) return `${minutes}m`;
 	const hours = Math.floor(minutes / 60);
@@ -125,6 +128,9 @@ function formatSweepTime(nextRun: string | null, currentTime: number): string | 
 	if (!nextRun) return null;
 	const diff = new Date(nextRun).getTime() - currentTime;
 	if (diff <= 0) return null;
+
+	const seconds = Math.max(1, Math.floor(diff / 1000));
+	if (seconds < 60) return `${seconds}s`;
 
 	const minutes = Math.ceil(diff / 60000);
 	if (minutes < 60) return `${minutes}m`;
@@ -153,6 +159,7 @@ const sweepTimeFormatted = $derived(formatSweepTime(nextSweepRun, now));
 				{@const dailyProgress = getDailyProgress(connector)}
 				{@const pauseTime = formatPauseTime(connector.pausedUntil, now)}
 				{@const available = status.available}
+				{@const showPendingInfo = pendingCount > 0 && connector.searchingCount === 0 && connector.queuedCount === 0 && sweepTimeFormatted}
 
 				<Card.Root
 					variant="glass"
@@ -310,9 +317,11 @@ const sweepTimeFormatted = $derived(formatSweepTime(nextSweepRun, now));
 						<div class="flex items-center justify-between text-xs pt-1 border-t border-glass-border/30">
 							<span class="text-muted-foreground">Queue</span>
 							<div class="flex items-center gap-2">
-								{#if pendingCount > 0 && connector.searchingCount === 0 && connector.queuedCount === 0 && sweepTimeFormatted}
+								{#if showPendingInfo}
 									<span class="text-muted-foreground/80 text-[10px]">
-										{pendingCount} pending → {sweepTimeFormatted}
+										<span class="font-medium">{pendingCount}</span>
+										<span class="opacity-70"> pending →</span>
+										<span class="font-mono tabular-nums ml-1">{sweepTimeFormatted}</span>
 									</span>
 								{/if}
 								<span>
@@ -327,8 +336,12 @@ const sweepTimeFormatted = $derived(formatSweepTime(nextSweepRun, now));
 									{#if connector.queuedCount > 0}
 										<span class="text-muted-foreground">{connector.queuedCount} waiting</span>
 									{/if}
-									{#if connector.searchingCount === 0 && connector.queuedCount === 0}
-										<span class="text-muted-foreground italic">idle</span>
+									{#if connector.searchingCount === 0 && connector.queuedCount === 0 && !showPendingInfo}
+										{#if sweepTimeFormatted}
+											<span class="text-muted-foreground/70 text-[10px] font-mono tabular-nums">sweeps {sweepTimeFormatted}</span>
+										{:else}
+											<span class="text-muted-foreground/50 text-[10px] italic">no schedules</span>
+										{/if}
 									{/if}
 								</span>
 							</div>
