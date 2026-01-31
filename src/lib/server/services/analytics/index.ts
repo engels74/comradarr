@@ -9,7 +9,6 @@ export type {
 	QueueDepthSample,
 	QueueDepthSampledPayload,
 	RecordEventResult,
-	SearchCompletedPayload,
 	SearchDispatchedPayload,
 	SearchFailedPayload,
 	SyncCompletedPayload,
