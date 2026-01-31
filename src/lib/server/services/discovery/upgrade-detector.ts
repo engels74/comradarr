@@ -108,6 +108,10 @@ async function discoverEpisodeUpgrades(
 	connectorId: number,
 	batchSize: number
 ): Promise<DiscoveryStats> {
+	// Find episodes that need registries:
+	// - monitored=true, hasFile=true, no existing registry
+	// - AND either: qualityCutoffNotMet=true (needs upgrade) OR lastSearchTime IS NULL (never searched)
+	// This avoids re-creating registries for items that were searched and don't need upgrades
 	const episodeUpgrades = await db
 		.select({
 			id: episodes.id,
@@ -127,7 +131,9 @@ async function discoverEpisodeUpgrades(
 				eq(episodes.connectorId, connectorId),
 				eq(episodes.monitored, true),
 				eq(episodes.hasFile, true),
-				isNull(searchRegistry.id) // No existing registry entry
+				isNull(searchRegistry.id), // No existing registry entry
+				// Only create registry if: needs upgrade OR never been searched (chicken-and-egg case)
+				sql`(${episodes.qualityCutoffNotMet} = true OR ${episodes.lastSearchTime} IS NULL)`
 			)
 		);
 
@@ -196,6 +202,10 @@ async function discoverMovieUpgrades(
 	connectorId: number,
 	batchSize: number
 ): Promise<DiscoveryStats> {
+	// Find movies that need registries:
+	// - monitored=true, hasFile=true, no existing registry
+	// - AND either: qualityCutoffNotMet=true (needs upgrade) OR lastSearchTime IS NULL (never searched)
+	// This avoids re-creating registries for items that were searched and don't need upgrades
 	const movieUpgrades = await db
 		.select({
 			id: movies.id,
@@ -215,7 +225,9 @@ async function discoverMovieUpgrades(
 				eq(movies.connectorId, connectorId),
 				eq(movies.monitored, true),
 				eq(movies.hasFile, true),
-				isNull(searchRegistry.id) // No existing registry entry
+				isNull(searchRegistry.id), // No existing registry entry
+				// Only create registry if: needs upgrade OR never been searched (chicken-and-egg case)
+				sql`(${movies.qualityCutoffNotMet} = true OR ${movies.lastSearchTime} IS NULL)`
 			)
 		);
 

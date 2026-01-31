@@ -18,7 +18,7 @@
  */
 
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'bun:test';
-import { and, eq, sql } from 'drizzle-orm';
+import { and, eq, inArray, sql } from 'drizzle-orm';
 import * as fc from 'fast-check';
 import { db } from '../../src/lib/server/db';
 import {
@@ -680,11 +680,16 @@ describe('Upgrade Registry Cleanup on Success', () => {
 			let registryCount = await countSearchRegistry(testSonarrConnectorId, 'upgrade');
 			expect(registryCount).toBe(1);
 
-			// Simulate that the item has been searched (set lastSearched)
+			// Simulate that the item has been searched (set lastSearched on registry and lastSearchTime on episode)
+			const searchTime = new Date();
 			await db
 				.update(searchRegistry)
-				.set({ lastSearched: new Date() })
+				.set({ lastSearched: searchTime })
 				.where(eq(searchRegistry.connectorId, testSonarrConnectorId));
+			await db
+				.update(episodes)
+				.set({ lastSearchTime: searchTime })
+				.where(eq(episodes.id, episodeId));
 
 			// Update episode qualityCutoffNotMet to false (simulating successful upgrade)
 			await db
@@ -695,7 +700,8 @@ describe('Upgrade Registry Cleanup on Success', () => {
 			// Run discovery again - should clean up resolved registry
 			const result2 = await discoverUpgrades(testSonarrConnectorId);
 			expect(result2.registriesResolved).toBe(1);
-			expect(result2.upgradesFound).toBe(0);
+			// upgradesFound counts all monitored episodes with files (item still exists)
+			expect(result2.upgradesFound).toBe(1);
 
 			// Verify registry was deleted
 			registryCount = await countSearchRegistry(testSonarrConnectorId, 'upgrade');
@@ -779,11 +785,13 @@ describe('Upgrade Registry Cleanup on Success', () => {
 			let registryCount = await countSearchRegistry(testRadarrConnectorId, 'upgrade');
 			expect(registryCount).toBe(1);
 
-			// Simulate that the item has been searched (set lastSearched)
+			// Simulate that the item has been searched (set lastSearched on registry and lastSearchTime on movie)
+			const searchTime = new Date();
 			await db
 				.update(searchRegistry)
-				.set({ lastSearched: new Date() })
+				.set({ lastSearched: searchTime })
 				.where(eq(searchRegistry.connectorId, testRadarrConnectorId));
+			await db.update(movies).set({ lastSearchTime: searchTime }).where(eq(movies.id, movieId));
 
 			// Update movie qualityCutoffNotMet to false (simulating successful upgrade)
 			await db.update(movies).set({ qualityCutoffNotMet: false }).where(eq(movies.id, movieId));
@@ -791,7 +799,8 @@ describe('Upgrade Registry Cleanup on Success', () => {
 			// Run discovery again - should clean up resolved registry
 			const result2 = await discoverUpgrades(testRadarrConnectorId);
 			expect(result2.registriesResolved).toBe(1);
-			expect(result2.upgradesFound).toBe(0);
+			// upgradesFound counts all monitored movies with files (item still exists)
+			expect(result2.upgradesFound).toBe(1);
 
 			// Verify registry was deleted
 			registryCount = await countSearchRegistry(testRadarrConnectorId, 'upgrade');
@@ -808,7 +817,14 @@ describe('Upgrade Registry Cleanup on Success', () => {
 				true,
 				true
 			);
-			await insertTestMovie(testRadarrConnectorId, 202, 'Movie 2', true, true, true);
+			const movieId2 = await insertTestMovie(
+				testRadarrConnectorId,
+				202,
+				'Movie 2',
+				true,
+				true,
+				true
+			);
 
 			// Run discovery - creates 2 registries
 			const result1 = await discoverUpgrades(testRadarrConnectorId);
@@ -818,11 +834,16 @@ describe('Upgrade Registry Cleanup on Success', () => {
 			let registryCount = await countSearchRegistry(testRadarrConnectorId, 'upgrade');
 			expect(registryCount).toBe(2);
 
-			// Simulate that items have been searched (set lastSearched)
+			// Simulate that items have been searched (set lastSearched on registry and lastSearchTime on movies)
+			const searchTime = new Date();
 			await db
 				.update(searchRegistry)
-				.set({ lastSearched: new Date() })
+				.set({ lastSearched: searchTime })
 				.where(eq(searchRegistry.connectorId, testRadarrConnectorId));
+			await db
+				.update(movies)
+				.set({ lastSearchTime: searchTime })
+				.where(inArray(movies.id, [movieId1, movieId2]));
 
 			// Update only one movie qualityCutoffNotMet to false
 			await db.update(movies).set({ qualityCutoffNotMet: false }).where(eq(movies.id, movieId1));
@@ -830,8 +851,10 @@ describe('Upgrade Registry Cleanup on Success', () => {
 			// Run discovery again
 			const result2 = await discoverUpgrades(testRadarrConnectorId);
 			expect(result2.registriesResolved).toBe(1); // One resolved
-			expect(result2.upgradesFound).toBe(1); // One still an upgrade candidate
-			expect(result2.registriesSkipped).toBe(1); // One already has registry
+			// upgradesFound counts all monitored movies with files (both still exist)
+			expect(result2.upgradesFound).toBe(2);
+			// registriesSkipped = 2: movie 2 has registry, movie 1 is resolved (not recreated)
+			expect(result2.registriesSkipped).toBe(2);
 
 			// Verify only one registry remains
 			registryCount = await countSearchRegistry(testRadarrConnectorId, 'upgrade');
@@ -883,11 +906,16 @@ describe('Property 4: Upgrade Registry Cleanup on Success - Property-Based Tests
 						const result1 = await discoverUpgrades(testRadarrConnectorId);
 						expect(result1.registriesCreated).toBe(uniqueMovies.length);
 
-						// Simulate that items have been searched (set lastSearched)
+						// Simulate that items have been searched (set lastSearched on registry and lastSearchTime on movies)
+						const searchTime = new Date();
 						await db
 							.update(searchRegistry)
-							.set({ lastSearched: new Date() })
+							.set({ lastSearched: searchTime })
 							.where(eq(searchRegistry.connectorId, testRadarrConnectorId));
+						await db
+							.update(movies)
+							.set({ lastSearchTime: searchTime })
+							.where(inArray(movies.id, movieIds));
 
 						// Determine which movies to "resolve" (set qualityCutoffNotMet=false)
 						const moviesToResolve = uniqueMovies.filter((m) => m.resolveAfterFirstDiscovery);
@@ -909,11 +937,11 @@ describe('Property 4: Upgrade Registry Cleanup on Success - Property-Based Tests
 						// Verify correct number resolved
 						expect(result2.registriesResolved).toBe(moviesToResolve.length);
 
-						// Verify remaining upgrade count
-						const remainingUpgrades = uniqueMovies.length - moviesToResolve.length;
-						expect(result2.upgradesFound).toBe(remainingUpgrades);
+						// upgradesFound counts all monitored movies with files (all still exist)
+						expect(result2.upgradesFound).toBe(uniqueMovies.length);
 
-						// Verify registry count matches remaining upgrades
+						// Verify registry count matches remaining (non-resolved) upgrades
+						const remainingUpgrades = uniqueMovies.length - moviesToResolve.length;
 						const registryCount = await countSearchRegistry(testRadarrConnectorId, 'upgrade');
 						expect(registryCount).toBe(remainingUpgrades);
 					}
