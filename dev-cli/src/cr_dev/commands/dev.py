@@ -446,6 +446,8 @@ def setup_dev_server(
     if admin_password:
         config.admin_password = admin_password
 
+    newly_created_db = False  # Track if we created a new DB (for cleanup on failure)
+
     if db_name:
         if not validate_db_name(db_name):
             error(f"Invalid database name: {db_name}")
@@ -465,6 +467,7 @@ def setup_dev_server(
             step(f"Creating database '{db_name}'...")
             if not _create_database(config, strategy):
                 return None
+            newly_created_db = True
             success(f"Database '{db_name}' created")
 
     elif persist:
@@ -485,15 +488,16 @@ def setup_dev_server(
             return None
         success(f"Database '{config.db_name}' created")
 
-    if not config.reconnect:
-        step("Running migrations...")
-        if not _run_migrations(config, project_root):
-            error("Failed to run migrations")
-            if not config.persist and config.db_name:
-                _ = drop_database(config.db_name, config.db_port, strategy)
-            return None
-        success("Migrations completed")
+    step("Running migrations...")
+    if not _run_migrations(config, project_root):
+        error("Failed to run migrations")
+        # Clean up newly created databases on failure (even named ones without saved creds)
+        if newly_created_db or (not config.persist and config.db_name):
+            _ = drop_database(config.db_name, config.db_port, strategy)
+        return None
+    success("Migrations completed")
 
+    if not config.reconnect:
         step("Creating admin user...")
         if not _create_admin_user(config, project_root):
             warning("Admin user may already exist")
@@ -601,6 +605,8 @@ def dev_command(
     if admin_password:
         config.admin_password = admin_password
 
+    newly_created_db = False  # Track if we created a new DB (for cleanup on failure)
+
     if db_name:
         if not validate_db_name(db_name):
             error(f"Invalid database name: {db_name}")
@@ -620,6 +626,7 @@ def dev_command(
             step(f"Creating database '{db_name}'...")
             if not _create_database(config, strategy):
                 raise typer.Exit(1)
+            newly_created_db = True
             success(f"Database '{db_name}' created")
 
     elif persist:
@@ -640,15 +647,16 @@ def dev_command(
             raise typer.Exit(1)
         success(f"Database '{config.db_name}' created")
 
-    if not config.reconnect:
-        step("Running migrations...")
-        if not _run_migrations(config, project_root):
-            error("Failed to run migrations")
-            if not config.persist and config.db_name:
-                _ = drop_database(config.db_name, config.db_port, strategy)
-            raise typer.Exit(1)
-        success("Migrations completed")
+    step("Running migrations...")
+    if not _run_migrations(config, project_root):
+        error("Failed to run migrations")
+        # Clean up newly created databases on failure (even named ones without saved creds)
+        if newly_created_db or (not config.persist and config.db_name):
+            _ = drop_database(config.db_name, config.db_port, strategy)
+        raise typer.Exit(1)
+    success("Migrations completed")
 
+    if not config.reconnect:
         step("Creating admin user...")
         if not _create_admin_user(config, project_root):
             warning("Admin user may already exist")
