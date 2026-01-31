@@ -96,4 +96,11 @@ export interface CommandResponse {
 	lastExecutionTime?: string;
 }
 
-export type CommandStatus = 'queued' | 'started' | 'completed' | 'failed';
+export type CommandStatus =
+	| 'queued'
+	| 'started'
+	| 'completed'
+	| 'failed'
+	| 'aborted'
+	| 'cancelled'
+	| 'orphaned';

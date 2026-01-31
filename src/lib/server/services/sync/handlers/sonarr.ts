@@ -1,4 +1,4 @@
-import { sql } from 'drizzle-orm';
+import { and, eq, inArray, sql } from 'drizzle-orm';
 import type { SonarrClient } from '$lib/server/connectors/sonarr/client';
 import type { SonarrSeries } from '$lib/server/connectors/sonarr/types';
 import type { WhisparrClient } from '$lib/server/connectors/whisparr/client';
@@ -232,7 +232,11 @@ async function upsertEpisodes(
 		.select({ id: episodes.id, arrId: episodes.arrId })
 		.from(episodes)
 		.where(
-			sql`${episodes.connectorId} = ${connectorId} AND ${episodes.arrId} = ANY(${arrIds}) AND ${episodes.hasFile} = false`
+			and(
+				eq(episodes.connectorId, connectorId),
+				inArray(episodes.arrId, arrIds),
+				eq(episodes.hasFile, false)
+			)
 		);
 	const arrIdsWithoutFiles = new Set(episodesWithoutFiles.map((e) => e.arrId));
 

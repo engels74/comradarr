@@ -1,4 +1,4 @@
-import { sql } from 'drizzle-orm';
+import { and, eq, inArray, sql } from 'drizzle-orm';
 import type { RadarrClient } from '$lib/server/connectors/radarr/client';
 import { db } from '$lib/server/db';
 import {
@@ -30,7 +30,11 @@ export async function syncRadarrMovies(client: RadarrClient, connectorId: number
 		.select({ id: movies.id, arrId: movies.arrId })
 		.from(movies)
 		.where(
-			sql`${movies.connectorId} = ${connectorId} AND ${movies.arrId} = ANY(${arrIds}) AND ${movies.hasFile} = false`
+			and(
+				eq(movies.connectorId, connectorId),
+				inArray(movies.arrId, arrIds),
+				eq(movies.hasFile, false)
+			)
 		);
 	const arrIdsWithoutFiles = new Set(moviesWithoutFiles.map((m) => m.arrId));
 

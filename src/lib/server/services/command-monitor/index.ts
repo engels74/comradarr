@@ -43,6 +43,10 @@ function createClient(
 function mapArrStatusToDbStatus(
 	arrStatus: ArrCommandStatus
 ): 'queued' | 'started' | 'completed' | 'failed' {
+	// Map terminal states (aborted, cancelled, orphaned) to 'failed' for DB tracking
+	if (arrStatus === 'aborted' || arrStatus === 'cancelled' || arrStatus === 'orphaned') {
+		return 'failed';
+	}
 	return arrStatus;
 }
 
