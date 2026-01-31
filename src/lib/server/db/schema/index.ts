@@ -168,6 +168,10 @@ export const episodes = pgTable(
 		qualityCutoffNotMet: boolean('quality_cutoff_not_met').notNull().default(false),
 		episodeFileId: integer('episode_file_id'),
 		lastSearchTime: timestamp('last_search_time', { withTimezone: true }),
+		// File loss tracking for priority boost
+		firstDownloadedAt: timestamp('first_downloaded_at', { withTimezone: true }),
+		fileLostAt: timestamp('file_lost_at', { withTimezone: true }),
+		fileLossCount: integer('file_loss_count').notNull().default(0),
 		createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 		updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow()
 	},
@@ -201,6 +205,10 @@ export const movies = pgTable(
 		qualityCutoffNotMet: boolean('quality_cutoff_not_met').notNull().default(false),
 		movieFileId: integer('movie_file_id'),
 		lastSearchTime: timestamp('last_search_time', { withTimezone: true }),
+		// File loss tracking for priority boost
+		firstDownloadedAt: timestamp('first_downloaded_at', { withTimezone: true }),
+		fileLostAt: timestamp('file_lost_at', { withTimezone: true }),
+		fileLossCount: integer('file_loss_count').notNull().default(0),
 		createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
 		updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow()
 	},

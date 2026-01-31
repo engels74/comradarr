@@ -181,7 +181,7 @@ function getRetryValue(key: keyof typeof data.retryConfig): number {
 						</p>
 					</div>
 
-					<div class="grid gap-2 sm:col-span-2">
+					<div class="grid gap-2">
 						<Label for="gapBonus">{priorityWeightLabels.gapBonus}</Label>
 						<Input
 							id="gapBonus"
@@ -195,6 +195,40 @@ function getRetryValue(key: keyof typeof data.retryConfig): number {
 							value={getPriorityValue('gapBonus')}
 						/>
 						<p class="text-xs text-muted-foreground">{priorityWeightDescriptions.gapBonus}</p>
+					</div>
+
+					<div class="grid gap-2">
+						<Label for="specialsPenalty">{priorityWeightLabels.specialsPenalty}</Label>
+						<Input
+							id="specialsPenalty"
+							name="specialsPenalty"
+							type="number"
+							min="0"
+							max="200"
+							step="1"
+							required
+							disabled={isSubmitting}
+							value={getPriorityValue('specialsPenalty')}
+						/>
+						<p class="text-xs text-muted-foreground">
+							{priorityWeightDescriptions.specialsPenalty}
+						</p>
+					</div>
+
+					<div class="grid gap-2 sm:col-span-2">
+						<Label for="fileLostBonus">{priorityWeightLabels.fileLostBonus}</Label>
+						<Input
+							id="fileLostBonus"
+							name="fileLostBonus"
+							type="number"
+							min="0"
+							max="100"
+							step="1"
+							required
+							disabled={isSubmitting}
+							value={getPriorityValue('fileLostBonus')}
+						/>
+						<p class="text-xs text-muted-foreground">{priorityWeightDescriptions.fileLostBonus}</p>
 					</div>
 				</div>
 			</Card.Content>

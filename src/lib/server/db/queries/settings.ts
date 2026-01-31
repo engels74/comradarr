@@ -20,6 +20,8 @@ export const SEARCH_SETTINGS_DEFAULTS = {
 	search_priority_weight_user_priority: '40',
 	search_priority_weight_failure_penalty: '10',
 	search_priority_weight_gap_bonus: '20',
+	search_priority_weight_specials_penalty: '50',
+	search_priority_weight_file_lost_bonus: '35',
 
 	// Season Pack Thresholds
 	search_season_pack_min_missing_percent: '50',
@@ -196,6 +198,8 @@ export interface SearchSettings {
 		userPriority: number;
 		failurePenalty: number;
 		gapBonus: number;
+		specialsPenalty: number;
+		fileLostBonus: number;
 	};
 	seasonPackThresholds: {
 		minMissingPercent: number;
@@ -243,6 +247,14 @@ export async function getSearchSettings(): Promise<SearchSettings> {
 			gapBonus: Number(
 				settings.search_priority_weight_gap_bonus ??
 					SEARCH_SETTINGS_DEFAULTS.search_priority_weight_gap_bonus
+			),
+			specialsPenalty: Number(
+				settings.search_priority_weight_specials_penalty ??
+					SEARCH_SETTINGS_DEFAULTS.search_priority_weight_specials_penalty
+			),
+			fileLostBonus: Number(
+				settings.search_priority_weight_file_lost_bonus ??
+					SEARCH_SETTINGS_DEFAULTS.search_priority_weight_file_lost_bonus
 			)
 		},
 		seasonPackThresholds: {
@@ -323,6 +335,14 @@ export async function updateSearchSettings(input: SearchSettings): Promise<void>
 			value: String(input.priorityWeights.failurePenalty)
 		},
 		{ key: 'search_priority_weight_gap_bonus', value: String(input.priorityWeights.gapBonus) },
+		{
+			key: 'search_priority_weight_specials_penalty',
+			value: String(input.priorityWeights.specialsPenalty)
+		},
+		{
+			key: 'search_priority_weight_file_lost_bonus',
+			value: String(input.priorityWeights.fileLostBonus)
+		},
 
 		// Season Pack Thresholds
 		{

@@ -34,6 +34,25 @@ export async function syncRadarrMovies(client: RadarrClient, connectorId: number
 				quality: sql`excluded.quality`,
 				qualityCutoffNotMet: sql`excluded.quality_cutoff_not_met`,
 				movieFileId: sql`excluded.movie_file_id`,
+				// File tracking: set firstDownloadedAt when file first appears
+				firstDownloadedAt: sql`CASE
+					WHEN ${movies.hasFile} = false AND excluded.has_file = true
+						THEN COALESCE(${movies.firstDownloadedAt}, now())
+					ELSE ${movies.firstDownloadedAt}
+				END`,
+				// File tracking: set fileLostAt and increment count when file disappears
+				fileLostAt: sql`CASE
+					WHEN ${movies.hasFile} = true AND excluded.has_file = false
+						THEN now()
+					WHEN excluded.has_file = true
+						THEN NULL
+					ELSE ${movies.fileLostAt}
+				END`,
+				fileLossCount: sql`CASE
+					WHEN ${movies.hasFile} = true AND excluded.has_file = false
+						THEN ${movies.fileLossCount} + 1
+					ELSE ${movies.fileLossCount}
+				END`,
 				updatedAt: sql`now()`
 			}
 		});

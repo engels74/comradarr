@@ -109,7 +109,10 @@ async function enqueueEpisodes(
 			searchType: searchRegistry.searchType,
 			attemptCount: searchRegistry.attemptCount,
 			createdAt: searchRegistry.createdAt,
-			airDate: episodes.airDate
+			airDate: episodes.airDate,
+			seasonNumber: episodes.seasonNumber,
+			firstDownloadedAt: episodes.firstDownloadedAt,
+			fileLostAt: episodes.fileLostAt
 		})
 		.from(searchRegistry)
 		.innerJoin(episodes, eq(episodes.id, searchRegistry.contentId))
@@ -140,7 +143,10 @@ async function enqueueEpisodes(
 			contentDate: registry.airDate,
 			discoveredAt: registry.createdAt,
 			userPriorityOverride: 0, // TODO: Support user priority override
-			attemptCount: registry.attemptCount
+			attemptCount: registry.attemptCount,
+			seasonNumber: registry.seasonNumber,
+			wasDownloaded: registry.firstDownloadedAt !== null,
+			fileLostAt: registry.fileLostAt
 		};
 
 		const { score } = calculatePriority(priorityInput, undefined, now);
@@ -217,7 +223,9 @@ async function enqueueMovies(
 			searchType: searchRegistry.searchType,
 			attemptCount: searchRegistry.attemptCount,
 			createdAt: searchRegistry.createdAt,
-			year: movies.year
+			year: movies.year,
+			firstDownloadedAt: movies.firstDownloadedAt,
+			fileLostAt: movies.fileLostAt
 		})
 		.from(searchRegistry)
 		.innerJoin(movies, eq(movies.id, searchRegistry.contentId))
@@ -250,7 +258,10 @@ async function enqueueMovies(
 			contentDate,
 			discoveredAt: registry.createdAt,
 			userPriorityOverride: 0, // TODO: Support user priority override
-			attemptCount: registry.attemptCount
+			attemptCount: registry.attemptCount,
+			// Movies don't have seasonNumber
+			wasDownloaded: registry.firstDownloadedAt !== null,
+			fileLostAt: registry.fileLostAt
 		};
 
 		const { score } = calculatePriority(priorityInput, undefined, now);

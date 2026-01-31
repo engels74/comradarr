@@ -473,7 +473,9 @@ export const actions: Actions = {
 				missingDuration: Number(formData.get('missingDuration')),
 				userPriority: Number(formData.get('userPriority')),
 				failurePenalty: Number(formData.get('failurePenalty')),
-				gapBonus: Number(formData.get('gapBonus'))
+				gapBonus: Number(formData.get('gapBonus')),
+				specialsPenalty: Number(formData.get('specialsPenalty')),
+				fileLostBonus: Number(formData.get('fileLostBonus'))
 			},
 			seasonPackThresholds: {
 				minMissingPercent: Number(formData.get('minMissingPercent')),

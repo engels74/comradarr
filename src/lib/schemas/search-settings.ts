@@ -30,6 +30,18 @@ export const PriorityWeightsSchema = v.object({
 		v.integer('Gap bonus must be a whole number'),
 		v.minValue(0, 'Gap bonus must be at least 0'),
 		v.maxValue(100, 'Gap bonus must be at most 100')
+	),
+	specialsPenalty: v.pipe(
+		v.number('Specials penalty must be a number'),
+		v.integer('Specials penalty must be a whole number'),
+		v.minValue(0, 'Specials penalty must be at least 0'),
+		v.maxValue(200, 'Specials penalty must be at most 200')
+	),
+	fileLostBonus: v.pipe(
+		v.number('File lost bonus must be a number'),
+		v.integer('File lost bonus must be a whole number'),
+		v.minValue(0, 'File lost bonus must be at least 0'),
+		v.maxValue(100, 'File lost bonus must be at most 100')
 	)
 });
 
@@ -123,7 +135,9 @@ export const priorityWeightLabels: Record<keyof PriorityWeightsOutput, string> =
 	missingDuration: 'Missing Duration Weight',
 	userPriority: 'User Priority Weight',
 	failurePenalty: 'Failure Penalty',
-	gapBonus: 'Gap Bonus'
+	gapBonus: 'Gap Bonus',
+	specialsPenalty: 'Season 0 (Specials) Penalty',
+	fileLostBonus: 'Previously Downloaded Bonus'
 };
 
 export const priorityWeightDescriptions: Record<keyof PriorityWeightsOutput, string> = {
@@ -131,7 +145,11 @@ export const priorityWeightDescriptions: Record<keyof PriorityWeightsOutput, str
 	missingDuration: 'Higher values prioritize items missing longer. Range: 0-100.',
 	userPriority: 'Weight applied to user-set priority overrides. Range: 0-100.',
 	failurePenalty: 'Points subtracted per failed search attempt. Range: 0-100.',
-	gapBonus: 'Bonus points for gap searches over upgrades. Range: 0-100.'
+	gapBonus: 'Bonus points for gap searches over upgrades. Range: 0-100.',
+	specialsPenalty:
+		'Priority penalty for Season 0 episodes (specials). Set to 0 to treat equally. Range: 0-200.',
+	fileLostBonus:
+		'Priority bonus for re-acquiring content that was previously downloaded but is now missing. Decays over 30 days. Range: 0-100.'
 };
 
 export const seasonPackLabels: Record<keyof SeasonPackThresholdsOutput, string> = {
@@ -173,7 +191,9 @@ export const SEARCH_SETTINGS_DEFAULTS: SearchSettingsOutput = {
 		missingDuration: 25,
 		userPriority: 40,
 		failurePenalty: 10,
-		gapBonus: 20
+		gapBonus: 20,
+		specialsPenalty: 50,
+		fileLostBonus: 35
 	},
 	seasonPackThresholds: {
 		minMissingPercent: 50,

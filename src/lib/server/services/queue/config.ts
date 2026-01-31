@@ -20,7 +20,13 @@ export const DEFAULT_PRIORITY_WEIGHTS: Readonly<PriorityWeights> = {
 	failurePenalty: 10,
 
 	/** Bonus points for gap searches */
-	gapBonus: 20
+	gapBonus: 20,
+
+	/** Penalty for Season 0 (specials) episodes */
+	specialsPenalty: 50,
+
+	/** Bonus for re-acquiring content that was previously downloaded but is now missing */
+	fileLostBonus: 35
 } as const;
 
 export const PRIORITY_CONSTANTS = {
@@ -52,7 +58,13 @@ export const PRIORITY_CONSTANTS = {
 	 * Raw score scale for age/duration factors.
 	 * Normalized values (0-1) are multiplied by this.
 	 */
-	FACTOR_SCALE: 100
+	FACTOR_SCALE: 100,
+
+	/**
+	 * Number of days over which the file lost bonus decays to zero.
+	 * Recently lost files get full bonus, older losses get reduced bonus.
+	 */
+	FILE_LOST_DECAY_DAYS: 30
 } as const;
 
 export type PriorityConstantsType = typeof PRIORITY_CONSTANTS;

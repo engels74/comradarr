@@ -19,13 +19,26 @@ export function calculatePriority(
 		input.userPriorityOverride * (weights.userPriority / PRIORITY_CONSTANTS.WEIGHT_SCALE);
 	const failurePenalty = input.attemptCount * weights.failurePenalty;
 
+	// Season 0 (specials) penalty - only applies to episodes
+	const specialsPenalty = input.seasonNumber === 0 ? weights.specialsPenalty : 0;
+
+	// File lost bonus - higher priority for re-acquiring content that was previously downloaded
+	const fileLostBonus = calculateFileLostBonus(
+		input.wasDownloaded ?? false,
+		input.fileLostAt ?? null,
+		weights.fileLostBonus,
+		now
+	);
+
 	const rawScore =
 		PRIORITY_CONSTANTS.BASE_SCORE +
 		contentAgeScore +
 		missingDurationScore +
 		userPriorityScore -
 		failurePenalty +
-		searchTypeBonus;
+		searchTypeBonus -
+		specialsPenalty +
+		fileLostBonus;
 
 	const score = Math.round(rawScore);
 
@@ -34,7 +47,9 @@ export function calculatePriority(
 		missingDurationScore,
 		userPriorityScore,
 		failurePenalty,
-		searchTypeBonus
+		searchTypeBonus,
+		specialsPenalty,
+		fileLostBonus
 	};
 
 	return { score, breakdown };
@@ -62,6 +77,26 @@ function calculateMissingDurationScore(discoveredAt: Date, now: Date): number {
 		1
 	);
 	return PRIORITY_CONSTANTS.FACTOR_SCALE * normalizedDuration;
+}
+
+// Content that was previously downloaded gets a priority boost that decays over time
+function calculateFileLostBonus(
+	wasDownloaded: boolean,
+	fileLostAt: Date | null,
+	bonusWeight: number,
+	now: Date
+): number {
+	// No bonus if content was never downloaded
+	if (!wasDownloaded || fileLostAt === null) {
+		return 0;
+	}
+
+	const daysSinceLost = Math.max(0, (now.getTime() - fileLostAt.getTime()) / (1000 * 60 * 60 * 24));
+
+	// Decay to zero over FILE_LOST_DECAY_DAYS
+	const decayFactor = Math.max(0, 1 - daysSinceLost / PRIORITY_CONSTANTS.FILE_LOST_DECAY_DAYS);
+
+	return bonusWeight * decayFactor;
 }
 
 // Higher score = higher priority = comes first

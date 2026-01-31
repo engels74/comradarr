@@ -46,7 +46,9 @@ export function mapEpisodeToDb(
 		quality: apiEpisode.episodeFile?.quality ?? null,
 		// API returns null when no file exists; coerce to false for DB
 		qualityCutoffNotMet: apiEpisode.qualityCutoffNotMet ?? false,
-		episodeFileId: apiEpisode.episodeFileId ?? null
+		episodeFileId: apiEpisode.episodeFileId ?? null,
+		// Set firstDownloadedAt on insert when file already exists (enables fileLostBonus tracking)
+		firstDownloadedAt: apiEpisode.hasFile ? new Date() : null
 	};
 }
 
@@ -63,6 +65,8 @@ export function mapMovieToDb(connectorId: number, apiMovie: RadarrMovie): NewMov
 		quality: apiMovie.movieFile?.quality ?? null,
 		// API returns null when no file exists; coerce to false for DB
 		qualityCutoffNotMet: apiMovie.qualityCutoffNotMet ?? false,
-		movieFileId: apiMovie.movieFileId ?? null
+		movieFileId: apiMovie.movieFileId ?? null,
+		// Set firstDownloadedAt on insert when file already exists (enables fileLostBonus tracking)
+		firstDownloadedAt: apiMovie.hasFile ? new Date() : null
 	};
 }
