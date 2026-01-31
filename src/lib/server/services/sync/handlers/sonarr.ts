@@ -1,10 +1,15 @@
-import { sql } from 'drizzle-orm';
+import { and, eq, inArray, sql } from 'drizzle-orm';
 import type { SonarrClient } from '$lib/server/connectors/sonarr/client';
 import type { SonarrSeries } from '$lib/server/connectors/sonarr/types';
 import type { WhisparrClient } from '$lib/server/connectors/whisparr/client';
 import { db } from '$lib/server/db';
+import {
+	getOldestPendingCommandForContent,
+	markCommandFileAcquired
+} from '$lib/server/db/queries/pending-commands';
 import { episodes, seasons, series } from '$lib/server/db/schema';
 import { createLogger } from '$lib/server/logger';
+import { analyticsCollector } from '$lib/server/services/analytics';
 import { mapEpisodeToDb, mapSeasonToDb, mapSeriesToDb } from '../mappers';
 import type { SyncOptions } from '../types';
 
@@ -87,13 +92,23 @@ export async function syncSonarrContent(
 		requestDelayMs
 	);
 
-	const totalEpisodes = await upsertEpisodes(connectorId, episodeResults, seriesIdMap, seasonIdMap);
+	const { totalEpisodes, acquiredEpisodeIds } = await upsertEpisodes(
+		connectorId,
+		episodeResults,
+		seriesIdMap,
+		seasonIdMap
+	);
+
+	if (acquiredEpisodeIds.length > 0) {
+		await recordFileAcquisitions(connectorId, acquiredEpisodeIds);
+	}
 
 	const durationMs = Date.now() - startTime;
 	logger.info('Sonarr sync completed', {
 		connectorId,
 		seriesCount: apiSeriesList.length,
 		episodeCount: totalEpisodes,
+		filesAcquired: acquiredEpisodeIds.length,
 		durationMs
 	});
 
@@ -181,12 +196,17 @@ interface EpisodeFetchResult {
 	episodes: Awaited<ReturnType<SeriesClient['getEpisodes']>>;
 }
 
+interface UpsertEpisodesResult {
+	totalEpisodes: number;
+	acquiredEpisodeIds: number[];
+}
+
 async function upsertEpisodes(
 	connectorId: number,
 	episodeResults: EpisodeFetchResult[],
 	seriesIdMap: Map<number, number>,
 	seasonIdMap: Map<string, number>
-): Promise<number> {
+): Promise<UpsertEpisodesResult> {
 	const episodeRecords: ReturnType<typeof mapEpisodeToDb>[] = [];
 
 	for (const { seriesArrId, episodes: seriesEpisodes } of episodeResults) {
@@ -203,10 +223,24 @@ async function upsertEpisodes(
 	}
 
 	if (episodeRecords.length === 0) {
-		return 0;
+		return { totalEpisodes: 0, acquiredEpisodeIds: [] };
 	}
 
-	await db
+	// Query episodes that currently don't have files (before upsert)
+	const arrIds = episodeRecords.map((r) => r.arrId);
+	const episodesWithoutFiles = await db
+		.select({ id: episodes.id, arrId: episodes.arrId })
+		.from(episodes)
+		.where(
+			and(
+				eq(episodes.connectorId, connectorId),
+				inArray(episodes.arrId, arrIds),
+				eq(episodes.hasFile, false)
+			)
+		);
+	const arrIdsWithoutFiles = new Set(episodesWithoutFiles.map((e) => e.arrId));
+
+	const result = await db
 		.insert(episodes)
 		.values(episodeRecords)
 		.onConflictDoUpdate({
@@ -243,7 +277,56 @@ async function upsertEpisodes(
 				END`,
 				updatedAt: sql`now()`
 			}
+		})
+		.returning({
+			id: episodes.id,
+			arrId: episodes.arrId,
+			hasFile: episodes.hasFile
 		});
 
-	return episodeRecords.length;
+	// Detect file acquisitions: episodes that didn't have files before but now do
+	const acquiredEpisodeIds = result
+		.filter((r) => r.hasFile && arrIdsWithoutFiles.has(r.arrId))
+		.map((r) => r.id);
+
+	return { totalEpisodes: episodeRecords.length, acquiredEpisodeIds };
+}
+
+async function recordFileAcquisitions(
+	connectorId: number,
+	acquiredEpisodeIds: number[]
+): Promise<void> {
+	for (const episodeId of acquiredEpisodeIds) {
+		try {
+			const pendingCommand = await getOldestPendingCommandForContent('episode', episodeId);
+
+			if (pendingCommand) {
+				const timeSinceDispatchMs = Date.now() - pendingCommand.dispatchedAt.getTime();
+
+				await markCommandFileAcquired(pendingCommand.id);
+
+				await analyticsCollector.recordSearchSuccessful(
+					connectorId,
+					pendingCommand.searchRegistryId,
+					'episode',
+					pendingCommand.searchType as 'gap' | 'upgrade',
+					pendingCommand.commandId,
+					timeSinceDispatchMs
+				);
+
+				logger.debug('File acquisition recorded for episode', {
+					episodeId,
+					connectorId,
+					commandId: pendingCommand.commandId,
+					timeSinceDispatchMs
+				});
+			}
+		} catch (error) {
+			logger.warn('Failed to record file acquisition', {
+				episodeId,
+				connectorId,
+				error: error instanceof Error ? error.message : String(error)
+			});
+		}
+	}
 }

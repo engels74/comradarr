@@ -52,7 +52,7 @@ export async function aggregateHourlyStats(hourBucket: Date): Promise<Aggregatio
 					searchesDispatched: sql<number>`
 						COALESCE(COUNT(*) FILTER (WHERE event_type = 'search_dispatched'), 0)::int`,
 					searchesSuccessful: sql<number>`
-						COALESCE(COUNT(*) FILTER (WHERE event_type = 'search_dispatched'), 0)::int`,
+						COALESCE(COUNT(*) FILTER (WHERE event_type = 'search_successful'), 0)::int`,
 					searchesFailed: sql<number>`
 						COALESCE(COUNT(*) FILTER (WHERE event_type = 'search_failed'), 0)::int`,
 					searchesNoResults: sql<number>`

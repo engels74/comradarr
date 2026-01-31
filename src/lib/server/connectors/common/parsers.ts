@@ -24,7 +24,15 @@ export const QualityModelSchema = v.object({
 	})
 });
 
-export const CommandStatusSchema = v.picklist(['queued', 'started', 'completed', 'failed']);
+export const CommandStatusSchema = v.picklist([
+	'queued',
+	'started',
+	'completed',
+	'failed',
+	'aborted',
+	'cancelled',
+	'orphaned'
+]);
 
 export const CommandResponseSchema = v.object({
 	id: v.number(),

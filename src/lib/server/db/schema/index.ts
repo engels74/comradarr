@@ -221,6 +221,43 @@ export const movies = pgTable(
 );
 
 // =============================================================================
+// Pending Commands Table
+// =============================================================================
+
+/**
+ * Tracks dispatched search commands awaiting completion.
+ * Used to correlate file acquisitions with specific search requests for analytics.
+ */
+export const pendingCommands = pgTable(
+	'pending_commands',
+	{
+		id: integer('id').primaryKey().generatedAlwaysAsIdentity(),
+		connectorId: integer('connector_id')
+			.notNull()
+			.references(() => connectors.id, { onDelete: 'cascade' }),
+		searchRegistryId: integer('search_registry_id')
+			.notNull()
+			.references(() => searchRegistry.id, { onDelete: 'cascade' }),
+		commandId: integer('command_id').notNull(),
+		contentType: varchar('content_type', { length: 20 }).notNull(), // 'episode' | 'movie'
+		contentId: integer('content_id').notNull(), // References episodes.id or movies.id
+		searchType: varchar('search_type', { length: 20 }).notNull(), // 'gap' | 'upgrade'
+		dispatchedAt: timestamp('dispatched_at', { withTimezone: true }).notNull().defaultNow(),
+		completedAt: timestamp('completed_at', { withTimezone: true }),
+		commandStatus: varchar('command_status', { length: 20 }), // 'queued' | 'started' | 'completed' | 'failed'
+		fileAcquired: boolean('file_acquired')
+	},
+	(table) => [
+		index('pending_commands_connector_idx').on(table.connectorId),
+		index('pending_commands_content_idx').on(table.contentType, table.contentId),
+		index('pending_commands_status_idx').on(table.commandStatus, table.completedAt)
+	]
+);
+
+export type PendingCommand = typeof pendingCommands.$inferSelect;
+export type NewPendingCommand = typeof pendingCommands.$inferInsert;
+
+// =============================================================================
 // Search Registry Table
 // =============================================================================
 
