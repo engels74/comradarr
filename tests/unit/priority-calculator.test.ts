@@ -37,14 +37,16 @@ function daysAgo(days: number, from: Date = new Date()): Date {
  * Helper to create a base priority input with sensible defaults.
  */
 function createInput(overrides: Partial<PriorityInput> = {}): PriorityInput {
-	return {
+	const base: PriorityInput = {
 		searchType: 'gap',
 		contentDate: new Date('2024-06-01'),
 		discoveredAt: new Date('2024-06-15'),
 		userPriorityOverride: 0,
 		attemptCount: 0,
-		...overrides
+		wasDownloaded: false,
+		fileLostAt: null
 	};
+	return { ...base, ...overrides };
 }
 
 describe('calculatePriority', () => {
@@ -304,6 +306,124 @@ describe('calculatePriority', () => {
 		});
 	});
 
+	describe('specials penalty', () => {
+		it('should apply penalty for Season 0 (specials)', () => {
+			const regularInput = createInput({
+				seasonNumber: 1
+			});
+			const specialInput = createInput({
+				seasonNumber: 0
+			});
+
+			const regularResult = calculatePriority(regularInput, DEFAULT_PRIORITY_WEIGHTS, now);
+			const specialResult = calculatePriority(specialInput, DEFAULT_PRIORITY_WEIGHTS, now);
+
+			expect(regularResult.score).toBeGreaterThan(specialResult.score);
+			expect(regularResult.breakdown.specialsPenalty).toBe(0);
+			expect(specialResult.breakdown.specialsPenalty).toBe(
+				DEFAULT_PRIORITY_WEIGHTS.specialsPenalty
+			);
+		});
+
+		it('should not apply penalty for undefined seasonNumber (movies)', () => {
+			const movieInput = createInput();
+			// Don't set seasonNumber - it remains undefined
+
+			const result = calculatePriority(movieInput, DEFAULT_PRIORITY_WEIGHTS, now);
+
+			expect(result.breakdown.specialsPenalty).toBe(0);
+		});
+
+		it('should not apply penalty for regular seasons', () => {
+			const season5Input = createInput({
+				seasonNumber: 5
+			});
+
+			const result = calculatePriority(season5Input, DEFAULT_PRIORITY_WEIGHTS, now);
+
+			expect(result.breakdown.specialsPenalty).toBe(0);
+		});
+	});
+
+	describe('file lost bonus', () => {
+		it('should apply bonus for recently lost files', () => {
+			const neverDownloadedInput = createInput({
+				wasDownloaded: false,
+				fileLostAt: null
+			});
+			const lostYesterdayInput = createInput({
+				wasDownloaded: true,
+				fileLostAt: daysAgo(1, now)
+			});
+
+			const neverDownloadedResult = calculatePriority(
+				neverDownloadedInput,
+				DEFAULT_PRIORITY_WEIGHTS,
+				now
+			);
+			const lostYesterdayResult = calculatePriority(
+				lostYesterdayInput,
+				DEFAULT_PRIORITY_WEIGHTS,
+				now
+			);
+
+			expect(lostYesterdayResult.score).toBeGreaterThan(neverDownloadedResult.score);
+			expect(neverDownloadedResult.breakdown.fileLostBonus).toBe(0);
+			expect(lostYesterdayResult.breakdown.fileLostBonus).toBeGreaterThan(0);
+		});
+
+		it('should decay bonus over time', () => {
+			const lostRecentlyInput = createInput({
+				wasDownloaded: true,
+				fileLostAt: daysAgo(1, now)
+			});
+			const lostOlderInput = createInput({
+				wasDownloaded: true,
+				fileLostAt: daysAgo(15, now)
+			});
+
+			const recentResult = calculatePriority(lostRecentlyInput, DEFAULT_PRIORITY_WEIGHTS, now);
+			const olderResult = calculatePriority(lostOlderInput, DEFAULT_PRIORITY_WEIGHTS, now);
+
+			expect(recentResult.breakdown.fileLostBonus).toBeGreaterThan(
+				olderResult.breakdown.fileLostBonus
+			);
+		});
+
+		it('should have zero bonus after 30 days', () => {
+			const lostLongAgoInput = createInput({
+				wasDownloaded: true,
+				fileLostAt: daysAgo(31, now)
+			});
+
+			const result = calculatePriority(lostLongAgoInput, DEFAULT_PRIORITY_WEIGHTS, now);
+
+			expect(result.breakdown.fileLostBonus).toBe(0);
+		});
+
+		it('should have zero bonus when wasDownloaded is false', () => {
+			const neverDownloadedInput = createInput({
+				wasDownloaded: false,
+				fileLostAt: daysAgo(1, now)
+			});
+
+			const result = calculatePriority(neverDownloadedInput, DEFAULT_PRIORITY_WEIGHTS, now);
+
+			expect(result.breakdown.fileLostBonus).toBe(0);
+		});
+
+		it('should have zero bonus when fileLostAt is null', () => {
+			const downloadedButNotLostInput = createInput({
+				wasDownloaded: true,
+				fileLostAt: null
+			});
+
+			const result = calculatePriority(downloadedButNotLostInput, DEFAULT_PRIORITY_WEIGHTS, now);
+
+			expect(result.breakdown.fileLostBonus).toBe(0);
+		});
+	});
+
 	describe('custom weights', () => {
 		it('should respect custom content age weight', () => {
 			const input = createInput({
@@ -349,6 +469,63 @@ describe('calculatePriority', () => {
 			const result = calculatePriority(input, zeroAgeWeightConfig, now);
 
 			expect(result.breakdown.contentAgeScore).toBe(0);
+		});
+
+		it('should respect custom specials penalty', () => {
+			const specialsInput = createInput({
+				seasonNumber: 0
+			});
+
+			const lowPenaltyConfig: PriorityWeights = {
+				...DEFAULT_PRIORITY_WEIGHTS,
+				specialsPenalty: 10
+			};
+			const highPenaltyConfig: PriorityWeights = {
+				...DEFAULT_PRIORITY_WEIGHTS,
+				specialsPenalty: 100
+			};
+
+			const lowResult = calculatePriority(specialsInput, lowPenaltyConfig, now);
+			const highResult = calculatePriority(specialsInput, highPenaltyConfig, now);
+
+			expect(lowResult.breakdown.specialsPenalty).toBe(10);
+			expect(highResult.breakdown.specialsPenalty).toBe(100);
+			expect(lowResult.score).toBeGreaterThan(highResult.score);
+		});
+
+		it('should respect custom file lost bonus', () => {
+			const lostInput = createInput({
+				wasDownloaded: true,
+				fileLostAt: daysAgo(1, now)
+			});
+
+			const lowBonusConfig: PriorityWeights = { ...DEFAULT_PRIORITY_WEIGHTS, fileLostBonus: 10 };
+			const highBonusConfig: PriorityWeights = { ...DEFAULT_PRIORITY_WEIGHTS, fileLostBonus: 50 };
+
+			const lowResult = calculatePriority(lostInput, lowBonusConfig, now);
+			const highResult = calculatePriority(lostInput, highBonusConfig, now);
+
+			expect(highResult.breakdown.fileLostBonus).toBeGreaterThan(lowResult.breakdown.fileLostBonus);
+			expect(highResult.score).toBeGreaterThan(lowResult.score);
+		});
+
+		it('should allow zero specials penalty to treat Season 0 equally', () => {
+			const regularInput = createInput({
+				seasonNumber: 1
+			});
+			const specialInput = createInput({
+				seasonNumber: 0
+			});
+
+			const zeroPenaltyConfig: PriorityWeights = {
+				...DEFAULT_PRIORITY_WEIGHTS,
+				specialsPenalty: 0
+			};
+
+			const regularResult = calculatePriority(regularInput, zeroPenaltyConfig, now);
+			const specialResult = calculatePriority(specialInput, zeroPenaltyConfig, now);
+
+			expect(regularResult.score).toBe(specialResult.score);
 		});
 	});
 
@@ -495,6 +672,8 @@ describe('DEFAULT_PRIORITY_WEIGHTS', () => {
 		expect(DEFAULT_PRIORITY_WEIGHTS.userPriority).toBe(40);
 		expect(DEFAULT_PRIORITY_WEIGHTS.failurePenalty).toBe(10);
 		expect(DEFAULT_PRIORITY_WEIGHTS.gapBonus).toBe(20);
+		expect(DEFAULT_PRIORITY_WEIGHTS.specialsPenalty).toBe(50);
+		expect(DEFAULT_PRIORITY_WEIGHTS.fileLostBonus).toBe(35);
 	});
 });
 
@@ -505,5 +684,6 @@ describe('PRIORITY_CONSTANTS', () => {
 		expect(PRIORITY_CONSTANTS.BASE_SCORE).toBe(1000);
 		expect(PRIORITY_CONSTANTS.WEIGHT_SCALE).toBe(100);
 		expect(PRIORITY_CONSTANTS.FACTOR_SCALE).toBe(100);
+		expect(PRIORITY_CONSTANTS.FILE_LOST_DECAY_DAYS).toBe(30);
 	});
 });

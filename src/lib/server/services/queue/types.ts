@@ -9,6 +9,8 @@ export interface PriorityWeights {
 	userPriority: number;
 	failurePenalty: number;
 	gapBonus: number;
+	specialsPenalty: number;
+	fileLostBonus: number;
 }
 
 export interface PriorityInput {
@@ -18,6 +20,11 @@ export interface PriorityInput {
 	discoveredAt: Date;
 	userPriorityOverride: number;
 	attemptCount: number;
+	// Season number for episodes (0 = specials), undefined for movies
+	seasonNumber?: number;
+	// File loss tracking for priority boost
+	wasDownloaded?: boolean;
+	fileLostAt?: Date | null;
 }
 
 export interface PriorityBreakdown {
@@ -26,6 +33,8 @@ export interface PriorityBreakdown {
 	userPriorityScore: number;
 	failurePenalty: number;
 	searchTypeBonus: number;
+	specialsPenalty: number;
+	fileLostBonus: number;
 }
 
 export interface PriorityResult {

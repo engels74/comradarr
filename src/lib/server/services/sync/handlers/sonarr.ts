@@ -222,6 +222,25 @@ async function upsertEpisodes(
 				quality: sql`excluded.quality`,
 				qualityCutoffNotMet: sql`excluded.quality_cutoff_not_met`,
 				episodeFileId: sql`excluded.episode_file_id`,
+				// File tracking: set firstDownloadedAt when file first appears
+				firstDownloadedAt: sql`CASE
+					WHEN ${episodes.hasFile} = false AND excluded.has_file = true
+						THEN COALESCE(${episodes.firstDownloadedAt}, now())
+					ELSE ${episodes.firstDownloadedAt}
+				END`,
+				// File tracking: set fileLostAt and increment count when file disappears
+				fileLostAt: sql`CASE
+					WHEN ${episodes.hasFile} = true AND excluded.has_file = false
+						THEN now()
+					WHEN excluded.has_file = true
+						THEN NULL
+					ELSE ${episodes.fileLostAt}
+				END`,
+				fileLossCount: sql`CASE
+					WHEN ${episodes.hasFile} = true AND excluded.has_file = false
+						THEN ${episodes.fileLossCount} + 1
+					ELSE ${episodes.fileLossCount}
+				END`,
 				updatedAt: sql`now()`
 			}
 		});

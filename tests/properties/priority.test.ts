@@ -53,14 +53,26 @@ const attemptCountArbitrary = fc.integer({ min: 0, max: 100 });
 
 /**
  * Arbitrary generator for PriorityInput.
+ * Uses oneof to handle the optional seasonNumber field with proper types.
  */
-const priorityInputArbitrary: fc.Arbitrary<PriorityInput> = fc.record({
-	searchType: searchTypeArbitrary,
-	contentDate: nullableDateArbitrary,
-	discoveredAt: dateArbitrary,
-	userPriorityOverride: userPriorityArbitrary,
-	attemptCount: attemptCountArbitrary
-});
+const priorityInputArbitrary: fc.Arbitrary<PriorityInput> = fc
+	.record({
+		searchType: searchTypeArbitrary,
+		contentDate: nullableDateArbitrary,
+		discoveredAt: dateArbitrary,
+		userPriorityOverride: userPriorityArbitrary,
+		attemptCount: attemptCountArbitrary,
+		wasDownloaded: fc.boolean(),
+		fileLostAt: nullableDateArbitrary
+	})
+	.chain((base) =>
+		fc.option(fc.integer({ min: 0, max: 30 }), { nil: undefined }).map((seasonNumber) => {
+			if (seasonNumber !== undefined) {
+				return { ...base, seasonNumber };
+			}
+			return base;
+		})
+	);
 
 /**
  * Arbitrary generator for PriorityWeights with valid ranges.
@@ -70,7 +82,9 @@ const priorityWeightsArbitrary: fc.Arbitrary<PriorityWeights> = fc.record({
 	missingDuration: fc.integer({ min: 0, max: 100 }),
 	userPriority: fc.integer({ min: 0, max: 100 }),
 	failurePenalty: fc.integer({ min: 0, max: 50 }),
-	gapBonus: fc.integer({ min: 0, max: 100 })
+	gapBonus: fc.integer({ min: 0, max: 100 }),
+	specialsPenalty: fc.integer({ min: 0, max: 200 }),
+	fileLostBonus: fc.integer({ min: 0, max: 100 })
 });
 
 /**
@@ -254,6 +268,8 @@ describe('Priority Calculation Properties', () => {
 						expect(Number.isFinite(result.breakdown.userPriorityScore)).toBe(true);
 						expect(Number.isFinite(result.breakdown.failurePenalty)).toBe(true);
 						expect(Number.isFinite(result.breakdown.searchTypeBonus)).toBe(true);
+						expect(Number.isFinite(result.breakdown.specialsPenalty)).toBe(true);
+						expect(Number.isFinite(result.breakdown.fileLostBonus)).toBe(true);
 					}
 				),
 				{ numRuns: 100 }
@@ -361,6 +377,87 @@ describe('Priority Calculation Properties', () => {
 
 						// With zero gapBonus, gap and upgrade should have same score
 						expect(gapResult.score).toBe(upgradeResult.score);
+					}
+				),
+				{ numRuns: 100 }
+			);
+		});
+
+		it('zero specialsPenalty eliminates Season 0 penalty', () => {
+			fc.assert(
+				fc.property(
+					nullableDateArbitrary,
+					dateArbitrary,
+					userPriorityArbitrary,
+					attemptCountArbitrary,
+					nowArbitrary,
+					(contentDate, discoveredAt, userPriority, attemptCount, now) => {
+						const zeroWeightConfig: PriorityWeights = {
+							...DEFAULT_PRIORITY_WEIGHTS,
+							specialsPenalty: 0
+						};
+
+						const regularInput: PriorityInput = {
+							searchType: 'gap',
+							contentDate,
+							discoveredAt,
+							userPriorityOverride: userPriority,
+							attemptCount,
+							seasonNumber: 1
+						};
+						const specialInput: PriorityInput = {
+							searchType: 'gap',
+							contentDate,
+							discoveredAt,
+							userPriorityOverride: userPriority,
+							attemptCount,
+							seasonNumber: 0
+						};
+
+						const regularResult = calculatePriority(regularInput, zeroWeightConfig, now);
+						const specialResult = calculatePriority(specialInput, zeroWeightConfig, now);
+
+						// With zero specialsPenalty, Season 0 and regular should have same score
+						expect(regularResult.score).toBe(specialResult.score);
+					}
+				),
+				{ numRuns: 100 }
+			);
+		});
+	});
+
+	describe('Property: Season 0 Penalty Ordering', () => {
+		it('regular seasons score >= Season 0 (all else equal)', () => {
+			fc.assert(
+				fc.property(
+					nullableDateArbitrary,
+					dateArbitrary,
+					userPriorityArbitrary,
+					attemptCountArbitrary,
+					fc.integer({ min: 1, max: 30 }),
+					nowArbitrary,
+					(contentDate, discoveredAt, userPriority, attemptCount, regularSeason, now) => {
+						const regularInput: PriorityInput = {
+							searchType: 'gap',
+							contentDate,
+							discoveredAt,
+							userPriorityOverride: userPriority,
+							attemptCount,
+							seasonNumber: regularSeason
+						};
+						const specialInput: PriorityInput = {
+							searchType: 'gap',
+							contentDate,
+							discoveredAt,
+							userPriorityOverride: userPriority,
+							attemptCount,
+							seasonNumber: 0
+						};
+
+						const regularResult = calculatePriority(regularInput, DEFAULT_PRIORITY_WEIGHTS, now);
+						const specialResult = calculatePriority(specialInput, DEFAULT_PRIORITY_WEIGHTS, now);
+
+						expect(regularResult.score).toBeGreaterThanOrEqual(specialResult.score);
 					}
 				),
 				{ numRuns: 100 }
@@ -579,7 +676,9 @@ describe('Edge Cases', () => {
 			missingDuration: 100,
 			userPriority: 100,
 			failurePenalty: 50,
-			gapBonus: 100
+			gapBonus: 100,
+			specialsPenalty: 200,
+			fileLostBonus: 100
 		};
 
 		const input: PriorityInput = {
@@ -587,7 +686,10 @@ describe('Edge Cases', () => {
 			contentDate: new Date('2024-01-01'),
 			discoveredAt: new Date('2020-01-01'),
 			userPriorityOverride: 100,
-			attemptCount: 10
+			attemptCount: 10,
+			seasonNumber: 0,
+			wasDownloaded: true,
+			fileLostAt: new Date('2024-06-01')
 		};
 
 		const result = calculatePriority(input, extremeWeights, new Date('2024-07-01'));
