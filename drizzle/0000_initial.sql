@@ -201,6 +201,20 @@ CREATE TABLE "notification_history" (
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
+CREATE TABLE "pending_commands" (
+	"id" integer PRIMARY KEY GENERATED ALWAYS AS IDENTITY (sequence name "pending_commands_id_seq" INCREMENT BY 1 MINVALUE 1 MAXVALUE 2147483647 START WITH 1 CACHE 1),
+	"connector_id" integer NOT NULL,
+	"search_registry_id" integer NOT NULL,
+	"command_id" integer NOT NULL,
+	"content_type" varchar(20) NOT NULL,
+	"content_id" integer NOT NULL,
+	"search_type" varchar(20) NOT NULL,
+	"dispatched_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"completed_at" timestamp with time zone,
+	"command_status" varchar(20),
+	"file_acquired" boolean
+);
+--> statement-breakpoint
 CREATE TABLE "prowlarr_indexer_health" (
 	"id" integer PRIMARY KEY GENERATED ALWAYS AS IDENTITY (sequence name "prowlarr_indexer_health_id_seq" INCREMENT BY 1 MINVALUE 1 MAXVALUE 2147483647 START WITH 1 CACHE 1),
 	"prowlarr_instance_id" integer NOT NULL,
@@ -388,6 +402,8 @@ ALTER TABLE "episodes" ADD CONSTRAINT "episodes_season_id_seasons_id_fk" FOREIGN
 ALTER TABLE "episodes" ADD CONSTRAINT "episodes_connector_id_connectors_id_fk" FOREIGN KEY ("connector_id") REFERENCES "public"."connectors"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "movies" ADD CONSTRAINT "movies_connector_id_connectors_id_fk" FOREIGN KEY ("connector_id") REFERENCES "public"."connectors"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "notification_history" ADD CONSTRAINT "notification_history_channel_id_notification_channels_id_fk" FOREIGN KEY ("channel_id") REFERENCES "public"."notification_channels"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "pending_commands" ADD CONSTRAINT "pending_commands_connector_id_connectors_id_fk" FOREIGN KEY ("connector_id") REFERENCES "public"."connectors"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "pending_commands" ADD CONSTRAINT "pending_commands_search_registry_id_search_registry_id_fk" FOREIGN KEY ("search_registry_id") REFERENCES "public"."search_registry"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "prowlarr_indexer_health" ADD CONSTRAINT "prowlarr_indexer_health_prowlarr_instance_id_prowlarr_instances_id_fk" FOREIGN KEY ("prowlarr_instance_id") REFERENCES "public"."prowlarr_instances"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "request_queue" ADD CONSTRAINT "request_queue_search_registry_id_search_registry_id_fk" FOREIGN KEY ("search_registry_id") REFERENCES "public"."search_registry"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "request_queue" ADD CONSTRAINT "request_queue_connector_id_connectors_id_fk" FOREIGN KEY ("connector_id") REFERENCES "public"."connectors"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
@@ -431,6 +447,9 @@ CREATE INDEX "notification_channels_type_enabled_idx" ON "notification_channels"
 CREATE INDEX "notification_history_channel_idx" ON "notification_history" USING btree ("channel_id","created_at" DESC NULLS LAST);--> statement-breakpoint
 CREATE INDEX "notification_history_status_idx" ON "notification_history" USING btree ("status","created_at");--> statement-breakpoint
 CREATE INDEX "notification_history_batch_idx" ON "notification_history" USING btree ("batch_id");--> statement-breakpoint
+CREATE INDEX "pending_commands_connector_idx" ON "pending_commands" USING btree ("connector_id");--> statement-breakpoint
+CREATE INDEX "pending_commands_content_idx" ON "pending_commands" USING btree ("content_type","content_id");--> statement-breakpoint
+CREATE INDEX "pending_commands_status_idx" ON "pending_commands" USING btree ("command_status","completed_at");--> statement-breakpoint
 CREATE UNIQUE INDEX "prowlarr_indexer_health_instance_indexer_idx" ON "prowlarr_indexer_health" USING btree ("prowlarr_instance_id","indexer_id");--> statement-breakpoint
 CREATE INDEX "prowlarr_indexer_health_rate_limited_idx" ON "prowlarr_indexer_health" USING btree ("prowlarr_instance_id","is_rate_limited");--> statement-breakpoint
 CREATE INDEX "request_queue_priority_idx" ON "request_queue" USING btree ("connector_id","priority" DESC NULLS LAST,"scheduled_at");--> statement-breakpoint
