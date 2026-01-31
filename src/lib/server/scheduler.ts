@@ -209,7 +209,7 @@ async function processConnectorQueue(connector: {
 
 		if (dispatchResult.success) {
 			result.succeeded++;
-			await markSearchDispatched(item.searchRegistryId);
+			await markSearchDispatched(item.searchRegistryId, item.searchType);
 			await analyticsCollector.recordSearchDispatched(
 				item.connectorId,
 				item.searchRegistryId,
