@@ -86,6 +86,7 @@ export async function markCommandFileAcquired(id: number): Promise<void> {
 		.update(pendingCommands)
 		.set({
 			fileAcquired: true,
+			commandStatus: 'completed',
 			completedAt: new Date()
 		})
 		.where(eq(pendingCommands.id, id));

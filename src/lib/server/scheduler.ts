@@ -224,15 +224,27 @@ async function processConnectorQueue(connector: {
 				responseTimeMs
 			);
 
-			// Create pending command to track file acquisition
-			await createPendingCommand({
-				connectorId: item.connectorId,
-				searchRegistryId: item.searchRegistryId,
-				commandId: dispatchResult.commandId!,
-				contentType: item.contentType,
-				contentId: item.contentId,
-				searchType: item.searchType
-			});
+			// Create pending command to track file acquisition (non-critical, log and continue on failure)
+			try {
+				await createPendingCommand({
+					connectorId: item.connectorId,
+					searchRegistryId: item.searchRegistryId,
+					commandId: dispatchResult.commandId!,
+					contentType: item.contentType,
+					contentId: item.contentId,
+					searchType: item.searchType
+				});
+			} catch (pendingCommandError) {
+				logger.warn('Failed to create pending command for file acquisition tracking', {
+					connectorId: item.connectorId,
+					searchRegistryId: item.searchRegistryId,
+					commandId: dispatchResult.commandId,
+					error:
+						pendingCommandError instanceof Error
+							? pendingCommandError.message
+							: String(pendingCommandError)
+				});
+			}
 		} else {
 			result.failed++;
 

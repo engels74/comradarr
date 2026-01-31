@@ -24,7 +24,16 @@ export async function syncRadarrMovies(client: RadarrClient, connectorId: number
 
 	const movieRecords = apiMovies.map((movie) => mapMovieToDb(connectorId, movie));
 
-	// Use RETURNING to get IDs of movies that transitioned from hasFile=false to hasFile=true
+	// Query movies that currently don't have files (before upsert)
+	const arrIds = movieRecords.map((r) => r.arrId);
+	const moviesWithoutFiles = await db
+		.select({ id: movies.id, arrId: movies.arrId })
+		.from(movies)
+		.where(
+			sql`${movies.connectorId} = ${connectorId} AND ${movies.arrId} = ANY(${arrIds}) AND ${movies.hasFile} = false`
+		);
+	const arrIdsWithoutFiles = new Set(moviesWithoutFiles.map((m) => m.arrId));
+
 	const result = await db
 		.insert(movies)
 		.values(movieRecords)
@@ -64,11 +73,14 @@ export async function syncRadarrMovies(client: RadarrClient, connectorId: number
 		})
 		.returning({
 			id: movies.id,
-			// Track if this was a file acquisition (hasFile was false, now true)
-			fileAcquired: sql<boolean>`${movies.hasFile} = false AND excluded.has_file = true`
+			arrId: movies.arrId,
+			hasFile: movies.hasFile
 		});
 
-	const acquiredMovieIds = result.filter((r) => r.fileAcquired).map((r) => r.id);
+	// Detect file acquisitions: movies that didn't have files before but now do
+	const acquiredMovieIds = result
+		.filter((r) => r.hasFile && arrIdsWithoutFiles.has(r.arrId))
+		.map((r) => r.id);
 
 	if (acquiredMovieIds.length > 0) {
 		await recordFileAcquisitions(connectorId, acquiredMovieIds);

@@ -226,7 +226,16 @@ async function upsertEpisodes(
 		return { totalEpisodes: 0, acquiredEpisodeIds: [] };
 	}
 
-	// Use RETURNING to get IDs of episodes that transitioned from hasFile=false to hasFile=true
+	// Query episodes that currently don't have files (before upsert)
+	const arrIds = episodeRecords.map((r) => r.arrId);
+	const episodesWithoutFiles = await db
+		.select({ id: episodes.id, arrId: episodes.arrId })
+		.from(episodes)
+		.where(
+			sql`${episodes.connectorId} = ${connectorId} AND ${episodes.arrId} = ANY(${arrIds}) AND ${episodes.hasFile} = false`
+		);
+	const arrIdsWithoutFiles = new Set(episodesWithoutFiles.map((e) => e.arrId));
+
 	const result = await db
 		.insert(episodes)
 		.values(episodeRecords)
@@ -267,11 +276,14 @@ async function upsertEpisodes(
 		})
 		.returning({
 			id: episodes.id,
-			// Track if this was a file acquisition (hasFile was false, now true)
-			fileAcquired: sql<boolean>`${episodes.hasFile} = false AND excluded.has_file = true`
+			arrId: episodes.arrId,
+			hasFile: episodes.hasFile
 		});
 
-	const acquiredEpisodeIds = result.filter((r) => r.fileAcquired).map((r) => r.id);
+	// Detect file acquisitions: episodes that didn't have files before but now do
+	const acquiredEpisodeIds = result
+		.filter((r) => r.hasFile && arrIdsWithoutFiles.has(r.arrId))
+		.map((r) => r.id);
 
 	return { totalEpisodes: episodeRecords.length, acquiredEpisodeIds };
 }
