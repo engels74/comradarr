@@ -2,16 +2,16 @@
  * Integration tests for upgrade discovery service.
  *
  * Validates requirements:
- * - 4.1: Identify monitored items with files that need quality upgrades (qualityCutoffNotMet=true)
+ * - 4.1: Identify all monitored items with files for upgrade searching
  * - 4.3: Create search registry entry with state "pending" and search type "upgrade"
- * - 4.4: Delete search registry entry when qualityCutoffNotMet becomes false (via cleanup)
+ * - 4.4: Delete search registry entry when qualityCutoffNotMet becomes false AND item has been searched
  *
  * Property 3: Upgrade Discovery Correctness
  * - For any content mirror state, upgrade discovery should return exactly the set
- *   of items where monitored=true AND hasFile=true AND qualityCutoffNotMet=true
- * - When qualityCutoffNotMet becomes false, the registry is cleaned up
+ *   of items where monitored=true AND hasFile=true (regardless of qualityCutoffNotMet)
+ * - When qualityCutoffNotMet becomes false AND lastSearched IS NOT NULL, the registry is cleaned up
  * - No upgrade candidates should be excluded (no false negatives)
- * - No non-monitored, file-less, or at-cutoff items should be included (no false positives)
+ * - No non-monitored or file-less items should be included (no false positives)
  *
  * NOTE: These tests require a running PostgreSQL database with DATABASE_URL set.
  * Run with: bun test tests/integration/upgrade-discovery.test.ts
@@ -256,37 +256,37 @@ describe('Upgrade Discovery Service', () => {
 			expect(result.registriesSkipped).toBe(0);
 		});
 
-		it('should detect episode upgrades (monitored=true, hasFile=true, qualityCutoffNotMet=true)', async () => {
+		it('should detect episode upgrades (monitored=true, hasFile=true)', async () => {
 			// Create test series and season
 			const seriesId = await insertTestSeries(testSonarrConnectorId, 1, 'Test Series');
 			const seasonId = await insertTestSeason(seriesId, 1);
 
-			// Create episodes - only items with qualityCutoffNotMet=true are upgrade candidates
+			// Create episodes - ALL monitored items with files are discovered (regardless of qualityCutoffNotMet)
 			await insertTestEpisode(testSonarrConnectorId, seasonId, 101, 1, 1, true, true, true); // Detected
-			await insertTestEpisode(testSonarrConnectorId, seasonId, 102, 1, 2, true, true, false); // At cutoff - NOT detected
+			await insertTestEpisode(testSonarrConnectorId, seasonId, 102, 1, 2, true, true, false); // Also detected (at cutoff)
 			await insertTestEpisode(testSonarrConnectorId, seasonId, 103, 1, 3, true, true, true); // Detected
 
 			const result = await discoverUpgrades(testSonarrConnectorId);
 
 			expect(result.success).toBe(true);
 			expect(result.connectorType).toBe('sonarr');
-			expect(result.upgradesFound).toBe(2);
-			expect(result.registriesCreated).toBe(2);
+			expect(result.upgradesFound).toBe(3);
+			expect(result.registriesCreated).toBe(3);
 			expect(result.registriesSkipped).toBe(0);
 		});
 
-		it('should detect movie upgrades (monitored=true, hasFile=true, qualityCutoffNotMet=true)', async () => {
-			// Create movies - only items with qualityCutoffNotMet=true are upgrade candidates
+		it('should detect movie upgrades (monitored=true, hasFile=true)', async () => {
+			// Create movies - ALL monitored items with files are discovered (regardless of qualityCutoffNotMet)
 			await insertTestMovie(testRadarrConnectorId, 201, 'Upgrade Movie 1', true, true, true); // Detected
-			await insertTestMovie(testRadarrConnectorId, 202, 'Upgrade Movie 2', true, true, false); // At cutoff - NOT detected
+			await insertTestMovie(testRadarrConnectorId, 202, 'Upgrade Movie 2', true, true, false); // Also detected (at cutoff)
 			await insertTestMovie(testRadarrConnectorId, 203, 'Upgrade Movie 3', true, true, true); // Detected
 
 			const result = await discoverUpgrades(testRadarrConnectorId);
 
 			expect(result.success).toBe(true);
 			expect(result.connectorType).toBe('radarr');
-			expect(result.upgradesFound).toBe(2);
-			expect(result.registriesCreated).toBe(2);
+			expect(result.upgradesFound).toBe(3);
+			expect(result.registriesCreated).toBe(3);
 			expect(result.registriesSkipped).toBe(0);
 		});
 
@@ -305,19 +305,20 @@ describe('Upgrade Discovery Service', () => {
 			expect(result.registriesCreated).toBe(0);
 		});
 
-		it('should NOT detect items at quality cutoff (qualityCutoffNotMet=false)', async () => {
+		it('should detect items at quality cutoff (qualityCutoffNotMet=false) for initial search', async () => {
 			const seriesId = await insertTestSeries(testSonarrConnectorId, 1, 'Test Series');
 			const seasonId = await insertTestSeason(seriesId, 1);
 
-			// Create episodes at quality cutoff - these don't need upgrades
+			// Create episodes at quality cutoff - these ARE now detected for initial search
+			// (cleanup will remove them after they've been searched once)
 			await insertTestEpisode(testSonarrConnectorId, seasonId, 101, 1, 1, true, true, false);
 			await insertTestEpisode(testSonarrConnectorId, seasonId, 102, 1, 2, true, true, false);
 
 			const result = await discoverUpgrades(testSonarrConnectorId);
 
 			expect(result.success).toBe(true);
-			expect(result.upgradesFound).toBe(0);
-			expect(result.registriesCreated).toBe(0);
+			expect(result.upgradesFound).toBe(2);
+			expect(result.registriesCreated).toBe(2);
 		});
 
 		it('should NOT detect items with monitored=false', async () => {
@@ -411,9 +412,9 @@ describe('Upgrade Discovery Service', () => {
 			const seriesId = await insertTestSeries(testSonarrConnectorId, 1, 'Test Series');
 			const seasonId = await insertTestSeason(seriesId, 1);
 
-			// Mix of states - only monitored=true AND hasFile=true AND qualityCutoffNotMet=true should be detected
+			// Mix of states - monitored=true AND hasFile=true should be detected (regardless of qualityCutoffNotMet)
 			await insertTestEpisode(testSonarrConnectorId, seasonId, 101, 1, 1, true, true, true); // Detected
-			await insertTestEpisode(testSonarrConnectorId, seasonId, 102, 1, 2, true, true, false); // At cutoff - NOT detected
+			await insertTestEpisode(testSonarrConnectorId, seasonId, 102, 1, 2, true, true, false); // Detected (at cutoff)
 			await insertTestEpisode(testSonarrConnectorId, seasonId, 103, 1, 3, true, false, true); // No file (gap) - NOT detected
 			await insertTestEpisode(testSonarrConnectorId, seasonId, 104, 1, 4, false, true, true); // Unmonitored - NOT detected
 			await insertTestEpisode(testSonarrConnectorId, seasonId, 105, 1, 5, true, true, true); // Detected
@@ -421,8 +422,8 @@ describe('Upgrade Discovery Service', () => {
 			const result = await discoverUpgrades(testSonarrConnectorId);
 
 			expect(result.success).toBe(true);
-			expect(result.upgradesFound).toBe(2); // Episodes 1 and 5 (101 and 105)
-			expect(result.registriesCreated).toBe(2);
+			expect(result.upgradesFound).toBe(3); // Episodes 1, 2, and 5 (101, 102, 105)
+			expect(result.registriesCreated).toBe(3);
 		});
 	});
 
@@ -431,13 +432,13 @@ describe('Upgrade Discovery Service', () => {
 			const seriesId = await insertTestSeries(testSonarrConnectorId, 1, 'Test Series');
 			const seasonId = await insertTestSeason(seriesId, 1);
 
-			// Only items with qualityCutoffNotMet=true are counted as needing upgrades
-			await insertTestEpisode(testSonarrConnectorId, seasonId, 101, 1, 1, true, true, true); // Needs upgrade
-			await insertTestEpisode(testSonarrConnectorId, seasonId, 102, 1, 2, true, true, false); // At cutoff - NOT counted
+			// All monitored items with files are counted as upgrade candidates
+			await insertTestEpisode(testSonarrConnectorId, seasonId, 101, 1, 1, true, true, true); // Counted
+			await insertTestEpisode(testSonarrConnectorId, seasonId, 102, 1, 2, true, true, false); // Also counted
 
 			const stats = await getUpgradeStats(testSonarrConnectorId);
 
-			expect(stats.episodeUpgrades).toBe(1);
+			expect(stats.episodeUpgrades).toBe(2);
 			expect(stats.movieUpgrades).toBe(0);
 
 			// Verify no registries were created
@@ -446,15 +447,15 @@ describe('Upgrade Discovery Service', () => {
 		});
 
 		it('should return movie upgrade counts for radarr', async () => {
-			// Only items with qualityCutoffNotMet=true are counted as needing upgrades
-			await insertTestMovie(testRadarrConnectorId, 201, 'Upgrade Movie 1', true, true, true); // Needs upgrade
-			await insertTestMovie(testRadarrConnectorId, 202, 'Upgrade Movie 2', true, true, true); // Needs upgrade
-			await insertTestMovie(testRadarrConnectorId, 203, 'At Cutoff Movie', true, true, false); // At cutoff - NOT counted
+			// All monitored items with files are counted as upgrade candidates
+			await insertTestMovie(testRadarrConnectorId, 201, 'Upgrade Movie 1', true, true, true); // Counted
+			await insertTestMovie(testRadarrConnectorId, 202, 'Upgrade Movie 2', true, true, true); // Counted
+			await insertTestMovie(testRadarrConnectorId, 203, 'At Cutoff Movie', true, true, false); // Also counted
 
 			const stats = await getUpgradeStats(testRadarrConnectorId);
 
 			expect(stats.episodeUpgrades).toBe(0);
-			expect(stats.movieUpgrades).toBe(2); // Only 2 movies need upgrades
+			expect(stats.movieUpgrades).toBe(3); // All 3 movies are counted
 		});
 	});
 });
@@ -494,7 +495,7 @@ describe('Property 3: Upgrade Discovery Correctness - Property-Based Tests', () 
 	}
 
 	describe('Episode Upgrade Detection', () => {
-		it('should detect exactly the episodes where monitored=true AND hasFile=true AND qualityCutoffNotMet=true', async () => {
+		it('should detect exactly the episodes where monitored=true AND hasFile=true', async () => {
 			await fc.assert(
 				fc.asyncProperty(
 					fc.array(episodeDataArbitrary, { minLength: 1, maxLength: 20 }).map(deduplicateByArrId),
@@ -525,10 +526,8 @@ describe('Property 3: Upgrade Discovery Correctness - Property-Based Tests', () 
 							});
 						}
 
-						// Calculate expected upgrades (monitored AND hasFile AND qualityCutoffNotMet)
-						const expectedUpgrades = episodeData.filter(
-							(ep) => ep.monitored && ep.hasFile && ep.qualityCutoffNotMet
-						).length;
+						// Calculate expected upgrades (monitored AND hasFile - qualityCutoffNotMet doesn't matter)
+						const expectedUpgrades = episodeData.filter((ep) => ep.monitored && ep.hasFile).length;
 
 						// Run discovery
 						const result = await discoverUpgrades(testSonarrConnectorId);
@@ -555,7 +554,7 @@ describe('Property 3: Upgrade Discovery Correctness - Property-Based Tests', () 
 	});
 
 	describe('Movie Upgrade Detection', () => {
-		it('should detect exactly the movies where monitored=true AND hasFile=true AND qualityCutoffNotMet=true', async () => {
+		it('should detect exactly the movies where monitored=true AND hasFile=true', async () => {
 			await fc.assert(
 				fc.asyncProperty(
 					fc.array(movieDataArbitrary, { minLength: 1, maxLength: 20 }).map(deduplicateByArrId),
@@ -576,10 +575,8 @@ describe('Property 3: Upgrade Discovery Correctness - Property-Based Tests', () 
 							});
 						}
 
-						// Calculate expected upgrades (monitored AND hasFile AND qualityCutoffNotMet)
-						const expectedUpgrades = movieData.filter(
-							(m) => m.monitored && m.hasFile && m.qualityCutoffNotMet
-						).length;
+						// Calculate expected upgrades (monitored AND hasFile - qualityCutoffNotMet doesn't matter)
+						const expectedUpgrades = movieData.filter((m) => m.monitored && m.hasFile).length;
 
 						// Run discovery
 						const result = await discoverUpgrades(testRadarrConnectorId);
@@ -657,7 +654,7 @@ describe('Property 3: Upgrade Discovery Correctness - Property-Based Tests', () 
 
 describe('Upgrade Registry Cleanup on Success', () => {
 	describe('Episode Upgrade Cleanup', () => {
-		it('should delete upgrade registry when qualityCutoffNotMet becomes false', async () => {
+		it('should delete upgrade registry when qualityCutoffNotMet becomes false AND lastSearched is set', async () => {
 			// Create test series and season
 			const seriesId = await insertTestSeries(testSonarrConnectorId, 1, 'Test Series');
 			const seasonId = await insertTestSeason(seriesId, 1);
@@ -683,6 +680,12 @@ describe('Upgrade Registry Cleanup on Success', () => {
 			let registryCount = await countSearchRegistry(testSonarrConnectorId, 'upgrade');
 			expect(registryCount).toBe(1);
 
+			// Simulate that the item has been searched (set lastSearched)
+			await db
+				.update(searchRegistry)
+				.set({ lastSearched: new Date() })
+				.where(eq(searchRegistry.connectorId, testSonarrConnectorId));
+
 			// Update episode qualityCutoffNotMet to false (simulating successful upgrade)
 			await db
 				.update(episodes)
@@ -699,6 +702,33 @@ describe('Upgrade Registry Cleanup on Success', () => {
 			expect(registryCount).toBe(0);
 		});
 
+		it('should NOT delete upgrade registry when qualityCutoffNotMet is false but lastSearched is NULL', async () => {
+			// Create test series and season
+			const seriesId = await insertTestSeries(testSonarrConnectorId, 1, 'Test Series');
+			const seasonId = await insertTestSeason(seriesId, 1);
+
+			// Create episode with qualityCutoffNotMet=false (already at cutoff)
+			await insertTestEpisode(testSonarrConnectorId, seasonId, 101, 1, 1, true, true, false);
+
+			// Run discovery - creates registry (for initial search)
+			const result1 = await discoverUpgrades(testSonarrConnectorId);
+			expect(result1.registriesCreated).toBe(1);
+
+			// Verify registry was created with lastSearched=NULL
+			const registries = await getSearchRegistries(testSonarrConnectorId);
+			expect(registries.length).toBe(1);
+			expect(registries[0]!.lastSearched).toBeNull();
+
+			// Run discovery again - should NOT clean up (lastSearched is NULL)
+			const result2 = await discoverUpgrades(testSonarrConnectorId);
+			expect(result2.registriesResolved).toBe(0);
+			expect(result2.registriesSkipped).toBe(1);
+
+			// Verify registry still exists
+			const registryCount = await countSearchRegistry(testSonarrConnectorId, 'upgrade');
+			expect(registryCount).toBe(1);
+		});
+
 		it('should NOT delete upgrade registry while qualityCutoffNotMet is still true', async () => {
 			// Create test series and season
 			const seriesId = await insertTestSeries(testSonarrConnectorId, 1, 'Test Series');
@@ -710,6 +740,12 @@ describe('Upgrade Registry Cleanup on Success', () => {
 			// Run discovery - creates registry
 			const result1 = await discoverUpgrades(testSonarrConnectorId);
 			expect(result1.registriesCreated).toBe(1);
+
+			// Simulate that the item has been searched
+			await db
+				.update(searchRegistry)
+				.set({ lastSearched: new Date() })
+				.where(eq(searchRegistry.connectorId, testSonarrConnectorId));
 
 			// Run discovery again without changing qualityCutoffNotMet
 			const result2 = await discoverUpgrades(testSonarrConnectorId);
@@ -723,7 +759,7 @@ describe('Upgrade Registry Cleanup on Success', () => {
 	});
 
 	describe('Movie Upgrade Cleanup', () => {
-		it('should delete upgrade registry when qualityCutoffNotMet becomes false', async () => {
+		it('should delete upgrade registry when qualityCutoffNotMet becomes false AND lastSearched is set', async () => {
 			// Create movie with qualityCutoffNotMet=true (upgrade candidate)
 			const movieId = await insertTestMovie(
 				testRadarrConnectorId,
@@ -742,6 +778,12 @@ describe('Upgrade Registry Cleanup on Success', () => {
 			// Verify registry was created
 			let registryCount = await countSearchRegistry(testRadarrConnectorId, 'upgrade');
 			expect(registryCount).toBe(1);
+
+			// Simulate that the item has been searched (set lastSearched)
+			await db
+				.update(searchRegistry)
+				.set({ lastSearched: new Date() })
+				.where(eq(searchRegistry.connectorId, testRadarrConnectorId));
 
 			// Update movie qualityCutoffNotMet to false (simulating successful upgrade)
 			await db.update(movies).set({ qualityCutoffNotMet: false }).where(eq(movies.id, movieId));
@@ -776,6 +818,12 @@ describe('Upgrade Registry Cleanup on Success', () => {
 			let registryCount = await countSearchRegistry(testRadarrConnectorId, 'upgrade');
 			expect(registryCount).toBe(2);
 
+			// Simulate that items have been searched (set lastSearched)
+			await db
+				.update(searchRegistry)
+				.set({ lastSearched: new Date() })
+				.where(eq(searchRegistry.connectorId, testRadarrConnectorId));
+
 			// Update only one movie qualityCutoffNotMet to false
 			await db.update(movies).set({ qualityCutoffNotMet: false }).where(eq(movies.id, movieId1));
 
@@ -804,7 +852,7 @@ describe('Property 4: Upgrade Registry Cleanup on Success - Property-Based Tests
 	});
 
 	describe('Movie Upgrade Cleanup Property', () => {
-		it('upgrade registries should be deleted exactly when qualityCutoffNotMet becomes false', async () => {
+		it('upgrade registries should be deleted exactly when qualityCutoffNotMet becomes false AND lastSearched is set', async () => {
 			await fc.assert(
 				fc.asyncProperty(
 					fc.array(movieCleanupArbitrary, { minLength: 1, maxLength: 10 }),
@@ -834,6 +882,12 @@ describe('Property 4: Upgrade Registry Cleanup on Success - Property-Based Tests
 						// First discovery - creates registries for all upgrade candidates
 						const result1 = await discoverUpgrades(testRadarrConnectorId);
 						expect(result1.registriesCreated).toBe(uniqueMovies.length);
+
+						// Simulate that items have been searched (set lastSearched)
+						await db
+							.update(searchRegistry)
+							.set({ lastSearched: new Date() })
+							.where(eq(searchRegistry.connectorId, testRadarrConnectorId));
 
 						// Determine which movies to "resolve" (set qualityCutoffNotMet=false)
 						const moviesToResolve = uniqueMovies.filter((m) => m.resolveAfterFirstDiscovery);

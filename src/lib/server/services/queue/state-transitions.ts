@@ -504,14 +504,35 @@ export async function markSearchDispatched(
 			};
 		}
 
-		await db.delete(searchRegistry).where(eq(searchRegistry.id, searchRegistryId));
+		// Enter backlog tier 1 for continuous upgrade searching instead of deleting.
+		// Items will be re-searched after the backlog delay. Cleanup will remove items
+		// where qualityCutoffNotMet=false (after sync updates the value).
+		const now = new Date();
+		const backlogConfig = await getBacklogConfig();
+		const nextEligible = calculateBacklogNextEligibleTime(1, backlogConfig.tierDelaysDays, now);
 
-		logger.debug('Search marked as dispatched', { searchRegistryId });
+		await db
+			.update(searchRegistry)
+			.set({
+				state: 'cooldown',
+				backlogTier: 1,
+				attemptCount: 0,
+				nextEligible,
+				updatedAt: now
+			})
+			.where(eq(searchRegistry.id, searchRegistryId));
+
+		logger.debug('Search marked as dispatched, entering backlog tier 1', {
+			searchRegistryId,
+			nextEligible: nextEligible.toISOString()
+		});
 		return {
 			success: true,
 			searchRegistryId,
 			previousState: 'searching',
-			newState: 'searching'
+			newState: 'cooldown',
+			backlogTier: 1,
+			nextEligible
 		};
 	} catch (error) {
 		const errorMessage = error instanceof Error ? error.message : String(error);
