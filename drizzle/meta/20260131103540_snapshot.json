@@ -1,6 +1,6 @@
 {
-  "id": "bc2032fa-d211-4cec-8668-062f1b8d3c4d",
-  "prevId": "27f268f6-60a3-4977-b73c-7462c470b6cb",
+  "id": "97d3927a-284c-4e2d-bde9-cf4d737400e3",
+  "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -3322,6 +3322,38 @@
           "primaryKey": false,
           "notNull": true,
           "default": 0
+        },
+        "reconnect_attempts": {
+          "name": "reconnect_attempts",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "next_reconnect_at": {
+          "name": "next_reconnect_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "reconnect_started_at": {
+          "name": "reconnect_started_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "last_reconnect_error": {
+          "name": "last_reconnect_error",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "reconnect_paused": {
+          "name": "reconnect_paused",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
         },
         "created_at": {
           "name": "created_at",

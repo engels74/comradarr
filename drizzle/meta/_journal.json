@@ -5,22 +5,8 @@
     {
       "idx": 0,
       "version": "7",
-      "when": 1768168859848,
-      "tag": "0000_initial",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "7",
-      "when": 1769338733251,
-      "tag": "20260125105853_spotty_blink",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "7",
-      "when": 1769343931540,
-      "tag": "20260125122531_smooth_cardiac",
+      "when": 1769855740575,
+      "tag": "20260131103540_initial",
       "breakpoints": true
     }
   ]
