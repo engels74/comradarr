@@ -91,6 +91,17 @@ CREATE TABLE "app_settings" (
 	CONSTRAINT "app_settings_key_unique" UNIQUE("key")
 );
 --> statement-breakpoint
+CREATE TABLE "application_logs" (
+	"id" integer PRIMARY KEY GENERATED ALWAYS AS IDENTITY (sequence name "application_logs_id_seq" INCREMENT BY 1 MINVALUE 1 MAXVALUE 2147483647 START WITH 1 CACHE 1),
+	"timestamp" timestamp with time zone DEFAULT now() NOT NULL,
+	"level" varchar(10) NOT NULL,
+	"module" varchar(100) NOT NULL,
+	"message" text NOT NULL,
+	"correlation_id" varchar(36),
+	"context" jsonb,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL
+);
+--> statement-breakpoint
 CREATE TABLE "completion_snapshots" (
 	"id" integer PRIMARY KEY GENERATED ALWAYS AS IDENTITY (sequence name "completion_snapshots_id_seq" INCREMENT BY 1 MINVALUE 1 MAXVALUE 2147483647 START WITH 1 CACHE 1),
 	"connector_id" integer NOT NULL,
@@ -304,6 +315,11 @@ CREATE TABLE "sync_state" (
 	"last_reconciliation" timestamp with time zone,
 	"cursor" jsonb,
 	"consecutive_failures" integer DEFAULT 0 NOT NULL,
+	"reconnect_attempts" integer DEFAULT 0 NOT NULL,
+	"next_reconnect_at" timestamp with time zone,
+	"reconnect_started_at" timestamp with time zone,
+	"last_reconnect_error" text,
+	"reconnect_paused" boolean DEFAULT false NOT NULL,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
 	CONSTRAINT "sync_state_connector_id_unique" UNIQUE("connector_id")
@@ -393,6 +409,10 @@ CREATE INDEX "api_key_usage_logs_key_idx" ON "api_key_usage_logs" USING btree ("
 CREATE INDEX "api_key_usage_logs_created_idx" ON "api_key_usage_logs" USING btree ("created_at");--> statement-breakpoint
 CREATE INDEX "api_keys_user_idx" ON "api_keys" USING btree ("user_id");--> statement-breakpoint
 CREATE INDEX "api_keys_prefix_idx" ON "api_keys" USING btree ("key_prefix");--> statement-breakpoint
+CREATE INDEX "application_logs_level_time_idx" ON "application_logs" USING btree ("level","timestamp" DESC NULLS LAST);--> statement-breakpoint
+CREATE INDEX "application_logs_module_time_idx" ON "application_logs" USING btree ("module","timestamp" DESC NULLS LAST);--> statement-breakpoint
+CREATE INDEX "application_logs_correlation_idx" ON "application_logs" USING btree ("correlation_id");--> statement-breakpoint
+CREATE INDEX "application_logs_created_idx" ON "application_logs" USING btree ("created_at");--> statement-breakpoint
 CREATE INDEX "completion_snapshots_connector_time_idx" ON "completion_snapshots" USING btree ("connector_id","captured_at" DESC NULLS LAST);--> statement-breakpoint
 CREATE UNIQUE INDEX "completion_snapshots_connector_captured_idx" ON "completion_snapshots" USING btree ("connector_id","captured_at");--> statement-breakpoint
 CREATE UNIQUE INDEX "episodes_connector_arr_idx" ON "episodes" USING btree ("connector_id","arr_id");--> statement-breakpoint
