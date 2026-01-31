@@ -12,6 +12,7 @@ import type {
 	RecordEventResult,
 	SearchDispatchedPayload,
 	SearchFailedPayload,
+	SearchSuccessfulPayload,
 	UpgradeDiscoveredPayload
 } from './types';
 
@@ -109,6 +110,25 @@ class AnalyticsCollector {
 		};
 
 		return this.recordEvent(connectorId, 'search_dispatched', payload);
+	}
+
+	async recordSearchSuccessful(
+		connectorId: number,
+		searchRegistryId: number,
+		contentType: 'episode' | 'movie',
+		searchType: 'gap' | 'upgrade',
+		commandId: number,
+		timeSinceDispatchMs: number
+	): Promise<RecordEventResult> {
+		const payload: SearchSuccessfulPayload = {
+			searchRegistryId,
+			contentType,
+			searchType,
+			commandId,
+			timeSinceDispatchMs
+		};
+
+		return this.recordEvent(connectorId, 'search_successful', payload);
 	}
 
 	// Determines event type based on failure category: 'no_results' -> search_no_results, others -> search_failed

@@ -37,6 +37,7 @@ import {
 	getHealthyConnectors,
 	updateConnectorHealth
 } from '$lib/server/db/queries/connectors';
+import { createPendingCommand } from '$lib/server/db/queries/pending-commands';
 import { getEnabledSchedules, updateNextRunAt } from '$lib/server/db/queries/schedules';
 import { getBackupSettings, getSettingWithDefault } from '$lib/server/db/queries/settings';
 import type { Connector } from '$lib/server/db/schema';
@@ -49,6 +50,10 @@ import {
 } from '$lib/server/services/analytics';
 import { apiKeyRateLimiter } from '$lib/server/services/api-rate-limit';
 import { cleanupOldScheduledBackups, createBackup } from '$lib/server/services/backup';
+import {
+	checkPendingCommands,
+	cleanupOldCompletedCommands
+} from '$lib/server/services/command-monitor';
 import { discoverGaps, discoverUpgrades } from '$lib/server/services/discovery';
 import {
 	enableLogPersistence,
@@ -218,6 +223,16 @@ async function processConnectorQueue(connector: {
 				dispatchResult.commandId!,
 				responseTimeMs
 			);
+
+			// Create pending command to track file acquisition
+			await createPendingCommand({
+				connectorId: item.connectorId,
+				searchRegistryId: item.searchRegistryId,
+				commandId: dispatchResult.commandId!,
+				contentType: item.contentType,
+				contentId: item.contentId,
+				searchType: item.searchType
+			});
 		} else {
 			result.failed++;
 
@@ -944,6 +959,41 @@ export function initializeScheduler(): void {
 		cron: queueDepthSamplerJob
 	});
 
+	const commandCompletionJob = new Cron(
+		'*/2 * * * *',
+		{
+			name: 'command-completion-check',
+			protect: true,
+			catch: (err) => {
+				logger.error('Command completion check failed', {
+					error: err instanceof Error ? err.message : String(err)
+				});
+			}
+		},
+		withJobContext('command-completion-check', async () => {
+			const result = await checkPendingCommands();
+
+			if (
+				result.commandsChecked > 0 ||
+				result.commandsCompleted > 0 ||
+				result.commandsTimedOut > 0
+			) {
+				logger.info('Command completion check', {
+					connectorsChecked: result.connectorsChecked,
+					commandsChecked: result.commandsChecked,
+					commandsCompleted: result.commandsCompleted,
+					commandsFailed: result.commandsFailed,
+					commandsTimedOut: result.commandsTimedOut
+				});
+			}
+		})
+	);
+
+	state.jobs.set('command-completion-check', {
+		name: 'command-completion-check',
+		cron: commandCompletionJob
+	});
+
 	const hourlyAggregationJob = new Cron(
 		'5 * * * *',
 		{
@@ -1007,6 +1057,11 @@ export function initializeScheduler(): void {
 			const eventsDeleted = await cleanupOldEvents(7);
 			if (eventsDeleted > 0) {
 				logger.info('Old analytics events cleaned up', { eventsDeleted });
+			}
+
+			const commandsDeleted = await cleanupOldCompletedCommands(7);
+			if (commandsDeleted > 0) {
+				logger.info('Old completed commands cleaned up', { commandsDeleted });
 			}
 		})
 	);

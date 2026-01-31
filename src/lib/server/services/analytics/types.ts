@@ -2,6 +2,7 @@ export type AnalyticsEventType =
 	| 'gap_discovered'
 	| 'upgrade_discovered'
 	| 'search_dispatched'
+	| 'search_successful'
 	| 'search_failed'
 	| 'search_no_results'
 	| 'queue_depth_sampled'
@@ -45,6 +46,19 @@ export interface SearchDispatchedPayload {
 	commandId: number;
 	/** Response time for the API call in milliseconds */
 	responseTimeMs?: number | undefined;
+}
+
+export interface SearchSuccessfulPayload {
+	/** ID of the search registry entry */
+	searchRegistryId: number;
+	/** Type of content searched */
+	contentType: 'episode' | 'movie';
+	/** Type of search (gap or upgrade) */
+	searchType: 'gap' | 'upgrade';
+	/** Command ID from the *arr API */
+	commandId: number;
+	/** Time between dispatch and file acquisition in milliseconds */
+	timeSinceDispatchMs: number;
 }
 
 export interface SearchFailedPayload {
@@ -95,6 +109,7 @@ export type AnalyticsEventPayload =
 	| GapDiscoveredPayload
 	| UpgradeDiscoveredPayload
 	| SearchDispatchedPayload
+	| SearchSuccessfulPayload
 	| SearchFailedPayload
 	| QueueDepthSampledPayload
 	| SyncCompletedPayload
