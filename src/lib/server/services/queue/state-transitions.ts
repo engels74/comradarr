@@ -18,6 +18,7 @@ import type {
 	ReenqueueCooldownResult,
 	RevertToQueuedResult,
 	SearchState,
+	SearchType,
 	StateTransitionResult
 } from './types';
 
@@ -464,7 +465,8 @@ export async function setSearching(searchRegistryId: number): Promise<StateTrans
 }
 
 export async function markSearchDispatched(
-	searchRegistryId: number
+	searchRegistryId: number,
+	searchType: SearchType
 ): Promise<StateTransitionResult> {
 	try {
 		const current = await db
@@ -504,14 +506,48 @@ export async function markSearchDispatched(
 			};
 		}
 
-		await db.delete(searchRegistry).where(eq(searchRegistry.id, searchRegistryId));
+		// Gap searches: delete after successful dispatch (content found, no need to re-search)
+		if (searchType === 'gap') {
+			await db.delete(searchRegistry).where(eq(searchRegistry.id, searchRegistryId));
+			logger.debug('Gap search dispatched and removed', { searchRegistryId });
+			return {
+				success: true,
+				searchRegistryId,
+				previousState: 'searching',
+				newState: 'searching'
+			};
+		}
 
-		logger.debug('Search marked as dispatched', { searchRegistryId });
+		// Upgrade searches: enter backlog tier 1 for continuous searching.
+		// Items will be re-searched after the backlog delay. Cleanup will remove items
+		// where qualityCutoffNotMet=false (after sync updates the value).
+		const now = new Date();
+		const backlogConfig = await getBacklogConfig();
+		const nextEligible = calculateBacklogNextEligibleTime(1, backlogConfig.tierDelaysDays, now);
+
+		await db
+			.update(searchRegistry)
+			.set({
+				state: 'cooldown',
+				backlogTier: 1,
+				attemptCount: 0,
+				failureCategory: null,
+				nextEligible,
+				updatedAt: now
+			})
+			.where(eq(searchRegistry.id, searchRegistryId));
+
+		logger.debug('Upgrade search dispatched, entering backlog tier 1', {
+			searchRegistryId,
+			nextEligible: nextEligible.toISOString()
+		});
 		return {
 			success: true,
 			searchRegistryId,
 			previousState: 'searching',
-			newState: 'searching'
+			newState: 'cooldown',
+			backlogTier: 1,
+			nextEligible
 		};
 	} catch (error) {
 		const errorMessage = error instanceof Error ? error.message : String(error);
