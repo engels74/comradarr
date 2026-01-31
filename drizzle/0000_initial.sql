@@ -143,6 +143,9 @@ CREATE TABLE "episodes" (
 	"quality_cutoff_not_met" boolean DEFAULT false NOT NULL,
 	"episode_file_id" integer,
 	"last_search_time" timestamp with time zone,
+	"first_downloaded_at" timestamp with time zone,
+	"file_lost_at" timestamp with time zone,
+	"file_loss_count" integer DEFAULT 0 NOT NULL,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
 );
@@ -161,6 +164,9 @@ CREATE TABLE "movies" (
 	"quality_cutoff_not_met" boolean DEFAULT false NOT NULL,
 	"movie_file_id" integer,
 	"last_search_time" timestamp with time zone,
+	"first_downloaded_at" timestamp with time zone,
+	"file_lost_at" timestamp with time zone,
+	"file_loss_count" integer DEFAULT 0 NOT NULL,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
 );

@@ -1,5 +1,5 @@
 {
-  "id": "97d3927a-284c-4e2d-bde9-cf4d737400e3",
+  "id": "5ecbe57e-d5e7-498a-b756-ad46be83b0af",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -1473,6 +1473,25 @@
           "primaryKey": false,
           "notNull": false
         },
+        "first_downloaded_at": {
+          "name": "first_downloaded_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "file_lost_at": {
+          "name": "file_lost_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "file_loss_count": {
+          "name": "file_loss_count",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
         "created_at": {
           "name": "created_at",
           "type": "timestamp with time zone",
@@ -1682,6 +1701,25 @@
           "type": "timestamp with time zone",
           "primaryKey": false,
           "notNull": false
+        },
+        "first_downloaded_at": {
+          "name": "first_downloaded_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "file_lost_at": {
+          "name": "file_lost_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "file_loss_count": {
+          "name": "file_loss_count",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
         },
         "created_at": {
           "name": "created_at",
