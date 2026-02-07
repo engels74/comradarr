@@ -69,7 +69,7 @@
 		"croner": "^9.1.0",
 		"drizzle-orm": "^0.45.0",
 		"formsnap": "^2.0.1",
-		"nodemailer": "^7.0.12",
+		"nodemailer": "^8.0.0",
 		"tailwind-merge": "^3.4.0",
 		"tailwind-variants": "^3.2.2"
 	}
