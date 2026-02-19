@@ -57,7 +57,7 @@
 		"vitest": "^4.0.16"
 	},
 	"dependencies": {
-		"@lucide/svelte": "^0.564.0",
+		"@lucide/svelte": "^0.575.0",
 		"@node-rs/argon2": "^2.0.2",
 		"@tanstack/svelte-virtual": "^3.13.18",
 		"@unocss/extractor-svelte": "^66.5.12",
