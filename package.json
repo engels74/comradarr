@@ -32,7 +32,7 @@
 		"check:biome": "biome check ."
 	},
 	"devDependencies": {
-		"@biomejs/biome": "^2.3.11",
+		"@biomejs/biome": "2.3.15",
 		"@internationalized/date": "^3.10.1",
 		"@j178/prek": "^0.3.0",
 		"@resvg/resvg-js": "^2.6.2",

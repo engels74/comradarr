@@ -11,7 +11,7 @@ jobs:
     name: Pre-commit Checks
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      contents: write
 
     steps:
       - name: Checkout repository
@@ -34,6 +34,23 @@ jobs:
 
       - name: Install Python dev dependencies
         run: uv sync --project dev-cli --dev
+
+      - name: Auto-migrate Biome config
+        if: github.actor == 'renovate[bot]'
+        run: |
+          bunx biome migrate --write
+          bunx biome check --write . || true
+
+      - name: Push Biome migration changes
+        if: github.actor == 'renovate[bot]'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -u
+          if ! git diff --staged --quiet; then
+            git commit -m "chore: auto-migrate biome config"
+            git push
+          fi
 
       - name: Run prek checks
         uses: j178/prek-action@v1
