@@ -87,15 +87,10 @@ export async function getQueueHealthSummary(): Promise<QueueHealthSummary> {
 	// Run both queries in parallel
 	const [totalDepthResult, pausedCountResult] = await Promise.all([
 		// Total queue depth across all connectors
-		db
-			.select({ count: count() })
-			.from(requestQueue),
+		db.select({ count: count() }).from(requestQueue),
 
 		// Count of connectors with queuePaused = true
-		db
-			.select({ count: count() })
-			.from(connectors)
-			.where(eq(connectors.queuePaused, true))
+		db.select({ count: count() }).from(connectors).where(eq(connectors.queuePaused, true))
 	]);
 
 	return {
