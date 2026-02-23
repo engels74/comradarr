@@ -556,7 +556,14 @@ export const actions: Actions = {
 	// =========================================================================
 	// Security Settings Actions
 	// =========================================================================
-	securityUpdateAuthMode: async ({ request }) => {
+	securityUpdateAuthMode: async ({ request, locals }) => {
+		if (locals.isLocalBypass || !locals.user || locals.user.id === 0) {
+			return fail(403, {
+				action: 'securityUpdateAuthMode',
+				error: 'Cannot change authentication mode in local network bypass mode'
+			});
+		}
+
 		const formData = await request.formData();
 
 		const data = {

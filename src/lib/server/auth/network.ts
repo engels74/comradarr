@@ -29,19 +29,8 @@ export function isLocalNetworkIP(ip: string | null): boolean {
 	return false;
 }
 
-/** Extract client IP from X-Forwarded-For, X-Real-IP, or getClientAddress(). */
+/** Extract client IP from SvelteKit's getClientAddress() (populated by the adapter). */
 export function getClientIP(request: Request, getClientAddress?: () => string): string | null {
-	const forwardedFor = request.headers.get('x-forwarded-for');
-	if (forwardedFor) {
-		const firstIP = forwardedFor.split(',')[0]?.trim();
-		if (firstIP) return firstIP;
-	}
-
-	const realIP = request.headers.get('x-real-ip');
-	if (realIP) {
-		return realIP.trim();
-	}
-
 	if (getClientAddress) {
 		try {
 			return getClientAddress();
@@ -49,6 +38,5 @@ export function getClientIP(request: Request, getClientAddress?: () => string): 
 			return null;
 		}
 	}
-
 	return null;
 }

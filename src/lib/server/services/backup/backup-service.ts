@@ -1,5 +1,5 @@
 import { mkdir, readdir, readFile, rm, stat, writeFile } from 'node:fs/promises';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
 import { encrypt } from '$lib/server/crypto';
 import { db } from '$lib/server/db';
 import * as schema from '$lib/server/db/schema';
@@ -264,7 +264,12 @@ export async function listBackups(): Promise<BackupInfo[]> {
 export async function loadBackup(backupId: string): Promise<BackupFile | null> {
 	const backupDir = await getBackupDirectory();
 	const filename = getBackupFilename(backupId);
-	const filePath = join(backupDir, filename);
+	const filePath = resolve(backupDir, filename);
+
+	if (!filePath.startsWith(resolve(backupDir))) {
+		logger.warn('Path traversal attempt blocked in backup load', { backupId });
+		return null;
+	}
 
 	try {
 		const content = await readFile(filePath, 'utf-8');
@@ -277,7 +282,12 @@ export async function loadBackup(backupId: string): Promise<BackupFile | null> {
 export async function deleteBackup(backupId: string): Promise<boolean> {
 	const backupDir = await getBackupDirectory();
 	const filename = getBackupFilename(backupId);
-	const filePath = join(backupDir, filename);
+	const filePath = resolve(backupDir, filename);
+
+	if (!filePath.startsWith(resolve(backupDir))) {
+		logger.warn('Path traversal attempt blocked in backup delete', { backupId });
+		return false;
+	}
 
 	try {
 		await rm(filePath);
@@ -291,7 +301,12 @@ export async function deleteBackup(backupId: string): Promise<boolean> {
 export async function getBackupInfo(backupId: string): Promise<BackupInfo | null> {
 	const backupDir = await getBackupDirectory();
 	const filename = getBackupFilename(backupId);
-	const filePath = join(backupDir, filename);
+	const filePath = resolve(backupDir, filename);
+
+	if (!filePath.startsWith(resolve(backupDir))) {
+		logger.warn('Path traversal attempt blocked in backup info', { backupId });
+		return null;
+	}
 
 	try {
 		const content = await readFile(filePath, 'utf-8');
