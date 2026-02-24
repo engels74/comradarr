@@ -735,7 +735,10 @@ export async function getContentStatusCounts(connectorId?: number): Promise<Cont
 			.from(series)
 			.where(connectorId !== undefined ? eq(series.connectorId, connectorId) : undefined),
 		// Total movies
-		db.select({ count: count() }).from(movies).where(movieConnectorCondition),
+		db
+			.select({ count: count() })
+			.from(movies)
+			.where(movieConnectorCondition),
 		// Series with missing episodes (count distinct series)
 		db
 			.select({ count: sql<number>`COUNT(DISTINCT ${seasons.seriesId})::int` })
