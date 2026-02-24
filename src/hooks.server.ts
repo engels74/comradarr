@@ -16,6 +16,16 @@ const logger = createLogger('auth');
 /** Cookie name for session token */
 const SESSION_COOKIE_NAME = 'session';
 
+function applySecurityHeaders(response: Response): Response {
+	response.headers.set('X-Frame-Options', 'SAMEORIGIN');
+	response.headers.set('X-Content-Type-Options', 'nosniff');
+	response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
+	if (process.env.NODE_ENV === 'production') {
+		response.headers.set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+	}
+	return response;
+}
+
 // =============================================================================
 // Application Initialization
 // =============================================================================
@@ -108,22 +118,24 @@ export const handle: Handle = async ({ event, resolve }) => {
 
 					logger.warn('API key rate limited', { keyId: apiKeyResult.keyId });
 
-					return json(
-						{
-							error: 'Too Many Requests',
-							message: 'Rate limit exceeded. Please try again later.',
-							retryAfter: retryAfterSeconds
-						},
-						{
-							status: 429,
-							headers: {
-								'Retry-After': String(retryAfterSeconds),
-								'X-RateLimit-Limit': String(rateLimitStatus.limit ?? 'unlimited'),
-								'X-RateLimit-Remaining': String(rateLimitStatus.remaining ?? 'unlimited'),
-								'X-RateLimit-Reset': String(rateLimitStatus.resetInSeconds),
-								'X-Correlation-ID': correlationId
+					return applySecurityHeaders(
+						json(
+							{
+								error: 'Too Many Requests',
+								message: 'Rate limit exceeded. Please try again later.',
+								retryAfter: retryAfterSeconds
+							},
+							{
+								status: 429,
+								headers: {
+									'Retry-After': String(retryAfterSeconds),
+									'X-RateLimit-Limit': String(rateLimitStatus.limit ?? 'unlimited'),
+									'X-RateLimit-Remaining': String(rateLimitStatus.remaining ?? 'unlimited'),
+									'X-RateLimit-Reset': String(rateLimitStatus.resetInSeconds),
+									'X-Correlation-ID': correlationId
+								}
 							}
-						}
+						)
 					);
 				}
 
@@ -141,18 +153,20 @@ export const handle: Handle = async ({ event, resolve }) => {
 				});
 			} catch {
 				// Rate limiter error - fail closed by rejecting the request
-				return json(
-					{
-						error: 'Service Unavailable',
-						message: 'Rate limiting service temporarily unavailable. Please try again.'
-					},
-					{
-						status: 503,
-						headers: {
-							'Retry-After': '5',
-							'X-Correlation-ID': correlationId
+				return applySecurityHeaders(
+					json(
+						{
+							error: 'Service Unavailable',
+							message: 'Rate limiting service temporarily unavailable. Please try again.'
+						},
+						{
+							status: 503,
+							headers: {
+								'Retry-After': '5',
+								'X-Correlation-ID': correlationId
+							}
 						}
-					}
+					)
 				);
 			}
 		}
@@ -206,24 +220,14 @@ export const handle: Handle = async ({ event, resolve }) => {
 	// Enforce authentication for protected routes
 	if (event.route.id?.startsWith('/(app)')) {
 		if (!event.locals.user) {
-			if (event.request.method === 'GET') {
-				return new Response(null, {
+			return applySecurityHeaders(
+				new Response(null, {
 					status: 303,
 					headers: {
 						Location: '/login',
 						'X-Correlation-ID': correlationId
 					}
-				});
-			}
-			return json(
-				{
-					error: 'Unauthorized',
-					message: 'Authentication required'
-				},
-				{
-					status: 401,
-					headers: { 'X-Correlation-ID': correlationId }
-				}
+				})
 			);
 		}
 	}
@@ -279,15 +283,7 @@ export const handle: Handle = async ({ event, resolve }) => {
 			});
 		}
 
-		// Security headers
-		response.headers.set('X-Frame-Options', 'SAMEORIGIN');
-		response.headers.set('X-Content-Type-Options', 'nosniff');
-		response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
-
-		// HSTS header in production only (don't break local HTTP dev)
-		if (process.env.NODE_ENV === 'production') {
-			response.headers.set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
-		}
+		applySecurityHeaders(response);
 
 		// Include correlation ID in response for client-side correlation
 		response.headers.set('X-Correlation-ID', correlationId);
