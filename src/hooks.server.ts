@@ -203,6 +203,31 @@ export const handle: Handle = async ({ event, resolve }) => {
 		}
 	}
 
+	// Enforce authentication for protected routes
+	if (event.route.id?.startsWith('/(app)')) {
+		if (!event.locals.user) {
+			if (event.request.method === 'GET') {
+				return new Response(null, {
+					status: 303,
+					headers: {
+						Location: '/login',
+						'X-Correlation-ID': correlationId
+					}
+				});
+			}
+			return json(
+				{
+					error: 'Unauthorized',
+					message: 'Authentication required'
+				},
+				{
+					status: 401,
+					headers: { 'X-Correlation-ID': correlationId }
+				}
+			);
+		}
+	}
+
 	// All async operations within this context will have access to the correlation ID
 	const context: RequestContext = {
 		correlationId,
