@@ -266,16 +266,14 @@ describe('Property 9: Episode Batching Decision', () => {
 			fc.assert(
 				fc.property(
 					// Generate seasons with at least 1 missing episode
-					fc
-						.integer({ min: 2, max: 100 })
-						.chain((total) =>
-							fc.record({
-								totalEpisodes: fc.constant(total),
-								// Downloaded must be less than total (at least 1 missing)
-								downloadedEpisodes: fc.integer({ min: 0, max: total - 1 }),
-								nextAiring: futureDateArbitrary // Always a date, never null
-							})
-						),
+					fc.integer({ min: 2, max: 100 }).chain((total) =>
+						fc.record({
+							totalEpisodes: fc.constant(total),
+							// Downloaded must be less than total (at least 1 missing)
+							downloadedEpisodes: fc.integer({ min: 0, max: total - 1 }),
+							nextAiring: futureDateArbitrary // Always a date, never null
+						})
+					),
 					(stats) => {
 						const result = determineBatchingDecision(stats);
 						expect(result.command).toBe('EpisodeSearch');
