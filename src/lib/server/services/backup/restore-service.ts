@@ -190,22 +190,29 @@ async function insertTableData(tableExport: TableExport): Promise<number> {
 
 	const schemaTable = tableNameToSchema[tableName];
 	const schemaColumns = getTableColumns(schemaTable);
-	const validDbColumnNames = new Set(Object.values(schemaColumns).map((col) => col.name));
 
-	const invalidColumns = rawColumns.filter((c) => !validDbColumnNames.has(c));
+	// Build mapping from JS property key (camelCase) → SQL column name (snake_case)
+	// Backup data uses JS keys from db.select(), but INSERT needs SQL column names
+	const jsKeyToSqlName = new Map<string, string>();
+	for (const [jsKey, col] of Object.entries(schemaColumns)) {
+		jsKeyToSqlName.set(jsKey, col.name);
+	}
+
+	const invalidColumns = rawColumns.filter((c) => !jsKeyToSqlName.has(c));
 	if (invalidColumns.length > 0) {
 		logger.warn('Skipping unknown columns in backup data', { tableName, invalidColumns });
 	}
 
-	const columns = rawColumns.filter((c) => validDbColumnNames.has(c));
+	const validJsKeys = rawColumns.filter((c) => jsKeyToSqlName.has(c));
 
-	if (columns.length === 0) {
+	if (validJsKeys.length === 0) {
 		logger.warn('Table has no columns, skipping', { tableName });
 		return 0;
 	}
 
 	// Build INSERT statement with OVERRIDING SYSTEM VALUE for IDENTITY columns
-	const columnList = columns.map((c) => `"${c}"`).join(', ');
+	// Use SQL column names for the INSERT column list
+	const columnList = validJsKeys.map((k) => `"${jsKeyToSqlName.get(k)}"`).join(', ');
 
 	// Insert in batches of 500 rows to avoid memory issues
 	const BATCH_SIZE = 500;
@@ -216,7 +223,7 @@ async function insertTableData(tableExport: TableExport): Promise<number> {
 
 		const valueRows = batch.map((row) => {
 			const typedRow = row as Record<string, unknown>;
-			const values = columns.map((col) => escapeSqlValue(typedRow[col]));
+			const values = validJsKeys.map((jsKey) => escapeSqlValue(typedRow[jsKey]));
 			return `(${values.join(', ')})`;
 		});
 
@@ -238,7 +245,7 @@ async function insertTableData(tableExport: TableExport): Promise<number> {
 
 	// Reset sequence to max ID + 1 for tables with identity columns
 	// Most tables have an 'id' column that is GENERATED ALWAYS AS IDENTITY
-	if (columns.includes('id')) {
+	if (validJsKeys.includes('id')) {
 		try {
 			const sequenceName = `${tableName}_id_seq`;
 			await db.execute(
