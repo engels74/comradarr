@@ -1,5 +1,6 @@
 import { readFile } from 'node:fs/promises';
 import { sql } from 'drizzle-orm';
+import { getTableColumns } from 'drizzle-orm/utils';
 import { DecryptionError, decrypt } from '$lib/server/crypto';
 import { db } from '$lib/server/db';
 import * as schema from '$lib/server/db/schema';
@@ -185,7 +186,18 @@ async function insertTableData(tableExport: TableExport): Promise<number> {
 		return 0;
 	}
 
-	const columns = Object.keys(rows[0] as Record<string, unknown>);
+	const rawColumns = Object.keys(rows[0] as Record<string, unknown>);
+
+	const schemaTable = tableNameToSchema[tableName];
+	const schemaColumns = getTableColumns(schemaTable);
+	const validDbColumnNames = new Set(Object.values(schemaColumns).map((col) => col.name));
+
+	const invalidColumns = rawColumns.filter((c) => !validDbColumnNames.has(c));
+	if (invalidColumns.length > 0) {
+		logger.warn('Skipping unknown columns in backup data', { tableName, invalidColumns });
+	}
+
+	const columns = rawColumns.filter((c) => validDbColumnNames.has(c));
 
 	if (columns.length === 0) {
 		logger.warn('Table has no columns, skipping', { tableName });

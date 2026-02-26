@@ -1,9 +1,18 @@
 import { sql } from 'drizzle-orm';
+import { getTableConfig } from 'drizzle-orm/pg-core';
+import { isTable } from 'drizzle-orm/table';
 import { db } from '$lib/server/db';
+import * as schema from '$lib/server/db/schema';
 import { createLogger } from '$lib/server/logger';
 import type { MaintenanceOptions, MaintenanceResult } from './types';
 
 const logger = createLogger('maintenance');
+
+const validTableNames = new Set(
+	Object.values(schema)
+		.filter(isTable)
+		.map((table) => getTableConfig(table).name)
+);
 
 // Regular VACUUM (default) doesn't lock tables and runs concurrently with normal operations
 export async function runDatabaseMaintenance(
@@ -34,12 +43,13 @@ export async function runDatabaseMaintenance(
 		// 2. Run ANALYZE
 		const analyzeStart = Date.now();
 		if (options?.analyzeTables && options.analyzeTables.length > 0) {
-			// Analyze specific tables
 			for (const table of options.analyzeTables) {
+				if (!validTableNames.has(table)) {
+					logger.warn('Skipping unknown table for ANALYZE', { table });
+					continue;
+				}
 				logger.info('Running ANALYZE on table', { table });
-				// Use sql.raw for table name since it can't be parameterized
-				// Note: Table names should be validated/sanitized by caller
-				await db.execute(sql.raw(`ANALYZE ${table}`));
+				await db.execute(sql.raw(`ANALYZE "${table}"`));
 			}
 		} else {
 			// Analyze all tables
