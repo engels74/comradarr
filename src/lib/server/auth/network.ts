@@ -30,7 +30,7 @@ export function isLocalNetworkIP(ip: string | null): boolean {
 }
 
 /** Extract client IP from SvelteKit's getClientAddress() (populated by the adapter). */
-export function getClientIP(request: Request, getClientAddress?: () => string): string | null {
+export function getClientIP(_request: Request, getClientAddress?: () => string): string | null {
 	if (getClientAddress) {
 		try {
 			return getClientAddress();
