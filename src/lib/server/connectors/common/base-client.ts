@@ -10,13 +10,18 @@ import {
 	SSLError,
 	TimeoutError
 } from './errors.js';
+import type { LenientParseResult, ParseResult } from './parsers.js';
+import { parseCommandResponse } from './parsers.js';
 import { DEFAULT_RETRY_CONFIG, withRetry } from './retry.js';
 import type {
 	BaseClientConfig,
+	CommandResponse,
 	HealthCheck,
+	PaginatedResponse,
 	RequestOptions,
 	RetryConfig,
-	SystemStatus
+	SystemStatus,
+	WantedOptions
 } from './types.js';
 
 const logger = createLogger('arr-client');
@@ -145,6 +150,18 @@ export class BaseArrClient {
 		}
 	}
 
+	private isSSLError(message: string): boolean {
+		const lower = message.toLowerCase();
+		return (
+			lower.includes('ssl') ||
+			lower.includes('certificate') ||
+			lower.includes('cert_') ||
+			lower.includes('unable_to_verify') ||
+			lower.includes('self signed') ||
+			lower.includes('self-signed')
+		);
+	}
+
 	private categorizeError(error: unknown, timeout: number): ArrClientError {
 		if (isArrClientError(error)) {
 			return error;
@@ -158,43 +175,23 @@ export class BaseArrClient {
 			return new TimeoutError(timeout);
 		}
 
-		if (error instanceof TypeError) {
-			const message = error.message.toLowerCase();
-
-			if (
-				message.includes('ssl') ||
-				message.includes('certificate') ||
-				message.includes('cert_') ||
-				message.includes('unable_to_verify') ||
-				message.includes('self signed') ||
-				message.includes('self-signed')
-			) {
-				return new SSLError(error.message);
-			}
-
-			if (message.includes('fetch failed') || message.includes('econnrefused')) {
-				return new NetworkError('Connection refused', 'connection_refused');
-			}
-			if (
-				message.includes('getaddrinfo') ||
-				message.includes('dns') ||
-				message.includes('enotfound')
-			) {
-				return new NetworkError('DNS lookup failed', 'dns_failure');
-			}
-		}
-
 		if (error instanceof Error) {
-			const message = error.message.toLowerCase();
-			if (
-				message.includes('ssl') ||
-				message.includes('certificate') ||
-				message.includes('cert_') ||
-				message.includes('unable_to_verify') ||
-				message.includes('self signed') ||
-				message.includes('self-signed')
-			) {
+			if (this.isSSLError(error.message)) {
 				return new SSLError(error.message);
+			}
+
+			if (error instanceof TypeError) {
+				const message = error.message.toLowerCase();
+				if (message.includes('fetch failed') || message.includes('econnrefused')) {
+					return new NetworkError('Connection refused', 'connection_refused');
+				}
+				if (
+					message.includes('getaddrinfo') ||
+					message.includes('dns') ||
+					message.includes('enotfound')
+				) {
+					return new NetworkError('DNS lookup failed', 'dns_failure');
+				}
 			}
 		}
 
@@ -202,6 +199,115 @@ export class BaseArrClient {
 			error instanceof Error ? error.message : 'Unknown network error',
 			'unknown'
 		);
+	}
+
+	protected parseArrayLenient<T>(
+		response: unknown[],
+		parser: (item: unknown) => ParseResult<T>,
+		options: {
+			resourceType: string;
+			safeFields: string[];
+			context?: Record<string, unknown>;
+		}
+	): T[] {
+		if (!Array.isArray(response)) {
+			throw new Error(
+				`Expected array response from /${options.resourceType} endpoint, got ${typeof response}`
+			);
+		}
+
+		const results: T[] = [];
+		let skipped = 0;
+		for (const item of response) {
+			const result = parser(item);
+			if (result.success) {
+				results.push(result.data);
+			} else {
+				skipped++;
+				if (skipped <= 3) {
+					const safeItem =
+						item && typeof item === 'object'
+							? Object.fromEntries(
+									options.safeFields.map((f) => [f, (item as Record<string, unknown>)[f]])
+								)
+							: { type: typeof item };
+					logger.warn(`Failed to parse ${options.resourceType} record`, {
+						error: result.error,
+						sample: safeItem
+					});
+				}
+			}
+		}
+
+		if (skipped > 0) {
+			logger.warn(`Skipped malformed ${options.resourceType} records`, {
+				...options.context,
+				skipped,
+				total: response.length,
+				parsed: results.length
+			});
+		}
+
+		if (results.length === 0 && response.length > 0) {
+			throw new Error(
+				`All ${response.length} ${options.resourceType} failed parsing - possible API schema mismatch`
+			);
+		}
+
+		return results;
+	}
+
+	protected async fetchAllPaginated<T>(
+		endpoint: string,
+		parser: (data: unknown) => LenientParseResult<PaginatedResponse<T>>,
+		options?: WantedOptions
+	): Promise<T[]> {
+		const pageSize = options?.pageSize ?? 1000;
+		const monitored = options?.monitored ?? true;
+		const sortKey = options?.sortKey ?? 'airDateUtc';
+		const sortDirection = options?.sortDirection ?? 'descending';
+
+		let page = options?.page ?? 1;
+		const allRecords: T[] = [];
+
+		while (true) {
+			const queryParams = new URLSearchParams({
+				page: String(page),
+				pageSize: String(pageSize),
+				monitored: String(monitored),
+				sortKey,
+				sortDirection
+			});
+
+			const response = await this.requestWithRetry<unknown>(
+				`${endpoint}?${queryParams.toString()}`
+			);
+
+			const result = parser(response);
+			if (!result.success) {
+				throw new Error(result.error);
+			}
+
+			allRecords.push(...result.data.records);
+
+			if (page * pageSize >= result.data.totalRecords) {
+				break;
+			}
+
+			page++;
+		}
+
+		return allRecords;
+	}
+
+	async getCommandStatus(commandId: number): Promise<CommandResponse> {
+		const response = await this.requestWithRetry<unknown>(`command/${commandId}`);
+
+		const result = parseCommandResponse(response);
+		if (!result.success) {
+			throw new Error(result.error);
+		}
+		return result.data;
 	}
 
 	async ping(): Promise<boolean> {

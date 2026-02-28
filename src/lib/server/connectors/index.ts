@@ -43,7 +43,8 @@ export type {
 	PaginationOptions,
 	RequestOptions,
 	RetryConfig,
-	SystemStatus
+	SystemStatus,
+	WantedOptions
 } from './common/types.js';
 export { createConnectorClient } from './factory.js';
 export type { ApiVersionInfo } from './radarr/client.js';

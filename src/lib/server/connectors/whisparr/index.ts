@@ -1,4 +1,3 @@
-export type { WantedOptions } from './client.js';
 export { WhisparrClient } from './client.js';
 export {
 	parsePaginatedWhisparrEpisodes,
