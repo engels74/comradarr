@@ -1,14 +1,14 @@
 // Unlike incremental sync which only upserts, full reconciliation also deletes removed content
 
 import { sql } from 'drizzle-orm';
-import { RadarrClient } from '$lib/server/connectors/radarr/client';
-import { SonarrClient } from '$lib/server/connectors/sonarr/client';
-import { WhisparrClient } from '$lib/server/connectors/whisparr/client';
+import { createConnectorClient } from '$lib/server/connectors/factory';
+import type { RadarrClient } from '$lib/server/connectors/radarr/client';
 import { db } from '$lib/server/db';
 import { getDecryptedApiKey, updateConnectorLastSync } from '$lib/server/db/queries/connectors';
 import { type Connector, syncState } from '$lib/server/db/schema';
 import { createLogger } from '$lib/server/logger';
 import { reconcileRadarrMovies } from './handlers/radarr-reconcile';
+import type { SeriesClient } from './handlers/shared';
 import { reconcileSonarrContent } from './handlers/sonarr-reconcile';
 import type { ReconciliationResult, SyncOptions } from './types';
 import { withSyncRetry } from './with-sync-retry';
@@ -27,7 +27,6 @@ export async function runFullReconciliation(
 		type: connector.type
 	});
 
-	// Validate connector is enabled
 	if (!connector.enabled) {
 		logger.warn('Full reconciliation skipped - connector disabled', {
 			connectorId: connector.id,
@@ -89,47 +88,25 @@ async function executeFullReconciliation(
 ): Promise<ReconciliationResult> {
 	try {
 		const apiKey = await getDecryptedApiKey(connector);
-		const clientConfig = {
-			baseUrl: connector.url,
-			apiKey,
-			timeout: 120000
-		};
+		const client = createConnectorClient(connector, apiKey, 120000);
 
 		let itemsCreated: number;
 		let itemsUpdated: number;
 		let itemsDeleted: number;
 		let searchStateDeleted: number;
 
-		switch (connector.type) {
-			case 'sonarr': {
-				const client = new SonarrClient(clientConfig);
-				const result = await reconcileSonarrContent(client, connector.id, options);
-				itemsCreated = result.seriesCreated + result.episodesCreated;
-				itemsUpdated = result.seriesUpdated + result.episodesUpdated;
-				itemsDeleted = result.seriesDeleted + result.episodesDeleted;
-				searchStateDeleted = result.searchStateDeleted;
-				break;
-			}
-			case 'whisparr': {
-				const client = new WhisparrClient(clientConfig);
-				const result = await reconcileSonarrContent(client, connector.id, options);
-				itemsCreated = result.seriesCreated + result.episodesCreated;
-				itemsUpdated = result.seriesUpdated + result.episodesUpdated;
-				itemsDeleted = result.seriesDeleted + result.episodesDeleted;
-				searchStateDeleted = result.searchStateDeleted;
-				break;
-			}
-			case 'radarr': {
-				const client = new RadarrClient(clientConfig);
-				const result = await reconcileRadarrMovies(client, connector.id);
-				itemsCreated = result.moviesCreated;
-				itemsUpdated = result.moviesUpdated;
-				itemsDeleted = result.moviesDeleted;
-				searchStateDeleted = result.searchStateDeleted;
-				break;
-			}
-			default:
-				throw new Error(`Unknown connector type: ${connector.type}`);
+		if (connector.type === 'radarr') {
+			const result = await reconcileRadarrMovies(client as RadarrClient, connector.id);
+			itemsCreated = result.moviesCreated;
+			itemsUpdated = result.moviesUpdated;
+			itemsDeleted = result.moviesDeleted;
+			searchStateDeleted = result.searchStateDeleted;
+		} else {
+			const result = await reconcileSonarrContent(client as SeriesClient, connector.id, options);
+			itemsCreated = result.seriesCreated + result.episodesCreated;
+			itemsUpdated = result.seriesUpdated + result.episodesUpdated;
+			itemsDeleted = result.seriesDeleted + result.episodesDeleted;
+			searchStateDeleted = result.searchStateDeleted;
 		}
 
 		await updateReconciliationState(connector.id, true);

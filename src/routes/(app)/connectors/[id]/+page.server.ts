@@ -1,13 +1,11 @@
 import { error, fail } from '@sveltejs/kit';
 import {
 	AuthenticationError,
+	createConnectorClient,
 	isArrClientError,
 	NetworkError,
-	RadarrClient,
-	SonarrClient,
 	SSLError,
-	TimeoutError,
-	WhisparrClient
+	TimeoutError
 } from '$lib/server/connectors';
 import { captureConnectorSnapshotAfterSync } from '$lib/server/db/queries/completion';
 import {
@@ -22,7 +20,6 @@ import {
 	updateConnectorHealth
 } from '$lib/server/db/queries/connectors';
 import { getReconnectState } from '$lib/server/db/queries/reconnect';
-import type { Connector } from '$lib/server/db/schema';
 import { createLogger } from '$lib/server/logger';
 import {
 	pauseConnectorReconnect,
@@ -33,27 +30,6 @@ import { runIncrementalSync } from '$lib/server/services/sync';
 import type { Actions, PageServerLoad } from './$types';
 
 const logger = createLogger('connectors');
-
-function createClient(
-	connector: Connector,
-	apiKey: string
-): SonarrClient | RadarrClient | WhisparrClient {
-	const clientConfig = {
-		baseUrl: connector.url,
-		apiKey
-	};
-
-	switch (connector.type) {
-		case 'sonarr':
-			return new SonarrClient(clientConfig);
-		case 'radarr':
-			return new RadarrClient(clientConfig);
-		case 'whisparr':
-			return new WhisparrClient(clientConfig);
-		default:
-			throw new Error(`Unknown connector type: ${connector.type}`);
-	}
-}
 
 function getErrorMessage(err: unknown): string {
 	if (err instanceof AuthenticationError) {
@@ -138,7 +114,7 @@ export const actions: Actions = {
 
 		try {
 			const apiKey = await getDecryptedApiKey(connector);
-			const client = createClient(connector, apiKey);
+			const client = createConnectorClient(connector, apiKey);
 			const isConnected = await client.ping();
 
 			if (isConnected) {

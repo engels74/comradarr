@@ -1,19 +1,13 @@
-/**
- * Edit connector page server-side logic.
- */
-
 import { error, fail } from '@sveltejs/kit';
 import * as v from 'valibot';
 import { ConnectorUpdateSchema } from '$lib/schemas/connectors';
 import {
 	AuthenticationError,
+	createConnectorClient,
 	isArrClientError,
 	NetworkError,
-	RadarrClient,
-	SonarrClient,
 	SSLError,
-	TimeoutError,
-	WhisparrClient
+	TimeoutError
 } from '$lib/server/connectors';
 import {
 	connectorNameExists,
@@ -21,32 +15,10 @@ import {
 	getDecryptedApiKey,
 	updateConnector
 } from '$lib/server/db/queries/connectors';
-import type { Connector } from '$lib/server/db/schema';
 import { createLogger } from '$lib/server/logger';
 import type { Actions, PageServerLoad } from './$types';
 
 const logger = createLogger('connectors');
-
-function createClient(
-	connector: Connector,
-	apiKey: string
-): SonarrClient | RadarrClient | WhisparrClient {
-	const clientConfig = {
-		baseUrl: connector.url,
-		apiKey
-	};
-
-	switch (connector.type) {
-		case 'sonarr':
-			return new SonarrClient(clientConfig);
-		case 'radarr':
-			return new RadarrClient(clientConfig);
-		case 'whisparr':
-			return new WhisparrClient(clientConfig);
-		default:
-			throw new Error(`Unknown connector type: ${connector.type}`);
-	}
-}
 
 function getErrorMessage(err: unknown): string {
 	if (err instanceof AuthenticationError) {
@@ -144,7 +116,7 @@ export const actions: Actions = {
 		};
 
 		try {
-			const client = createClient(testConnector, apiKey);
+			const client = createConnectorClient(testConnector, apiKey);
 			const isConnected = await client.ping();
 
 			if (isConnected) {

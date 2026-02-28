@@ -1,12 +1,12 @@
 import { sql } from 'drizzle-orm';
-import { RadarrClient } from '$lib/server/connectors/radarr/client';
-import { SonarrClient } from '$lib/server/connectors/sonarr/client';
-import { WhisparrClient } from '$lib/server/connectors/whisparr/client';
+import { createConnectorClient } from '$lib/server/connectors/factory';
+import type { RadarrClient } from '$lib/server/connectors/radarr/client';
 import { db } from '$lib/server/db';
 import { getDecryptedApiKey, updateConnectorLastSync } from '$lib/server/db/queries/connectors';
 import { type Connector, syncState } from '$lib/server/db/schema';
 import { createLogger } from '$lib/server/logger';
 import { syncRadarrMovies } from './handlers/radarr';
+import type { SeriesClient } from './handlers/shared';
 import { syncSonarrContent } from './handlers/sonarr';
 import type { SyncOptions, SyncResult } from './types';
 import { withSyncRetry } from './with-sync-retry';
@@ -77,33 +77,12 @@ async function executeIncrementalSync(
 ): Promise<SyncResult> {
 	try {
 		const apiKey = await getDecryptedApiKey(connector);
-		const clientConfig = {
-			baseUrl: connector.url,
-			apiKey,
-			timeout: 60000
-		};
+		const client = createConnectorClient(connector, apiKey, 60000);
 
-		let itemsSynced: number;
-
-		switch (connector.type) {
-			case 'sonarr': {
-				const client = new SonarrClient(clientConfig);
-				itemsSynced = await syncSonarrContent(client, connector.id, options);
-				break;
-			}
-			case 'whisparr': {
-				const client = new WhisparrClient(clientConfig);
-				itemsSynced = await syncSonarrContent(client, connector.id, options);
-				break;
-			}
-			case 'radarr': {
-				const client = new RadarrClient(clientConfig);
-				itemsSynced = await syncRadarrMovies(client, connector.id);
-				break;
-			}
-			default:
-				throw new Error(`Unknown connector type: ${connector.type}`);
-		}
+		const itemsSynced =
+			connector.type === 'radarr'
+				? await syncRadarrMovies(client as RadarrClient, connector.id)
+				: await syncSonarrContent(client as SeriesClient, connector.id, options);
 
 		await updateSyncState(connector.id, true);
 		await updateConnectorLastSync(connector.id);

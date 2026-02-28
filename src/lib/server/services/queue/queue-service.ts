@@ -95,6 +95,60 @@ export async function enqueuePendingItems(
 	}
 }
 
+async function processBatchEnqueue(
+	connectorId: number,
+	itemsToEnqueue: Array<{ registryId: number; connectorId: number; priority: number }>,
+	batchSize: number,
+	scheduledAt: Date,
+	now: Date
+): Promise<number> {
+	let totalEnqueued = 0;
+
+	for (let i = 0; i < itemsToEnqueue.length; i += batchSize) {
+		const batch = itemsToEnqueue.slice(i, i + batchSize);
+		const registryIds = batch.map((item) => item.registryId);
+
+		await db
+			.update(searchRegistry)
+			.set({
+				state: 'queued',
+				priority: sql`CASE ${searchRegistry.id} ${batch.map((item) => sql`WHEN ${item.registryId} THEN ${item.priority}`).reduce((acc, curr) => sql`${acc} ${curr}`)} END`,
+				updatedAt: now
+			})
+			.where(inArray(searchRegistry.id, registryIds));
+
+		const inserted = await db
+			.insert(requestQueue)
+			.values(
+				batch.map((item) => ({
+					searchRegistryId: item.registryId,
+					connectorId: item.connectorId,
+					priority: item.priority,
+					scheduledAt
+				}))
+			)
+			.onConflictDoNothing()
+			.returning({ id: requestQueue.id });
+
+		totalEnqueued += inserted.length;
+
+		const processedCount = i + batch.length;
+		if (
+			processedCount > 0 &&
+			processedCount % 500 === 0 &&
+			processedCount < itemsToEnqueue.length
+		) {
+			logger.info('Enqueue progress', {
+				connectorId,
+				processedItems: processedCount,
+				totalItems: itemsToEnqueue.length
+			});
+		}
+	}
+
+	return totalEnqueued;
+}
+
 async function enqueueEpisodes(
 	connectorId: number,
 	batchSize: number,
@@ -158,50 +212,13 @@ async function enqueueEpisodes(
 		});
 	}
 
-	let totalEnqueued = 0;
-
-	for (let i = 0; i < itemsToEnqueue.length; i += batchSize) {
-		const batch = itemsToEnqueue.slice(i, i + batchSize);
-		const registryIds = batch.map((item) => item.registryId);
-
-		await db
-			.update(searchRegistry)
-			.set({
-				state: 'queued',
-				priority: sql`CASE ${searchRegistry.id} ${batch.map((item) => sql`WHEN ${item.registryId} THEN ${item.priority}`).reduce((acc, curr) => sql`${acc} ${curr}`)} END`,
-				updatedAt: now
-			})
-			.where(inArray(searchRegistry.id, registryIds));
-
-		const inserted = await db
-			.insert(requestQueue)
-			.values(
-				batch.map((item) => ({
-					searchRegistryId: item.registryId,
-					connectorId: item.connectorId,
-					priority: item.priority,
-					scheduledAt
-				}))
-			)
-			.onConflictDoNothing()
-			.returning({ id: requestQueue.id });
-
-		totalEnqueued += inserted.length;
-
-		// Progress logging for large batches
-		const processedCount = i + batch.length;
-		if (
-			processedCount > 0 &&
-			processedCount % 500 === 0 &&
-			processedCount < itemsToEnqueue.length
-		) {
-			logger.info('Enqueue progress', {
-				connectorId,
-				processedItems: processedCount,
-				totalItems: itemsToEnqueue.length
-			});
-		}
-	}
+	const totalEnqueued = await processBatchEnqueue(
+		connectorId,
+		itemsToEnqueue,
+		batchSize,
+		scheduledAt,
+		now
+	);
 
 	return {
 		enqueued: totalEnqueued,
@@ -273,50 +290,13 @@ async function enqueueMovies(
 		});
 	}
 
-	let totalEnqueued = 0;
-
-	for (let i = 0; i < itemsToEnqueue.length; i += batchSize) {
-		const batch = itemsToEnqueue.slice(i, i + batchSize);
-		const registryIds = batch.map((item) => item.registryId);
-
-		await db
-			.update(searchRegistry)
-			.set({
-				state: 'queued',
-				priority: sql`CASE ${searchRegistry.id} ${batch.map((item) => sql`WHEN ${item.registryId} THEN ${item.priority}`).reduce((acc, curr) => sql`${acc} ${curr}`)} END`,
-				updatedAt: now
-			})
-			.where(inArray(searchRegistry.id, registryIds));
-
-		const inserted = await db
-			.insert(requestQueue)
-			.values(
-				batch.map((item) => ({
-					searchRegistryId: item.registryId,
-					connectorId: item.connectorId,
-					priority: item.priority,
-					scheduledAt
-				}))
-			)
-			.onConflictDoNothing()
-			.returning({ id: requestQueue.id });
-
-		totalEnqueued += inserted.length;
-
-		// Progress logging for large batches
-		const processedCount = i + batch.length;
-		if (
-			processedCount > 0 &&
-			processedCount % 500 === 0 &&
-			processedCount < itemsToEnqueue.length
-		) {
-			logger.info('Enqueue progress', {
-				connectorId,
-				processedItems: processedCount,
-				totalItems: itemsToEnqueue.length
-			});
-		}
-	}
+	const totalEnqueued = await processBatchEnqueue(
+		connectorId,
+		itemsToEnqueue,
+		batchSize,
+		scheduledAt,
+		now
+	);
 
 	return {
 		enqueued: totalEnqueued,
