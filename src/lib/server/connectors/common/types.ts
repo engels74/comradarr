@@ -77,6 +77,10 @@ export interface PaginationOptions {
 	sortDirection?: 'ascending' | 'descending';
 }
 
+export interface WantedOptions extends PaginationOptions {
+	monitored?: boolean;
+}
+
 export interface CommandResponse {
 	id: number;
 	name: string;

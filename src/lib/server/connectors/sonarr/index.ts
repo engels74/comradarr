@@ -1,4 +1,3 @@
-export type { WantedOptions } from './client.js';
 export { SonarrClient } from './client.js';
 export {
 	parsePaginatedEpisodes,
