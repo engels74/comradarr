@@ -4,21 +4,19 @@
  * Tests cover:
  * - calculateNextEligibleTime() with various attempt counts
  * - Exponential backoff behavior
- * - Maximum delay capping
  * - Configuration constants
  *
  * Note: Database-dependent functions (markSearchFailed, markSearchExhausted,
  * reenqueueEligibleCooldownItems) are tested in integration tests.
+ * shouldMarkExhausted, max delay capping, and zero/negative edge cases are
+ * covered by property tests in tests/properties/state-transitions.test.ts.
  *
 
  */
 
 import { describe, expect, it } from 'vitest';
 // Import directly from specific files to avoid loading database-dependent modules
-import {
-	calculateNextEligibleTime,
-	shouldMarkExhausted
-} from '../../src/lib/server/services/queue/backoff';
+import { calculateNextEligibleTime } from '../../src/lib/server/services/queue/backoff';
 import { STATE_TRANSITION_CONFIG } from '../../src/lib/server/services/queue/config';
 
 describe('calculateNextEligibleTime', () => {
@@ -77,16 +75,6 @@ describe('calculateNextEligibleTime', () => {
 			expect(avgDelay3).toBeGreaterThan(avgDelay2 * 1.5);
 		});
 
-		it('should cap delay at maximum', () => {
-			// Very high attempt count should still be capped
-			const result = calculateNextEligibleTime(100, now);
-			const delay = result.getTime() - now.getTime();
-
-			// Maximum delay with jitter could be up to 125% of max delay
-			const maxWithJitter = STATE_TRANSITION_CONFIG.COOLDOWN_MAX_DELAY * 1.25;
-			expect(delay).toBeLessThanOrEqual(maxWithJitter);
-		});
-
 		it('should respect multiplier configuration', () => {
 			// First attempt delay should be around base delay
 			const result = calculateNextEligibleTime(1, now);
@@ -105,25 +93,6 @@ describe('calculateNextEligibleTime', () => {
 	});
 
 	describe('edge cases', () => {
-		it('should handle zero attempt count', () => {
-			const result = calculateNextEligibleTime(0, now);
-			const delay = result.getTime() - now.getTime();
-
-			// Zero attempts means base delay (or slightly less due to -1 in calculation)
-			// Should still be a valid positive delay
-			expect(delay).toBeGreaterThan(0);
-			expect(delay).toBeLessThanOrEqual(STATE_TRANSITION_CONFIG.COOLDOWN_BASE_DELAY * 1.25);
-		});
-
-		it('should handle negative attempt count gracefully', () => {
-			// Should clamp to 0
-			const result = calculateNextEligibleTime(-5, now);
-			const delay = result.getTime() - now.getTime();
-
-			expect(delay).toBeGreaterThan(0);
-			expect(Number.isFinite(delay)).toBe(true);
-		});
-
 		it('should use current time when not provided', () => {
 			const before = Date.now();
 			const result = calculateNextEligibleTime(1);
@@ -168,31 +137,6 @@ describe('calculateNextEligibleTime', () => {
 			expect(expectedDelays[3]).toBe(28800000); // 8 hours
 			expect(expectedDelays[4]).toBe(57600000); // 16 hours (not yet capped)
 		});
-	});
-});
-
-describe('shouldMarkExhausted', () => {
-	it('should return false for attempt count below max', () => {
-		for (let i = 0; i < STATE_TRANSITION_CONFIG.MAX_ATTEMPTS; i++) {
-			expect(shouldMarkExhausted(i)).toBe(false);
-		}
-	});
-
-	it('should return true for attempt count at max', () => {
-		expect(shouldMarkExhausted(STATE_TRANSITION_CONFIG.MAX_ATTEMPTS)).toBe(true);
-	});
-
-	it('should return true for attempt count above max', () => {
-		expect(shouldMarkExhausted(STATE_TRANSITION_CONFIG.MAX_ATTEMPTS + 1)).toBe(true);
-		expect(shouldMarkExhausted(STATE_TRANSITION_CONFIG.MAX_ATTEMPTS + 10)).toBe(true);
-	});
-
-	it('should handle zero attempts', () => {
-		expect(shouldMarkExhausted(0)).toBe(false);
-	});
-
-	it('should handle negative attempts gracefully', () => {
-		expect(shouldMarkExhausted(-1)).toBe(false);
 	});
 });
 
