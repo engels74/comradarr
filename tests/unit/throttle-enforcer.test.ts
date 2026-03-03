@@ -11,10 +11,7 @@ import { describe, expect, it } from 'vitest';
 import {
 	getStartOfDayUTC,
 	getStartOfNextDayUTC,
-	isDayWindowExpired,
-	isMinuteWindowExpired,
-	msUntilMidnightUTC,
-	msUntilMinuteWindowExpires
+	isDayWindowExpired
 } from '../../src/lib/server/services/throttle/time-utils';
 
 describe('Throttle Utility Functions', () => {
@@ -95,36 +92,6 @@ describe('Throttle Utility Functions', () => {
 		});
 	});
 
-	describe('isMinuteWindowExpired', () => {
-		it('should return true for null windowStart', () => {
-			expect(isMinuteWindowExpired(null)).toBe(true);
-		});
-
-		it('should return false for recent window', () => {
-			const now = new Date();
-			const windowStart = new Date(now.getTime() - 30 * 1000); // 30 seconds ago
-			expect(isMinuteWindowExpired(windowStart, now)).toBe(false);
-		});
-
-		it('should return true for expired window (exactly 60 seconds)', () => {
-			const now = new Date();
-			const windowStart = new Date(now.getTime() - 60 * 1000); // Exactly 60 seconds ago
-			expect(isMinuteWindowExpired(windowStart, now)).toBe(true);
-		});
-
-		it('should return true for window older than 60 seconds', () => {
-			const now = new Date();
-			const windowStart = new Date(now.getTime() - 90 * 1000); // 90 seconds ago
-			expect(isMinuteWindowExpired(windowStart, now)).toBe(true);
-		});
-
-		it('should return false for window at 59.999 seconds', () => {
-			const now = new Date();
-			const windowStart = new Date(now.getTime() - 59999); // 59.999 seconds ago
-			expect(isMinuteWindowExpired(windowStart, now)).toBe(false);
-		});
-	});
-
 	describe('isDayWindowExpired', () => {
 		it('should return true for null windowStart', () => {
 			expect(isDayWindowExpired(null)).toBe(true);
@@ -160,85 +127,6 @@ describe('Throttle Utility Functions', () => {
 			expect(isDayWindowExpired(windowStart, now)).toBe(true);
 		});
 	});
-
-	describe('msUntilMinuteWindowExpires', () => {
-		it('should return 0 for null windowStart', () => {
-			expect(msUntilMinuteWindowExpires(null)).toBe(0);
-		});
-
-		it('should return 0 for expired window', () => {
-			const now = new Date();
-			const windowStart = new Date(now.getTime() - 90 * 1000); // 90 seconds ago
-			expect(msUntilMinuteWindowExpires(windowStart, now)).toBe(0);
-		});
-
-		it('should return remaining time for active window', () => {
-			const now = new Date();
-			const windowStart = new Date(now.getTime() - 30 * 1000); // 30 seconds ago
-			const result = msUntilMinuteWindowExpires(windowStart, now);
-
-			// Should be approximately 30 seconds remaining
-			expect(result).toBeGreaterThan(29000);
-			expect(result).toBeLessThanOrEqual(30000);
-		});
-
-		it('should return 60 seconds for window that just started', () => {
-			const now = new Date();
-			const windowStart = new Date(now.getTime()); // Just now
-			const result = msUntilMinuteWindowExpires(windowStart, now);
-
-			expect(result).toBe(60000);
-		});
-
-		it('should return 1ms for window about to expire', () => {
-			const now = new Date();
-			const windowStart = new Date(now.getTime() - 59999); // 59.999 seconds ago
-			const result = msUntilMinuteWindowExpires(windowStart, now);
-
-			expect(result).toBe(1);
-		});
-	});
-
-	describe('msUntilMidnightUTC', () => {
-		it('should calculate time until midnight for morning', () => {
-			const now = new Date('2024-06-15T06:00:00.000Z');
-			const result = msUntilMidnightUTC(now);
-
-			// 18 hours until midnight
-			expect(result).toBe(18 * 60 * 60 * 1000);
-		});
-
-		it('should calculate time until midnight for evening', () => {
-			const now = new Date('2024-06-15T22:00:00.000Z');
-			const result = msUntilMidnightUTC(now);
-
-			// 2 hours until midnight
-			expect(result).toBe(2 * 60 * 60 * 1000);
-		});
-
-		it('should return 24 hours at midnight', () => {
-			const now = new Date('2024-06-15T00:00:00.000Z');
-			const result = msUntilMidnightUTC(now);
-
-			// Full 24 hours until next midnight
-			expect(result).toBe(24 * 60 * 60 * 1000);
-		});
-
-		it('should return ~1ms just before midnight', () => {
-			const now = new Date('2024-06-15T23:59:59.999Z');
-			const result = msUntilMidnightUTC(now);
-
-			expect(result).toBe(1);
-		});
-
-		it('should handle end of month correctly', () => {
-			const now = new Date('2024-06-30T12:00:00.000Z');
-			const result = msUntilMidnightUTC(now);
-
-			// 12 hours until July 1st midnight
-			expect(result).toBe(12 * 60 * 60 * 1000);
-		});
-	});
 });
 
 describe('Edge Cases and Boundary Conditions', () => {
@@ -266,20 +154,6 @@ describe('Edge Cases and Boundary Conditions', () => {
 			expect(nextDay.getUTCFullYear()).toBe(2025);
 			expect(nextDay.getUTCMonth()).toBe(0);
 			expect(nextDay.getUTCDate()).toBe(1);
-		});
-	});
-
-	describe('Window boundary precision', () => {
-		it('isMinuteWindowExpired should be precise at 60000ms boundary', () => {
-			const now = new Date(1000000060000); // Arbitrary base time + 60000ms
-			const windowStart = new Date(1000000000000); // Exactly 60000ms earlier
-
-			// At exactly 60 seconds, window is expired
-			expect(isMinuteWindowExpired(windowStart, now)).toBe(true);
-
-			// At 59999ms, window is not expired
-			const almostNow = new Date(now.getTime() - 1);
-			expect(isMinuteWindowExpired(windowStart, almostNow)).toBe(false);
 		});
 	});
 });

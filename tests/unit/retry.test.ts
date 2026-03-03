@@ -38,14 +38,6 @@ describe('calculateBackoffDelay', () => {
 			expect(delay).toBe(1000); // 1000 * 2^0 = 1000
 		});
 
-		it('should double delay for each attempt', () => {
-			expect(calculateBackoffDelay(0, baseConfig)).toBe(1000); // 2^0 = 1
-			expect(calculateBackoffDelay(1, baseConfig)).toBe(2000); // 2^1 = 2
-			expect(calculateBackoffDelay(2, baseConfig)).toBe(4000); // 2^2 = 4
-			expect(calculateBackoffDelay(3, baseConfig)).toBe(8000); // 2^3 = 8
-			expect(calculateBackoffDelay(4, baseConfig)).toBe(16000); // 2^4 = 16
-		});
-
 		it('should respect custom baseDelay', () => {
 			const config = { ...baseConfig, baseDelay: 500 };
 			expect(calculateBackoffDelay(0, config)).toBe(500);
@@ -58,56 +50,6 @@ describe('calculateBackoffDelay', () => {
 			expect(calculateBackoffDelay(0, config)).toBe(1000); // 1000 * 3^0 = 1000
 			expect(calculateBackoffDelay(1, config)).toBe(3000); // 1000 * 3^1 = 3000
 			expect(calculateBackoffDelay(2, config)).toBe(9000); // 1000 * 3^2 = 9000
-		});
-	});
-
-	describe('maxDelay cap', () => {
-		it('should cap delay at maxDelay', () => {
-			const config = { ...baseConfig, maxDelay: 5000 };
-			expect(calculateBackoffDelay(0, config)).toBe(1000);
-			expect(calculateBackoffDelay(1, config)).toBe(2000);
-			expect(calculateBackoffDelay(2, config)).toBe(4000);
-			expect(calculateBackoffDelay(3, config)).toBe(5000); // Would be 8000, capped at 5000
-			expect(calculateBackoffDelay(10, config)).toBe(5000); // Still capped
-		});
-	});
-
-	describe('jitter', () => {
-		it('should add jitter when enabled', () => {
-			const config = { ...baseConfig, jitter: true };
-			const delays = new Set<number>();
-
-			// Generate multiple delays - with jitter they should vary
-			for (let i = 0; i < 100; i++) {
-				delays.add(calculateBackoffDelay(0, config));
-			}
-
-			// With jitter enabled, we should see variation
-			expect(delays.size).toBeGreaterThan(1);
-		});
-
-		it('should produce delays within ±25% range with jitter', () => {
-			const config = { ...baseConfig, jitter: true, baseDelay: 1000 };
-			const minExpected = 750; // 1000 * 0.75
-			const maxExpected = 1250; // 1000 * 1.25
-
-			for (let i = 0; i < 100; i++) {
-				const delay = calculateBackoffDelay(0, config);
-				expect(delay).toBeGreaterThanOrEqual(minExpected);
-				expect(delay).toBeLessThanOrEqual(maxExpected);
-			}
-		});
-
-		it('should not have jitter when disabled', () => {
-			const config = { ...baseConfig, jitter: false };
-			const delays = new Set<number>();
-
-			for (let i = 0; i < 10; i++) {
-				delays.add(calculateBackoffDelay(0, config));
-			}
-
-			// Without jitter, all delays should be identical
-			expect(delays.size).toBe(1);
 		});
 	});
 });

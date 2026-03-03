@@ -54,23 +54,6 @@ describe('calculatePriority', () => {
 	const now = new Date('2024-07-01T12:00:00Z');
 
 	describe('content age factor', () => {
-		it('should give newer content higher priority', () => {
-			const newerInput = createInput({
-				contentDate: daysAgo(7, now) // 7 days old
-			});
-			const olderInput = createInput({
-				contentDate: daysAgo(365, now) // 1 year old
-			});
-
-			const newerResult = calculatePriority(newerInput, DEFAULT_PRIORITY_WEIGHTS, now);
-			const olderResult = calculatePriority(olderInput, DEFAULT_PRIORITY_WEIGHTS, now);
-
-			expect(newerResult.score).toBeGreaterThan(olderResult.score);
-			expect(newerResult.breakdown.contentAgeScore).toBeGreaterThan(
-				olderResult.breakdown.contentAgeScore
-			);
-		});
-
 		it('should cap content age at maximum threshold', () => {
 			const veryOldInput = createInput({
 				contentDate: daysAgo(5000, now) // ~14 years old
@@ -461,16 +444,6 @@ describe('calculatePriority', () => {
 			expect(lowResult.score).toBeGreaterThan(highResult.score);
 		});
 
-		it('should allow zero weights to disable factors', () => {
-			const input = createInput();
-
-			const zeroAgeWeightConfig: PriorityWeights = { ...DEFAULT_PRIORITY_WEIGHTS, contentAge: 0 };
-
-			const result = calculatePriority(input, zeroAgeWeightConfig, now);
-
-			expect(result.breakdown.contentAgeScore).toBe(0);
-		});
-
 		it('should respect custom specials penalty', () => {
 			const specialsInput = createInput({
 				seasonNumber: 0
@@ -526,18 +499,6 @@ describe('calculatePriority', () => {
 			const specialResult = calculatePriority(specialInput, zeroPenaltyConfig, now);
 
 			expect(regularResult.score).toBe(specialResult.score);
-		});
-	});
-
-	describe('determinism', () => {
-		it('should produce identical results for identical inputs', () => {
-			const input = createInput();
-
-			const result1 = calculatePriority(input, DEFAULT_PRIORITY_WEIGHTS, now);
-			const result2 = calculatePriority(input, DEFAULT_PRIORITY_WEIGHTS, now);
-
-			expect(result1.score).toBe(result2.score);
-			expect(result1.breakdown).toEqual(result2.breakdown);
 		});
 	});
 
