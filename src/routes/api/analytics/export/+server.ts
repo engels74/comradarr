@@ -44,7 +44,12 @@ export function escapeCSVField(value: string | number | null): string {
 		stringValue = `'${stringValue}`;
 	}
 
-	if (stringValue.includes(',') || stringValue.includes('"') || stringValue.includes('\n')) {
+	if (
+		stringValue.includes(',') ||
+		stringValue.includes('"') ||
+		stringValue.includes('\n') ||
+		stringValue.includes('\r')
+	) {
 		return `"${stringValue.replace(/"/g, '""')}"`;
 	}
 
