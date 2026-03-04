@@ -117,7 +117,7 @@ jobs:
         run: bun install
 
       - name: Run database migrations
-        run: bunx drizzle-kit push
+        run: bunx drizzle-kit push --force
         env:
           DATABASE_URL: postgres://comradarr_test:testpassword@localhost:5432/comradarr_test
 
