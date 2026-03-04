@@ -58,8 +58,18 @@ interface HealthResponse {
 const APP_NAME = 'Comradarr';
 const APP_VERSION = '0.0.1';
 
-export const GET: RequestHandler = async () => {
+export const GET: RequestHandler = async ({ locals }) => {
 	const healthSummary = await getHealthSummary();
+
+	const httpStatus = healthSummary.overallStatus === 'unhealthy' ? 503 : 200;
+
+	if (!locals.user) {
+		return json(
+			{ status: healthSummary.overallStatus, timestamp: new Date().toISOString() },
+			{ status: httpStatus }
+		);
+	}
+
 	const memoryUsage = process.memoryUsage();
 
 	const response: HealthResponse = {
@@ -88,6 +98,5 @@ export const GET: RequestHandler = async () => {
 		queue: healthSummary.queue
 	};
 
-	const httpStatus = healthSummary.overallStatus === 'unhealthy' ? 503 : 200;
 	return json(response, { status: httpStatus });
 };

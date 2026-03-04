@@ -65,7 +65,7 @@ export const POST: RequestHandler = async ({ request, locals }) => {
  * - 401: Not authenticated
  */
 export const GET: RequestHandler = async ({ locals }) => {
-	requireScope(locals, 'read');
+	requireScope(locals, 'full');
 
 	const backups = await listBackups();
 
