@@ -53,8 +53,8 @@ describe('escapeCSVField', () => {
 			expect(escapeCSVField('\tmalicious')).toBe("'\tmalicious");
 		});
 
-		it('should prefix carriage return with single quote', () => {
-			expect(escapeCSVField('\rmalicious')).toBe("'\rmalicious");
+		it('should prefix carriage return with single quote and quote the field', () => {
+			expect(escapeCSVField('\rmalicious')).toBe('"\'\rmalicious"');
 		});
 
 		it('should prefix line feed with single quote and quote the field', () => {
