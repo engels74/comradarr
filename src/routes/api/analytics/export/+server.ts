@@ -31,7 +31,7 @@ const CSV_HEADERS = [
 	'success_rate'
 ] as const;
 
-const FORMULA_PREFIXES = ['=', '+', '-', '@', '\t', '\r'];
+const FORMULA_PREFIXES = ['=', '+', '-', '@', '\t', '\r', '\n', '＝', '＋', '－', '＠'];
 
 export function escapeCSVField(value: string | number | null): string {
 	if (value === null) {

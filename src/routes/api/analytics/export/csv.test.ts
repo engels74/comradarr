@@ -56,6 +56,26 @@ describe('escapeCSVField', () => {
 		it('should prefix carriage return with single quote', () => {
 			expect(escapeCSVField('\rmalicious')).toBe("'\rmalicious");
 		});
+
+		it('should prefix line feed with single quote and quote the field', () => {
+			expect(escapeCSVField('\nmalicious')).toBe('"\'\nmalicious"');
+		});
+
+		it('should prefix full-width ＝ with single quote', () => {
+			expect(escapeCSVField('＝CMD()')).toBe("'＝CMD()");
+		});
+
+		it('should prefix full-width ＋ with single quote', () => {
+			expect(escapeCSVField('＋1+1')).toBe("'＋1+1");
+		});
+
+		it('should prefix full-width － with single quote', () => {
+			expect(escapeCSVField('－1+1')).toBe("'－1+1");
+		});
+
+		it('should prefix full-width ＠ with single quote', () => {
+			expect(escapeCSVField('＠SUM(A1)')).toBe("'＠SUM(A1)");
+		});
 	});
 
 	describe('normal strings', () => {
