@@ -64,8 +64,10 @@ export const handle: Handle = async ({ event, resolve }) => {
 	const correlationId = event.request.headers.get('x-correlation-id') ?? crypto.randomUUID();
 	event.locals.correlationId = correlationId;
 
-	// Check X-API-Key header before session validation
-	const apiKey = event.request.headers.get('x-api-key');
+	// API key auth is restricted to /api/* routes — server actions in (app) routes use session auth only
+	const apiKey = event.url.pathname.startsWith('/api/')
+		? event.request.headers.get('x-api-key')
+		: null;
 	if (apiKey) {
 		let apiKeyResult: Awaited<ReturnType<typeof validateApiKey>> | null = null;
 		let apiKeyUser: {

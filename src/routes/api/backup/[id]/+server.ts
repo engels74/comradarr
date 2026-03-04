@@ -26,7 +26,7 @@ import type { RequestHandler } from './$types';
  * - 404: Backup not found
  */
 export const GET: RequestHandler = async ({ params, locals }) => {
-	requireScope(locals, 'read');
+	requireScope(locals, 'full');
 
 	const { id } = params;
 

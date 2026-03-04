@@ -146,6 +146,12 @@ export async function createBackup(options?: BackupOptions): Promise<BackupResul
 		const tables: TableExport[] = [];
 
 		for (const tableName of TABLE_EXPORT_ORDER) {
+			// Sessions excluded — contains bearer tokens that could enable session hijacking
+			if (tableName === 'sessions') {
+				tables.push({ tableName: 'sessions', rowCount: 0, rows: [] });
+				logger.info('Exported table', { tableName, rowCount: 0 });
+				continue;
+			}
 			const tableExport = await exportTable(tableName);
 			tables.push(tableExport);
 			logger.info('Exported table', { tableName, rowCount: tableExport.rowCount });
