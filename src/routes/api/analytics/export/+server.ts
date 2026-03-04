@@ -31,12 +31,18 @@ const CSV_HEADERS = [
 	'success_rate'
 ] as const;
 
-function escapeCSVField(value: string | number | null): string {
+const FORMULA_PREFIXES = ['=', '+', '-', '@', '\t', '\r', '\n', '＝', '＋', '－', '＠'];
+
+export function escapeCSVField(value: string | number | null): string {
 	if (value === null) {
 		return '';
 	}
 
-	const stringValue = String(value);
+	let stringValue = String(value);
+
+	if (typeof value === 'string' && FORMULA_PREFIXES.some((p) => stringValue.startsWith(p))) {
+		stringValue = `'${stringValue}`;
+	}
 
 	if (stringValue.includes(',') || stringValue.includes('"') || stringValue.includes('\n')) {
 		return `"${stringValue.replace(/"/g, '""')}"`;
@@ -45,7 +51,7 @@ function escapeCSVField(value: string | number | null): string {
 	return stringValue;
 }
 
-function toCSV(rows: ExportRow[]): string {
+export function toCSV(rows: ExportRow[]): string {
 	const lines: string[] = [];
 	lines.push(CSV_HEADERS.join(','));
 
