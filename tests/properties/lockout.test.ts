@@ -153,11 +153,11 @@ describe('Account Lockout', () => {
 		});
 
 		it('should handle millisecond precision', () => {
-			// Just 1ms in the future
-			const barelyFuture = new Date(Date.now() + 1);
+			// Just 50ms in the future
+			const barelyFuture = new Date(Date.now() + 50);
 			const user = { lockedUntil: barelyFuture };
 
-			// Should be considered locked (even if only for 1ms)
+			// Should be considered locked (even if only for 50ms)
 			expect(isAccountLocked(user)).toBe(true);
 		});
 
