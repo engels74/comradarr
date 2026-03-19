@@ -9,11 +9,11 @@ import {
 
 // Re-export pure functions and types from health-utils
 export {
-	determineHealthStatus,
-	shouldRetrySync,
 	calculateSyncBackoffDelay,
+	determineHealthStatus,
 	type HealthStatus,
-	type SyncFailureContext
+	type SyncFailureContext,
+	shouldRetrySync
 };
 
 export async function updateHealthFromSyncResult(

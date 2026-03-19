@@ -11,23 +11,23 @@ import Legend from './form-legend.svelte';
 const Control = FormPrimitive.Control;
 
 export {
-	Field,
-	Control,
-	Label,
 	Button,
-	FieldErrors,
+	Button as FormButton,
+	Control,
+	Control as FormControl,
 	Description,
-	Fieldset,
-	Legend,
+	Description as FormDescription,
 	ElementField,
+	ElementField as FormElementField,
+	Field,
 	//
 	Field as FormField,
-	Control as FormControl,
-	Description as FormDescription,
-	Label as FormLabel,
+	FieldErrors,
 	FieldErrors as FormFieldErrors,
+	Fieldset,
 	Fieldset as FormFieldset,
-	Legend as FormLegend,
-	ElementField as FormElementField,
-	Button as FormButton
+	Label,
+	Label as FormLabel,
+	Legend,
+	Legend as FormLegend
 };
