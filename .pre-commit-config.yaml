@@ -24,9 +24,9 @@ repos:
     hooks:
       - id: ruff-check
         args: [--fix]
-        files: ^dev-cli/(src|tests)/.*\.py$
+        files: ^dev_cli/(src|tests)/.*\.py$
       - id: ruff-format
-        files: ^dev-cli/(src|tests)/.*\.py$
+        files: ^dev_cli/(src|tests)/.*\.py$
 
   # Local hooks
   - repo: local
@@ -55,9 +55,9 @@ repos:
       # Python type checking with basedpyright on push
       - id: python-typecheck
         name: Python Type Check
-        entry: uv run --project dev-cli --extra dev basedpyright dev-cli/src dev-cli/tests
+        entry: uv run --project dev_cli --extra dev basedpyright dev_cli/src dev_cli/tests
         language: system
-        files: ^dev-cli/(src|tests)/.*\.py$
+        files: ^dev_cli/(src|tests)/.*\.py$
         pass_filenames: false
         stages: [pre-push]
 

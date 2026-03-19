@@ -55,7 +55,7 @@ def validate_db_name(name: str) -> bool:
 
 def _get_project_root() -> Path:
     """Get the project root directory."""
-    # dev.py -> commands -> cr_dev -> src -> dev-cli -> project root
+    # dev.py -> commands -> cr_dev -> src -> dev_cli -> project root
     return Path(__file__).parent.parent.parent.parent.parent
 
 
