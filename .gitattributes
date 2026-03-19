@@ -1,2 +1,2 @@
 # Exclude development tools from language statistics
-dev-cli/** linguist-vendored
+dev_cli/** linguist-vendored

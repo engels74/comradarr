@@ -23,7 +23,7 @@ app = typer.Typer(no_args_is_help=True)
 
 def _get_project_root() -> Path:
     """Get the project root directory."""
-    # test.py -> commands -> cr_dev -> src -> dev-cli -> project root
+    # test.py -> commands -> cr_dev -> src -> dev_cli -> project root
     return Path(__file__).parent.parent.parent.parent.parent
 
 

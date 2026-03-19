@@ -375,7 +375,7 @@ def setup() -> None:
 
     from pathlib import Path
 
-    # db.py -> commands -> cr_dev -> src -> dev-cli -> project root
+    # db.py -> commands -> cr_dev -> src -> dev_cli -> project root
     project_root = Path(__file__).parent.parent.parent.parent.parent
     env = os.environ.copy()
     env["DATABASE_URL"] = config.database_url

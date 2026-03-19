@@ -14,11 +14,11 @@ import { createLogger } from '$lib/server/logger';
 const logger = createLogger('auth-db');
 
 export {
-	MAX_FAILED_ATTEMPTS,
-	LOCKOUT_DURATION_MINUTES,
-	isAccountLocked,
-	getRemainingLockoutTime,
 	calculateLockoutExpiry,
+	getRemainingLockoutTime,
+	isAccountLocked,
+	LOCKOUT_DURATION_MINUTES,
+	MAX_FAILED_ATTEMPTS,
 	shouldTriggerLockout
 };
 

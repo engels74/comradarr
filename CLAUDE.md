@@ -57,11 +57,11 @@ bun run test:db:status               # Show database status
 
 ### Python Dev Tools (run from project root)
 ```bash
-uv run --project dev-cli cr-dev menu            # Interactive TUI menu
-uv run --project dev-cli cr-dev dev                    # Dev server with temp database (deleted on exit)
-uv run --project dev-cli cr-dev dev --db-name mydb     # Dev server with named database (persisted)
-uv run --project dev-cli basedpyright src tests # Type check Python code
-uv run --project dev-cli ruff check src tests   # Lint Python code
+uv run --project dev_cli cr-dev menu            # Interactive TUI menu
+uv run --project dev_cli cr-dev dev                    # Dev server with temp database (deleted on exit)
+uv run --project dev_cli cr-dev dev --db-name mydb     # Dev server with named database (persisted)
+uv run --project dev_cli basedpyright dev_cli/src dev_cli/tests # Type check Python code
+uv run --project dev_cli ruff check dev_cli/src dev_cli/tests   # Lint Python code
 ```
 
 ## Coding Guidelines
