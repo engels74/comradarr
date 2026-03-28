@@ -4,7 +4,7 @@ import ScrollTextIcon from '@lucide/svelte/icons/scroll-text';
 import TrashIcon from '@lucide/svelte/icons/trash';
 import { onMount } from 'svelte';
 import { goto, invalidate } from '$app/navigation';
-import { page } from '$app/stores';
+import { page } from '$app/state';
 import { LogFilters, LogTable } from '$lib/components/logs';
 import * as AlertDialog from '$lib/components/ui/alert-dialog';
 import { Button } from '$lib/components/ui/button';
@@ -45,7 +45,7 @@ const currentPage = $derived(Math.floor(data.filters.offset / pageSize) + 1);
 function goToPage(pageNum: number) {
 	if (pageNum < 1 || pageNum > totalPages) return;
 
-	const params = new URLSearchParams($page.url.searchParams);
+	const params = new URLSearchParams(page.url.searchParams);
 	params.set('offset', ((pageNum - 1) * pageSize).toString());
 	goto(`/logs?${params.toString()}`);
 }

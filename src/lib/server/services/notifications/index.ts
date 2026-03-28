@@ -128,6 +128,5 @@ export {
 	type SweepCompletedData,
 	type SweepStartedData,
 	type SyncCompletedData,
-	type SyncFailedData,
-	type UpdateAvailableData
+	type SyncFailedData
 } from './templates';

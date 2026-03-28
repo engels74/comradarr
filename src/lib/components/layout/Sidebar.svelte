@@ -8,7 +8,7 @@ import PlugIcon from '@lucide/svelte/icons/plug';
 import ScrollTextIcon from '@lucide/svelte/icons/scroll-text';
 import SettingsIcon from '@lucide/svelte/icons/settings';
 import type { Component, Snippet } from 'svelte';
-import { page } from '$app/stores';
+import { page } from '$app/state';
 import comradarrIcon from '$lib/assets/comradarr-icon.svg';
 import ThemeToggle from './ThemeToggle.svelte';
 import UserMenu from './UserMenu.svelte';
@@ -37,7 +37,7 @@ const navItems: NavItem[] = [
 ];
 
 const isActive = $derived((href: string) => {
-	const pathname = $page.url.pathname;
+	const pathname = page.url.pathname;
 	if (href === '/dashboard') {
 		return pathname === '/dashboard' || pathname === '/';
 	}

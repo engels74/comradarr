@@ -112,8 +112,8 @@ export async function decrypt(encrypted: string): Promise<string> {
 
 	const [ivHex, authTagHex, ciphertextHex] = parts;
 
-	if (!ivHex || (ivHex.length !== 24 && ivHex.length !== 32)) {
-		throw new DecryptionError('Invalid IV length: expected 12 or 16 bytes');
+	if (!ivHex || ivHex.length !== 24) {
+		throw new DecryptionError('Invalid IV length: expected 12 bytes');
 	}
 	if (!authTagHex || authTagHex.length !== (AUTH_TAG_LENGTH / 8) * 2) {
 		throw new DecryptionError(

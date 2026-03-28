@@ -171,7 +171,7 @@ describe('API Key Encryption (Requirements 1.1, 36.1)', () => {
 		});
 
 		it('should throw DecryptionError for invalid IV length', async () => {
-			const shortIv = 'a'.repeat(20); // Neither 24 (12 bytes) nor 32 (16 bytes)
+			const shortIv = 'a'.repeat(20); // Not 24 (12 bytes)
 			await expect(decrypt(`${shortIv}:${'b'.repeat(32)}:${'c'.repeat(32)}`)).rejects.toThrow(
 				DecryptionError
 			);
@@ -179,20 +179,20 @@ describe('API Key Encryption (Requirements 1.1, 36.1)', () => {
 
 		it('should throw DecryptionError for invalid auth tag length', async () => {
 			const shortTag = 'b'.repeat(30); // Should be 32
-			await expect(decrypt(`${'a'.repeat(32)}:${shortTag}:${'c'.repeat(32)}`)).rejects.toThrow(
+			await expect(decrypt(`${'a'.repeat(24)}:${shortTag}:${'c'.repeat(32)}`)).rejects.toThrow(
 				DecryptionError
 			);
 		});
 
 		it('should throw DecryptionError for empty ciphertext', async () => {
-			await expect(decrypt(`${'a'.repeat(32)}:${'b'.repeat(32)}:`)).rejects.toThrow(
+			await expect(decrypt(`${'a'.repeat(24)}:${'b'.repeat(32)}:`)).rejects.toThrow(
 				DecryptionError
 			);
 		});
 
 		it('should throw DecryptionError for non-hex characters', async () => {
 			await expect(
-				decrypt(`${'g'.repeat(32)}:${'h'.repeat(32)}:${'z'.repeat(32)}`)
+				decrypt(`${'g'.repeat(24)}:${'h'.repeat(32)}:${'z'.repeat(32)}`)
 			).rejects.toThrow(DecryptionError);
 		});
 	});
@@ -247,46 +247,7 @@ describe('API Key Encryption (Requirements 1.1, 36.1)', () => {
 		});
 	});
 
-	describe('Backward Compatibility (16-byte IV)', () => {
-		it('should decrypt values encrypted with legacy 16-byte IV', async () => {
-			const keyHex = process.env.SECRET_KEY!;
-			const keyBytes = new Uint8Array(keyHex.length / 2);
-			for (let i = 0; i < keyBytes.length; i++) {
-				keyBytes[i] = parseInt(keyHex.slice(i * 2, i * 2 + 2), 16);
-			}
-			const key = await crypto.subtle.importKey(
-				'raw',
-				keyBytes.buffer as ArrayBuffer,
-				{ name: 'AES-GCM' },
-				false,
-				['encrypt', 'decrypt']
-			);
-
-			const plaintext = 'legacy-api-key-test';
-			const iv = crypto.getRandomValues(new Uint8Array(16)); // Old 16-byte IV
-			const encoded = new TextEncoder().encode(plaintext);
-			const encrypted = await crypto.subtle.encrypt(
-				{ name: 'AES-GCM', iv, tagLength: 128 },
-				key,
-				encoded
-			);
-
-			const encArray = new Uint8Array(encrypted);
-			const authTagStart = encArray.length - 16;
-			const ciphertext = encArray.slice(0, authTagStart);
-			const authTag = encArray.slice(authTagStart);
-
-			const toHex = (bytes: Uint8Array) =>
-				Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('');
-
-			const legacyEncrypted = `${toHex(iv)}:${toHex(authTag)}:${toHex(ciphertext)}`;
-
-			expect(legacyEncrypted.split(':')[0]!.length).toBe(32);
-
-			const decrypted = await decrypt(legacyEncrypted);
-			expect(decrypted).toBe(plaintext);
-		});
-
+	describe('IV Format', () => {
 		it('should produce 24-char hex IV for new encryptions', async () => {
 			const encrypted = await encrypt('new-encryption-test');
 			const ivHex = encrypted.split(':')[0]!;

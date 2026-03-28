@@ -51,8 +51,7 @@ export type NotificationEventType =
 	| 'connector_health_changed'
 	| 'sync_completed'
 	| 'sync_failed'
-	| 'app_started'
-	| 'update_available';
+	| 'app_started';
 
 export type NotificationStatus = 'pending' | 'sent' | 'failed' | 'batched';
 

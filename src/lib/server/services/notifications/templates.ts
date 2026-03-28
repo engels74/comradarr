@@ -68,13 +68,6 @@ export interface AppStartedData {
 	environment?: string;
 }
 
-export interface UpdateAvailableData {
-	currentVersion: string;
-	newVersion: string;
-	releaseUrl?: string;
-	releaseNotes?: string;
-}
-
 export interface EventDataMap {
 	sweep_started: SweepStartedData;
 	sweep_completed: SweepCompletedData;
@@ -84,7 +77,6 @@ export interface EventDataMap {
 	sync_completed: SyncCompletedData;
 	sync_failed: SyncFailedData;
 	app_started: AppStartedData;
-	update_available: UpdateAvailableData;
 }
 
 function buildSweepStartedPayload(data: SweepStartedData): NotificationPayload {
@@ -322,37 +314,6 @@ function buildAppStartedPayload(data: AppStartedData): NotificationPayload {
 	return payload;
 }
 
-function buildUpdateAvailablePayload(data: UpdateAvailableData): NotificationPayload {
-	const fields: NotificationField[] = [
-		{ name: 'Current Version', value: data.currentVersion, inline: true },
-		{ name: 'New Version', value: data.newVersion, inline: true }
-	];
-
-	if (data.releaseNotes) {
-		fields.push({
-			name: 'Release Notes',
-			value: truncateText(data.releaseNotes, 500),
-			inline: false
-		});
-	}
-
-	const payload: NotificationPayload = {
-		eventType: 'update_available',
-		title: 'Update Available',
-		message: `A new version of Comradarr is available: v${data.newVersion}`,
-		fields,
-		color: getEventColor('update_available'),
-		timestamp: new Date()
-	};
-
-	// Only include url if provided
-	if (data.releaseUrl) {
-		payload.url = data.releaseUrl;
-	}
-
-	return payload;
-}
-
 export function buildPayload<T extends NotificationEventType>(
 	eventType: T,
 	data: EventDataMap[T]
@@ -374,8 +335,6 @@ export function buildPayload<T extends NotificationEventType>(
 			return buildSyncFailedPayload(data as SyncFailedData);
 		case 'app_started':
 			return buildAppStartedPayload(data as AppStartedData);
-		case 'update_available':
-			return buildUpdateAvailablePayload(data as UpdateAvailableData);
 		default: {
 			// TypeScript exhaustiveness check
 			const _exhaustiveCheck: never = eventType;

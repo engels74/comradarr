@@ -32,8 +32,7 @@ export const NOTIFICATION_EVENT_TYPES = [
 	'connector_health_changed',
 	'sync_completed',
 	'sync_failed',
-	'app_started',
-	'update_available'
+	'app_started'
 ] as const;
 
 export type NotificationEventType = (typeof NOTIFICATION_EVENT_TYPES)[number];
@@ -193,8 +192,7 @@ export const eventTypeLabels: Record<NotificationEventType, string> = {
 	connector_health_changed: 'Connector Health Changed',
 	sync_completed: 'Sync Completed',
 	sync_failed: 'Sync Failed',
-	app_started: 'Application Started',
-	update_available: 'Update Available'
+	app_started: 'Application Started'
 };
 
 export const eventTypeDescriptions: Record<NotificationEventType, string> = {
@@ -205,8 +203,7 @@ export const eventTypeDescriptions: Record<NotificationEventType, string> = {
 	connector_health_changed: 'When a connector health status changes',
 	sync_completed: 'When a library sync completes successfully',
 	sync_failed: 'When a library sync fails',
-	app_started: 'When Comradarr starts up',
-	update_available: 'When a new version is available'
+	app_started: 'When Comradarr starts up'
 };
 
 export const baseChannelLabels = {

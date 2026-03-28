@@ -1,7 +1,7 @@
 <script lang="ts">
 import { untrack } from 'svelte';
 import { goto } from '$app/navigation';
-import { page } from '$app/stores';
+import { page } from '$app/state';
 import { BulkActionBar, ContentFilters, VirtualizedContentTable } from '$lib/components/content';
 import { Button } from '$lib/components/ui/button';
 import * as Dialog from '$lib/components/ui/dialog';
@@ -73,7 +73,7 @@ function jumpToPage() {
 	}
 
 	// Navigate to the target page
-	const params = new URLSearchParams($page.url.searchParams);
+	const params = new URLSearchParams(page.url.searchParams);
 	params.set('page', targetPage.toString());
 	goto(`/content?${params.toString()}`);
 
@@ -93,7 +93,7 @@ async function loadMore() {
 
 	try {
 		// Build API URL with current filters
-		const params = new URLSearchParams($page.url.searchParams);
+		const params = new URLSearchParams(page.url.searchParams);
 		params.set('cursor', nextCursor);
 		params.set('offset', loadedItems.length.toString());
 

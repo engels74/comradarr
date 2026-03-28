@@ -73,38 +73,6 @@ async function validateSecretKeyMatch(secretKeyVerifier: string): Promise<boolea
 	}
 }
 
-async function _getCurrentSchemaVersion(): Promise<SchemaVersion> {
-	try {
-		const journalPath = './drizzle/meta/_journal.json';
-		const journalContent = await readFile(journalPath, 'utf-8');
-		const journal = JSON.parse(journalContent) as {
-			entries: Array<{ idx: number; tag: string }>;
-		};
-
-		const lastEntry = journal.entries.at(-1);
-
-		if (!lastEntry) {
-			return {
-				appVersion: '0.0.1',
-				lastMigration: 'none',
-				migrationIndex: -1
-			};
-		}
-
-		return {
-			appVersion: '0.0.1',
-			lastMigration: lastEntry.tag,
-			migrationIndex: lastEntry.idx
-		};
-	} catch {
-		return {
-			appVersion: '0.0.1',
-			lastMigration: 'unknown',
-			migrationIndex: -1
-		};
-	}
-}
-
 async function getPendingMigrations(backupSchemaVersion: SchemaVersion): Promise<string[]> {
 	try {
 		const journalPath = './drizzle/meta/_journal.json';

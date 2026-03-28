@@ -1,6 +1,6 @@
 <script lang="ts">
 import { goto } from '$app/navigation';
-import { page } from '$app/stores';
+import { page } from '$app/state';
 import { Input } from '$lib/components/ui/input';
 import type { QueueConnector, QueueStatusCounts } from '$lib/server/db/queries/queue';
 
@@ -11,11 +11,11 @@ interface Props {
 
 let { connectors, statusCounts }: Props = $props();
 
-let search = $state($page.url.searchParams.get('search') ?? '');
-let connectorId = $state($page.url.searchParams.get('connector') ?? '');
-let contentType = $state($page.url.searchParams.get('type') ?? 'all');
-let queueState = $state($page.url.searchParams.get('state') ?? 'all');
-let searchType = $state($page.url.searchParams.get('searchType') ?? 'all');
+let search = $state(page.url.searchParams.get('search') ?? '');
+let connectorId = $state(page.url.searchParams.get('connector') ?? '');
+let contentType = $state(page.url.searchParams.get('type') ?? 'all');
+let queueState = $state(page.url.searchParams.get('state') ?? 'all');
+let searchType = $state(page.url.searchParams.get('searchType') ?? 'all');
 
 let searchTimeout: ReturnType<typeof setTimeout>;
 
@@ -29,7 +29,7 @@ function updateFilters() {
 	if (searchType !== 'all') params.set('searchType', searchType);
 
 	// Preserve pagination
-	const currentLimit = $page.url.searchParams.get('limit');
+	const currentLimit = page.url.searchParams.get('limit');
 	if (currentLimit) params.set('limit', currentLimit);
 
 	goto(`/queue?${params.toString()}`, { replaceState: true, keepFocus: true });

@@ -400,15 +400,13 @@ export const actions: Actions = {
 		const data = {
 			appName: formData.get('appName'),
 			timezone: formData.get('timezone'),
-			logLevel: formData.get('logLevel'),
-			checkForUpdates: formData.get('checkForUpdates') === 'on'
+			logLevel: formData.get('logLevel')
 		};
 
 		const formValues = {
 			appName: data.appName?.toString() ?? '',
 			timezone: data.timezone?.toString() ?? '',
-			logLevel: data.logLevel?.toString() ?? '',
-			checkForUpdates: data.checkForUpdates
+			logLevel: data.logLevel?.toString() ?? ''
 		};
 
 		const result = v.safeParse(GeneralSettingsSchema, data);
@@ -437,8 +435,7 @@ export const actions: Actions = {
 			await updateGeneralSettings({
 				appName: config.appName,
 				timezone: config.timezone,
-				logLevel: config.logLevel,
-				checkForUpdates: config.checkForUpdates
+				logLevel: config.logLevel
 			});
 
 			setLogLevel(config.logLevel as LogLevel);

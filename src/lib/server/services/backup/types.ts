@@ -47,7 +47,7 @@ export interface TableExport {
 }
 
 export interface BackupFile {
-	/** Format version for backward compatibility */
+	/** Backup format version */
 	formatVersion: 1;
 
 	/** Backup metadata */
