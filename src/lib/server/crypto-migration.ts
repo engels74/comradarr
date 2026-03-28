@@ -42,7 +42,7 @@ export async function migrateEncryptedValues(): Promise<MigrationResult> {
 			const newEncrypted = await reEncrypt(connector.apiKeyEncrypted);
 			await db
 				.update(connectors)
-				.set({ apiKeyEncrypted: newEncrypted })
+				.set({ apiKeyEncrypted: newEncrypted, updatedAt: new Date() })
 				.where(eq(connectors.id, connector.id));
 			result.connectors.migrated++;
 		} catch (error) {
@@ -67,7 +67,7 @@ export async function migrateEncryptedValues(): Promise<MigrationResult> {
 			const newEncrypted = await reEncrypt(channel.configEncrypted);
 			await db
 				.update(notificationChannels)
-				.set({ configEncrypted: newEncrypted })
+				.set({ configEncrypted: newEncrypted, updatedAt: new Date() })
 				.where(eq(notificationChannels.id, channel.id));
 			result.notificationChannels.migrated++;
 		} catch (error) {
@@ -92,7 +92,7 @@ export async function migrateEncryptedValues(): Promise<MigrationResult> {
 			const newEncrypted = await reEncrypt(instance.apiKeyEncrypted);
 			await db
 				.update(prowlarrInstances)
-				.set({ apiKeyEncrypted: newEncrypted })
+				.set({ apiKeyEncrypted: newEncrypted, updatedAt: new Date() })
 				.where(eq(prowlarrInstances.id, instance.id));
 			result.prowlarrInstances.migrated++;
 		} catch (error) {

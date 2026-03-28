@@ -690,6 +690,13 @@ export const actions: Actions = {
 			});
 		}
 
+		if (!/^[0-9a-f]{64}$/.test(revocationId)) {
+			return fail(400, {
+				action: 'securityRevokeSession',
+				error: 'Invalid revocation ID format'
+			});
+		}
+
 		if (locals.sessionId) {
 			const currentRevocationId = await hashSessionId(locals.sessionId);
 			if (revocationId === currentRevocationId) {
