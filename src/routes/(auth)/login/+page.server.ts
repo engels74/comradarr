@@ -5,7 +5,7 @@
 import { fail, redirect } from '@sveltejs/kit';
 import * as v from 'valibot';
 import { LoginSchema } from '$lib/schemas/auth';
-import { verifyPassword } from '$lib/server/auth/password';
+import { isPasswordResetRequired, verifyPassword } from '$lib/server/auth/password';
 import { createSession } from '$lib/server/auth/session';
 import {
 	checkAndResetLockout,
@@ -76,6 +76,19 @@ export const actions: Actions = {
 			});
 			return fail(400, {
 				error: `Account is locked. Try again in ${remainingMinutes} minute${remainingMinutes !== 1 ? 's' : ''}.`,
+				username
+			});
+		}
+
+		if (isPasswordResetRequired(user.passwordHash)) {
+			logger.warn('Login attempt with reset-required password', {
+				username,
+				userId: user.id,
+				ipAddress
+			});
+			return fail(400, {
+				error:
+					'Your password was reset during backup restore. Please contact the administrator to set a new password.',
 				username
 			});
 		}

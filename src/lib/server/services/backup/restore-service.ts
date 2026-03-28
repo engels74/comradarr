@@ -1,6 +1,7 @@
 import { readFile } from 'node:fs/promises';
 import { sql } from 'drizzle-orm';
 import { getTableColumns } from 'drizzle-orm/utils';
+import { PASSWORD_RESET_PLACEHOLDER } from '$lib/server/auth/password';
 import { DecryptionError, decrypt } from '$lib/server/crypto';
 import { db } from '$lib/server/db';
 import * as schema from '$lib/server/db/schema';
@@ -233,7 +234,7 @@ async function insertTableData(tableExport: TableExport): Promise<number> {
 			const typedRow = row as Record<string, unknown>;
 			const values = validJsKeys.map((jsKey) => {
 				if (needsPasswordHashPlaceholder && jsKey === 'passwordHash') {
-					return escapeSqlValue('!RESET_REQUIRED');
+					return escapeSqlValue(PASSWORD_RESET_PLACEHOLDER);
 				}
 				return escapeSqlValue(typedRow[jsKey]);
 			});

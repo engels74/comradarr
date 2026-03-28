@@ -159,7 +159,7 @@ export async function hasUsers(): Promise<boolean> {
 	return result.length > 0;
 }
 
-async function hashSessionId(sessionId: string): Promise<string> {
+export async function hashSessionId(sessionId: string): Promise<string> {
 	const data = new TextEncoder().encode(sessionId);
 	const hashBuffer = await crypto.subtle.digest('SHA-256', data);
 	return Array.from(new Uint8Array(hashBuffer))

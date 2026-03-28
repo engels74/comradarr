@@ -46,7 +46,8 @@ import {
 	deleteOtherUserSessions,
 	deleteUserSessionByRevocationId,
 	getUserById,
-	getUserSessions
+	getUserSessions,
+	hashSessionId
 } from '$lib/server/db/queries/auth';
 import {
 	createNotificationChannel,
@@ -687,6 +688,16 @@ export const actions: Actions = {
 				action: 'securityRevokeSession',
 				error: 'Revocation ID is required'
 			});
+		}
+
+		if (locals.sessionId) {
+			const currentRevocationId = await hashSessionId(locals.sessionId);
+			if (revocationId === currentRevocationId) {
+				return fail(400, {
+					action: 'securityRevokeSession',
+					error: 'Cannot revoke your current session. Use logout instead.'
+				});
+			}
 		}
 
 		try {

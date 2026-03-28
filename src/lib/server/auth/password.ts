@@ -12,6 +12,12 @@ const ARGON2_OPTIONS = {
 	algorithm: 2
 } as const;
 
+export const PASSWORD_RESET_PLACEHOLDER = '!RESET_REQUIRED';
+
+export function isPasswordResetRequired(passwordHash: string): boolean {
+	return passwordHash === PASSWORD_RESET_PLACEHOLDER;
+}
+
 export async function hashPassword(password: string): Promise<string> {
 	return hash(password, ARGON2_OPTIONS);
 }
