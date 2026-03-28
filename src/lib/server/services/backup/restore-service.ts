@@ -1,7 +1,6 @@
 import { readFile } from 'node:fs/promises';
 import { sql } from 'drizzle-orm';
 import { getTableColumns } from 'drizzle-orm/utils';
-import { PASSWORD_RESET_PLACEHOLDER } from '$lib/server/auth/password';
 import { DecryptionError, decrypt } from '$lib/server/crypto';
 import { db } from '$lib/server/db';
 import * as schema from '$lib/server/db/schema';
@@ -204,19 +203,11 @@ async function insertTableData(tableExport: TableExport): Promise<number> {
 		logger.warn('Skipping unknown columns in backup data', { tableName, invalidColumns });
 	}
 
-	let validJsKeys = rawColumns.filter((c) => jsKeyToSqlName.has(c));
+	const validJsKeys = rawColumns.filter((c) => jsKeyToSqlName.has(c));
 
 	if (validJsKeys.length === 0) {
 		logger.warn('Table has no columns, skipping', { tableName });
 		return 0;
-	}
-
-	// Users table: inject placeholder hash when passwordHash is missing (stripped for security)
-	const needsPasswordHashPlaceholder =
-		tableName === 'users' && !validJsKeys.includes('passwordHash');
-	if (needsPasswordHashPlaceholder) {
-		validJsKeys = [...validJsKeys, 'passwordHash'];
-		logger.info('Injecting placeholder passwordHash for users table (password reset required)');
 	}
 
 	// Build INSERT statement with OVERRIDING SYSTEM VALUE for IDENTITY columns
@@ -232,12 +223,7 @@ async function insertTableData(tableExport: TableExport): Promise<number> {
 
 		const valueRows = batch.map((row) => {
 			const typedRow = row as Record<string, unknown>;
-			const values = validJsKeys.map((jsKey) => {
-				if (needsPasswordHashPlaceholder && jsKey === 'passwordHash') {
-					return escapeSqlValue(PASSWORD_RESET_PLACEHOLDER);
-				}
-				return escapeSqlValue(typedRow[jsKey]);
-			});
+			const values = validJsKeys.map((jsKey) => escapeSqlValue(typedRow[jsKey]));
 			return `(${values.join(', ')})`;
 		});
 

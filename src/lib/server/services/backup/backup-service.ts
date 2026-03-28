@@ -153,14 +153,6 @@ export async function createBackup(options?: BackupOptions): Promise<BackupResul
 				continue;
 			}
 			const tableExport = await exportTable(tableName);
-
-			// Strip password hashes from users table — these should never leave the database
-			if (tableName === 'users') {
-				for (const row of tableExport.rows) {
-					delete row.passwordHash;
-				}
-			}
-
 			tables.push(tableExport);
 			logger.info('Exported table', { tableName, rowCount: tableExport.rowCount });
 		}
