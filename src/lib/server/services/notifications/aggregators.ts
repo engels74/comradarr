@@ -431,8 +431,3 @@ export function buildAggregatePayload(
 		}
 	}
 }
-
-export interface AggregatedPayloadMetadata {
-	individualCount: number;
-	[key: string]: unknown;
-}

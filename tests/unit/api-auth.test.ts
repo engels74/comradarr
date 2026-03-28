@@ -4,13 +4,12 @@
  * Tests cover:
  * - requireAuth() behavior for authenticated and unauthenticated requests
  * - requireScope() behavior for different scopes and auth types
- * - canWrite() and canRead() helper functions
  *
 
  */
 
 import { describe, expect, it } from 'vitest';
-import { canRead, canWrite, requireAuth, requireScope } from '../../src/lib/server/auth/api-auth';
+import { requireAuth, requireScope } from '../../src/lib/server/auth/api-auth';
 
 // Mock App.Locals for testing
 function createLocals(overrides: Partial<App.Locals> = {}): App.Locals {
@@ -210,100 +209,6 @@ describe('requireScope', () => {
 	});
 });
 
-describe('canWrite', () => {
-	it('should return false for unauthenticated request', () => {
-		const locals = createLocals({ user: null });
-		expect(canWrite(locals)).toBe(false);
-	});
-
-	it('should return true for session authenticated user', () => {
-		const locals = createLocals({
-			user: createAuthenticatedUser()
-		});
-		expect(canWrite(locals)).toBe(true);
-	});
-
-	it('should return true for local bypass user', () => {
-		const locals = createLocals({
-			user: {
-				id: 0,
-				username: 'local',
-				displayName: 'Local Network',
-				role: 'admin'
-			},
-			isLocalBypass: true
-		});
-		expect(canWrite(locals)).toBe(true);
-	});
-
-	it('should return true for API key with full scope', () => {
-		const locals = createLocals({
-			user: createAuthenticatedUser(),
-			isApiKey: true,
-			apiKeyScope: 'full',
-			apiKeyId: 1
-		});
-		expect(canWrite(locals)).toBe(true);
-	});
-
-	it('should return false for API key with read scope', () => {
-		const locals = createLocals({
-			user: createAuthenticatedUser(),
-			isApiKey: true,
-			apiKeyScope: 'read',
-			apiKeyId: 1
-		});
-		expect(canWrite(locals)).toBe(false);
-	});
-});
-
-describe('canRead', () => {
-	it('should return false for unauthenticated request', () => {
-		const locals = createLocals({ user: null });
-		expect(canRead(locals)).toBe(false);
-	});
-
-	it('should return true for session authenticated user', () => {
-		const locals = createLocals({
-			user: createAuthenticatedUser()
-		});
-		expect(canRead(locals)).toBe(true);
-	});
-
-	it('should return true for local bypass user', () => {
-		const locals = createLocals({
-			user: {
-				id: 0,
-				username: 'local',
-				displayName: 'Local Network',
-				role: 'admin'
-			},
-			isLocalBypass: true
-		});
-		expect(canRead(locals)).toBe(true);
-	});
-
-	it('should return true for API key with full scope', () => {
-		const locals = createLocals({
-			user: createAuthenticatedUser(),
-			isApiKey: true,
-			apiKeyScope: 'full',
-			apiKeyId: 1
-		});
-		expect(canRead(locals)).toBe(true);
-	});
-
-	it('should return true for API key with read scope', () => {
-		const locals = createLocals({
-			user: createAuthenticatedUser(),
-			isApiKey: true,
-			apiKeyScope: 'read',
-			apiKeyId: 1
-		});
-		expect(canRead(locals)).toBe(true);
-	});
-});
-
 describe('scope hierarchy', () => {
 	it('should enforce that full scope allows all operations', () => {
 		const locals = createLocals({
@@ -313,11 +218,8 @@ describe('scope hierarchy', () => {
 			apiKeyId: 1
 		});
 
-		// Full scope should allow both read and write
 		expect(() => requireScope(locals, 'read')).not.toThrow();
 		expect(() => requireScope(locals, 'full')).not.toThrow();
-		expect(canRead(locals)).toBe(true);
-		expect(canWrite(locals)).toBe(true);
 	});
 
 	it('should enforce that read scope only allows read operations', () => {
@@ -328,10 +230,7 @@ describe('scope hierarchy', () => {
 			apiKeyId: 1
 		});
 
-		// Read scope should only allow read operations
 		expect(() => requireScope(locals, 'read')).not.toThrow();
 		expect(() => requireScope(locals, 'full')).toThrow();
-		expect(canRead(locals)).toBe(true);
-		expect(canWrite(locals)).toBe(false);
 	});
 });

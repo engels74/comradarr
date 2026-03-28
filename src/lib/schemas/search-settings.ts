@@ -45,7 +45,6 @@ export const PriorityWeightsSchema = v.object({
 	)
 });
 
-export type PriorityWeightsInput = v.InferInput<typeof PriorityWeightsSchema>;
 export type PriorityWeightsOutput = v.InferOutput<typeof PriorityWeightsSchema>;
 
 export const SeasonPackThresholdsSchema = v.object({
@@ -63,7 +62,6 @@ export const SeasonPackThresholdsSchema = v.object({
 	)
 });
 
-export type SeasonPackThresholdsInput = v.InferInput<typeof SeasonPackThresholdsSchema>;
 export type SeasonPackThresholdsOutput = v.InferOutput<typeof SeasonPackThresholdsSchema>;
 
 export const CooldownConfigSchema = v.object({
@@ -85,7 +83,6 @@ export const CooldownConfigSchema = v.object({
 	jitter: v.boolean('Jitter must be a boolean')
 });
 
-export type CooldownConfigInput = v.InferInput<typeof CooldownConfigSchema>;
 export type CooldownConfigOutput = v.InferOutput<typeof CooldownConfigSchema>;
 
 export const RetryConfigSchema = v.object({
@@ -97,7 +94,6 @@ export const RetryConfigSchema = v.object({
 	)
 });
 
-export type RetryConfigInput = v.InferInput<typeof RetryConfigSchema>;
 export type RetryConfigOutput = v.InferOutput<typeof RetryConfigSchema>;
 
 export const BacklogConfigSchema = v.object({
@@ -116,9 +112,6 @@ export const BacklogConfigSchema = v.object({
 	)
 });
 
-export type BacklogConfigInput = v.InferInput<typeof BacklogConfigSchema>;
-export type BacklogConfigOutput = v.InferOutput<typeof BacklogConfigSchema>;
-
 export const SearchSettingsSchema = v.object({
 	priorityWeights: PriorityWeightsSchema,
 	seasonPackThresholds: SeasonPackThresholdsSchema,
@@ -127,7 +120,6 @@ export const SearchSettingsSchema = v.object({
 	backlogConfig: BacklogConfigSchema
 });
 
-export type SearchSettingsInput = v.InferInput<typeof SearchSettingsSchema>;
 export type SearchSettingsOutput = v.InferOutput<typeof SearchSettingsSchema>;
 
 export const priorityWeightLabels: Record<keyof PriorityWeightsOutput, string> = {

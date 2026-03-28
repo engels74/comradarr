@@ -68,9 +68,6 @@ export const BaseChannelSchema = v.object({
 	quietHoursTimezone: v.optional(v.string(), 'UTC')
 });
 
-export type BaseChannelInput = v.InferInput<typeof BaseChannelSchema>;
-export type BaseChannelOutput = v.InferOutput<typeof BaseChannelSchema>;
-
 export const DiscordConfigSchema = v.object({
 	webhookUrl: v.pipe(
 		v.string('Webhook URL is required'),
@@ -84,9 +81,6 @@ export const DiscordConfigSchema = v.object({
 	avatarUrl: v.optional(v.pipe(v.string(), v.trim(), v.url('Invalid avatar URL')))
 });
 
-export type DiscordConfigInput = v.InferInput<typeof DiscordConfigSchema>;
-export type DiscordConfigOutput = v.InferOutput<typeof DiscordConfigSchema>;
-
 export const TelegramConfigSchema = v.object({
 	botToken: v.pipe(
 		v.string('Bot token is required'),
@@ -98,9 +92,6 @@ export const TelegramConfigSchema = v.object({
 	disableWebPagePreview: v.optional(v.boolean(), false),
 	disableNotification: v.optional(v.boolean(), false)
 });
-
-export type TelegramConfigInput = v.InferInput<typeof TelegramConfigSchema>;
-export type TelegramConfigOutput = v.InferOutput<typeof TelegramConfigSchema>;
 
 export const SlackConfigSchema = v.object({
 	webhookUrl: v.pipe(
@@ -119,9 +110,6 @@ export const SlackConfigSchema = v.object({
 		v.pipe(v.string(), v.trim(), v.maxLength(50, 'Icon emoji must be 50 characters or less'))
 	)
 });
-
-export type SlackConfigInput = v.InferInput<typeof SlackConfigSchema>;
-export type SlackConfigOutput = v.InferOutput<typeof SlackConfigSchema>;
 
 export const EmailConfigSchema = v.object({
 	host: v.pipe(
@@ -146,9 +134,6 @@ export const EmailConfigSchema = v.object({
 	)
 });
 
-export type EmailConfigInput = v.InferInput<typeof EmailConfigSchema>;
-export type EmailConfigOutput = v.InferOutput<typeof EmailConfigSchema>;
-
 export const WebhookConfigSchema = v.object({
 	url: v.pipe(v.string('Webhook URL is required'), v.trim(), v.url('Invalid webhook URL')),
 	method: v.optional(v.picklist(['POST', 'PUT']), 'POST'),
@@ -158,9 +143,6 @@ export const WebhookConfigSchema = v.object({
 	signatureHeader: v.optional(v.pipe(v.string(), v.trim()), 'X-Comradarr-Signature'),
 	timestampHeader: v.optional(v.pipe(v.string(), v.trim()), 'X-Comradarr-Timestamp')
 });
-
-export type WebhookConfigInput = v.InferInput<typeof WebhookConfigSchema>;
-export type WebhookConfigOutput = v.InferOutput<typeof WebhookConfigSchema>;
 
 export const channelTypeLabels: Record<NotificationChannelType, string> = {
 	discord: 'Discord',
@@ -193,17 +175,6 @@ export const eventTypeLabels: Record<NotificationEventType, string> = {
 	sync_completed: 'Sync Completed',
 	sync_failed: 'Sync Failed',
 	app_started: 'Application Started'
-};
-
-export const eventTypeDescriptions: Record<NotificationEventType, string> = {
-	sweep_started: 'When a sweep cycle begins scanning a connector',
-	sweep_completed: 'When a sweep cycle finishes with discovered items',
-	search_success: 'When a search finds and grabs content',
-	search_exhausted: 'When a search has reached maximum retry attempts',
-	connector_health_changed: 'When a connector health status changes',
-	sync_completed: 'When a library sync completes successfully',
-	sync_failed: 'When a library sync fails',
-	app_started: 'When Comradarr starts up'
 };
 
 export const baseChannelLabels = {
@@ -318,59 +289,8 @@ export function isImplementedChannelType(type: string): type is ImplementedChann
 	return IMPLEMENTED_CHANNEL_TYPES.includes(type as ImplementedChannelType);
 }
 
-export function getChannelConfigSchema(type: NotificationChannelType) {
-	switch (type) {
-		case 'discord':
-			return DiscordConfigSchema;
-		case 'telegram':
-			return TelegramConfigSchema;
-		case 'slack':
-			return SlackConfigSchema;
-		case 'email':
-			return EmailConfigSchema;
-		case 'webhook':
-			return WebhookConfigSchema;
-		default:
-			return null;
-	}
-}
-
-export function getChannelFieldLabels(type: NotificationChannelType): Record<string, string> {
-	switch (type) {
-		case 'discord':
-			return discordFieldLabels;
-		case 'telegram':
-			return telegramFieldLabels;
-		case 'slack':
-			return slackFieldLabels;
-		case 'email':
-			return emailFieldLabels;
-		case 'webhook':
-			return webhookFieldLabels;
-		default:
-			return {};
-	}
-}
-
-export function getChannelFieldDescriptions(type: NotificationChannelType): Record<string, string> {
-	switch (type) {
-		case 'discord':
-			return discordFieldDescriptions;
-		case 'telegram':
-			return telegramFieldDescriptions;
-		case 'slack':
-			return slackFieldDescriptions;
-		case 'email':
-			return emailFieldDescriptions;
-		case 'webhook':
-			return webhookFieldDescriptions;
-		default:
-			return {};
-	}
-}
-
 // Fields requiring encryption for security
-export const sensitiveFields: Record<ImplementedChannelType, string[]> = {
+const sensitiveFields: Record<ImplementedChannelType, string[]> = {
 	discord: ['webhookUrl'],
 	telegram: ['botToken'],
 	slack: ['webhookUrl'],

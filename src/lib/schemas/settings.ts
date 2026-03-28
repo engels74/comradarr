@@ -34,9 +34,6 @@ export const GeneralSettingsSchema = v.object({
 	logLevel: v.pipe(v.string('Log level is required'), v.picklist(logLevels, 'Invalid log level'))
 });
 
-export type GeneralSettingsInput = v.InferInput<typeof GeneralSettingsSchema>;
-export type GeneralSettingsOutput = v.InferOutput<typeof GeneralSettingsSchema>;
-
 export const authModes = ['full', 'local_bypass'] as const;
 export type AuthMode = (typeof authModes)[number];
 
@@ -57,9 +54,6 @@ export const AuthModeSchema = v.object({
 		v.picklist(authModes, 'Invalid authentication mode')
 	)
 });
-
-export type AuthModeInput = v.InferInput<typeof AuthModeSchema>;
-export type AuthModeOutput = v.InferOutput<typeof AuthModeSchema>;
 
 export const PasswordChangeSchema = v.pipe(
 	v.object({
@@ -86,9 +80,6 @@ export const PasswordChangeSchema = v.pipe(
 	)
 );
 
-export type PasswordChangeInput = v.InferInput<typeof PasswordChangeSchema>;
-export type PasswordChangeOutput = v.InferOutput<typeof PasswordChangeSchema>;
-
 export const BackupSettingsSchema = v.object({
 	scheduledEnabled: v.boolean('Scheduled enabled must be a boolean'),
 	scheduledCron: v.pipe(
@@ -103,9 +94,6 @@ export const BackupSettingsSchema = v.object({
 		v.maxValue(100, 'Retention count cannot exceed 100')
 	)
 });
-
-export type BackupSettingsInput = v.InferInput<typeof BackupSettingsSchema>;
-export type BackupSettingsOutput = v.InferOutput<typeof BackupSettingsSchema>;
 
 export const apiKeyScopes = ['read', 'full'] as const;
 export type ApiKeyScope = (typeof apiKeyScopes)[number];
@@ -171,9 +159,6 @@ export const CreateApiKeySchema = v.object({
 	)
 });
 
-export type CreateApiKeyInput = v.InferInput<typeof CreateApiKeySchema>;
-export type CreateApiKeyOutput = v.InferOutput<typeof CreateApiKeySchema>;
-
 export const UpdateApiKeyRateLimitSchema = v.object({
 	rateLimitPreset: v.pipe(
 		v.string('Rate limit preset is required'),
@@ -187,9 +172,6 @@ export const UpdateApiKeyRateLimitSchema = v.object({
 		)
 	)
 });
-
-export type UpdateApiKeyRateLimitInput = v.InferInput<typeof UpdateApiKeyRateLimitSchema>;
-export type UpdateApiKeyRateLimitOutput = v.InferOutput<typeof UpdateApiKeyRateLimitSchema>;
 
 export function parseRateLimitValue(
 	preset: ApiKeyRateLimitPreset | undefined,

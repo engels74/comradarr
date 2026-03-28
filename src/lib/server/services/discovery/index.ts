@@ -1,11 +1,5 @@
-export { discoverGaps, getGapStats } from './gap-detector';
+export { discoverGaps } from './gap-detector';
 
-export type {
-	ContentGap,
-	DiscoveryOptions,
-	DiscoveryStats,
-	GapDiscoveryResult,
-	UpgradeDiscoveryResult
-} from './types';
+export type { DiscoveryOptions, GapDiscoveryResult, UpgradeDiscoveryResult } from './types';
 
-export { discoverUpgrades, getUpgradeStats } from './upgrade-detector';
+export { discoverUpgrades } from './upgrade-detector';

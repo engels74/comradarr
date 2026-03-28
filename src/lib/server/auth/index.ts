@@ -1,4 +1,4 @@
-export { type ApiKeyScope, canRead, canWrite, requireAuth, requireScope } from './api-auth';
+export { type ApiKeyScope, requireAuth, requireScope } from './api-auth';
 export {
 	getClientIP,
 	getRawSocketIP,

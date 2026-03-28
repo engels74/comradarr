@@ -1,15 +1,4 @@
-export {
-	calculateNextEligibleTime,
-	calculateNextEligibleTimeWithConfig,
-	shouldMarkExhausted
-} from './backoff';
-export {
-	BATCHING_CONFIG,
-	DEFAULT_PRIORITY_WEIGHTS,
-	PRIORITY_CONSTANTS,
-	QUEUE_CONFIG,
-	STATE_TRANSITION_CONFIG
-} from './config';
+export { QUEUE_CONFIG } from './config';
 export type {
 	BatchingConfig,
 	BatchingDecision,
@@ -30,22 +19,12 @@ export {
 	groupEpisodesBySeries,
 	isSeasonFullyAired
 } from './episode-batcher';
-export { calculatePriority } from './priority-calculator';
-export {
-	clearQueue,
-	dequeuePriorityItems,
-	enqueuePendingItems,
-	getQueueStatus,
-	pauseQueue,
-	resumeQueue
-} from './queue-service';
-export type { DispatchFailureReason, DispatchOptions, DispatchResult } from './search-dispatcher';
-export { dispatchBatch, dispatchSearch } from './search-dispatcher';
+export { dequeuePriorityItems, enqueuePendingItems } from './queue-service';
+export type { DispatchOptions, DispatchResult } from './search-dispatcher';
+export { dispatchSearch } from './search-dispatcher';
 export {
 	cleanupOrphanedSearchingItems,
-	getSearchState,
 	markSearchDispatched,
-	markSearchExhausted,
 	markSearchFailed,
 	reenqueueEligibleCooldownItems,
 	revertToQueued,

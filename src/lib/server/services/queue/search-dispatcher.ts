@@ -39,13 +39,6 @@ export interface DispatchResult {
 	connectorPaused?: boolean;
 }
 
-export type DispatchFailureReason =
-	| 'throttled'
-	| 'rate_limited'
-	| 'connector_not_found'
-	| 'api_error'
-	| 'invalid_options';
-
 async function createConnectorClient(
 	connectorId: number
 ): Promise<{ client: SonarrClient | RadarrClient | WhisparrClient; type: string } | null> {
@@ -352,67 +345,4 @@ export async function dispatchSearch(
 
 		throw error;
 	}
-}
-
-// Stops processing on rate limit to prevent overwhelming *arr API
-export async function dispatchBatch(
-	dispatches: Array<{
-		connectorId: number;
-		searchRegistryId: number;
-		contentType: ContentType;
-		searchType: SearchType;
-		options: DispatchOptions;
-	}>
-): Promise<DispatchResult[]> {
-	if (dispatches.length === 0) {
-		return [];
-	}
-
-	const startTime = Date.now();
-	const connectorId = dispatches[0]!.connectorId;
-	logger.info('Processing search batch', { batchSize: dispatches.length, connectorId });
-
-	const results: DispatchResult[] = [];
-
-	for (const dispatch of dispatches) {
-		const result = await dispatchSearch(
-			dispatch.connectorId,
-			dispatch.searchRegistryId,
-			dispatch.contentType,
-			dispatch.searchType,
-			dispatch.options
-		);
-
-		results.push(result);
-
-		if (result.rateLimited && result.connectorPaused) {
-			const remainingIndex = dispatches.indexOf(dispatch) + 1;
-			for (let i = remainingIndex; i < dispatches.length; i++) {
-				const remaining = dispatches[i]!;
-				results.push({
-					success: false,
-					searchRegistryId: remaining.searchRegistryId,
-					connectorId: remaining.connectorId,
-					error: 'Skipped: connector paused due to rate limiting',
-					rateLimited: true
-				});
-			}
-			break;
-		}
-	}
-
-	const durationMs = Date.now() - startTime;
-	const successCount = results.filter((r) => r.success).length;
-	const failureCount = results.filter((r) => !r.success && !r.rateLimited).length;
-	const skippedDueToRateLimit = results.filter((r) => r.rateLimited).length;
-
-	logger.info('Search batch completed', {
-		totalDispatched: results.length,
-		successCount,
-		failureCount,
-		skippedDueToRateLimit,
-		durationMs
-	});
-
-	return results;
 }

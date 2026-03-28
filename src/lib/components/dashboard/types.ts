@@ -93,7 +93,7 @@ export interface SerializedConnectorCompletion {
 /**
  * Optional context for jobs that need additional state information.
  */
-export interface ScheduledJobContext {
+interface ScheduledJobContext {
 	/** Total items across all connector queues */
 	totalQueueDepth?: number;
 	/** Number of enabled connectors with healthy/degraded status */

@@ -1,26 +1,8 @@
 import { calculateBackoffDelay } from '$lib/server/connectors/common/retry.js';
 import type { RetryConfig } from '$lib/server/connectors/common/types.js';
-import { BACKLOG_CONFIG, getStateTransitionConfig, STATE_TRANSITION_CONFIG } from './config';
+import { BACKLOG_CONFIG, getStateTransitionConfig } from './config';
 
-/** Calculate next retry time using exponential backoff. */
-export function calculateNextEligibleTime(attemptCount: number, now: Date = new Date()): Date {
-	const config: Required<RetryConfig> = {
-		maxRetries: STATE_TRANSITION_CONFIG.MAX_ATTEMPTS,
-		baseDelay: STATE_TRANSITION_CONFIG.COOLDOWN_BASE_DELAY,
-		maxDelay: STATE_TRANSITION_CONFIG.COOLDOWN_MAX_DELAY,
-		multiplier: STATE_TRANSITION_CONFIG.COOLDOWN_MULTIPLIER,
-		jitter: STATE_TRANSITION_CONFIG.COOLDOWN_JITTER
-	};
-
-	const delayMs = calculateBackoffDelay(Math.max(0, attemptCount - 1), config);
-	return new Date(now.getTime() + delayMs);
-}
-
-export function shouldMarkExhausted(attemptCount: number): boolean {
-	return attemptCount >= STATE_TRANSITION_CONFIG.MAX_ATTEMPTS;
-}
-
-/** Async version using database-configured cooldown settings. */
+/** Calculate next retry time using database-configured cooldown settings. */
 export async function calculateNextEligibleTimeWithConfig(
 	attemptCount: number,
 	now: Date = new Date()

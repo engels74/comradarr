@@ -1,8 +1,6 @@
 import * as v from 'valibot';
 
 export const sweepTypes = ['incremental', 'full_reconciliation'] as const;
-export type SweepType = (typeof sweepTypes)[number];
-
 export const timezoneOptions = [
 	'UTC',
 	'America/New_York',
@@ -56,10 +54,4 @@ export const ScheduleSchema = v.object({
 	)
 });
 
-export type ScheduleInput = v.InferInput<typeof ScheduleSchema>;
-export type ScheduleOutput = v.InferOutput<typeof ScheduleSchema>;
-
 export const ScheduleUpdateSchema = ScheduleSchema;
-
-export type ScheduleUpdateInput = v.InferInput<typeof ScheduleUpdateSchema>;
-export type ScheduleUpdateOutput = v.InferOutput<typeof ScheduleUpdateSchema>;

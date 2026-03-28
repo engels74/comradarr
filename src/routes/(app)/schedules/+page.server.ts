@@ -11,7 +11,6 @@ import type {
 	SweepType,
 	TimelineData
 } from '$lib/components/schedules/types';
-import { getAllConnectors, toSafeConnector } from '$lib/server/db/queries/connectors';
 import {
 	getAllSchedules,
 	type ScheduleWithRelations,
@@ -170,12 +169,11 @@ function computeTimelineData(schedules: ScheduleWithRelations[]): TimelineData {
 }
 
 export const load: PageServerLoad = async () => {
-	const [schedules, connectors] = await Promise.all([getAllSchedules(), getAllConnectors()]);
+	const schedules = await getAllSchedules();
 	const timeline = computeTimelineData(schedules);
 
 	return {
 		schedules,
-		connectors: connectors.map(toSafeConnector),
 		timeline
 	};
 };

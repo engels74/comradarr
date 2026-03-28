@@ -2,7 +2,6 @@ import { isArrClientError } from '$lib/server/connectors/common/errors';
 import {
 	deleteStaleIndexerHealth,
 	getAllCachedIndexerHealth,
-	getAllProwlarrInstances,
 	getDecryptedApiKey,
 	getEnabledProwlarrInstances,
 	getIndexerHealthByInstance,
@@ -16,7 +15,6 @@ import type {
 	CachedIndexerHealth,
 	HealthCheckResult,
 	HealthMonitorConfig,
-	HealthSummary,
 	ProwlarrHealthStatus
 } from './types.js';
 
@@ -198,25 +196,6 @@ export class ProwlarrHealthMonitor {
 			lastUpdated: entry.lastUpdated,
 			isStale: now.getTime() - entry.lastUpdated.getTime() > this.staleThresholdMs
 		}));
-	}
-
-	async getHealthSummary(): Promise<HealthSummary> {
-		const instances = await getAllProwlarrInstances();
-		const allHealth = await getAllCachedIndexerHealth();
-
-		const healthyInstances = instances.filter((i) => i.healthStatus === 'healthy').length;
-		const rateLimitedIndexers = allHealth.filter((h) => h.isRateLimited).length;
-
-		return {
-			totalInstances: instances.length,
-			healthyInstances,
-			totalIndexers: allHealth.length,
-			rateLimitedIndexers
-		};
-	}
-
-	getCheckIntervalMs(): number {
-		return this.checkIntervalMs;
 	}
 
 	getStaleThresholdMs(): number {

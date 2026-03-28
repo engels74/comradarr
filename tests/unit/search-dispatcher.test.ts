@@ -1,5 +1,5 @@
 /**
- * Unit tests for search dispatcher error handling, Prowlarr integration, and batch dispatch.
+ * Unit tests for search dispatcher error handling and Prowlarr integration.
  *
  * Rate limit handling, successful dispatch, and throttle enforcement tests are
  * covered by integration tests in tests/integration/search-dispatcher.test.ts.
@@ -9,7 +9,6 @@ import { beforeEach, describe, expect, it, type Mock, vi } from 'vitest';
 import {
 	AuthenticationError,
 	NetworkError,
-	RateLimitError,
 	ServerError
 } from '../../src/lib/server/connectors/common/errors';
 
@@ -139,10 +138,7 @@ import { getConnector, getDecryptedApiKey } from '$lib/server/db/queries/connect
 import { prowlarrHealthMonitor } from '$lib/server/services/prowlarr';
 import { throttleEnforcer } from '$lib/server/services/throttle';
 // Now import the module and mocks
-import {
-	dispatchBatch,
-	dispatchSearch
-} from '../../src/lib/server/services/queue/search-dispatcher';
+import { dispatchSearch } from '../../src/lib/server/services/queue/search-dispatcher';
 
 describe('dispatchSearch', () => {
 	const mockConnector = {
@@ -431,166 +427,5 @@ describe('dispatchSearch', () => {
 
 			logSpy.mockRestore();
 		});
-	});
-});
-
-describe('dispatchBatch', () => {
-	const mockConnector = {
-		id: 1,
-		name: 'Test Sonarr',
-		type: 'sonarr',
-		url: 'http://localhost:8989',
-		apiKeyEncrypted: 'encrypted-key',
-		enabled: true
-	};
-
-	beforeEach(() => {
-		vi.clearAllMocks();
-
-		(getConnector as Mock).mockResolvedValue(mockConnector);
-		(getDecryptedApiKey as Mock).mockResolvedValue('decrypted-api-key');
-		(throttleEnforcer.canDispatch as Mock).mockResolvedValue({ allowed: true });
-		(throttleEnforcer.recordRequest as Mock).mockResolvedValue(undefined);
-		(throttleEnforcer.handleRateLimitResponse as Mock).mockResolvedValue(undefined);
-		(throttleEnforcer.getStatus as Mock).mockResolvedValue({
-			connectorId: 1,
-			requestsThisMinute: 0,
-			requestsToday: 0,
-			remainingThisMinute: 5,
-			remainingToday: 100,
-			isPaused: false,
-			pauseReason: null,
-			pauseExpiresInMs: null
-		});
-		// Default: no Prowlarr instances configured (empty array)
-		(prowlarrHealthMonitor.getAllCachedHealth as Mock).mockResolvedValue([]);
-	});
-
-	it('should dispatch all items successfully', async () => {
-		mockSonarrClient.sendEpisodeSearch
-			.mockResolvedValueOnce({ id: 1, status: 'queued' })
-			.mockResolvedValueOnce({ id: 2, status: 'queued' })
-			.mockResolvedValueOnce({ id: 3, status: 'queued' });
-
-		const dispatches = [
-			{
-				connectorId: 1,
-				searchRegistryId: 100,
-				contentType: 'episode' as const,
-				searchType: 'gap' as const,
-				options: { episodeIds: [1] }
-			},
-			{
-				connectorId: 1,
-				searchRegistryId: 101,
-				contentType: 'episode' as const,
-				searchType: 'gap' as const,
-				options: { episodeIds: [2] }
-			},
-			{
-				connectorId: 1,
-				searchRegistryId: 102,
-				contentType: 'episode' as const,
-				searchType: 'gap' as const,
-				options: { episodeIds: [3] }
-			}
-		];
-
-		const results = await dispatchBatch(dispatches);
-
-		expect(results).toHaveLength(3);
-		expect(results.every((r) => r.success)).toBe(true);
-	});
-
-	it('should stop batch processing on rate limit and mark remaining as skipped', async () => {
-		mockSonarrClient.sendEpisodeSearch
-			.mockResolvedValueOnce({ id: 1, status: 'queued' }) // First succeeds
-			.mockRejectedValueOnce(new RateLimitError(60)); // Second hits rate limit
-		// Third never called
-
-		const dispatches = [
-			{
-				connectorId: 1,
-				searchRegistryId: 100,
-				contentType: 'episode' as const,
-				searchType: 'gap' as const,
-				options: { episodeIds: [1] }
-			},
-			{
-				connectorId: 1,
-				searchRegistryId: 101,
-				contentType: 'episode' as const,
-				searchType: 'gap' as const,
-				options: { episodeIds: [2] }
-			},
-			{
-				connectorId: 1,
-				searchRegistryId: 102,
-				contentType: 'episode' as const,
-				searchType: 'gap' as const,
-				options: { episodeIds: [3] }
-			}
-		];
-
-		const results = await dispatchBatch(dispatches);
-
-		expect(results).toHaveLength(3);
-
-		// First succeeded
-		expect(results[0]!.success).toBe(true);
-		expect(results[0]!.commandId).toBe(1);
-
-		// Second hit rate limit
-		expect(results[1]!.success).toBe(false);
-		expect(results[1]!.rateLimited).toBe(true);
-		expect(results[1]!.connectorPaused).toBe(true);
-
-		// Third was skipped
-		expect(results[2]!.success).toBe(false);
-		expect(results[2]!.rateLimited).toBe(true);
-		expect(results[2]!.error).toContain('Skipped');
-
-		// Verify handleRateLimitResponse was called only once
-		expect(throttleEnforcer.handleRateLimitResponse).toHaveBeenCalledTimes(1);
-		expect(throttleEnforcer.handleRateLimitResponse).toHaveBeenCalledWith(1, 60);
-	});
-
-	it('should continue processing on non-rate-limit errors', async () => {
-		mockSonarrClient.sendEpisodeSearch
-			.mockResolvedValueOnce({ id: 1, status: 'queued' }) // First succeeds
-			.mockRejectedValueOnce(new NetworkError('Connection lost', 'timeout')) // Second fails with network error
-			.mockResolvedValueOnce({ id: 3, status: 'queued' }); // Third succeeds
-
-		const dispatches = [
-			{
-				connectorId: 1,
-				searchRegistryId: 100,
-				contentType: 'episode' as const,
-				searchType: 'gap' as const,
-				options: { episodeIds: [1] }
-			},
-			{
-				connectorId: 1,
-				searchRegistryId: 101,
-				contentType: 'episode' as const,
-				searchType: 'gap' as const,
-				options: { episodeIds: [2] }
-			},
-			{
-				connectorId: 1,
-				searchRegistryId: 102,
-				contentType: 'episode' as const,
-				searchType: 'gap' as const,
-				options: { episodeIds: [3] }
-			}
-		];
-
-		const results = await dispatchBatch(dispatches);
-
-		expect(results).toHaveLength(3);
-		expect(results[0]!.success).toBe(true);
-		expect(results[1]!.success).toBe(false);
-		expect(results[1]!.rateLimited).toBeUndefined();
-		expect(results[2]!.success).toBe(true);
 	});
 });

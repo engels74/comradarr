@@ -11,19 +11,6 @@ export interface LogEntry {
 	[key: string]: unknown;
 }
 
-export interface RequestLogOptions {
-	headers?: Record<string, string>;
-	body?: unknown;
-	correlationId?: string;
-}
-
-export interface ResponseLogOptions {
-	headers?: Record<string, string>;
-	body?: unknown;
-	durationMs?: number;
-	correlationId?: string;
-}
-
 const LOG_LEVEL_PRIORITY: Record<LogLevel, number> = {
 	error: 0,
 	warn: 1,
@@ -86,28 +73,6 @@ export async function initializeLogLevel(): Promise<void> {
 
 export function shouldLog(messageLevel: LogLevel, currentLevel: LogLevel): boolean {
 	return LOG_LEVEL_PRIORITY[messageLevel] <= LOG_LEVEL_PRIORITY[currentLevel];
-}
-
-const SENSITIVE_HEADERS = new Set([
-	'authorization',
-	'x-api-key',
-	'cookie',
-	'set-cookie',
-	'x-auth-token'
-]);
-
-function redactHeaders(headers: Record<string, string>): Record<string, string> {
-	const redacted: Record<string, string> = {};
-
-	for (const [key, value] of Object.entries(headers)) {
-		if (SENSITIVE_HEADERS.has(key.toLowerCase())) {
-			redacted[key] = '[REDACTED]';
-		} else {
-			redacted[key] = value;
-		}
-	}
-
-	return redacted;
 }
 
 export function sanitizeUrl(url: string): string {
@@ -207,66 +172,6 @@ export class Logger {
 
 	trace(message: string, context?: Record<string, unknown>): void {
 		this.log('trace', message, context);
-	}
-
-	logRequest(method: string, url: string, options?: RequestLogOptions): void {
-		const currentLevel = getCurrentLogLevel();
-
-		if (!shouldLog('debug', currentLevel)) {
-			return;
-		}
-
-		const context: Record<string, unknown> = {
-			method,
-			url
-		};
-
-		const correlationId = options?.correlationId ?? getCorrelationId();
-		if (correlationId) {
-			context.correlationId = correlationId;
-		}
-
-		if (options?.headers) {
-			context.headers = redactHeaders(options.headers);
-		}
-
-		if (options?.body !== undefined && shouldLog('trace', currentLevel)) {
-			context.body = options.body;
-		}
-
-		this.log('debug', `HTTP ${method} ${url}`, context);
-	}
-
-	logResponse(statusCode: number, url: string, options?: ResponseLogOptions): void {
-		const currentLevel = getCurrentLogLevel();
-
-		if (!shouldLog('debug', currentLevel)) {
-			return;
-		}
-
-		const context: Record<string, unknown> = {
-			statusCode,
-			url
-		};
-
-		const correlationId = options?.correlationId ?? getCorrelationId();
-		if (correlationId) {
-			context.correlationId = correlationId;
-		}
-
-		if (options?.durationMs !== undefined) {
-			context.durationMs = options.durationMs;
-		}
-
-		if (options?.headers) {
-			context.headers = options.headers;
-		}
-
-		if (options?.body !== undefined && shouldLog('trace', currentLevel)) {
-			context.body = options.body;
-		}
-
-		this.log('debug', `HTTP ${statusCode} ${url}`, context);
 	}
 }
 

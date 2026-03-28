@@ -1,23 +1,10 @@
 export type { NotificationSender } from './base-channel';
-export { DEFAULT_SENDER_CONFIG, EVENT_COLORS, getEventColor, hexColorToInt } from './base-channel';
+export { DEFAULT_SENDER_CONFIG, getEventColor, hexColorToInt } from './base-channel';
 export { DiscordSender } from './channels/discord';
 export { EmailSender } from './channels/email';
 export { SlackSender } from './channels/slack';
 export { TelegramSender } from './channels/telegram';
 export { WebhookSender } from './channels/webhook';
-export {
-	isNotificationError,
-	isRetryableNotificationError,
-	NotificationAuthenticationError,
-	NotificationConfigurationError,
-	NotificationError,
-	type NotificationErrorCategory,
-	NotificationNetworkError,
-	NotificationRateLimitError,
-	NotificationServerError,
-	NotificationTimeoutError,
-	NotificationValidationError
-} from './errors';
 export type {
 	// Channel-specific configs
 	DiscordConfig,
@@ -85,7 +72,7 @@ export function isSupportedChannelType(channelType: string): boolean {
 	return supportedTypes.includes(channelType);
 }
 
-export { type AggregatedPayloadMetadata, buildAggregatePayload } from './aggregators';
+export { buildAggregatePayload } from './aggregators';
 export {
 	type BatchProcessingResult,
 	type BatchSendResult,
@@ -100,14 +87,7 @@ export {
 	NotificationDispatcher,
 	notify
 } from './dispatcher';
-export {
-	getCurrentTimeInTimezone,
-	isInQuietHours,
-	isTimeInRange,
-	parseTimeString,
-	type TimeOfDay,
-	timeToMinutes
-} from './quiet-hours';
+export { isInQuietHours, type TimeOfDay } from './quiet-hours';
 export {
 	type AppStartedData,
 	buildPayload,

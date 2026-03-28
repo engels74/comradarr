@@ -28,7 +28,6 @@ import {
 import { STATE_TRANSITION_CONFIG } from '../../src/lib/server/services/queue/config';
 import {
 	getSearchState,
-	markSearchExhausted,
 	markSearchFailed,
 	reenqueueEligibleCooldownItems
 } from '../../src/lib/server/services/queue/state-transitions';
@@ -401,86 +400,6 @@ describe('State Transitions - markSearchFailed', () => {
 			expect(failResult.error).toContain('pending');
 			expect(failResult.error).toContain("expected 'searching'");
 		});
-	});
-});
-
-// ============================================================================
-// markSearchExhausted Tests
-// ============================================================================
-
-describe('State Transitions - markSearchExhausted', () => {
-	it('should transition from searching to exhausted', async () => {
-		const episodeId = await createTestEpisode(testConnectorId);
-		const registryId = await createSearchingRegistry(testConnectorId, episodeId, 2);
-
-		const result = await markSearchExhausted(registryId);
-
-		expect(result.success).toBe(true);
-		expect(result.previousState).toBe('searching');
-		expect(result.newState).toBe('exhausted');
-	});
-
-	it('should transition from cooldown to exhausted', async () => {
-		const episodeId = await createTestEpisode(testConnectorId);
-		const registryId = await createCooldownRegistry(
-			testConnectorId,
-			episodeId,
-			2,
-			new Date(Date.now() + 3600000)
-		);
-
-		const result = await markSearchExhausted(registryId);
-
-		expect(result.success).toBe(true);
-		expect(result.previousState).toBe('cooldown');
-		expect(result.newState).toBe('exhausted');
-	});
-
-	it('should clear nextEligible when exhausted', async () => {
-		const episodeId = await createTestEpisode(testConnectorId);
-		const registryId = await createCooldownRegistry(
-			testConnectorId,
-			episodeId,
-			2,
-			new Date(Date.now() + 3600000)
-		);
-
-		await markSearchExhausted(registryId);
-
-		const registry = await getRegistryById(registryId);
-		expect(registry?.nextEligible).toBeNull();
-	});
-
-	it('should return error for invalid source state', async () => {
-		const episodeId = await createTestEpisode(testConnectorId);
-
-		// Create a registry in 'pending' state
-		const insertResult = await db
-			.insert(searchRegistry)
-			.values({
-				connectorId: testConnectorId,
-				contentType: 'episode',
-				contentId: episodeId,
-				searchType: 'gap',
-				state: 'pending',
-				attemptCount: 0,
-				priority: 0
-			})
-			.returning({ id: searchRegistry.id });
-
-		const registryId = insertResult[0]!.id;
-
-		const result = await markSearchExhausted(registryId);
-
-		expect(result.success).toBe(false);
-		expect(result.error).toContain('pending');
-	});
-
-	it('should return error for non-existent registry', async () => {
-		const result = await markSearchExhausted(999999);
-
-		expect(result.success).toBe(false);
-		expect(result.error).toContain('not found');
 	});
 });
 

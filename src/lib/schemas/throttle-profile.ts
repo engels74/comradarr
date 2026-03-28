@@ -47,7 +47,6 @@ export const ThrottleProfileSchema = v.object({
 	isDefault: v.optional(v.boolean())
 });
 
-export type ThrottleProfileInput = v.InferInput<typeof ThrottleProfileSchema>;
 export type ThrottleProfileOutput = v.InferOutput<typeof ThrottleProfileSchema>;
 
 export const throttleProfileLabels: Record<keyof ThrottleProfileOutput, string> = {

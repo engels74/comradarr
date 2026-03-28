@@ -28,7 +28,7 @@ import {
 	seasons,
 	series
 } from '../../src/lib/server/db/schema';
-import { discoverGaps, getGapStats } from '../../src/lib/server/services/discovery';
+import { discoverGaps } from '../../src/lib/server/services/discovery';
 
 // Store original SECRET_KEY to restore after tests
 const originalSecretKey = process.env.SECRET_KEY;
@@ -404,36 +404,6 @@ describe('Gap Discovery Service', () => {
 			expect(result.success).toBe(true);
 			expect(result.gapsFound).toBe(2); // Only episodes 1 and 5
 			expect(result.registriesCreated).toBe(2);
-		});
-	});
-
-	describe('getGapStats', () => {
-		it('should return correct gap counts without creating registries', async () => {
-			const seriesId = await insertTestSeries(testSonarrConnectorId, 1, 'Test Series');
-			const seasonId = await insertTestSeason(seriesId, 1);
-
-			await insertTestEpisode(testSonarrConnectorId, seasonId, 101, 1, 1, true, false);
-			await insertTestEpisode(testSonarrConnectorId, seasonId, 102, 1, 2, true, false);
-
-			const stats = await getGapStats(testSonarrConnectorId);
-
-			expect(stats.episodeGaps).toBe(2);
-			expect(stats.movieGaps).toBe(0);
-
-			// Verify no registries were created
-			const registryCount = await countSearchRegistry(testSonarrConnectorId);
-			expect(registryCount).toBe(0);
-		});
-
-		it('should return movie gap counts for radarr', async () => {
-			await insertTestMovie(testRadarrConnectorId, 201, 'Missing Movie 1', true, false);
-			await insertTestMovie(testRadarrConnectorId, 202, 'Missing Movie 2', true, false);
-			await insertTestMovie(testRadarrConnectorId, 203, 'Has File Movie', true, true);
-
-			const stats = await getGapStats(testRadarrConnectorId);
-
-			expect(stats.episodeGaps).toBe(0);
-			expect(stats.movieGaps).toBe(2);
 		});
 	});
 });
