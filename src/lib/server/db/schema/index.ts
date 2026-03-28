@@ -700,8 +700,6 @@ export const completionSnapshots = pgTable(
 	]
 );
 
-export type CompletionSnapshot = typeof completionSnapshots.$inferSelect;
-
 // =============================================================================
 // Sweep Schedules Table
 // =============================================================================
@@ -879,8 +877,6 @@ export const appSettings = pgTable('app_settings', {
 	value: text('value').notNull(),
 	updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow()
 });
-
-export type AppSetting = typeof appSettings.$inferSelect;
 
 // =============================================================================
 // Application Logs Table

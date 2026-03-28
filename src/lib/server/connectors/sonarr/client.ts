@@ -1,8 +1,8 @@
 import { createLogger } from '$lib/server/logger';
 import { BaseArrClient } from '../common/base-client.js';
 import { parseCommandResponse } from '../common/parsers.js';
-import type { CommandResponse, WantedOptions } from '../common/types.js';
-import { parsePaginatedEpisodesLenient, parseSonarrEpisode, parseSonarrSeries } from './parsers.js';
+import type { CommandResponse } from '../common/types.js';
+import { parseSonarrEpisode, parseSonarrSeries } from './parsers.js';
 import type { SonarrEpisode, SonarrSeries } from './types.js';
 
 const logger = createLogger('sonarr-client');
@@ -31,14 +31,6 @@ export class SonarrClient extends BaseArrClient {
 
 		logger.debug('Episodes fetched', { seriesId, total: episodes.length });
 		return episodes;
-	}
-
-	async getWantedMissing(options?: WantedOptions): Promise<SonarrEpisode[]> {
-		return this.fetchAllPaginated('wanted/missing', parsePaginatedEpisodesLenient, options);
-	}
-
-	async getWantedCutoff(options?: WantedOptions): Promise<SonarrEpisode[]> {
-		return this.fetchAllPaginated('wanted/cutoff', parsePaginatedEpisodesLenient, options);
 	}
 
 	async sendEpisodeSearch(episodeIds: number[]): Promise<CommandResponse> {

@@ -10,18 +10,15 @@ import {
 	SSLError,
 	TimeoutError
 } from './errors.js';
-import type { LenientParseResult, ParseResult } from './parsers.js';
+import type { ParseResult } from './parsers.js';
 import { parseCommandResponse } from './parsers.js';
 import { DEFAULT_RETRY_CONFIG, withRetry } from './retry.js';
 import type {
 	BaseClientConfig,
 	CommandResponse,
 	HealthCheck,
-	PaginatedResponse,
 	RequestOptions,
-	RetryConfig,
-	SystemStatus,
-	WantedOptions
+	RetryConfig
 } from './types.js';
 
 const logger = createLogger('arr-client');
@@ -257,49 +254,6 @@ export class BaseArrClient {
 		return results;
 	}
 
-	protected async fetchAllPaginated<T>(
-		endpoint: string,
-		parser: (data: unknown) => LenientParseResult<PaginatedResponse<T>>,
-		options?: WantedOptions
-	): Promise<T[]> {
-		const pageSize = options?.pageSize ?? 1000;
-		const monitored = options?.monitored ?? true;
-		const sortKey = options?.sortKey ?? 'airDateUtc';
-		const sortDirection = options?.sortDirection ?? 'descending';
-
-		let page = options?.page ?? 1;
-		const allRecords: T[] = [];
-
-		while (true) {
-			const queryParams = new URLSearchParams({
-				page: String(page),
-				pageSize: String(pageSize),
-				monitored: String(monitored),
-				sortKey,
-				sortDirection
-			});
-
-			const response = await this.requestWithRetry<unknown>(
-				`${endpoint}?${queryParams.toString()}`
-			);
-
-			const result = parser(response);
-			if (!result.success) {
-				throw new Error(result.error);
-			}
-
-			allRecords.push(...result.data.records);
-
-			if (page * pageSize >= result.data.totalRecords) {
-				break;
-			}
-
-			page++;
-		}
-
-		return allRecords;
-	}
-
 	async getCommandStatus(commandId: number): Promise<CommandResponse> {
 		const response = await this.requestWithRetry<unknown>(`command/${commandId}`);
 
@@ -324,10 +278,6 @@ export class BaseArrClient {
 		} catch {
 			return false;
 		}
-	}
-
-	async getSystemStatus(): Promise<SystemStatus> {
-		return this.request<SystemStatus>('system/status');
 	}
 
 	async getHealth(): Promise<HealthCheck[]> {

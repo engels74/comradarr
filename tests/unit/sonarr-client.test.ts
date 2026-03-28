@@ -7,7 +7,6 @@ import {
 	testCommandExecution,
 	testCommandStatus,
 	testConstructorDefaults,
-	testPaginatedMethod,
 	testPingBehavior,
 	testSimpleGetMethod
 } from './helpers/client-test-utils';
@@ -34,51 +33,6 @@ describe('SonarrClient.ping()', () => {
 		ClientClass: SonarrClient,
 		baseUrl: validConfig.baseUrl,
 		apiKey: validConfig.apiKey
-	});
-});
-
-describe('SonarrClient.getSystemStatus()', () => {
-	testSimpleGetMethod({
-		ClientClass: SonarrClient as unknown as new (config: {
-			baseUrl: string;
-			apiKey: string;
-		}) => Record<string, (...args: unknown[]) => Promise<unknown>>,
-		baseUrl: validConfig.baseUrl,
-		apiKey: validConfig.apiKey,
-		methodName: 'getSystemStatus',
-		expectedUrl: 'http://localhost:8989/api/v3/system/status',
-		mockResponse: {
-			appName: 'Sonarr',
-			instanceName: 'Sonarr',
-			version: '4.0.0.123',
-			buildTime: '2024-01-15T00:00:00Z',
-			isDebug: false,
-			isProduction: true,
-			isAdmin: false,
-			isUserInteractive: false,
-			startupPath: '/app',
-			appData: '/config',
-			osName: 'Linux',
-			osVersion: '5.15.0',
-			isDocker: true,
-			isMono: false,
-			isLinux: true,
-			isOsx: false,
-			isWindows: false,
-			branch: 'main',
-			authentication: 'forms',
-			sqliteVersion: '3.36.0',
-			urlBase: '',
-			runtimeVersion: 'bun 1.0.0',
-			runtimeName: 'bun',
-			startTime: '2024-01-15T10:00:00Z'
-		},
-		assertions: (result) => {
-			const r = result as Record<string, unknown>;
-			expect(r.appName).toBe('Sonarr');
-			expect(r.version).toBe('4.0.0.123');
-			expect(r.isDocker).toBe(true);
-		}
 	});
 });
 
@@ -331,85 +285,6 @@ describe('SonarrClient.getEpisodes()', () => {
 		expect(result[0]?.id).toBe(101);
 		expect(result[0]?.title).toBeUndefined();
 		expect(result[0]?.airDateUtc).toBeUndefined();
-	});
-});
-
-function buildSonarrEpisodeRecord(id: number) {
-	return {
-		id,
-		seriesId: 1,
-		seasonNumber: 1,
-		episodeNumber: id,
-		hasFile: false,
-		monitored: true,
-		qualityCutoffNotMet: false
-	};
-}
-
-function buildSonarrCutoffRecord(id: number) {
-	return {
-		id,
-		seriesId: 1,
-		seasonNumber: 1,
-		episodeNumber: id,
-		hasFile: true,
-		monitored: true,
-		qualityCutoffNotMet: true
-	};
-}
-
-const sonarrPaginatedClient = SonarrClient as unknown as new (config: {
-	baseUrl: string;
-	apiKey: string;
-}) => Record<string, (...args: unknown[]) => Promise<unknown[]>>;
-
-describe('SonarrClient.getWantedMissing()', () => {
-	testPaginatedMethod({
-		ClientClass: sonarrPaginatedClient,
-		baseUrl: validConfig.baseUrl,
-		apiKey: validConfig.apiKey,
-		methodName: 'getWantedMissing',
-		expectedUrlContains: '/api/v3/wanted/missing',
-		buildRecord: buildSonarrEpisodeRecord,
-		sortKey: 'airDateUtc',
-		customOptions: {
-			page: 2,
-			pageSize: 50,
-			sortKey: 'seriesTitle',
-			sortDirection: 'ascending',
-			monitored: false
-		},
-		expectedCustomParams: {
-			page: 'page=2',
-			pageSize: 'pageSize=50',
-			sortKey: 'sortKey=seriesTitle',
-			sortDirection: 'sortDirection=ascending',
-			monitored: 'monitored=false'
-		},
-		buildInvalidRecord: () => ({ id: 2, seriesId: 1 })
-	});
-});
-
-describe('SonarrClient.getWantedCutoff()', () => {
-	testPaginatedMethod({
-		ClientClass: sonarrPaginatedClient,
-		baseUrl: validConfig.baseUrl,
-		apiKey: validConfig.apiKey,
-		methodName: 'getWantedCutoff',
-		expectedUrlContains: '/api/v3/wanted/cutoff',
-		buildRecord: buildSonarrCutoffRecord,
-		sortKey: 'airDateUtc',
-		customOptions: {
-			pageSize: 25,
-			sortKey: 'seriesTitle',
-			sortDirection: 'ascending'
-		},
-		expectedCustomParams: {
-			pageSize: 'pageSize=25',
-			sortKey: 'sortKey=seriesTitle',
-			sortDirection: 'sortDirection=ascending'
-		},
-		buildInvalidRecord: () => ({ id: 2, badRecord: true })
 	});
 });
 

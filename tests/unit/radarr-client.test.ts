@@ -7,7 +7,6 @@ import {
 	testCommandExecution,
 	testCommandStatus,
 	testConstructorDefaults,
-	testPaginatedMethod,
 	testPingBehavior,
 	testSimpleGetMethod
 } from './helpers/client-test-utils';
@@ -34,51 +33,6 @@ describe('RadarrClient.ping()', () => {
 		ClientClass: RadarrClient,
 		baseUrl: validConfig.baseUrl,
 		apiKey: validConfig.apiKey
-	});
-});
-
-describe('RadarrClient.getSystemStatus()', () => {
-	testSimpleGetMethod({
-		ClientClass: RadarrClient as unknown as new (config: {
-			baseUrl: string;
-			apiKey: string;
-		}) => Record<string, (...args: unknown[]) => Promise<unknown>>,
-		baseUrl: validConfig.baseUrl,
-		apiKey: validConfig.apiKey,
-		methodName: 'getSystemStatus',
-		expectedUrl: 'http://localhost:7878/api/v3/system/status',
-		mockResponse: {
-			appName: 'Radarr',
-			instanceName: 'Radarr',
-			version: '5.2.0.8171',
-			buildTime: '2024-01-15T00:00:00Z',
-			isDebug: false,
-			isProduction: true,
-			isAdmin: false,
-			isUserInteractive: false,
-			startupPath: '/app',
-			appData: '/config',
-			osName: 'Linux',
-			osVersion: '5.15.0',
-			isDocker: true,
-			isMono: false,
-			isLinux: true,
-			isOsx: false,
-			isWindows: false,
-			branch: 'master',
-			authentication: 'forms',
-			sqliteVersion: '3.36.0',
-			urlBase: '',
-			runtimeVersion: 'bun 1.0.0',
-			runtimeName: 'bun',
-			startTime: '2024-01-15T10:00:00Z'
-		},
-		assertions: (result) => {
-			const r = result as Record<string, unknown>;
-			expect(r.appName).toBe('Radarr');
-			expect(r.version).toBe('5.2.0.8171');
-			expect(r.isDocker).toBe(true);
-		}
 	});
 });
 
@@ -242,89 +196,6 @@ describe('RadarrClient.getMovies()', () => {
 		expect(result[0]?.imdbId).toBeUndefined();
 		expect(result[0]?.movieFileId).toBeUndefined();
 		expect(result[0]?.status).toBeUndefined();
-	});
-});
-
-function buildRadarrMovieRecord(id: number) {
-	return {
-		id,
-		title: `Movie ${id}`,
-		tmdbId: id,
-		year: 2020,
-		hasFile: false,
-		monitored: true,
-		qualityCutoffNotMet: false
-	};
-}
-
-function buildRadarrCutoffRecord(id: number) {
-	return {
-		id,
-		title: `Movie ${id}`,
-		tmdbId: id,
-		year: 2020,
-		hasFile: true,
-		monitored: true,
-		qualityCutoffNotMet: true
-	};
-}
-
-const radarrPaginatedClient = RadarrClient as unknown as new (config: {
-	baseUrl: string;
-	apiKey: string;
-}) => Record<string, (...args: unknown[]) => Promise<unknown[]>>;
-
-describe('RadarrClient.getWantedMissing()', () => {
-	testPaginatedMethod({
-		ClientClass: radarrPaginatedClient,
-		baseUrl: validConfig.baseUrl,
-		apiKey: validConfig.apiKey,
-		methodName: 'getWantedMissing',
-		expectedUrlContains: '/api/v3/wanted/missing',
-		buildRecord: buildRadarrMovieRecord,
-		sortKey: 'title',
-		customOptions: {
-			page: 2,
-			pageSize: 50,
-			sortKey: 'year',
-			sortDirection: 'ascending',
-			monitored: false
-		},
-		expectedCustomParams: {
-			page: 'page=2',
-			pageSize: 'pageSize=50',
-			sortKey: 'sortKey=year',
-			sortDirection: 'sortDirection=ascending',
-			monitored: 'monitored=false'
-		},
-		buildInvalidRecord: () => ({ id: 2, title: 'Invalid Movie' })
-	});
-});
-
-describe('RadarrClient.getWantedCutoff()', () => {
-	testPaginatedMethod({
-		ClientClass: radarrPaginatedClient,
-		baseUrl: validConfig.baseUrl,
-		apiKey: validConfig.apiKey,
-		methodName: 'getWantedCutoff',
-		expectedUrlContains: '/api/v3/wanted/cutoff',
-		buildRecord: buildRadarrCutoffRecord,
-		sortKey: 'title',
-		customOptions: {
-			page: 2,
-			pageSize: 50,
-			sortKey: 'year',
-			sortDirection: 'ascending',
-			monitored: false
-		},
-		expectedCustomParams: {
-			page: 'page=2',
-			pageSize: 'pageSize=50',
-			sortKey: 'sortKey=year',
-			sortDirection: 'sortDirection=ascending',
-			monitored: 'monitored=false'
-		},
-		buildInvalidRecord: () => ({ id: 2, title: 'Invalid Movie' })
 	});
 });
 

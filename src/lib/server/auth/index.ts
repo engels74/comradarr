@@ -9,7 +9,6 @@ export { hashPassword, verifyPassword } from './password';
 export {
 	cleanupExpiredSessions,
 	createSession,
-	deleteAllUserSessions,
 	deleteSession,
 	type SessionUser,
 	validateSession

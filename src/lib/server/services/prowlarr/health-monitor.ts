@@ -4,7 +4,6 @@ import {
 	getAllCachedIndexerHealth,
 	getDecryptedApiKey,
 	getEnabledProwlarrInstances,
-	getIndexerHealthByInstance,
 	updateProwlarrHealth,
 	upsertIndexerHealth
 } from '$lib/server/db/queries/prowlarr';
@@ -161,24 +160,6 @@ export class ProwlarrHealthMonitor {
 				checkedAt
 			};
 		}
-	}
-
-	// Returns cached data even if stale for display purposes
-	async getCachedHealth(instanceId: number): Promise<CachedIndexerHealth[]> {
-		const cached = await getIndexerHealthByInstance(instanceId);
-		const now = new Date();
-
-		return cached.map((entry) => ({
-			instanceId: entry.prowlarrInstanceId,
-			indexerId: entry.indexerId,
-			name: entry.name,
-			enabled: entry.enabled,
-			isRateLimited: entry.isRateLimited,
-			rateLimitExpiresAt: entry.rateLimitExpiresAt,
-			mostRecentFailure: entry.mostRecentFailure,
-			lastUpdated: entry.lastUpdated,
-			isStale: now.getTime() - entry.lastUpdated.getTime() > this.staleThresholdMs
-		}));
 	}
 
 	async getAllCachedHealth(): Promise<CachedIndexerHealth[]> {

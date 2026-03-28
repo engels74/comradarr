@@ -57,10 +57,7 @@ import {
 	cleanupOldCompletedCommands
 } from '$lib/server/services/command-monitor';
 import { discoverGaps, discoverUpgrades } from '$lib/server/services/discovery';
-import {
-	enableLogPersistence,
-	shutdown as shutdownLogPersistence
-} from '$lib/server/services/log-persistence';
+import { enableLogPersistence } from '$lib/server/services/log-persistence';
 import {
 	cleanupOrphanedSearchState,
 	pruneApplicationLogs,
@@ -1114,44 +1111,6 @@ export function initializeScheduler(): void {
 
 	state.initialized = true;
 	logger.info('Scheduled jobs initialized', { jobs: Array.from(state.jobs.keys()) });
-}
-
-/** Stop all scheduled jobs. Used for graceful shutdown. */
-export async function stopScheduler(): Promise<void> {
-	const state = getSchedulerState();
-	logger.info('Stopping all scheduled jobs');
-
-	for (const [name, job] of state.jobs) {
-		job.cron.stop();
-		logger.info('Stopped job', { name });
-	}
-	state.jobs.clear();
-
-	for (const [id, cron] of state.dynamicJobs) {
-		cron.stop();
-		logger.info('Stopped dynamic schedule', { id });
-	}
-	state.dynamicJobs.clear();
-
-	if (state.scheduledBackupJob) {
-		state.scheduledBackupJob.stop();
-		state.scheduledBackupJob = null;
-		logger.info('Stopped scheduled backup job');
-	}
-
-	try {
-		const flushed = await shutdownLogPersistence();
-		if (flushed > 0) {
-			logger.info('Flushed pending logs', { count: flushed });
-		}
-	} catch (err) {
-		logger.error('Failed to flush pending logs', {
-			error: err instanceof Error ? err.message : String(err)
-		});
-	}
-
-	state.initialized = false;
-	logger.info('All scheduled jobs stopped');
 }
 
 export function getSchedulerStatus(): {

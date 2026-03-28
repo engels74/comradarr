@@ -16,7 +16,6 @@ import {
 	generateCorrelationId,
 	getContext,
 	getCorrelationId,
-	hasContext,
 	type RequestContext,
 	runWithContext
 } from '../../src/lib/server/context';
@@ -180,18 +179,6 @@ describe('Request Context', () => {
 			await runWithContext(context, async () => {
 				const retrieved = getContext();
 				expect(retrieved).toEqual(context);
-			});
-		});
-	});
-
-	describe('hasContext', () => {
-		it('should return false outside context', () => {
-			expect(hasContext()).toBe(false);
-		});
-
-		it('should return true inside context', async () => {
-			await runWithContext({ correlationId: 'has-context-test', source: 'http' }, async () => {
-				expect(hasContext()).toBe(true);
 			});
 		});
 	});

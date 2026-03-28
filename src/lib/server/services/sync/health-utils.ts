@@ -5,12 +5,6 @@ import { SYNC_CONFIG } from './config';
 
 export type HealthStatus = 'healthy' | 'degraded' | 'unhealthy' | 'offline' | 'unknown';
 
-export interface SyncFailureContext {
-	connectorId: number;
-	consecutiveFailures: number;
-	error: unknown;
-}
-
 // AuthenticationError immediately marks as unhealthy (won't recover without config change)
 export function determineHealthStatus(
 	success: boolean,

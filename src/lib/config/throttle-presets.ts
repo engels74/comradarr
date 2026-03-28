@@ -43,12 +43,4 @@ export const AGGRESSIVE_PRESET: ThrottlePreset = {
 	rateLimitPauseSeconds: 120
 } as const;
 
-export const PRESETS = {
-	conservative: CONSERVATIVE_PRESET,
-	moderate: MODERATE_PRESET,
-	aggressive: AGGRESSIVE_PRESET
-} as const;
-
-export type PresetName = keyof typeof PRESETS;
-
 export const DEFAULT_FALLBACK_PRESET = MODERATE_PRESET;

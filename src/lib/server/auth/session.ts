@@ -115,11 +115,6 @@ export async function deleteSession(sessionId: string): Promise<void> {
 	logger.debug('Session deleted', { sessionIdPrefix: sessionPrefix(sessionId) });
 }
 
-export async function deleteAllUserSessions(userId: number): Promise<void> {
-	await db.delete(sessions).where(eq(sessions.userId, userId));
-	logger.info('All user sessions deleted', { userId });
-}
-
 export async function cleanupExpiredSessions(): Promise<number> {
 	const result = await db
 		.delete(sessions)

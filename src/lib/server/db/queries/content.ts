@@ -9,6 +9,7 @@ import {
 	seasons,
 	series
 } from '$lib/server/db/schema';
+import type { QualityModel } from '$lib/utils/quality';
 
 export type ContentType = 'series' | 'movie';
 
@@ -89,20 +90,6 @@ export interface ContentStatusCounts {
 	exhausted: number;
 }
 
-export interface QualityModel {
-	quality: {
-		id: number;
-		name: string;
-		source: string;
-		resolution: number;
-	};
-	revision: {
-		version: number;
-		real: number;
-		isRepack: boolean;
-	};
-}
-
 export interface SeriesDetail {
 	id: number;
 	connectorId: number;
@@ -135,18 +122,6 @@ export interface EpisodeDetail {
 	searchType: string | null;
 	attemptCount: number;
 	nextEligible: Date | null;
-}
-
-export interface SeasonWithEpisodes {
-	id: number;
-	seasonNumber: number;
-	monitored: boolean;
-	totalEpisodes: number;
-	downloadedEpisodes: number;
-	nextAiring: Date | null;
-	missingCount: number;
-	upgradeCount: number;
-	episodes: EpisodeDetail[];
 }
 
 export interface SeriesSearchHistoryEntry {
@@ -827,96 +802,6 @@ export async function getSeriesDetail(id: number): Promise<SeriesDetail | null> 
 		.limit(1);
 
 	return result[0] ?? null;
-}
-
-export async function getSeriesSeasonsWithEpisodes(
-	seriesId: number
-): Promise<SeasonWithEpisodes[]> {
-	// Get seasons
-	const seasonRows = await db
-		.select()
-		.from(seasons)
-		.where(eq(seasons.seriesId, seriesId))
-		.orderBy(asc(seasons.seasonNumber));
-
-	if (seasonRows.length === 0) return [];
-
-	// Get all episodes for these seasons with search state
-	const seasonIds = seasonRows.map((s) => s.id);
-
-	const episodeRows = await db
-		.select({
-			id: episodes.id,
-			seasonId: episodes.seasonId,
-			arrId: episodes.arrId,
-			seasonNumber: episodes.seasonNumber,
-			episodeNumber: episodes.episodeNumber,
-			title: episodes.title,
-			airDate: episodes.airDate,
-			monitored: episodes.monitored,
-			hasFile: episodes.hasFile,
-			quality: episodes.quality,
-			qualityCutoffNotMet: episodes.qualityCutoffNotMet,
-			lastSearchTime: episodes.lastSearchTime,
-			// Search registry fields
-			searchState: searchRegistry.state,
-			searchType: searchRegistry.searchType,
-			attemptCount: searchRegistry.attemptCount,
-			nextEligible: searchRegistry.nextEligible
-		})
-		.from(episodes)
-		.leftJoin(
-			searchRegistry,
-			and(eq(searchRegistry.contentType, 'episode'), eq(searchRegistry.contentId, episodes.id))
-		)
-		.where(inArray(episodes.seasonId, seasonIds))
-		.orderBy(asc(episodes.seasonNumber), asc(episodes.episodeNumber));
-
-	// Group episodes by season
-	const episodesBySeason = new Map<number, EpisodeDetail[]>();
-	for (const ep of episodeRows) {
-		if (!episodesBySeason.has(ep.seasonId)) {
-			episodesBySeason.set(ep.seasonId, []);
-		}
-		episodesBySeason.get(ep.seasonId)!.push({
-			id: ep.id,
-			arrId: ep.arrId,
-			seasonNumber: ep.seasonNumber,
-			episodeNumber: ep.episodeNumber,
-			title: ep.title,
-			airDate: ep.airDate,
-			monitored: ep.monitored,
-			hasFile: ep.hasFile,
-			quality: ep.quality as QualityModel | null,
-			qualityCutoffNotMet: ep.qualityCutoffNotMet,
-			lastSearchTime: ep.lastSearchTime,
-			searchState: ep.searchState,
-			searchType: ep.searchType,
-			attemptCount: ep.attemptCount ?? 0,
-			nextEligible: ep.nextEligible
-		});
-	}
-
-	// Build result with computed counts
-	return seasonRows.map((season) => {
-		const eps = episodesBySeason.get(season.id) ?? [];
-		const missingCount = eps.filter((e) => e.monitored && !e.hasFile).length;
-		const upgradeCount = eps.filter(
-			(e) => e.monitored && e.hasFile && e.qualityCutoffNotMet
-		).length;
-
-		return {
-			id: season.id,
-			seasonNumber: season.seasonNumber,
-			monitored: season.monitored,
-			totalEpisodes: season.totalEpisodes,
-			downloadedEpisodes: season.downloadedEpisodes,
-			nextAiring: season.nextAiring,
-			missingCount,
-			upgradeCount,
-			episodes: eps
-		};
-	});
 }
 
 export async function getSeasonSummaries(seriesId: number): Promise<SeasonSummary[]> {

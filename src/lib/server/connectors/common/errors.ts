@@ -1,4 +1,4 @@
-export type ErrorCategory =
+type ErrorCategory =
 	| 'network'
 	| 'authentication'
 	| 'rate_limit'
@@ -7,7 +7,7 @@ export type ErrorCategory =
 	| 'not_found'
 	| 'ssl';
 
-export type NetworkErrorCause = 'connection_refused' | 'dns_failure' | 'timeout' | 'unknown';
+type NetworkErrorCause = 'connection_refused' | 'dns_failure' | 'timeout' | 'unknown';
 
 export abstract class ArrClientError extends Error {
 	abstract readonly category: ErrorCategory;

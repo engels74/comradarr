@@ -14,13 +14,7 @@ export const NOTIFICATION_CHANNEL_TYPES = [
 export type NotificationChannelType = (typeof NOTIFICATION_CHANNEL_TYPES)[number];
 
 // Subset of types that are fully implemented (others are coming soon)
-export const IMPLEMENTED_CHANNEL_TYPES = [
-	'discord',
-	'telegram',
-	'slack',
-	'email',
-	'webhook'
-] as const;
+const IMPLEMENTED_CHANNEL_TYPES = ['discord', 'telegram', 'slack', 'email', 'webhook'] as const;
 
 export type ImplementedChannelType = (typeof IMPLEMENTED_CHANNEL_TYPES)[number];
 

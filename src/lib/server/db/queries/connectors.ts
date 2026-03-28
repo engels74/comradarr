@@ -1,5 +1,5 @@
 import { and, count, desc, eq, inArray, or } from 'drizzle-orm';
-import { DecryptionError, decrypt, encrypt, SecretKeyError } from '$lib/server/crypto';
+import { decrypt, encrypt } from '$lib/server/crypto';
 import { db } from '$lib/server/db';
 import {
 	type Connector,
@@ -13,8 +13,6 @@ import {
 	searchRegistry,
 	syncState
 } from '$lib/server/db/schema';
-
-export { DecryptionError, SecretKeyError };
 
 export type SafeConnector = Omit<Connector, 'apiKeyEncrypted'>;
 

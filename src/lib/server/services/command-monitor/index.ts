@@ -12,7 +12,7 @@ import { createLogger } from '$lib/server/logger';
 
 const logger = createLogger('command-monitor');
 
-export interface CommandCheckResult {
+interface CommandCheckResult {
 	success: boolean;
 	connectorsChecked: number;
 	commandsChecked: number;

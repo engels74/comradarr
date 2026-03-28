@@ -6,6 +6,7 @@ import { untrack } from 'svelte';
 import { enhance } from '$app/forms';
 import { goto } from '$app/navigation';
 import { CronBuilder } from '$lib/components/schedules';
+import { formatSweepType } from '$lib/components/schedules/types';
 import { Button } from '$lib/components/ui/button';
 import * as Card from '$lib/components/ui/card';
 import { Input } from '$lib/components/ui/input';
@@ -27,13 +28,6 @@ const isLoading = $derived(isSubmitting);
 // Select styling
 const selectClass =
 	'flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-base shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 md:text-sm';
-
-/**
- * Format sweep type for display.
- */
-function formatSweepType(type: string): string {
-	return type === 'incremental' ? 'Incremental Sync' : 'Full Reconciliation';
-}
 </script>
 
 <svelte:head>

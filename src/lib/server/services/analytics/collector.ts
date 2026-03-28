@@ -227,32 +227,6 @@ class AnalyticsCollector {
 
 		return samples;
 	}
-
-	async recordSyncCompleted(
-		connectorId: number,
-		itemsSynced: number,
-		syncType: 'incremental' | 'full',
-		durationMs: number
-	): Promise<RecordEventResult> {
-		return this.recordEvent(connectorId, 'sync_completed', {
-			itemsSynced,
-			syncType,
-			durationMs
-		});
-	}
-
-	async recordSyncFailed(
-		connectorId: number,
-		syncType: 'incremental' | 'full',
-		error: string,
-		durationMs: number
-	): Promise<RecordEventResult> {
-		return this.recordEvent(connectorId, 'sync_failed', {
-			syncType,
-			error,
-			durationMs
-		});
-	}
 }
 
 export const analyticsCollector = new AnalyticsCollector();

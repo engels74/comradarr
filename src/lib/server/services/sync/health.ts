@@ -3,18 +3,11 @@ import {
 	calculateSyncBackoffDelay,
 	determineHealthStatus,
 	type HealthStatus,
-	type SyncFailureContext,
 	shouldRetrySync
 } from './health-utils';
 
 // Re-export pure functions and types from health-utils
-export {
-	calculateSyncBackoffDelay,
-	determineHealthStatus,
-	type HealthStatus,
-	type SyncFailureContext,
-	shouldRetrySync
-};
+export { calculateSyncBackoffDelay, determineHealthStatus, type HealthStatus, shouldRetrySync };
 
 export async function updateHealthFromSyncResult(
 	connectorId: number,

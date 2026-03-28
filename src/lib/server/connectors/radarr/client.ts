@@ -1,8 +1,8 @@
 import { createLogger } from '$lib/server/logger';
 import { BaseArrClient } from '../common/base-client.js';
 import { parseCommandResponse } from '../common/parsers.js';
-import type { CommandResponse, WantedOptions } from '../common/types.js';
-import { parsePaginatedMoviesLenient, parseRadarrMovie } from './parsers.js';
+import type { CommandResponse } from '../common/types.js';
+import { parseRadarrMovie } from './parsers.js';
 import type { RadarrMovie } from './types.js';
 
 const logger = createLogger('radarr-client');
@@ -18,20 +18,6 @@ export class RadarrClient extends BaseArrClient {
 
 		logger.info('Movies fetched successfully', { total: movies.length });
 		return movies;
-	}
-
-	async getWantedMissing(options?: WantedOptions): Promise<RadarrMovie[]> {
-		return this.fetchAllPaginated('wanted/missing', parsePaginatedMoviesLenient, {
-			sortKey: 'title',
-			...options
-		});
-	}
-
-	async getWantedCutoff(options?: WantedOptions): Promise<RadarrMovie[]> {
-		return this.fetchAllPaginated('wanted/cutoff', parsePaginatedMoviesLenient, {
-			sortKey: 'title',
-			...options
-		});
 	}
 
 	async sendMoviesSearch(movieIds: number[]): Promise<CommandResponse> {

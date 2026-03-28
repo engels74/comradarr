@@ -5,9 +5,7 @@ export type AnalyticsEventType =
 	| 'search_successful'
 	| 'search_failed'
 	| 'search_no_results'
-	| 'queue_depth_sampled'
-	| 'sync_completed'
-	| 'sync_failed';
+	| 'queue_depth_sampled';
 
 export interface GapDiscoveredPayload {
 	/** Total gaps found in content mirror */
@@ -87,33 +85,13 @@ export interface QueueDepthSampledPayload {
 	cooldownCount: number;
 }
 
-export interface SyncCompletedPayload {
-	/** Number of items synced */
-	itemsSynced: number;
-	/** Type of sync operation */
-	syncType: 'incremental' | 'full';
-	/** Duration of sync operation in milliseconds */
-	durationMs: number;
-}
-
-export interface SyncFailedPayload {
-	/** Type of sync operation that failed */
-	syncType: 'incremental' | 'full';
-	/** Error message */
-	error: string;
-	/** Duration before failure in milliseconds */
-	durationMs: number;
-}
-
 export type AnalyticsEventPayload =
 	| GapDiscoveredPayload
 	| UpgradeDiscoveredPayload
 	| SearchDispatchedPayload
 	| SearchSuccessfulPayload
 	| SearchFailedPayload
-	| QueueDepthSampledPayload
-	| SyncCompletedPayload
-	| SyncFailedPayload;
+	| QueueDepthSampledPayload;
 
 export interface RecordEventResult {
 	/** Whether the event was recorded successfully */

@@ -52,17 +52,6 @@ export const CommandResponseSchema = v.object({
 	lastExecutionTime: v.optional(v.string())
 });
 
-export function createPaginatedResponseSchema<T extends v.GenericSchema>(recordSchema: T) {
-	return v.object({
-		page: v.number(),
-		pageSize: v.number(),
-		sortKey: v.optional(v.string(), ''),
-		sortDirection: v.optional(v.picklist(['ascending', 'descending']), 'ascending'),
-		totalRecords: v.number(),
-		records: v.array(recordSchema)
-	});
-}
-
 export function parseCommandResponse(data: unknown): ParseResult<CommandResponse> {
 	const result = v.safeParse(CommandResponseSchema, data);
 

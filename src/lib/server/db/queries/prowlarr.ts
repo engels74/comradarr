@@ -1,5 +1,5 @@
 import { and, eq, notInArray, sql } from 'drizzle-orm';
-import { DecryptionError, decrypt, encrypt, SecretKeyError } from '$lib/server/crypto';
+import { decrypt, encrypt } from '$lib/server/crypto';
 import { db } from '$lib/server/db';
 import {
 	type NewProwlarrInstance,
@@ -9,8 +9,6 @@ import {
 	prowlarrInstances
 } from '$lib/server/db/schema';
 import type { IndexerHealth, ProwlarrHealthStatus } from '$lib/server/services/prowlarr/types';
-
-export { DecryptionError, SecretKeyError };
 
 export type SafeProwlarrInstance = Omit<ProwlarrInstance, 'apiKeyEncrypted'>;
 
@@ -222,19 +220,6 @@ export async function getIndexerHealthByInstance(
 
 export async function getAllCachedIndexerHealth(): Promise<ProwlarrIndexerHealth[]> {
 	return db.select().from(prowlarrIndexerHealth).orderBy(prowlarrIndexerHealth.name);
-}
-
-export async function getRateLimitedIndexers(instanceId: number): Promise<ProwlarrIndexerHealth[]> {
-	return db
-		.select()
-		.from(prowlarrIndexerHealth)
-		.where(
-			and(
-				eq(prowlarrIndexerHealth.prowlarrInstanceId, instanceId),
-				eq(prowlarrIndexerHealth.isRateLimited, true)
-			)
-		)
-		.orderBy(prowlarrIndexerHealth.name);
 }
 
 export async function deleteStaleIndexerHealth(
