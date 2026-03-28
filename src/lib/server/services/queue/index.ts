@@ -3,12 +3,6 @@ export {
 	calculateNextEligibleTimeWithConfig,
 	shouldMarkExhausted
 } from './backoff';
-export type {
-	BatchingConfigType,
-	PriorityConstantsType,
-	QueueConfigType,
-	StateTransitionConfigType
-} from './config';
 export {
 	BATCHING_CONFIG,
 	DEFAULT_PRIORITY_WEIGHTS,

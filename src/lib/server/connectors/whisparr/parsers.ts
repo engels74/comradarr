@@ -1,8 +1,6 @@
 // Whisparr is a Sonarr fork with identical API structure - re-export Sonarr parsers
 export {
-	parsePaginatedEpisodes as parsePaginatedWhisparrEpisodes,
 	parsePaginatedEpisodesLenient as parsePaginatedWhisparrEpisodesLenient,
-	parsePaginatedSeries as parsePaginatedWhisparrSeries,
 	parsePaginatedSeriesLenient as parsePaginatedWhisparrSeriesLenient,
 	parseSonarrEpisode as parseWhisparrEpisode,
 	parseSonarrSeries as parseWhisparrSeries,

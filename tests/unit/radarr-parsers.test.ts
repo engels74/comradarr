@@ -3,7 +3,6 @@
  *
  * Tests cover:
  * - parseRadarrMovie() valid and invalid inputs
- * - parsePaginatedMovies() valid and invalid inputs
  * - Edge cases for all parsers
  *
 
@@ -11,7 +10,6 @@
 
 import { describe, expect, it, vi } from 'vitest';
 import {
-	parsePaginatedMovies,
 	parsePaginatedMoviesLenient,
 	parseRadarrMovie,
 	RadarrMovieSchema
@@ -349,180 +347,6 @@ describe('parseRadarrMovie', () => {
 			expect(result.success).toBe(true);
 			if (result.success) {
 				expect(result.data.year).toBe(1902);
-			}
-		});
-	});
-});
-
-// =============================================================================
-// parsePaginatedMovies Tests
-// =============================================================================
-
-describe('parsePaginatedMovies', () => {
-	describe('valid inputs', () => {
-		it('should parse a valid paginated movies response', () => {
-			const input = {
-				page: 1,
-				pageSize: 10,
-				sortKey: 'title',
-				sortDirection: 'ascending',
-				totalRecords: 25,
-				records: [validMovie, minimalMovie]
-			};
-
-			const result = parsePaginatedMovies(input);
-
-			expect(result.success).toBe(true);
-			if (result.success) {
-				expect(result.data.page).toBe(1);
-				expect(result.data.pageSize).toBe(10);
-				expect(result.data.totalRecords).toBe(25);
-				expect(result.data.records).toHaveLength(2);
-				expect(result.data.records[0]?.title).toBe('The Matrix');
-			}
-		});
-
-		it('should parse an empty records array', () => {
-			const input = {
-				page: 1,
-				pageSize: 1000,
-				totalRecords: 0,
-				records: []
-			};
-
-			const result = parsePaginatedMovies(input);
-
-			expect(result.success).toBe(true);
-			if (result.success) {
-				expect(result.data.records).toHaveLength(0);
-				expect(result.data.totalRecords).toBe(0);
-			}
-		});
-
-		it('should use default values for optional pagination fields', () => {
-			const input = {
-				page: 1,
-				pageSize: 1000,
-				totalRecords: 100,
-				records: []
-			};
-
-			const result = parsePaginatedMovies(input);
-
-			expect(result.success).toBe(true);
-			if (result.success) {
-				expect(result.data.sortKey).toBe('');
-				expect(result.data.sortDirection).toBe('ascending');
-			}
-		});
-
-		it('should handle both sort directions', () => {
-			for (const sortDirection of ['ascending', 'descending'] as const) {
-				const input = {
-					page: 1,
-					pageSize: 10,
-					sortDirection,
-					totalRecords: 1,
-					records: [minimalMovie]
-				};
-
-				const result = parsePaginatedMovies(input);
-				expect(result.success).toBe(true);
-				if (result.success) {
-					expect(result.data.sortDirection).toBe(sortDirection);
-				}
-			}
-		});
-	});
-
-	describe('invalid inputs (Req 27.8)', () => {
-		it('should return error for null input', () => {
-			const result = parsePaginatedMovies(null);
-			expect(result.success).toBe(false);
-		});
-
-		it('should return error for undefined input', () => {
-			const result = parsePaginatedMovies(undefined);
-			expect(result.success).toBe(false);
-		});
-
-		it('should return error for missing required fields', () => {
-			const result = parsePaginatedMovies({ page: 1, pageSize: 10 });
-			expect(result.success).toBe(false);
-		});
-
-		it('should return error for invalid movie in array', () => {
-			const result = parsePaginatedMovies({
-				page: 1,
-				pageSize: 10,
-				totalRecords: 1,
-				records: [{ id: 'invalid', title: 123 }]
-			});
-			expect(result.success).toBe(false);
-		});
-	});
-
-	describe('wanted endpoints simulation', () => {
-		it('should parse missing movies (hasFile=false)', () => {
-			const missingMovies = [
-				{ ...minimalMovie, id: 1 },
-				{ ...minimalMovie, id: 2 },
-				{ ...minimalMovie, id: 3 }
-			];
-
-			const input = {
-				page: 1,
-				pageSize: 1000,
-				totalRecords: 3,
-				records: missingMovies
-			};
-
-			const result = parsePaginatedMovies(input);
-
-			expect(result.success).toBe(true);
-			if (result.success) {
-				expect(result.data.records).toHaveLength(3);
-				expect(result.data.records.every((m) => m.hasFile === false)).toBe(true);
-			}
-		});
-
-		it('should parse cutoff unmet movies (qualityCutoffNotMet=true)', () => {
-			const cutoffMovies = [
-				{ ...validMovie, id: 1, qualityCutoffNotMet: true },
-				{ ...validMovie, id: 2, qualityCutoffNotMet: true }
-			];
-
-			const input = {
-				page: 1,
-				pageSize: 1000,
-				totalRecords: 2,
-				records: cutoffMovies
-			};
-
-			const result = parsePaginatedMovies(input);
-
-			expect(result.success).toBe(true);
-			if (result.success) {
-				expect(result.data.records).toHaveLength(2);
-				expect(result.data.records.every((m) => m.qualityCutoffNotMet === true)).toBe(true);
-			}
-		});
-	});
-
-	describe('large datasets (Req 29.1)', () => {
-		it('should handle pageSize of 1000', () => {
-			const input = {
-				page: 1,
-				pageSize: 1000,
-				totalRecords: 5000,
-				records: []
-			};
-
-			const result = parsePaginatedMovies(input);
-
-			expect(result.success).toBe(true);
-			if (result.success) {
-				expect(result.data.pageSize).toBe(1000);
 			}
 		});
 	});

@@ -13,7 +13,6 @@ export interface BaseClientConfig {
 	apiKey: string;
 	timeout?: number;
 	userAgent?: string;
-	sslVerify?: boolean;
 	retry?: RetryConfig;
 }
 

@@ -1,7 +1,7 @@
 export { SonarrClient } from './client.js';
 export {
-	parsePaginatedEpisodes,
-	parsePaginatedSeries,
+	parsePaginatedEpisodesLenient,
+	parsePaginatedSeriesLenient,
 	parseSonarrEpisode,
 	parseSonarrSeries,
 	SonarrEpisodeFileSchema,

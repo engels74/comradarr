@@ -1,6 +1,5 @@
 import * as v from 'valibot';
 import {
-	createPaginatedResponseSchema,
 	type LenientParseResult,
 	type ParseResult,
 	parsePaginatedResponseLenient,
@@ -137,99 +136,6 @@ export function parseSonarrEpisode(data: unknown): ParseResult<SonarrEpisode> {
 	return {
 		success: false,
 		error: `Invalid Sonarr episode response: ${result.issues.map((i) => i.message).join(', ')}`,
-		issues: result.issues
-	};
-}
-
-export function parsePaginatedSeries(data: unknown): ParseResult<PaginatedResponse<SonarrSeries>> {
-	const schema = createPaginatedResponseSchema(SonarrSeriesSchema);
-	const result = v.safeParse(schema, data);
-
-	if (result.success) {
-		const output = result.output;
-		const paginatedResponse: PaginatedResponse<SonarrSeries> = {
-			page: output.page,
-			pageSize: output.pageSize,
-			sortKey: output.sortKey ?? '',
-			sortDirection: output.sortDirection ?? 'ascending',
-			totalRecords: output.totalRecords,
-			records: output.records.map((record) => {
-				// Map each record to SonarrSeries with proper optional handling
-				const series: SonarrSeries = {
-					id: record.id,
-					title: record.title,
-					tvdbId: record.tvdbId,
-					status: record.status,
-					monitored: record.monitored,
-					qualityProfileId: record.qualityProfileId,
-					seasons: record.seasons.map((season) => {
-						const mappedSeason: SonarrSeason = {
-							seasonNumber: season.seasonNumber,
-							monitored: season.monitored
-						};
-						if (season.statistics !== undefined) {
-							mappedSeason.statistics = season.statistics as SonarrSeasonStatistics;
-						}
-						return mappedSeason;
-					}),
-					...(record.statistics !== undefined && {
-						statistics: record.statistics as SonarrSeriesStatistics
-					})
-				};
-				return series;
-			})
-		};
-		return { success: true, data: paginatedResponse };
-	}
-
-	return {
-		success: false,
-		error: `Invalid paginated series response: ${result.issues.map((i) => i.message).join(', ')}`,
-		issues: result.issues
-	};
-}
-
-export function parsePaginatedEpisodes(
-	data: unknown
-): ParseResult<PaginatedResponse<SonarrEpisode>> {
-	const schema = createPaginatedResponseSchema(SonarrEpisodeSchema);
-	const result = v.safeParse(schema, data);
-
-	if (result.success) {
-		const output = result.output;
-		const paginatedResponse: PaginatedResponse<SonarrEpisode> = {
-			page: output.page,
-			pageSize: output.pageSize,
-			sortKey: output.sortKey ?? '',
-			sortDirection: output.sortDirection ?? 'ascending',
-			totalRecords: output.totalRecords,
-			records: output.records.map((record) => {
-				// Map each record to SonarrEpisode with proper optional handling
-				const episode: SonarrEpisode = {
-					id: record.id,
-					seriesId: record.seriesId,
-					seasonNumber: record.seasonNumber,
-					episodeNumber: record.episodeNumber,
-					hasFile: record.hasFile,
-					monitored: record.monitored,
-					// qualityCutoffNotMet may be undefined (missing) or null (no file)
-					qualityCutoffNotMet: record.qualityCutoffNotMet ?? null,
-					...(record.title !== undefined && { title: record.title }),
-					...(record.airDateUtc !== undefined && { airDateUtc: record.airDateUtc }),
-					...(record.episodeFileId !== undefined && { episodeFileId: record.episodeFileId }),
-					...(record.episodeFile !== undefined && {
-						episodeFile: record.episodeFile as SonarrEpisodeFile
-					})
-				};
-				return episode;
-			})
-		};
-		return { success: true, data: paginatedResponse };
-	}
-
-	return {
-		success: false,
-		error: `Invalid paginated episodes response: ${result.issues.map((i) => i.message).join(', ')}`,
 		issues: result.issues
 	};
 }
