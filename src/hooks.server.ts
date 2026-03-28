@@ -212,8 +212,14 @@ export const handle: Handle = async ({ event, resolve }) => {
 						role: 'admin'
 					};
 					logger.debug('Local network bypass authenticated', { clientIP });
-				} else if (bypassResult.reason) {
+				} else if (bypassResult.reason === 'socket_ip_not_local') {
 					logger.warn('Local bypass denied: potential XFF spoofing', {
+						clientIP,
+						socketIP: bypassResult.socketIP,
+						reason: bypassResult.reason
+					});
+				} else if (bypassResult.reason) {
+					logger.debug('Local bypass denied', {
 						clientIP,
 						socketIP: bypassResult.socketIP,
 						reason: bypassResult.reason
