@@ -36,7 +36,7 @@ import {
 import type { SecuritySettings } from '$lib/server/db/queries/settings';
 
 interface Session {
-	id: string;
+	revocationId: string;
 	userAgent: string | null;
 	ipAddress: string | null;
 	lastAccessedAt: Date;
@@ -60,7 +60,6 @@ interface Props {
 	security: {
 		settings: SecuritySettings;
 		sessions: Session[];
-		currentSessionId: string | null;
 		isLocalBypass: boolean;
 	};
 	apiKeys: {
@@ -441,7 +440,7 @@ function closeRateLimitDialog() {
 											};
 										}}
 									>
-										<input type="hidden" name="sessionId" value={session.id} />
+										<input type="hidden" name="revocationId" value={session.revocationId} />
 										<Button
 											type="submit"
 											variant="ghost"

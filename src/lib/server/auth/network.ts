@@ -40,3 +40,50 @@ export function getClientIP(_request: Request, getClientAddress?: () => string):
 	}
 	return null;
 }
+
+/**
+ * Get the raw TCP socket IP via Bun's requestIP(), bypassing any ADDRESS_HEADER override.
+ * Returns null if platform info is unavailable (e.g., during dev/testing).
+ */
+export function getRawSocketIP(platform: App.Platform | undefined): string | null {
+	try {
+		if (!platform?.server?.requestIP || !platform?.request) return null;
+		return platform.server.requestIP(platform.request)?.address ?? null;
+	} catch {
+		return null;
+	}
+}
+
+/**
+ * Validate local bypass when ADDRESS_HEADER is configured (reverse proxy scenario).
+ * Defense-in-depth: verifies the raw socket IP is from a local/trusted source,
+ * preventing remote attackers from spoofing the forwarded header.
+ *
+ * Returns { allowed: true } if bypass should proceed, or { allowed: false, reason } if denied.
+ */
+export function validateLocalBypassSource(
+	headerIP: string | null,
+	platform: App.Platform | undefined
+): { allowed: boolean; reason?: string; socketIP?: string | null } {
+	const addressHeader = process.env.ADDRESS_HEADER;
+
+	if (!addressHeader) {
+		return { allowed: isLocalNetworkIP(headerIP) };
+	}
+
+	if (!isLocalNetworkIP(headerIP)) {
+		return { allowed: false, reason: 'header_ip_not_local' };
+	}
+
+	const socketIP = getRawSocketIP(platform);
+
+	if (!socketIP) {
+		return { allowed: false, reason: 'socket_ip_unavailable', socketIP };
+	}
+
+	if (!isLocalNetworkIP(socketIP)) {
+		return { allowed: false, reason: 'socket_ip_not_local', socketIP };
+	}
+
+	return { allowed: true, socketIP };
+}

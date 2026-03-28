@@ -29,7 +29,12 @@ declare global {
 		}
 		// interface PageData {}
 		// interface PageState {}
-		// interface Platform {}
+		interface Platform {
+			server: {
+				requestIP(request: Request): { address: string } | null;
+			};
+			request: Request;
+		}
 	}
 }
 

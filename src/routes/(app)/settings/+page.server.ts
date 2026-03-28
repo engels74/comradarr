@@ -44,7 +44,7 @@ import {
 // Queries
 import {
 	deleteOtherUserSessions,
-	deleteUserSession,
+	deleteUserSessionByRevocationId,
 	getUserById,
 	getUserSessions
 } from '$lib/server/db/queries/auth';
@@ -181,7 +181,6 @@ export const load: PageServerLoad = async ({ locals }) => {
 		security: {
 			settings: security,
 			sessions,
-			currentSessionId: locals.sessionId ?? null,
 			isLocalBypass: locals.isLocalBypass ?? false
 		},
 		apiKeys: {
@@ -681,24 +680,17 @@ export const actions: Actions = {
 		}
 
 		const formData = await request.formData();
-		const sessionId = formData.get('sessionId')?.toString();
+		const revocationId = formData.get('revocationId')?.toString();
 
-		if (!sessionId) {
+		if (!revocationId) {
 			return fail(400, {
 				action: 'securityRevokeSession',
-				error: 'Session ID is required'
-			});
-		}
-
-		if (sessionId === locals.sessionId) {
-			return fail(400, {
-				action: 'securityRevokeSession',
-				error: 'Cannot revoke your current session. Use logout instead.'
+				error: 'Revocation ID is required'
 			});
 		}
 
 		try {
-			const deleted = await deleteUserSession(locals.user.id, sessionId);
+			const deleted = await deleteUserSessionByRevocationId(locals.user.id, revocationId);
 			if (!deleted) {
 				return fail(404, {
 					action: 'securityRevokeSession',
