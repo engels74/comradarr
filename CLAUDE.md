@@ -4,158 +4,135 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Comradarr is a media library completion service that integrates with *arr applications (Sonarr, Radarr, Whisparr) to systematically identify and request missing or upgradeable content. Built with Bun, SvelteKit 2, Svelte 5, Drizzle ORM, and PostgreSQL.
+Comradarr is a media library completion service that integrates with \*arr applications (Sonarr, Radarr, Whisparr) to systematically identify and request missing or upgradeable content. Built with **SvelteKit 2 + Svelte 5**, **Bun** runtime, **PostgreSQL** via **Drizzle ORM**, and styled with **UnoCSS + shadcn-svelte**.
 
 ## Commands
 
 ### Development
 ```bash
-bun install                          # Install dependencies (also installs git hooks via prek)
-bun run dev                          # Start dev server with Vite
+bun install                          # Install dependencies
+uv run --project dev_cli cr-dev dev  # Start dev server with ephemeral database
+uv run --project dev_cli cr-dev dev --persist  # Keep database after exit
+bun run dev                          # Start dev server (requires DATABASE_URL + SECRET_KEY)
 bun run build                        # Production build
 bun run start                        # Run production build
 ```
 
-Git hooks (pre-commit, pre-push) are managed by `prek` and installed automatically on `bun install`.
-
-### Type Checking & Linting
-```bash
-bun run typecheck                    # svelte-check + tsc --noEmit
-bun run check                        # svelte-check only
-bun run lint                         # Biome lint
-bun run format                       # Biome format
-bun run check:biome                  # Biome check (lint + format)
-```
-
 ### Testing
 ```bash
-bun run test                         # Full test suite (unit + integration via Python CLI)
-bun run test:unit                    # Vitest unit tests only
-bun run test:watch                   # Vitest watch mode
-bun run test:integration             # Integration tests with real database
-
-# Run a single test file
-bun run test:unit -- src/path/to/file.test.ts
-bun run test:watch -- src/path/to/file.test.ts
-```
-
-Test files: `src/**/*.test.ts` or `tests/**/*.test.ts` (integration tests in `tests/integration/` run separately).
-
-### Database (via Python CLI or directly)
-```bash
-bun run db:generate                  # Generate migrations from schema changes
-bun run db:migrate                   # Apply pending migrations
-bun run db:push                      # Push schema directly (dev only)
-bun run db:studio                    # Open Drizzle Studio GUI
-
-# Python CLI for test database management
-bun run test:db:setup                # Create test database container
-bun run test:db:teardown             # Remove test database
+bun run test                         # All tests (unit + integration via cr-dev)
+bun run test:unit                    # Unit tests only (vitest)
+vitest run src/path/to/file.test.ts  # Single test file
+vitest run -t "test name"            # Single test by name
+bun run test:watch                   # Watch mode
+bun run test:integration             # Integration tests (needs PostgreSQL)
+bun run test:db:setup                # Create test database
 bun run test:db:reset                # Reset test database
-bun run test:db:status               # Show database status
 ```
 
-### Python Dev Tools (run from project root)
+### Code Quality
 ```bash
-uv run --project dev_cli cr-dev menu            # Interactive TUI menu
-uv run --project dev_cli cr-dev dev                    # Dev server with temp database (deleted on exit)
-uv run --project dev_cli cr-dev dev --db-name mydb     # Dev server with named database (persisted)
-uv run --project dev_cli basedpyright dev_cli/src dev_cli/tests # Type check Python code
-uv run --project dev_cli ruff check dev_cli/src dev_cli/tests   # Lint Python code
+bun run typecheck                    # svelte-check + tsc --noEmit
+bun run check:biome                  # Biome lint + format check
+bun run lint                         # Biome lint only
+bun run lint:fix                     # Biome lint with auto-fix
+bun run format                       # Biome format with auto-write
+bun run format:check                 # Biome format check only
 ```
 
-## Coding Guidelines
-
-**Always follow the coding patterns established in:**
-`.augment/rules/bun-svelte-pro.md`
-
-Before making any changes, review this file to ensure consistency with project standards.
-
-### Comment Philosophy
-
-This codebase maintains a comment-minimal style. Follow these principles:
-
-- **Remove redundant comments** that restate what the code does—the code is the documentation
-- **Keep comments that explain WHY**, not WHAT (business logic rationale, non-obvious decisions)
-- **Preserve essential context** that isn't obvious from reading the code itself
-- **Avoid over-explanatory JSDoc** where TypeScript types already provide sufficient documentation
-- **Never add section dividers** or decorative comment blocks
+### Database
+```bash
+bunx drizzle-kit generate            # Generate migration from schema changes
+bunx drizzle-kit migrate             # Run migrations
+bunx drizzle-kit push                # Push schema directly (dev/test)
+bunx drizzle-kit studio              # Open Drizzle Studio GUI
+```
 
 ## Architecture
 
 ### Stack
-- **Runtime**: Bun with native PostgreSQL driver (`bun:sql`)
-- **Framework**: SvelteKit 2.x with svelte-adapter-bun
-- **UI**: Svelte 5 (Runes), shadcn-svelte, UnoCSS (presetWind3 + presetShadcn)
-- **Database**: PostgreSQL with Drizzle ORM
-- **Type Checking**: svelte-check + TypeScript strict mode
-- **Linting/Formatting**: Biome (tabs, single quotes, 100 line width)
+- **Runtime**: Bun (with `svelte-adapter-bun` for production)
+- **Framework**: SvelteKit 2 with Svelte 5 (runes: `$state`, `$derived`, `$props`, `$effect`)
+- **Database**: PostgreSQL via `drizzle-orm/bun-sql` (runtime uses `bun:sql`, drizzle-kit uses `postgres` package)
+- **Styling**: UnoCSS with `preset-wind3` + `preset-shadcn` (Tailwind-compatible classes)
+- **UI Components**: shadcn-svelte (bits-ui primitives)
+- **Validation**: Valibot (`$lib/schemas/`)
+- **Icons**: `@lucide/svelte` (direct icon imports, not barrel)
+- **Scheduling**: Croner for cron-based background jobs
+- **Auth**: Argon2id password hashing, session-based + API key + local network bypass
 
-### Directory Structure
+### Route Structure
 ```
-src/
-├── lib/
-│   ├── components/         # Svelte components (shadcn-svelte UI in ui/)
-│   ├── server/             # Server-only code (enforced by SvelteKit)
-│   │   ├── auth/           # Authentication (Argon2id, sessions, lockout)
-│   │   ├── connectors/     # *arr API clients (sonarr/, radarr/, whisparr/)
-│   │   ├── db/             # Drizzle schema and queries
-│   │   │   ├── schema/     # Table definitions with inferred types
-│   │   │   └── queries/    # Database query functions
-│   │   └── services/       # Business logic services
-│   │       ├── analytics/  # Stats aggregation
-│   │       ├── discovery/  # Gap/upgrade detection
-│   │       ├── notifications/ # Multi-channel notifications
-│   │       ├── prowlarr/   # Indexer health monitoring
-│   │       ├── queue/      # Search queue management
-│   │       ├── sync/       # Content synchronization
-│   │       └── throttle/   # Rate limiting
-│   └── stores/             # Svelte state (use $state in .svelte.ts)
-└── routes/
-    ├── (app)/              # Authenticated routes
-    ├── (auth)/             # Login/logout
-    └── api/                # API endpoints
+src/routes/
+  (app)/          # Authenticated routes (session auth enforced in hooks.server.ts)
+    dashboard/    # Main dashboard with completion stats, activity feed
+    connectors/   # *arr application connections (add/edit/detail with [id])
+    content/      # Browse synced content with search state
+    queue/        # Search request queue management
+    schedules/    # Sweep schedule configuration
+    analytics/    # Search/discovery metrics and charts
+    settings/     # User, security, notification, backup settings
+    logs/         # Application log viewer
+  (auth)/         # Unauthenticated routes (login, setup)
+  api/            # REST API endpoints (API key auth via x-api-key header)
+  health/         # Health check endpoint
 ```
 
-### Key Patterns
+### Server Architecture (`src/lib/server/`)
+- **`db/`** - Drizzle ORM setup, schema (`db/schema/index.ts`), and query modules (`db/queries/`)
+- **`connectors/`** - *arr API clients with a polymorphic factory: `createConnectorClient()` returns `SonarrClient`, `RadarrClient`, or `WhisparrClient` based on connector type. All extend `BaseArrClient` with shared retry, error handling, and response parsing
+- **`services/`** - Business logic organized by domain:
+  - `sync/` - Incremental sync and full reconciliation from *arr apps
+  - `discovery/` - Gap detection (missing content) and upgrade detection (quality cutoff not met)
+  - `queue/` - Priority queue with state machine (pending -> queued -> searching -> cooldown/exhausted), backoff, episode batching
+  - `throttle/` - Rate limiting enforcer per connector with configurable profiles
+  - `notifications/` - Multi-channel notifications (Discord, Telegram, Slack, email, webhooks, etc.)
+  - `reconnect/` - Auto-reconnection for offline connectors
+  - `analytics/` - Event collection and hourly/daily aggregation
+  - `backup/` - Database backup with retention
+  - `prowlarr/` - Indexer health monitoring
+- **`scheduler.ts`** - Central Croner-based scheduler that initializes all background jobs on startup
+- **`context.ts`** - `AsyncLocalStorage`-based request context for correlation ID propagation
+- **`crypto.ts`** - AES-256-GCM encryption for API keys/credentials (format: `iv:authTag:ciphertext` hex-encoded)
+- **`auth/`** - Password hashing, session management, API key validation, local network bypass
 
-**Svelte 5 Runes**: Use `$state()`, `$derived()`, `$props()`, `{#snippet}`, `{@render}`. Avoid legacy `export let`, `$:`, and `<slot>`.
+### Client-Side Patterns (`src/lib/`)
+- **`stores/`** - Svelte 5 class-based stores in `.svelte.ts` files (e.g., `ThemeStore`, `ToastStore`) using `$state` and getters
+- **`components/ui/`** - shadcn-svelte base components (auto-generated, excluded from TS checks)
+- **`components/`** - Feature-specific components organized by route/domain
+- **`schemas/`** - Valibot validation schemas shared between client and server
+- **`utils.ts`** - `cn()` helper (clsx + tailwind-merge) for class merging
 
-**Database**: Schema in `src/lib/server/db/schema/index.ts`. Use `$inferSelect`/`$inferInsert` for types. Two PostgreSQL drivers are used: `bun:sql` for runtime (via Drizzle ORM) and `postgres` package for drizzle-kit only (migrations/studio) since drizzle-kit doesn't support `bun:sql`.
+### Authentication Flow
+Authentication is handled in `hooks.server.ts` with a priority chain:
+1. **API key** (`x-api-key` header) - only for `/api/*` routes, with per-key rate limiting
+2. **Session** (cookie-based) - 7-day sessions stored in PostgreSQL
+3. **Local bypass** - optional mode for local network access without login
 
-**Connectors**: Factory pattern in `src/lib/server/connectors/factory.ts`. Each connector type (sonarr, radarr, whisparr) has its own client, types, and parsers.
+Routes under `(app)/` require authentication; unauthenticated users are redirected to `/login`.
 
-**Authentication**: Argon2id hashing, session-based with cookies, account lockout after failed attempts. Implemented in `src/lib/server/auth/`.
+### Environment Variables
+- `DATABASE_URL` - PostgreSQL connection string
+- `SECRET_KEY` - 64-char hex string for AES-256-GCM encryption (`openssl rand -hex 32`)
+- `ADDRESS_HEADER` - Optional: header name for client IP behind reverse proxy
 
-**Throttle System**: Per-connector rate limiting with daily budgets, batch processing, and automatic backoff. State persisted in `throttle_state` table.
+### Key Conventions
+- **TypeScript**: Strict mode with `noUncheckedIndexedAccess` and `exactOptionalPropertyTypes`
+- **Formatting**: Biome with tabs, single quotes, 100-char line width, trailing commas off
+- **Logger**: Use `createLogger('module-name')` from `$lib/server/logger` for structured logging with correlation IDs
+- **Database queries**: Organized in `$lib/server/db/queries/` by domain, imported by route `+page.server.ts` files
+- **Pre-commit**: Biome check + ruff (Python). Pre-push: typecheck + full test suite
 
-### Path Aliases
-- `$lib` - src/lib
+### dev_cli (`dev_cli/`)
+A Python CLI tool (`cr-dev`) for development workflows. Requires Python 3.14+ and uv. Manages PostgreSQL lifecycle, runs tests with auto-provisioned databases, and provides a TUI menu. Has its own [CLAUDE.md](dev_cli/CLAUDE.md).
 
-## Code Style
-
-**TypeScript**: Strict mode enabled. Use `satisfies` for configs, infer types from Drizzle schema.
-
-**Svelte Components**: Use Svelte 5 syntax exclusively:
-```svelte
-<script lang="ts">
-  import type { PageProps } from './$types';
-  let { data }: PageProps = $props();
-  const doubled = $derived(data.count * 2);
-</script>
+### Test Structure
+```
+tests/
+  unit/           # Unit tests (vitest, no database needed)
+  integration/    # Integration tests (needs PostgreSQL, uses bun:test)
+  properties/     # Property-based tests (fast-check)
+src/**/*.test.ts  # Co-located unit tests
 ```
 
-**Biome Config**: Tabs, single quotes, no trailing commas, 100 char line width.
-
-**Icons**: Import directly from `@lucide/svelte/icons/icon-name` for tree-shaking.
-
-## Database Schema
-
-Key tables: `connectors`, `series`, `seasons`, `episodes`, `movies`, `search_registry`, `request_queue`, `throttle_state`, `users`, `sessions`, `api_keys`, `notification_channels`, `sweep_schedules`, `analytics_events`.
-
-API keys use prefix-based lookup with Argon2id hashed storage. Connector API keys use AES-256-GCM encryption.
-
-## Environment Variables
-
-- `DATABASE_URL` - PostgreSQL connection string (required)
-- `SECRET_KEY` - 32-byte hex key for API key encryption (required in production; auto-generated by dev CLI only)
+Integration tests use `bun:test` (not vitest) and require `DATABASE_URL` + `SECRET_KEY` environment variables.
