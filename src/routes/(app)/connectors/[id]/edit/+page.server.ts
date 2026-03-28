@@ -13,6 +13,7 @@ import {
 	connectorNameExists,
 	getConnector,
 	getDecryptedApiKey,
+	toSafeConnector,
 	updateConnector
 } from '$lib/server/db/queries/connectors';
 import { createLogger } from '$lib/server/logger';
@@ -62,7 +63,7 @@ export const load: PageServerLoad = async ({ params }) => {
 	}
 
 	return {
-		connector
+		connector: toSafeConnector(connector)
 	};
 };
 

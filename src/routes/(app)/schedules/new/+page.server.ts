@@ -2,7 +2,7 @@ import { fail } from '@sveltejs/kit';
 import { Cron } from 'croner';
 import * as v from 'valibot';
 import { ScheduleSchema } from '$lib/schemas/schedules';
-import { getAllConnectors } from '$lib/server/db/queries/connectors';
+import { getAllConnectors, toSafeConnector } from '$lib/server/db/queries/connectors';
 import { createSchedule } from '$lib/server/db/queries/schedules';
 import { getAllThrottleProfiles } from '$lib/server/db/queries/throttle';
 import { createLogger } from '$lib/server/logger';
@@ -18,7 +18,7 @@ export const load: PageServerLoad = async () => {
 	]);
 
 	return {
-		connectors,
+		connectors: connectors.map(toSafeConnector),
 		throttleProfiles
 	};
 };

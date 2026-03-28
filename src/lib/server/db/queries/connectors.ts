@@ -16,6 +16,24 @@ import {
 
 export { DecryptionError, SecretKeyError };
 
+export type SafeConnector = Omit<Connector, 'apiKeyEncrypted'>;
+
+export function toSafeConnector(connector: Connector): SafeConnector {
+	return {
+		id: connector.id,
+		type: connector.type,
+		name: connector.name,
+		url: connector.url,
+		enabled: connector.enabled,
+		healthStatus: connector.healthStatus,
+		queuePaused: connector.queuePaused,
+		throttleProfileId: connector.throttleProfileId,
+		lastSync: connector.lastSync,
+		createdAt: connector.createdAt,
+		updatedAt: connector.updatedAt
+	};
+}
+
 export type ConnectorType = 'sonarr' | 'radarr' | 'whisparr';
 
 export interface CreateConnectorInput {

@@ -4,12 +4,15 @@ import { getRecentActivity } from '$lib/server/db/queries/activity';
 import type { ConnectorCompletionWithTrend } from '$lib/server/db/queries/completion';
 import { getAllConnectorCompletionWithTrends } from '$lib/server/db/queries/completion';
 import type { ConnectorStats } from '$lib/server/db/queries/connectors';
-import { getAllConnectorStats, getAllConnectors } from '$lib/server/db/queries/connectors';
+import {
+	getAllConnectorStats,
+	getAllConnectors,
+	toSafeConnector
+} from '$lib/server/db/queries/connectors';
 import type { ContentStatusCounts } from '$lib/server/db/queries/content';
 import { getContentStatusCounts } from '$lib/server/db/queries/content';
 import type { TodaySearchStats } from '$lib/server/db/queries/queue';
 import { getTodaySearchStats } from '$lib/server/db/queries/queue';
-import type { Connector } from '$lib/server/db/schema';
 import { createLogger } from '$lib/server/logger';
 import { getSchedulerStatus } from '$lib/server/scheduler';
 import type { PageServerLoad } from './$types';
@@ -113,7 +116,7 @@ export const load: PageServerLoad = async ({ parent }) => {
 
 	// Define fallback values for graceful degradation
 	const fallbacks = {
-		connectors: [] as Connector[],
+		connectors: [],
 		statsMap: new Map<number, ConnectorStats>(),
 		contentStats: {
 			all: 0,
@@ -166,7 +169,7 @@ export const load: PageServerLoad = async ({ parent }) => {
 	}
 
 	// Extract data (fallbacks already applied by safeQuery)
-	const connectors = connectorsResult.data;
+	const connectors = connectorsResult.data.map(toSafeConnector);
 	const statsMap = statsMapResult.data;
 	const contentStats = contentStatsResult.data;
 	const todayStats = todayStatsResult.data;

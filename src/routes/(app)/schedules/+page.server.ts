@@ -11,7 +11,7 @@ import type {
 	SweepType,
 	TimelineData
 } from '$lib/components/schedules/types';
-import { getAllConnectors } from '$lib/server/db/queries/connectors';
+import { getAllConnectors, toSafeConnector } from '$lib/server/db/queries/connectors';
 import {
 	getAllSchedules,
 	type ScheduleWithRelations,
@@ -175,7 +175,7 @@ export const load: PageServerLoad = async () => {
 
 	return {
 		schedules,
-		connectors,
+		connectors: connectors.map(toSafeConnector),
 		timeline
 	};
 };

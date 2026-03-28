@@ -4,12 +4,11 @@ import { StatusBadge } from '$lib/components/shared';
 import { Button } from '$lib/components/ui/button';
 import * as Card from '$lib/components/ui/card';
 import { toastStore } from '$lib/components/ui/toast';
-import type { ConnectorStats } from '$lib/server/db/queries/connectors';
-import type { Connector } from '$lib/server/db/schema';
+import type { ConnectorStats, SafeConnector } from '$lib/server/db/queries/connectors';
 import { cn } from '$lib/utils.js';
 
 interface Props {
-	connector: Connector;
+	connector: SafeConnector;
 	stats: ConnectorStats;
 	class?: string;
 }

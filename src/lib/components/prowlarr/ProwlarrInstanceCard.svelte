@@ -3,7 +3,7 @@ import { enhance } from '$app/forms';
 import { StatusBadge } from '$lib/components/shared';
 import { Button } from '$lib/components/ui/button';
 import * as Card from '$lib/components/ui/card';
-import type { ProwlarrInstance } from '$lib/server/db/schema';
+import type { SafeProwlarrInstance } from '$lib/server/db/queries/prowlarr';
 import { cn } from '$lib/utils.js';
 
 /**
@@ -16,7 +16,7 @@ interface ProwlarrInstanceStats {
 }
 
 interface Props {
-	instance: ProwlarrInstance;
+	instance: SafeProwlarrInstance;
 	stats: ProwlarrInstanceStats;
 	class?: string;
 }

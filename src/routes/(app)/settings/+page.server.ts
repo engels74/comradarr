@@ -59,6 +59,8 @@ import {
 	type NotificationChannelType,
 	type NotificationEventType,
 	notificationChannelNameExists,
+	type SafeNotificationChannel,
+	toSafeNotificationChannel,
 	updateNotificationChannel
 } from '$lib/server/db/queries/notifications';
 import {
@@ -82,7 +84,6 @@ import {
 	throttleProfileNameExists,
 	updateThrottleProfile
 } from '$lib/server/db/queries/throttle';
-import type { NotificationChannel } from '$lib/server/db/schema';
 // Logger
 import { createLogger, setLogLevel } from '$lib/server/logger';
 // Services
@@ -116,7 +117,7 @@ export interface ProfileWithUsage {
 /**
  * Channel with statistics for display.
  */
-export interface ChannelWithStats extends NotificationChannel {
+export interface ChannelWithStats extends SafeNotificationChannel {
 	stats: NotificationChannelStats;
 }
 
@@ -169,7 +170,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 	// Get notification channels with stats
 	const channelsWithStats: ChannelWithStats[] = await Promise.all(
 		channels.map(async (channel) => ({
-			...channel,
+			...toSafeNotificationChannel(channel),
 			stats: await getNotificationChannelStats(channel.id)
 		}))
 	);

@@ -6,11 +6,13 @@ import {
 	type ConnectorStats,
 	getAllConnectorStats,
 	getAllConnectors,
+	toSafeConnector,
 	updateConnector
 } from '$lib/server/db/queries/connectors';
 import {
 	getAllProwlarrInstances,
 	getIndexerHealthSummary,
+	toSafeProwlarrInstance,
 	updateProwlarrInstance
 } from '$lib/server/db/queries/prowlarr';
 import { createLogger } from '$lib/server/logger';
@@ -51,9 +53,9 @@ export const load: PageServerLoad = async () => {
 	}
 
 	return {
-		connectors,
+		connectors: connectors.map(toSafeConnector),
 		stats,
-		prowlarrInstances,
+		prowlarrInstances: prowlarrInstances.map(toSafeProwlarrInstance),
 		prowlarrStats
 	};
 };
