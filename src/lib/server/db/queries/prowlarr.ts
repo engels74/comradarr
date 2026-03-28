@@ -12,6 +12,21 @@ import type { IndexerHealth, ProwlarrHealthStatus } from '$lib/server/services/p
 
 export { DecryptionError, SecretKeyError };
 
+export type SafeProwlarrInstance = Omit<ProwlarrInstance, 'apiKeyEncrypted'>;
+
+export function toSafeProwlarrInstance(instance: ProwlarrInstance): SafeProwlarrInstance {
+	return {
+		id: instance.id,
+		name: instance.name,
+		url: instance.url,
+		enabled: instance.enabled,
+		healthStatus: instance.healthStatus,
+		lastHealthCheck: instance.lastHealthCheck,
+		createdAt: instance.createdAt,
+		updatedAt: instance.updatedAt
+	};
+}
+
 export interface CreateProwlarrInstanceInput {
 	name: string;
 	url: string;

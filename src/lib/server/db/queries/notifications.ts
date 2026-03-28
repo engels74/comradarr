@@ -12,6 +12,27 @@ import {
 
 export { DecryptionError, SecretKeyError };
 
+export type SafeNotificationChannel = Omit<NotificationChannel, 'configEncrypted'>;
+
+export function toSafeNotificationChannel(channel: NotificationChannel): SafeNotificationChannel {
+	return {
+		id: channel.id,
+		name: channel.name,
+		type: channel.type,
+		config: channel.config,
+		enabled: channel.enabled,
+		enabledEvents: channel.enabledEvents,
+		batchingEnabled: channel.batchingEnabled,
+		batchingWindowSeconds: channel.batchingWindowSeconds,
+		quietHoursEnabled: channel.quietHoursEnabled,
+		quietHoursStart: channel.quietHoursStart,
+		quietHoursEnd: channel.quietHoursEnd,
+		quietHoursTimezone: channel.quietHoursTimezone,
+		createdAt: channel.createdAt,
+		updatedAt: channel.updatedAt
+	};
+}
+
 export type NotificationChannelType =
 	| 'discord'
 	| 'telegram'

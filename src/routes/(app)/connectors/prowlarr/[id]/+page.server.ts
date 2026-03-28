@@ -15,6 +15,7 @@ import {
 	getDecryptedApiKey,
 	getIndexerHealthByInstance,
 	getProwlarrInstance,
+	toSafeProwlarrInstance,
 	updateProwlarrHealth
 } from '$lib/server/db/queries/prowlarr';
 import { ProwlarrClient, prowlarrHealthMonitor } from '$lib/server/services/prowlarr';
@@ -78,7 +79,7 @@ export const load: PageServerLoad = async ({ params }) => {
 	}));
 
 	return {
-		instance,
+		instance: toSafeProwlarrInstance(instance),
 		indexerHealth: indexerHealthWithStale
 	};
 };

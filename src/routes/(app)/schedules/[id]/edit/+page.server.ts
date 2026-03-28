@@ -6,7 +6,7 @@ import { error, fail } from '@sveltejs/kit';
 import { Cron } from 'croner';
 import * as v from 'valibot';
 import { ScheduleUpdateSchema } from '$lib/schemas/schedules';
-import { getAllConnectors } from '$lib/server/db/queries/connectors';
+import { getAllConnectors, toSafeConnector } from '$lib/server/db/queries/connectors';
 import { deleteSchedule, getScheduleById, updateSchedule } from '$lib/server/db/queries/schedules';
 import { getAllThrottleProfiles } from '$lib/server/db/queries/throttle';
 import { createLogger } from '$lib/server/logger';
@@ -34,7 +34,7 @@ export const load: PageServerLoad = async ({ params }) => {
 
 	return {
 		schedule,
-		connectors,
+		connectors: connectors.map(toSafeConnector),
 		throttleProfiles
 	};
 };

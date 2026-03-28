@@ -16,6 +16,7 @@ import {
 	getDecryptedApiKey,
 	getProwlarrInstance,
 	prowlarrInstanceNameExists,
+	toSafeProwlarrInstance,
 	updateProwlarrInstance
 } from '$lib/server/db/queries/prowlarr';
 import { createLogger } from '$lib/server/logger';
@@ -69,7 +70,7 @@ export const load: PageServerLoad = async ({ params }) => {
 	}
 
 	return {
-		instance
+		instance: toSafeProwlarrInstance(instance)
 	};
 };
 

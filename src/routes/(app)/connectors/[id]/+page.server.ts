@@ -17,6 +17,7 @@ import {
 	getRecentSearchHistory,
 	getSearchStateDistribution,
 	getSyncState,
+	toSafeConnector,
 	updateConnectorHealth
 } from '$lib/server/db/queries/connectors';
 import { getReconnectState } from '$lib/server/db/queries/reconnect';
@@ -87,7 +88,7 @@ export const load: PageServerLoad = async ({ params }) => {
 	]);
 
 	return {
-		connector,
+		connector: toSafeConnector(connector),
 		syncState: syncStateData,
 		detailedStats,
 		searchStateDistribution,

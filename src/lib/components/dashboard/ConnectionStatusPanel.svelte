@@ -2,11 +2,10 @@
 import PlugIcon from '@lucide/svelte/icons/plug';
 import StatusBadge from '$lib/components/shared/StatusBadge.svelte';
 import * as Card from '$lib/components/ui/card';
-import type { ConnectorStats } from '$lib/server/db/queries/connectors';
-import type { Connector } from '$lib/server/db/schema';
+import type { ConnectorStats, SafeConnector } from '$lib/server/db/queries/connectors';
 
 interface Props {
-	connectors: Connector[];
+	connectors: SafeConnector[];
 	stats: Record<number, ConnectorStats>;
 	class?: string;
 }
