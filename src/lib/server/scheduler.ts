@@ -18,10 +18,12 @@
  * - queue-depth-sampler: Every 5 minutes - samples queue depth for analytics
  * - analytics-hourly-aggregation: 5 min past each hour - aggregates raw events to hourly stats
  * - analytics-daily-aggregation: Daily at 1 AM - aggregates hourly to daily stats, cleans old events
+ * - session-cleanup: Every 6 hours - removes expired authentication sessions
  * - scheduled-backup: Configurable cron - creates database backups with retention cleanup
  */
 
 import { Cron } from 'croner';
+import { cleanupExpiredSessions } from '$lib/server/auth';
 import {
 	AuthenticationError,
 	NetworkError,
@@ -1083,6 +1085,31 @@ export function initializeScheduler(): void {
 		cron: dailyAggregationJob
 	});
 
+	const sessionCleanupJob = new Cron(
+		'0 */6 * * *',
+		{
+			name: 'session-cleanup',
+			protect: true,
+			catch: (err) => {
+				logger.error('Session cleanup failed', {
+					error: err instanceof Error ? err.message : String(err)
+				});
+			}
+		},
+		withJobContext('session-cleanup', async () => {
+			const deleted = await cleanupExpiredSessions();
+
+			if (deleted > 0) {
+				logger.info('Expired sessions cleaned up', { sessionsDeleted: deleted });
+			}
+		})
+	);
+
+	state.jobs.set('session-cleanup', {
+		name: 'session-cleanup',
+		cron: sessionCleanupJob
+	});
+
 	initializeScheduledBackup().catch((err) => {
 		logger.error('Failed to initialize scheduled backup', {
 			error: err instanceof Error ? err.message : String(err)
@@ -1206,8 +1233,7 @@ export async function refreshDynamicSchedules(): Promise<void> {
 					if (schedule.connectorId) {
 						const connector = await getConnector(schedule.connectorId);
 						if (
-							!connector ||
-							!connector.enabled ||
+							!connector?.enabled ||
 							!['healthy', 'degraded'].includes(connector.healthStatus ?? '')
 						) {
 							logger.warn('Schedule skipped - connector not healthy', {

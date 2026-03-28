@@ -283,30 +283,3 @@ async function discoverMovieUpgrades(
 		movieRegistriesCreated: registriesCreated
 	};
 }
-
-export async function getUpgradeStats(
-	connectorId: number
-): Promise<{ episodeUpgrades: number; movieUpgrades: number }> {
-	const episodeUpgradesResult = await db
-		.select({ count: sql<number>`count(*)::int` })
-		.from(episodes)
-		.where(
-			and(
-				eq(episodes.connectorId, connectorId),
-				eq(episodes.monitored, true),
-				eq(episodes.hasFile, true)
-			)
-		);
-
-	const movieUpgradesResult = await db
-		.select({ count: sql<number>`count(*)::int` })
-		.from(movies)
-		.where(
-			and(eq(movies.connectorId, connectorId), eq(movies.monitored, true), eq(movies.hasFile, true))
-		);
-
-	return {
-		episodeUpgrades: episodeUpgradesResult[0]?.count ?? 0,
-		movieUpgrades: movieUpgradesResult[0]?.count ?? 0
-	};
-}

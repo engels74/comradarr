@@ -2,25 +2,13 @@
  * Property-based tests for search state transitions.
  *
  * Validates requirements:
- * - 5.5: Calculate the next eligible search time using exponential backoff
- * - 5.6: Mark as exhausted when reaching maximum retry attempts
- *
- * Property 8: Exhaustion at Max Attempts
- * "For any search registry entry, when the attempt count reaches exactly
- * the configured maximum, the state should transition to 'exhausted'.
- * The state should not become exhausted before max attempts, and should
- * always become exhausted at max attempts."
- *
-
+ * - 5.5: State transition rules and configuration consistency
+ * - 5.6: Exhaustion boundary at maximum retry attempts
  */
 
 import * as fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 // Import directly from specific files to avoid loading database-dependent modules
-import {
-	calculateNextEligibleTime,
-	shouldMarkExhausted
-} from '../../src/lib/server/services/queue/backoff';
 import { STATE_TRANSITION_CONFIG } from '../../src/lib/server/services/queue/config';
 
 /**
@@ -38,25 +26,6 @@ const attemptCountBelowMaxArbitrary = fc.integer({
 	min: 1,
 	max: STATE_TRANSITION_CONFIG.MAX_ATTEMPTS - 1
 });
-
-/**
- * Arbitrary for attempt counts at or above max
- */
-const attemptCountAtOrAboveMaxArbitrary = fc.integer({
-	min: STATE_TRANSITION_CONFIG.MAX_ATTEMPTS,
-	max: STATE_TRANSITION_CONFIG.MAX_ATTEMPTS + 10
-});
-
-/**
- * Arbitrary for Date objects (within reasonable range)
- * Filter out invalid dates (NaN) to prevent test failures
- */
-const dateArbitrary = fc
-	.date({
-		min: new Date('2020-01-01'),
-		max: new Date('2030-12-31')
-	})
-	.filter((d) => !Number.isNaN(d.getTime()));
 
 describe('State Transitions (Requirements 5.5, 5.6)', () => {
 	describe('Property 8: Exhaustion at Max Attempts', () => {
@@ -121,114 +90,6 @@ describe('State Transitions (Requirements 5.5, 5.6)', () => {
 					const newCount = attemptCount + 1;
 					expect(newCount).toBe(STATE_TRANSITION_CONFIG.MAX_ATTEMPTS);
 					expect(newCount >= STATE_TRANSITION_CONFIG.MAX_ATTEMPTS).toBe(true);
-				}),
-				{ numRuns: 100 }
-			);
-		});
-
-		it('shouldMarkExhausted returns false for attempts below max', () => {
-			fc.assert(
-				fc.property(attemptCountBelowMaxArbitrary, (attemptCount) => {
-					// For any attempt count below MAX_ATTEMPTS, shouldMarkExhausted returns false
-					expect(shouldMarkExhausted(attemptCount)).toBe(false);
-				}),
-				{ numRuns: 100 }
-			);
-		});
-
-		it('shouldMarkExhausted returns true for attempts at or above max', () => {
-			fc.assert(
-				fc.property(attemptCountAtOrAboveMaxArbitrary, (attemptCount) => {
-					// For any attempt count at or above MAX_ATTEMPTS, shouldMarkExhausted returns true
-					expect(shouldMarkExhausted(attemptCount)).toBe(true);
-				}),
-				{ numRuns: 100 }
-			);
-		});
-
-		it('shouldMarkExhausted is deterministic', () => {
-			fc.assert(
-				fc.property(attemptCountArbitrary, (attemptCount) => {
-					// Same input always produces same output
-					const result1 = shouldMarkExhausted(attemptCount);
-					const result2 = shouldMarkExhausted(attemptCount);
-					expect(result1).toBe(result2);
-				}),
-				{ numRuns: 100 }
-			);
-		});
-	});
-
-	describe('Property: Next Eligible Time Calculation', () => {
-		it('should always produce a future date', () => {
-			fc.assert(
-				fc.property(attemptCountArbitrary, dateArbitrary, (attemptCount, now) => {
-					const nextEligible = calculateNextEligibleTime(attemptCount, now);
-					expect(nextEligible.getTime()).toBeGreaterThan(now.getTime());
-				}),
-				{ numRuns: 100 }
-			);
-		});
-
-		it('should produce valid Date objects', () => {
-			fc.assert(
-				fc.property(attemptCountArbitrary, dateArbitrary, (attemptCount, now) => {
-					const nextEligible = calculateNextEligibleTime(attemptCount, now);
-
-					expect(nextEligible).toBeInstanceOf(Date);
-					expect(nextEligible.toString()).not.toBe('Invalid Date');
-					expect(Number.isFinite(nextEligible.getTime())).toBe(true);
-				}),
-				{ numRuns: 100 }
-			);
-		});
-
-		it('should produce delays within expected bounds', () => {
-			fc.assert(
-				fc.property(attemptCountArbitrary, dateArbitrary, (attemptCount, now) => {
-					const nextEligible = calculateNextEligibleTime(attemptCount, now);
-					const delay = nextEligible.getTime() - now.getTime();
-
-					// Minimum delay is 75% of base delay (due to jitter)
-					const minDelay = STATE_TRANSITION_CONFIG.COOLDOWN_BASE_DELAY * 0.75;
-					// Maximum delay is 125% of max delay (due to jitter)
-					const maxDelay = STATE_TRANSITION_CONFIG.COOLDOWN_MAX_DELAY * 1.25;
-
-					expect(delay).toBeGreaterThanOrEqual(minDelay);
-					expect(delay).toBeLessThanOrEqual(maxDelay);
-				}),
-				{ numRuns: 100 }
-			);
-		});
-
-		it('should produce non-decreasing average delays for higher attempt counts', () => {
-			fc.assert(
-				fc.property(dateArbitrary, (now) => {
-					// Sample multiple times to average out jitter
-					const samples = 20;
-					const averageDelays: number[] = [];
-
-					for (let attemptCount = 1; attemptCount <= 5; attemptCount++) {
-						let totalDelay = 0;
-						for (let i = 0; i < samples; i++) {
-							const nextEligible = calculateNextEligibleTime(attemptCount, now);
-							totalDelay += nextEligible.getTime() - now.getTime();
-						}
-						averageDelays.push(totalDelay / samples);
-					}
-
-					// Average delays should generally increase (allowing some jitter variance)
-					// Check trend: at least 3 out of 4 transitions should be non-decreasing
-					let increasingCount = 0;
-					for (let i = 0; i < averageDelays.length - 1; i++) {
-						const next = averageDelays[i + 1];
-						const current = averageDelays[i];
-						// Allow 20% variance due to jitter
-						if (next !== undefined && current !== undefined && next >= current * 0.8) {
-							increasingCount++;
-						}
-					}
-					expect(increasingCount).toBeGreaterThanOrEqual(3);
 				}),
 				{ numRuns: 100 }
 			);

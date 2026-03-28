@@ -3,9 +3,12 @@ import AlertCircleIcon from '@lucide/svelte/icons/alert-circle';
 import CalendarIcon from '@lucide/svelte/icons/calendar';
 import ClockIcon from '@lucide/svelte/icons/clock';
 import { Cron } from 'croner';
+
 import { Input } from '$lib/components/ui/input';
 import { Label } from '$lib/components/ui/label';
 import { cn } from '$lib/utils.js';
+
+import { getCronDescription } from './types';
 
 type FrequencyMode = 'minutes' | 'hourly' | 'daily' | 'weekly' | 'monthly' | 'custom';
 
@@ -237,38 +240,6 @@ function getOrdinal(n: number): string {
 	const s = ['th', 'st', 'nd', 'rd'];
 	const v = n % 100;
 	return n + (s[(v - 20) % 10] || s[v] || s[0])!;
-}
-
-function getCronDescription(cron: string): string {
-	if (cron === '*/15 * * * *') return 'Every 15 minutes';
-	if (cron === '*/5 * * * *') return 'Every 5 minutes';
-	if (cron === '*/30 * * * *') return 'Every 30 minutes';
-	if (cron === '0 * * * *') return 'Every hour';
-	if (cron === '0 */2 * * *') return 'Every 2 hours';
-	if (cron === '0 */4 * * *') return 'Every 4 hours';
-	if (cron === '0 */6 * * *') return 'Every 6 hours';
-	if (cron === '0 */12 * * *') return 'Every 12 hours';
-	if (cron === '0 0 * * *') return 'Daily at midnight';
-	if (cron === '0 3 * * *') return 'Daily at 3:00 AM';
-	if (cron === '0 4 * * *') return 'Daily at 4:00 AM';
-
-	const dailyMatch = cron.match(/^(\d+) (\d+) \* \* \*$/);
-	if (dailyMatch) {
-		const [, minute, hour] = dailyMatch;
-		const h = parseInt(hour!, 10);
-		const m = parseInt(minute!, 10);
-		const period = h >= 12 ? 'PM' : 'AM';
-		const displayHour = h === 0 ? 12 : h > 12 ? h - 12 : h;
-		const displayMin = m.toString().padStart(2, '0');
-		return `Daily at ${displayHour}:${displayMin} ${period}`;
-	}
-
-	const minuteMatch = cron.match(/^\*\/(\d+) \* \* \* \*$/);
-	if (minuteMatch) {
-		return `Every ${minuteMatch[1]} minutes`;
-	}
-
-	return cron;
 }
 
 function formatNextRun(date: Date): string {

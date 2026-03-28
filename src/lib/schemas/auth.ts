@@ -9,6 +9,3 @@ export const LoginSchema = v.object({
 	),
 	password: v.pipe(v.string('Password is required'), v.minLength(1, 'Password is required'))
 });
-
-export type LoginInput = v.InferInput<typeof LoginSchema>;
-export type LoginOutput = v.InferOutput<typeof LoginSchema>;

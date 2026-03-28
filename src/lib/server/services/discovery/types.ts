@@ -45,15 +45,6 @@ export interface DiscoveryOptions {
 	batchSize?: number;
 }
 
-export interface ContentGap {
-	/** Database ID (episodes.id or movies.id) */
-	id: number;
-	/** Connector ID the content belongs to */
-	connectorId: number;
-	/** Type of content */
-	contentType: 'episode' | 'movie';
-}
-
 export interface DiscoveryStats {
 	/** Number of episode gaps/upgrades found */
 	episodeCount: number;

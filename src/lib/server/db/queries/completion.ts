@@ -104,14 +104,14 @@ export async function getAllConnectorCompletionStats(): Promise<ConnectorComplet
 	});
 }
 
-export async function getConnectorCompletionStats(
+async function getConnectorCompletionStats(
 	connectorId: number
 ): Promise<ConnectorCompletionStats | null> {
 	const all = await getAllConnectorCompletionStats();
 	return all.find((s) => s.connectorId === connectorId) ?? null;
 }
 
-export async function getCompletionTrend(
+async function getCompletionTrend(
 	connectorId: number,
 	limit: number = 14
 ): Promise<CompletionDataPoint[]> {
@@ -202,7 +202,7 @@ export async function cleanupOldSnapshots(retentionDays: number = 30): Promise<n
 	return result.length;
 }
 
-export async function getSnapshotCount(connectorId: number): Promise<number> {
+async function getSnapshotCount(connectorId: number): Promise<number> {
 	const result = await db
 		.select({ count: sql<number>`COUNT(*)::int` })
 		.from(completionSnapshots)
@@ -211,7 +211,7 @@ export async function getSnapshotCount(connectorId: number): Promise<number> {
 	return result[0]?.count ?? 0;
 }
 
-export async function hasRecentSnapshot(
+async function hasRecentSnapshot(
 	connectorId: number,
 	withinMinutes: number = 60
 ): Promise<boolean> {

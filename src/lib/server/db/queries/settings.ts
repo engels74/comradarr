@@ -1,14 +1,14 @@
 import { eq, inArray } from 'drizzle-orm';
 import { db } from '$lib/server/db';
-import { type AppSetting, appSettings } from '$lib/server/db/schema';
+import { appSettings } from '$lib/server/db/schema';
 
-export const GENERAL_SETTINGS_DEFAULTS = {
+const GENERAL_SETTINGS_DEFAULTS = {
 	app_name: 'Comradarr',
 	timezone: 'UTC',
 	log_level: 'info'
 } as const;
 
-export const SECURITY_SETTINGS_DEFAULTS = {
+const SECURITY_SETTINGS_DEFAULTS = {
 	auth_mode: 'full'
 } as const;
 
@@ -44,7 +44,7 @@ export const SEARCH_SETTINGS_DEFAULTS = {
 	search_backlog_tier5_delay_days: '90'
 } as const;
 
-export const MAINTENANCE_SETTINGS_DEFAULTS = {
+const MAINTENANCE_SETTINGS_DEFAULTS = {
 	// History retention in days (search_history table)
 	history_retention_days_search: '90',
 	// Log retention in days (application_logs table)
@@ -53,7 +53,7 @@ export const MAINTENANCE_SETTINGS_DEFAULTS = {
 	log_persistence_enabled: 'true'
 } as const;
 
-export const BACKUP_SETTINGS_DEFAULTS = {
+const BACKUP_SETTINGS_DEFAULTS = {
 	// Whether scheduled backups are enabled
 	backup_scheduled_enabled: 'false',
 	// Cron expression for backup schedule (default: daily at 2 AM)
@@ -62,7 +62,7 @@ export const BACKUP_SETTINGS_DEFAULTS = {
 	backup_retention_count: '7'
 } as const;
 
-export const SETTINGS_DEFAULTS = {
+const SETTINGS_DEFAULTS = {
 	...GENERAL_SETTINGS_DEFAULTS,
 	...SECURITY_SETTINGS_DEFAULTS,
 	...SEARCH_SETTINGS_DEFAULTS,
@@ -70,7 +70,7 @@ export const SETTINGS_DEFAULTS = {
 	...BACKUP_SETTINGS_DEFAULTS
 } as const;
 
-export type SettingKey = keyof typeof SETTINGS_DEFAULTS;
+type SettingKey = keyof typeof SETTINGS_DEFAULTS;
 
 export interface GeneralSettings {
 	appName: string;
@@ -137,10 +137,6 @@ export async function getSettings(keys: string[]): Promise<Record<string, string
 	return settings;
 }
 
-export async function getAllSettings(): Promise<AppSetting[]> {
-	return db.select().from(appSettings).orderBy(appSettings.key);
-}
-
 export async function getGeneralSettings(): Promise<GeneralSettings> {
 	const keys: SettingKey[] = ['app_name', 'timezone', 'log_level'];
 	const settings = await getSettings(keys);
@@ -178,12 +174,6 @@ export async function updateGeneralSettings(input: GeneralSettingsInput): Promis
 				});
 		}
 	});
-}
-
-export async function deleteSetting(key: string): Promise<boolean> {
-	const result = await db.delete(appSettings).where(eq(appSettings.key, key)).returning();
-
-	return result.length > 0;
 }
 
 export interface SearchSettings {

@@ -110,7 +110,7 @@ export async function recordSuccessfulLogin(userId: number): Promise<void> {
 		.where(eq(users.id, userId));
 }
 
-export async function lockUserAccount(userId: number, until: Date): Promise<void> {
+async function lockUserAccount(userId: number, until: Date): Promise<void> {
 	await db
 		.update(users)
 		.set({

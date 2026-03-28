@@ -47,24 +47,3 @@ export function requireScope(locals: App.Locals, required: ApiKeyScope): void {
 		});
 	}
 }
-
-/** Checks if the current authentication allows write operations. */
-export function canWrite(locals: App.Locals): boolean {
-	// Not authenticated
-	if (!locals.user) {
-		return false;
-	}
-
-	// Session auth and local bypass have full access
-	if (!locals.isApiKey) {
-		return true;
-	}
-
-	// API key auth - 'full' scope allows writes
-	return locals.apiKeyScope === 'full';
-}
-
-/** Checks if the current authentication allows read operations. */
-export function canRead(locals: App.Locals): boolean {
-	return locals.user !== null;
-}

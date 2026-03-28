@@ -265,34 +265,3 @@ async function discoverMovieGaps(connectorId: number, batchSize: number): Promis
 		movieRegistriesCreated: registriesCreated
 	};
 }
-
-export async function getGapStats(
-	connectorId: number
-): Promise<{ episodeGaps: number; movieGaps: number }> {
-	const episodeGapsResult = await db
-		.select({ count: sql<number>`count(*)::int` })
-		.from(episodes)
-		.where(
-			and(
-				eq(episodes.connectorId, connectorId),
-				eq(episodes.monitored, true),
-				eq(episodes.hasFile, false)
-			)
-		);
-
-	const movieGapsResult = await db
-		.select({ count: sql<number>`count(*)::int` })
-		.from(movies)
-		.where(
-			and(
-				eq(movies.connectorId, connectorId),
-				eq(movies.monitored, true),
-				eq(movies.hasFile, false)
-			)
-		);
-
-	return {
-		episodeGaps: episodeGapsResult[0]?.count ?? 0,
-		movieGaps: movieGapsResult[0]?.count ?? 0
-	};
-}

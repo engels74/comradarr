@@ -24,8 +24,6 @@ import type {
 
 const logger = createLogger('state-transitions');
 
-export { calculateNextEligibleTimeWithConfig, shouldMarkExhausted } from './backoff';
-
 // Season pack failure with no_results triggers EpisodeSearch fallback for all episodes in the season
 export async function markSearchFailed(
 	input: MarkSearchFailedInput
@@ -244,74 +242,6 @@ async function markSeasonPackFailedForSeason(
 				inArray(searchRegistry.contentId, episodeIds)
 			)
 		);
-}
-
-// Valid from 'searching' or 'cooldown' states only
-export async function markSearchExhausted(
-	searchRegistryId: number
-): Promise<StateTransitionResult> {
-	try {
-		const current = await db
-			.select({
-				id: searchRegistry.id,
-				state: searchRegistry.state,
-				attemptCount: searchRegistry.attemptCount
-			})
-			.from(searchRegistry)
-			.where(eq(searchRegistry.id, searchRegistryId))
-			.limit(1);
-
-		if (current.length === 0) {
-			return {
-				success: false,
-				searchRegistryId,
-				previousState: 'searching',
-				newState: 'searching',
-				error: `Search registry entry ${searchRegistryId} not found`
-			};
-		}
-
-		const entry = current[0]!;
-		const previousState = entry.state as SearchState;
-
-		if (previousState !== 'searching' && previousState !== 'cooldown') {
-			return {
-				success: false,
-				searchRegistryId,
-				previousState,
-				newState: previousState,
-				error: `Cannot mark exhausted: entry is in state '${previousState}', expected 'searching' or 'cooldown'`
-			};
-		}
-
-		const now = new Date();
-		await db
-			.update(searchRegistry)
-			.set({
-				state: 'exhausted',
-				nextEligible: null, // No retry for exhausted items
-				updatedAt: now
-			})
-			.where(eq(searchRegistry.id, searchRegistryId));
-
-		logger.info('Search marked exhausted', { searchRegistryId, previousState });
-
-		return {
-			success: true,
-			searchRegistryId,
-			previousState,
-			newState: 'exhausted',
-			attemptCount: entry.attemptCount
-		};
-	} catch (error) {
-		return {
-			success: false,
-			searchRegistryId,
-			previousState: 'searching',
-			newState: 'searching',
-			error: error instanceof Error ? error.message : String(error)
-		};
-	}
 }
 
 // Transitions cooldown items back to pending when nextEligible <= now

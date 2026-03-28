@@ -7,6 +7,7 @@ import { Button } from '$lib/components/ui/button';
 import * as Card from '$lib/components/ui/card';
 import type { ScheduleWithRelations } from '$lib/server/db/queries/schedules';
 import { cn } from '$lib/utils.js';
+import { getCronDescription } from './types';
 
 interface Props {
 	schedule: ScheduleWithRelations;
@@ -25,38 +26,6 @@ const typeColor = $derived(typeColors[schedule.sweepType] ?? 'bg-gray-500/10 tex
 const formattedType = $derived(
 	schedule.sweepType === 'incremental' ? 'Incremental Sync' : 'Full Reconciliation'
 );
-
-function getCronDescription(cron: string): string {
-	if (cron === '*/15 * * * *') return 'Every 15 minutes';
-	if (cron === '*/5 * * * *') return 'Every 5 minutes';
-	if (cron === '*/30 * * * *') return 'Every 30 minutes';
-	if (cron === '0 * * * *') return 'Every hour';
-	if (cron === '0 */2 * * *') return 'Every 2 hours';
-	if (cron === '0 */4 * * *') return 'Every 4 hours';
-	if (cron === '0 */6 * * *') return 'Every 6 hours';
-	if (cron === '0 */12 * * *') return 'Every 12 hours';
-	if (cron === '0 0 * * *') return 'Daily at midnight';
-	if (cron === '0 3 * * *') return 'Daily at 3:00 AM';
-	if (cron === '0 4 * * *') return 'Daily at 4:00 AM';
-
-	const dailyMatch = cron.match(/^(\d+) (\d+) \* \* \*$/);
-	if (dailyMatch) {
-		const [, minute, hour] = dailyMatch;
-		const h = parseInt(hour!, 10);
-		const m = parseInt(minute!, 10);
-		const period = h >= 12 ? 'PM' : 'AM';
-		const displayHour = h === 0 ? 12 : h > 12 ? h - 12 : h;
-		const displayMin = m.toString().padStart(2, '0');
-		return `Daily at ${displayHour}:${displayMin} ${period}`;
-	}
-
-	const minuteMatch = cron.match(/^\*\/(\d+) \* \* \* \*$/);
-	if (minuteMatch) {
-		return `Every ${minuteMatch[1]} minutes`;
-	}
-
-	return cron; // Fallback to raw expression
-}
 
 const cronDescription = $derived(getCronDescription(schedule.cronExpression));
 

@@ -99,7 +99,7 @@ const stats: StatCard[] = $derived([
 	</div>
 
 	<div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-		{#each stats as stat, i}
+		{#each stats as stat}
 			{@const Icon = stat.icon}
 			<Card.Root variant="glass" class="p-4 py-5 transition-all duration-300 hover:scale-[1.02] {stat.glowColor}">
 				<div class="flex items-center gap-3">

@@ -20,9 +20,6 @@ export const ConnectorSchema = v.object({
 	apiKey: v.pipe(v.string('API Key is required'), v.minLength(1, 'API Key is required'))
 });
 
-export type ConnectorInput = v.InferInput<typeof ConnectorSchema>;
-export type ConnectorOutput = v.InferOutput<typeof ConnectorSchema>;
-
 // Type is auto-detected from the *arr application when not provided
 export const TestConnectionSchema = v.object({
 	url: v.pipe(
@@ -34,9 +31,6 @@ export const TestConnectionSchema = v.object({
 	apiKey: v.pipe(v.string('API Key is required'), v.minLength(1, 'API Key is required')),
 	type: v.optional(v.pipe(v.string(), v.picklist(connectorTypes, 'Invalid connector type')))
 });
-
-export type TestConnectionInput = v.InferInput<typeof TestConnectionSchema>;
-export type TestConnectionOutput = v.InferOutput<typeof TestConnectionSchema>;
 
 // API key is optional on update - leave blank to keep existing
 export const ConnectorUpdateSchema = v.object({
@@ -56,6 +50,3 @@ export const ConnectorUpdateSchema = v.object({
 	apiKey: v.optional(v.pipe(v.string(), v.minLength(1, 'API Key must not be empty if provided'))),
 	enabled: v.optional(v.boolean())
 });
-
-export type ConnectorUpdateInput = v.InferInput<typeof ConnectorUpdateSchema>;
-export type ConnectorUpdateOutput = v.InferOutput<typeof ConnectorUpdateSchema>;

@@ -16,9 +16,6 @@ export const ProwlarrInstanceSchema = v.object({
 	apiKey: v.pipe(v.string('API Key is required'), v.minLength(1, 'API Key is required'))
 });
 
-export type ProwlarrInstanceInput = v.InferInput<typeof ProwlarrInstanceSchema>;
-export type ProwlarrInstanceOutput = v.InferOutput<typeof ProwlarrInstanceSchema>;
-
 // API key is optional on update - leave blank to keep existing
 export const ProwlarrInstanceUpdateSchema = v.object({
 	name: v.pipe(
@@ -36,6 +33,3 @@ export const ProwlarrInstanceUpdateSchema = v.object({
 	apiKey: v.optional(v.pipe(v.string(), v.minLength(1, 'API Key must not be empty if provided'))),
 	enabled: v.optional(v.boolean())
 });
-
-export type ProwlarrInstanceUpdateInput = v.InferInput<typeof ProwlarrInstanceUpdateSchema>;
-export type ProwlarrInstanceUpdateOutput = v.InferOutput<typeof ProwlarrInstanceUpdateSchema>;

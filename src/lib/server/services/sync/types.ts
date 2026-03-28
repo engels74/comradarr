@@ -52,10 +52,3 @@ export interface SyncOptions {
 	/** Skip retry wrapper and execute sync directly (useful for testing or forced sync) */
 	skipRetry?: boolean;
 }
-
-export interface SyncStats {
-	seriesCount: number;
-	seasonCount: number;
-	episodeCount: number;
-	movieCount: number;
-}

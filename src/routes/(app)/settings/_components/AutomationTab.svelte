@@ -8,7 +8,6 @@ import RocketIcon from '@lucide/svelte/icons/rocket';
 import ShieldIcon from '@lucide/svelte/icons/shield';
 import StarIcon from '@lucide/svelte/icons/star';
 import Trash2Icon from '@lucide/svelte/icons/trash-2';
-import TrashIcon from '@lucide/svelte/icons/trash-2';
 import WrenchIcon from '@lucide/svelte/icons/wrench';
 import ZapIcon from '@lucide/svelte/icons/zap';
 import { untrack } from 'svelte';
@@ -1025,7 +1024,7 @@ function getNumericFormValue(formValue: number | undefined, settingsValue: numbe
 									{#if deletingBackupId === backupItem.id}
 										Deleting...
 									{:else}
-										<TrashIcon class="h-4 w-4" />
+										<Trash2Icon class="h-4 w-4" />
 									{/if}
 								</Button>
 							</form>

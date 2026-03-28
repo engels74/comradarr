@@ -11,9 +11,10 @@
  */
 
 import { afterEach, beforeEach, describe, expect, it, type Mock, vi } from 'vitest';
+import { BaseArrClient } from '../../src/lib/server/connectors/common/base-client';
+import type { RetryConfig } from '../../src/lib/server/connectors/common/types';
 import {
 	AuthenticationError,
-	BaseArrClient,
 	NetworkError,
 	NotFoundError,
 	RateLimitError,
@@ -26,8 +27,6 @@ import {
 function createMockFetch(impl: Mock): typeof fetch {
 	return impl as unknown as typeof fetch;
 }
-
-import type { RetryConfig } from '../../src/lib/server/connectors/index';
 
 // Create a test subclass to expose protected methods
 class TestableBaseArrClient extends BaseArrClient {

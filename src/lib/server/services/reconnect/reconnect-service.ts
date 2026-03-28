@@ -17,7 +17,6 @@ import {
 	incrementReconnectAttempts,
 	initializeReconnectState,
 	pauseReconnect,
-	type ReconnectState,
 	resetReconnectState,
 	resumeReconnect,
 	updateReconnectState
@@ -266,11 +265,3 @@ export async function resumeConnectorReconnect(connectorId: number): Promise<voi
 		nextReconnectAt: nextReconnectAt.toISOString()
 	});
 }
-
-export async function getConnectorReconnectState(
-	connectorId: number
-): Promise<ReconnectState | null> {
-	return getReconnectState(connectorId);
-}
-
-export type { ReconnectState };

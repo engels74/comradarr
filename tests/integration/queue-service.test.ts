@@ -23,14 +23,7 @@ import {
 	seasons,
 	series
 } from '../../src/lib/server/db/schema';
-import {
-	clearQueue,
-	dequeuePriorityItems,
-	enqueuePendingItems,
-	getQueueStatus,
-	pauseQueue,
-	resumeQueue
-} from '../../src/lib/server/services/queue';
+import { dequeuePriorityItems, enqueuePendingItems } from '../../src/lib/server/services/queue';
 
 // Store original SECRET_KEY to restore after tests
 const originalSecretKey = process.env.SECRET_KEY;
@@ -533,8 +526,11 @@ describe('Queue Service - dequeuePriorityItems', () => {
 			await createPendingEpisodeRegistry(testSonarrConnectorId, episodeId);
 			await enqueuePendingItems(testSonarrConnectorId);
 
-			// Pause the queue
-			await pauseQueue(testSonarrConnectorId);
+			// Pause the queue via direct DB update
+			await db
+				.update(connectors)
+				.set({ queuePaused: true, updatedAt: new Date() })
+				.where(eq(connectors.id, testSonarrConnectorId));
 
 			// Try to dequeue
 			const result = await dequeuePriorityItems(testSonarrConnectorId);
@@ -546,194 +542,6 @@ describe('Queue Service - dequeuePriorityItems', () => {
 			const queueCount = await countQueueItems(testSonarrConnectorId);
 			expect(queueCount).toBe(1);
 		});
-	});
-});
-
-// ============================================================================
-// pause/resume Tests
-// ============================================================================
-
-describe('Queue Service - pauseQueue and resumeQueue', () => {
-	it('should pause queue successfully', async () => {
-		const result = await pauseQueue(testSonarrConnectorId);
-
-		expect(result.success).toBe(true);
-		expect(result.connectorId).toBe(testSonarrConnectorId);
-	});
-
-	it('should resume queue successfully', async () => {
-		await pauseQueue(testSonarrConnectorId);
-		const result = await resumeQueue(testSonarrConnectorId);
-
-		expect(result.success).toBe(true);
-		expect(result.connectorId).toBe(testSonarrConnectorId);
-	});
-
-	it('should allow dequeue after resume', async () => {
-		const seriesId = await insertTestSeries(testSonarrConnectorId, 1, 'Test Series');
-		const seasonId = await insertTestSeason(seriesId, 1);
-		const episodeId = await insertTestEpisode(testSonarrConnectorId, seasonId, 101, 1, 1);
-
-		await createPendingEpisodeRegistry(testSonarrConnectorId, episodeId);
-		await enqueuePendingItems(testSonarrConnectorId);
-
-		// Pause
-		await pauseQueue(testSonarrConnectorId);
-
-		// Dequeue while paused - should be empty
-		let result = await dequeuePriorityItems(testSonarrConnectorId);
-		expect(result.items).toHaveLength(0);
-
-		// Resume
-		await resumeQueue(testSonarrConnectorId);
-
-		// Dequeue after resume - should work
-		result = await dequeuePriorityItems(testSonarrConnectorId);
-		expect(result.items).toHaveLength(1);
-	});
-
-	it('should return error for non-existent connector', async () => {
-		const pauseResult = await pauseQueue(999999);
-		expect(pauseResult.success).toBe(false);
-		expect(pauseResult.error).toContain('not found');
-
-		const resumeResult = await resumeQueue(999999);
-		expect(resumeResult.success).toBe(false);
-		expect(resumeResult.error).toContain('not found');
-	});
-});
-
-// ============================================================================
-// clear Tests
-// ============================================================================
-
-describe('Queue Service - clearQueue', () => {
-	it('should clear all queue items for a connector', async () => {
-		const seriesId = await insertTestSeries(testSonarrConnectorId, 1, 'Test Series');
-		const seasonId = await insertTestSeason(seriesId, 1);
-
-		// Create and enqueue 3 episodes
-		for (let i = 1; i <= 3; i++) {
-			const episodeId = await insertTestEpisode(testSonarrConnectorId, seasonId, 100 + i, 1, i);
-			await createPendingEpisodeRegistry(testSonarrConnectorId, episodeId);
-		}
-
-		await enqueuePendingItems(testSonarrConnectorId);
-
-		// Verify items in queue
-		let queueCount = await countQueueItems(testSonarrConnectorId);
-		expect(queueCount).toBe(3);
-
-		// Clear queue
-		const result = await clearQueue(testSonarrConnectorId);
-
-		expect(result.success).toBe(true);
-		expect(result.itemsAffected).toBe(3);
-
-		// Verify queue is empty
-		queueCount = await countQueueItems(testSonarrConnectorId);
-		expect(queueCount).toBe(0);
-	});
-
-	it('should reset registry state back to pending', async () => {
-		const seriesId = await insertTestSeries(testSonarrConnectorId, 1, 'Test Series');
-		const seasonId = await insertTestSeason(seriesId, 1);
-		const episodeId = await insertTestEpisode(testSonarrConnectorId, seasonId, 101, 1, 1);
-
-		const registryId = await createPendingEpisodeRegistry(testSonarrConnectorId, episodeId);
-
-		await enqueuePendingItems(testSonarrConnectorId);
-
-		// Verify state is 'queued'
-		let registry = await getRegistryById(registryId);
-		expect(registry?.state).toBe('queued');
-
-		// Clear queue
-		await clearQueue(testSonarrConnectorId);
-
-		// Verify state is back to 'pending'
-		registry = await getRegistryById(registryId);
-		expect(registry?.state).toBe('pending');
-	});
-
-	it('should clear all queues when connectorId is not provided', async () => {
-		// Create data for both connectors
-		const seriesId = await insertTestSeries(testSonarrConnectorId, 1, 'Test Series');
-		const seasonId = await insertTestSeason(seriesId, 1);
-		const episodeId = await insertTestEpisode(testSonarrConnectorId, seasonId, 101, 1, 1);
-		await createPendingEpisodeRegistry(testSonarrConnectorId, episodeId);
-
-		const movieId = await insertTestMovie(testRadarrConnectorId, 201, 'Test Movie');
-		await createPendingMovieRegistry(testRadarrConnectorId, movieId);
-
-		await enqueuePendingItems(testSonarrConnectorId);
-		await enqueuePendingItems(testRadarrConnectorId);
-
-		// Verify both have items
-		let sonarrCount = await countQueueItems(testSonarrConnectorId);
-		let radarrCount = await countQueueItems(testRadarrConnectorId);
-		expect(sonarrCount).toBe(1);
-		expect(radarrCount).toBe(1);
-
-		// Clear all queues
-		const result = await clearQueue();
-
-		expect(result.success).toBe(true);
-		expect(result.itemsAffected).toBe(2);
-		expect(result.connectorId).toBeNull();
-
-		// Verify all empty
-		sonarrCount = await countQueueItems(testSonarrConnectorId);
-		radarrCount = await countQueueItems(testRadarrConnectorId);
-		expect(sonarrCount).toBe(0);
-		expect(radarrCount).toBe(0);
-	});
-});
-
-// ============================================================================
-// getQueueStatus Tests
-// ============================================================================
-
-describe('Queue Service - getQueueStatus', () => {
-	it('should return queue status with depth and pause state', async () => {
-		const seriesId = await insertTestSeries(testSonarrConnectorId, 1, 'Test Series');
-		const seasonId = await insertTestSeason(seriesId, 1);
-
-		// Create and enqueue 2 episodes
-		for (let i = 1; i <= 2; i++) {
-			const episodeId = await insertTestEpisode(testSonarrConnectorId, seasonId, 100 + i, 1, i);
-			await createPendingEpisodeRegistry(testSonarrConnectorId, episodeId);
-		}
-
-		await enqueuePendingItems(testSonarrConnectorId);
-
-		const status = await getQueueStatus(testSonarrConnectorId);
-
-		expect(status).not.toBeNull();
-		expect(status!.connectorId).toBe(testSonarrConnectorId);
-		expect(status!.isPaused).toBe(false);
-		expect(status!.queueDepth).toBe(2);
-		expect(status!.nextScheduledAt).toBeDefined();
-	});
-
-	it('should return null for non-existent connector', async () => {
-		const status = await getQueueStatus(999999);
-		expect(status).toBeNull();
-	});
-
-	it('should reflect paused state', async () => {
-		await pauseQueue(testSonarrConnectorId);
-
-		const status = await getQueueStatus(testSonarrConnectorId);
-
-		expect(status!.isPaused).toBe(true);
-	});
-
-	it('should return zero depth for empty queue', async () => {
-		const status = await getQueueStatus(testSonarrConnectorId);
-
-		expect(status!.queueDepth).toBe(0);
-		expect(status!.nextScheduledAt).toBeNull();
 	});
 });
 

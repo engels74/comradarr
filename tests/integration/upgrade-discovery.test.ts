@@ -29,7 +29,7 @@ import {
 	seasons,
 	series
 } from '../../src/lib/server/db/schema';
-import { discoverUpgrades, getUpgradeStats } from '../../src/lib/server/services/discovery';
+import { discoverUpgrades } from '../../src/lib/server/services/discovery';
 
 // Store original SECRET_KEY to restore after tests
 const originalSecretKey = process.env.SECRET_KEY;
@@ -424,38 +424,6 @@ describe('Upgrade Discovery Service', () => {
 			expect(result.success).toBe(true);
 			expect(result.upgradesFound).toBe(3); // Episodes 1, 2, and 5 (101, 102, 105)
 			expect(result.registriesCreated).toBe(3);
-		});
-	});
-
-	describe('getUpgradeStats', () => {
-		it('should return correct upgrade counts without creating registries', async () => {
-			const seriesId = await insertTestSeries(testSonarrConnectorId, 1, 'Test Series');
-			const seasonId = await insertTestSeason(seriesId, 1);
-
-			// All monitored items with files are counted as upgrade candidates
-			await insertTestEpisode(testSonarrConnectorId, seasonId, 101, 1, 1, true, true, true); // Counted
-			await insertTestEpisode(testSonarrConnectorId, seasonId, 102, 1, 2, true, true, false); // Also counted
-
-			const stats = await getUpgradeStats(testSonarrConnectorId);
-
-			expect(stats.episodeUpgrades).toBe(2);
-			expect(stats.movieUpgrades).toBe(0);
-
-			// Verify no registries were created
-			const registryCount = await countSearchRegistry(testSonarrConnectorId);
-			expect(registryCount).toBe(0);
-		});
-
-		it('should return movie upgrade counts for radarr', async () => {
-			// All monitored items with files are counted as upgrade candidates
-			await insertTestMovie(testRadarrConnectorId, 201, 'Upgrade Movie 1', true, true, true); // Counted
-			await insertTestMovie(testRadarrConnectorId, 202, 'Upgrade Movie 2', true, true, true); // Counted
-			await insertTestMovie(testRadarrConnectorId, 203, 'At Cutoff Movie', true, true, false); // Also counted
-
-			const stats = await getUpgradeStats(testRadarrConnectorId);
-
-			expect(stats.episodeUpgrades).toBe(0);
-			expect(stats.movieUpgrades).toBe(3); // All 3 movies are counted
 		});
 	});
 });

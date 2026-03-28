@@ -192,7 +192,7 @@ export async function upsertIndexerHealth(
 	}));
 
 	// Drizzle upsert with onConflictDoUpdate
-	const _result = await db
+	await db
 		.insert(prowlarrIndexerHealth)
 		.values(values)
 		.onConflictDoUpdate({
