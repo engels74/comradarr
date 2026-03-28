@@ -33,8 +33,7 @@ export const EVENT_COLORS: Record<string, string> = {
 	connector_health_changed: '#f39c12', // Orange
 	sync_completed: '#9b59b6', // Purple
 	sync_failed: '#e74c3c', // Red
-	app_started: '#1abc9c', // Teal
-	update_available: '#f1c40f' // Yellow
+	app_started: '#1abc9c' // Teal
 };
 
 export function hexColorToInt(hex: string): number {

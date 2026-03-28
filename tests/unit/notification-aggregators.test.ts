@@ -452,24 +452,6 @@ describe('buildAggregatePayload', () => {
 		});
 	});
 
-	describe('update_available aggregation', () => {
-		it('should handle update available event', () => {
-			const entries = [
-				createHistoryEntry('update_available', {
-					currentVersion: '1.0.0',
-					newVersion: '1.1.0',
-					releaseUrl: 'https://github.com/example/release'
-				})
-			];
-
-			const payload = buildAggregatePayload('update_available', entries);
-
-			expect(payload.title).toBe('Update Available');
-			expect(payload.message).toContain('v1.1.0');
-			expect(payload.url).toBe('https://github.com/example/release');
-		});
-	});
-
 	describe('edge cases', () => {
 		it('should handle empty entries array', () => {
 			const payload = buildAggregatePayload('search_success', []);

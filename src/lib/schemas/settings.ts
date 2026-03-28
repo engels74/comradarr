@@ -31,8 +31,7 @@ export const GeneralSettingsSchema = v.object({
 		v.trim(),
 		v.minLength(1, 'Timezone is required')
 	),
-	logLevel: v.pipe(v.string('Log level is required'), v.picklist(logLevels, 'Invalid log level')),
-	checkForUpdates: v.boolean('Check for updates must be a boolean')
+	logLevel: v.pipe(v.string('Log level is required'), v.picklist(logLevels, 'Invalid log level'))
 });
 
 export type GeneralSettingsInput = v.InferInput<typeof GeneralSettingsSchema>;

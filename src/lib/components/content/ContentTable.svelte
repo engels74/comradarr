@@ -1,6 +1,6 @@
 <script lang="ts">
 import { goto } from '$app/navigation';
-import { page } from '$app/stores';
+import { page } from '$app/state';
 import { Badge } from '$lib/components/ui/badge';
 import { Checkbox } from '$lib/components/ui/checkbox';
 import * as Table from '$lib/components/ui/table';
@@ -35,11 +35,11 @@ function handleRowCheckboxClick(item: ContentItem, event: MouseEvent) {
 	}
 }
 
-const currentSort = $derived($page.url.searchParams.get('sort') ?? 'title');
-const currentOrder = $derived($page.url.searchParams.get('order') ?? 'asc');
+const currentSort = $derived(page.url.searchParams.get('sort') ?? 'title');
+const currentOrder = $derived(page.url.searchParams.get('order') ?? 'asc');
 
 function toggleSort(column: string) {
-	const params = new URLSearchParams($page.url.searchParams);
+	const params = new URLSearchParams(page.url.searchParams);
 
 	if (currentSort === column) {
 		// Toggle direction

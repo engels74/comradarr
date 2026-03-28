@@ -7,31 +7,7 @@ import type { RadarrMovie } from './types.js';
 
 const logger = createLogger('radarr-client');
 
-export interface ApiVersionInfo {
-	appVersion: string;
-	majorVersion: number;
-	apiVersion: string;
-}
-
 export class RadarrClient extends BaseArrClient {
-	async detectApiVersion(): Promise<ApiVersionInfo> {
-		const status = await this.getSystemStatus();
-
-		// Parse major version from app version (e.g., "5.2.0.8171" -> 5)
-		const versionParts = status.version.split('.');
-		const majorVersion = parseInt(versionParts[0] ?? '3', 10);
-
-		// Radarr v3, v4, and v5 all currently use API v3
-		// This provides forward compatibility for detecting version-specific behavior
-		const apiVersion = 'v3';
-
-		return {
-			appVersion: status.version,
-			majorVersion: Number.isNaN(majorVersion) ? 3 : majorVersion,
-			apiVersion
-		};
-	}
-
 	async getMovies(): Promise<RadarrMovie[]> {
 		const response = await this.requestWithRetry<unknown[]>('movie');
 

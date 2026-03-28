@@ -5,8 +5,7 @@ import { type AppSetting, appSettings } from '$lib/server/db/schema';
 export const GENERAL_SETTINGS_DEFAULTS = {
 	app_name: 'Comradarr',
 	timezone: 'UTC',
-	log_level: 'info',
-	check_for_updates: 'true'
+	log_level: 'info'
 } as const;
 
 export const SECURITY_SETTINGS_DEFAULTS = {
@@ -77,14 +76,12 @@ export interface GeneralSettings {
 	appName: string;
 	timezone: string;
 	logLevel: string;
-	checkForUpdates: boolean;
 }
 
 export interface GeneralSettingsInput {
 	appName: string;
 	timezone: string;
 	logLevel: string;
-	checkForUpdates: boolean;
 }
 
 export async function getSetting(key: string): Promise<string | null> {
@@ -145,14 +142,13 @@ export async function getAllSettings(): Promise<AppSetting[]> {
 }
 
 export async function getGeneralSettings(): Promise<GeneralSettings> {
-	const keys: SettingKey[] = ['app_name', 'timezone', 'log_level', 'check_for_updates'];
+	const keys: SettingKey[] = ['app_name', 'timezone', 'log_level'];
 	const settings = await getSettings(keys);
 
 	return {
 		appName: settings.app_name ?? SETTINGS_DEFAULTS.app_name,
 		timezone: settings.timezone ?? SETTINGS_DEFAULTS.timezone,
-		logLevel: settings.log_level ?? SETTINGS_DEFAULTS.log_level,
-		checkForUpdates: (settings.check_for_updates ?? SETTINGS_DEFAULTS.check_for_updates) === 'true'
+		logLevel: settings.log_level ?? SETTINGS_DEFAULTS.log_level
 	};
 }
 
@@ -160,8 +156,7 @@ export async function updateGeneralSettings(input: GeneralSettingsInput): Promis
 	const updates: Array<{ key: string; value: string }> = [
 		{ key: 'app_name', value: input.appName },
 		{ key: 'timezone', value: input.timezone },
-		{ key: 'log_level', value: input.logLevel },
-		{ key: 'check_for_updates', value: input.checkForUpdates ? 'true' : 'false' }
+		{ key: 'log_level', value: input.logLevel }
 	];
 
 	// Use a transaction to ensure all settings are updated atomically

@@ -4,7 +4,7 @@ import RefreshCwIcon from '@lucide/svelte/icons/refresh-cw';
 import SearchIcon from '@lucide/svelte/icons/search';
 import XIcon from '@lucide/svelte/icons/x';
 import { goto } from '$app/navigation';
-import { page } from '$app/stores';
+import { page } from '$app/state';
 import { Button } from '$lib/components/ui/button';
 import { Input } from '$lib/components/ui/input';
 import { type LogLevel, logLevels } from '$lib/schemas/settings';
@@ -38,7 +38,7 @@ $effect(() => {
 });
 
 function updateFilters(params: Record<string, string | undefined>) {
-	const url = new URL($page.url);
+	const url = new URL(page.url);
 
 	for (const [key, value] of Object.entries(params)) {
 		if (value) {
@@ -83,7 +83,7 @@ function handleModuleChange(e: Event) {
 }
 
 function clearAllFilters() {
-	const url = new URL($page.url);
+	const url = new URL(page.url);
 	url.searchParams.delete('levels');
 	url.searchParams.delete('module');
 	url.searchParams.delete('search');
@@ -102,7 +102,7 @@ async function handleRefresh() {
 }
 
 function handleExport() {
-	const url = new URL($page.url);
+	const url = new URL(page.url);
 	const exportUrl = new URL('/api/logs', url.origin);
 
 	// Copy current filters to export URL

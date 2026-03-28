@@ -11,8 +11,7 @@ import type {
 	SweepCompletedData,
 	SweepStartedData,
 	SyncCompletedData,
-	SyncFailedData,
-	UpdateAvailableData
+	SyncFailedData
 } from './templates';
 import type { NotificationField, NotificationPayload } from './types';
 
@@ -392,48 +391,6 @@ function aggregateAppStarted(entries: NotificationHistory[]): NotificationPayloa
 	return payload;
 }
 
-function aggregateUpdateAvailable(entries: NotificationHistory[]): NotificationPayload {
-	// Usually update_available is a single event, use the latest
-	const latestEntry = entries[entries.length - 1]!;
-	const data = extractEventData<UpdateAvailableData>(latestEntry);
-
-	const fields: NotificationField[] = [];
-	if (data) {
-		fields.push({ name: 'Current Version', value: data.currentVersion, inline: true });
-		fields.push({ name: 'New Version', value: data.newVersion, inline: true });
-		if (data.releaseNotes) {
-			fields.push({
-				name: 'Release Notes',
-				value: truncateText(data.releaseNotes, 200),
-				inline: false
-			});
-		}
-	}
-
-	const payload: NotificationPayload = {
-		eventType: 'update_available',
-		title: 'Update Available',
-		message: data
-			? `A new version of Comradarr is available: v${data.newVersion}`
-			: 'A new version of Comradarr is available',
-		color: getEventColor('update_available'),
-		timestamp: new Date(),
-		eventData: { individualCount: entries.length }
-	};
-
-	// Only add fields if we have any (exactOptionalPropertyTypes compatibility)
-	if (fields.length > 0) {
-		payload.fields = fields;
-	}
-
-	// Only add url if provided
-	if (data?.releaseUrl) {
-		payload.url = data.releaseUrl;
-	}
-
-	return payload;
-}
-
 export function buildAggregatePayload(
 	eventType: NotificationEventType,
 	entries: NotificationHistory[]
@@ -467,8 +424,6 @@ export function buildAggregatePayload(
 			return aggregateConnectorHealthChanged(entries);
 		case 'app_started':
 			return aggregateAppStarted(entries);
-		case 'update_available':
-			return aggregateUpdateAvailable(entries);
 		default: {
 			// TypeScript exhaustiveness check
 			const _exhaustiveCheck: never = eventType;

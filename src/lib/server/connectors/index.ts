@@ -47,7 +47,6 @@ export type {
 	WantedOptions
 } from './common/types.js';
 export { createConnectorClient } from './factory.js';
-export type { ApiVersionInfo } from './radarr/client.js';
 export { RadarrClient } from './radarr/client.js';
 export {
 	parsePaginatedMovies,

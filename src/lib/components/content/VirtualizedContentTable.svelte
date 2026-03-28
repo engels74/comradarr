@@ -1,7 +1,7 @@
 <script lang="ts">
 import { createVirtualizer } from '@tanstack/svelte-virtual';
 import { goto } from '$app/navigation';
-import { page } from '$app/stores';
+import { page } from '$app/state';
 import { Badge } from '$lib/components/ui/badge';
 import { Checkbox } from '$lib/components/ui/checkbox';
 import type { ContentItem } from '$lib/server/db/queries/content';
@@ -61,11 +61,11 @@ function handleRowCheckboxClick(item: ContentItem, event: MouseEvent) {
 	}
 }
 
-const currentSort = $derived($page.url.searchParams.get('sort') ?? 'title');
-const currentOrder = $derived($page.url.searchParams.get('order') ?? 'asc');
+const currentSort = $derived(page.url.searchParams.get('sort') ?? 'title');
+const currentOrder = $derived(page.url.searchParams.get('order') ?? 'asc');
 
 function toggleSort(column: string) {
-	const params = new URLSearchParams($page.url.searchParams);
+	const params = new URLSearchParams(page.url.searchParams);
 
 	if (currentSort === column) {
 		params.set('order', currentOrder === 'asc' ? 'desc' : 'asc');

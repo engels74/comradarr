@@ -1,4 +1,3 @@
-export type { ApiVersionInfo } from './client.js';
 export { RadarrClient } from './client.js';
 export {
 	parsePaginatedMovies,

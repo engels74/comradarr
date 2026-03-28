@@ -54,8 +54,7 @@ const BATCHABLE_EVENT_TYPES: NotificationEventType[] = [
 	'connector_health_changed',
 	'sync_completed',
 	'sync_failed',
-	'app_started',
-	'update_available'
+	'app_started'
 ];
 
 export class NotificationBatcher {

@@ -1,6 +1,6 @@
 <script lang="ts">
 import { goto } from '$app/navigation';
-import { page } from '$app/stores';
+import { page } from '$app/state';
 import { Input } from '$lib/components/ui/input';
 import type { ContentStatusCounts } from '$lib/server/db/queries/content';
 
@@ -11,10 +11,10 @@ interface Props {
 
 let { connectors, statusCounts }: Props = $props();
 
-let search = $state($page.url.searchParams.get('search') ?? '');
-let connectorId = $state($page.url.searchParams.get('connector') ?? '');
-let contentType = $state($page.url.searchParams.get('type') ?? 'all');
-let status = $state($page.url.searchParams.get('status') ?? 'all');
+let search = $state(page.url.searchParams.get('search') ?? '');
+let connectorId = $state(page.url.searchParams.get('connector') ?? '');
+let contentType = $state(page.url.searchParams.get('type') ?? 'all');
+let status = $state(page.url.searchParams.get('status') ?? 'all');
 
 let searchTimeout: ReturnType<typeof setTimeout>;
 
@@ -27,8 +27,8 @@ function updateFilters() {
 	if (status !== 'all') params.set('status', status);
 
 	// Preserve sort params if they exist
-	const currentSort = $page.url.searchParams.get('sort');
-	const currentOrder = $page.url.searchParams.get('order');
+	const currentSort = page.url.searchParams.get('sort');
+	const currentOrder = page.url.searchParams.get('order');
 	if (currentSort) params.set('sort', currentSort);
 	if (currentOrder) params.set('order', currentOrder);
 

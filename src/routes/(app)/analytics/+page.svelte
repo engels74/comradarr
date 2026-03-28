@@ -11,7 +11,7 @@
 
 import BarChart3Icon from '@lucide/svelte/icons/bar-chart-3';
 import { goto } from '$app/navigation';
-import { page } from '$app/stores';
+import { page } from '$app/state';
 import {
 	AnalyticsSummaryCards,
 	ConnectorComparison,
@@ -31,7 +31,7 @@ let { data }: PageProps = $props();
  * Handles period change by updating URL.
  */
 function onPeriodChange(period: TimePeriod) {
-	const params = new URLSearchParams($page.url.searchParams);
+	const params = new URLSearchParams(page.url.searchParams);
 	params.set('period', period);
 	goto(`/analytics?${params.toString()}`);
 }

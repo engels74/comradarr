@@ -1,7 +1,7 @@
 <script lang="ts">
 import { onMount } from 'svelte';
 import { goto } from '$app/navigation';
-import { page } from '$app/stores';
+import { page } from '$app/state';
 import {
 	QueueBulkActions,
 	QueueControls,
@@ -96,7 +96,7 @@ const currentPage = $derived(Math.floor((data.filters.offset ?? 0) / pageSize) +
 function goToPage(pageNum: number) {
 	if (pageNum < 1 || pageNum > totalPages) return;
 
-	const params = new URLSearchParams($page.url.searchParams);
+	const params = new URLSearchParams(page.url.searchParams);
 	params.set('page', pageNum.toString());
 	goto(`/queue?${params.toString()}`);
 }
