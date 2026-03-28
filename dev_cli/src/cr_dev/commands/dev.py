@@ -541,8 +541,6 @@ def setup_dev_server(
     env = os.environ.copy()
     env["DATABASE_URL"] = config.database_url
     env["SECRET_KEY"] = config.secret_key
-    if config.skip_auth:
-        env["AUTH_MODE"] = "local_bypass"
 
     cmd = ["bun", "run", "dev", "--port", str(port)]
 
@@ -704,8 +702,6 @@ def dev_command(
     env = os.environ.copy()
     env["DATABASE_URL"] = config.database_url
     env["SECRET_KEY"] = config.secret_key
-    if config.skip_auth:
-        env["AUTH_MODE"] = "local_bypass"
 
     _display_banner(config, project_root)
 

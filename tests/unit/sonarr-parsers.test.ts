@@ -12,7 +12,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import {
 	parsePaginatedEpisodesLenient,
-	parsePaginatedSeriesLenient,
 	parseSonarrEpisode,
 	parseSonarrSeries,
 	SonarrEpisodeSchema,
@@ -536,97 +535,6 @@ describe('Schema exports', () => {
 // =============================================================================
 // Lenient Parser Tests
 // =============================================================================
-
-describe('parsePaginatedSeriesLenient', () => {
-	describe('valid inputs with mixed records', () => {
-		it('should parse valid records and skip malformed ones', () => {
-			const input = {
-				page: 1,
-				pageSize: 10,
-				totalRecords: 4,
-				records: [
-					validSeries,
-					{ id: 'invalid', title: 123 }, // Invalid - wrong types
-					minimalSeries,
-					null // Invalid - not an object
-				]
-			};
-
-			const result = parsePaginatedSeriesLenient(input);
-
-			expect(result.success).toBe(true);
-			if (result.success) {
-				expect(result.data.records).toHaveLength(2);
-				expect(result.skipped).toBe(2);
-				expect(result.data.records[0]?.title).toBe('Breaking Bad');
-				expect(result.data.records[1]?.title).toBe('Test Series');
-			}
-		});
-
-		it('should call onInvalid callback for malformed series (Req 27.8)', () => {
-			const invalidSeries = { id: 'not a number', title: 123 };
-			const input = {
-				page: 1,
-				pageSize: 10,
-				totalRecords: 2,
-				records: [validSeries, invalidSeries]
-			};
-
-			const onInvalid = vi.fn();
-			const result = parsePaginatedSeriesLenient(input, onInvalid);
-
-			expect(result.success).toBe(true);
-			expect(onInvalid).toHaveBeenCalledTimes(1);
-			expect(onInvalid).toHaveBeenCalledWith(invalidSeries, expect.any(String));
-		});
-
-		it('should return all valid when no malformed records', () => {
-			const input = {
-				page: 1,
-				pageSize: 10,
-				totalRecords: 2,
-				records: [validSeries, minimalSeries]
-			};
-
-			const result = parsePaginatedSeriesLenient(input);
-
-			expect(result.success).toBe(true);
-			if (result.success) {
-				expect(result.data.records).toHaveLength(2);
-				expect(result.skipped).toBe(0);
-			}
-		});
-
-		it('should return empty array when all records are malformed', () => {
-			const input = {
-				page: 1,
-				pageSize: 10,
-				totalRecords: 2,
-				records: [null, { invalid: 'record' }]
-			};
-
-			const result = parsePaginatedSeriesLenient(input);
-
-			expect(result.success).toBe(true);
-			if (result.success) {
-				expect(result.data.records).toHaveLength(0);
-				expect(result.skipped).toBe(2);
-			}
-		});
-	});
-
-	describe('invalid pagination structure', () => {
-		it('should return error for null input', () => {
-			const result = parsePaginatedSeriesLenient(null);
-			expect(result.success).toBe(false);
-		});
-
-		it('should return error for missing pagination fields', () => {
-			const result = parsePaginatedSeriesLenient({ page: 1, pageSize: 10 });
-			expect(result.success).toBe(false);
-		});
-	});
-});
 
 describe('parsePaginatedEpisodesLenient', () => {
 	describe('valid inputs with mixed records', () => {

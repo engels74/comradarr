@@ -20,10 +20,7 @@ import {
 	PRIORITY_CONSTANTS
 } from '../../src/lib/server/services/queue/config';
 // Import directly from specific files to avoid loading database-dependent queue-service.ts
-import {
-	calculatePriority,
-	comparePriority
-} from '../../src/lib/server/services/queue/priority-calculator';
+import { calculatePriority } from '../../src/lib/server/services/queue/priority-calculator';
 import type { PriorityInput, PriorityWeights } from '../../src/lib/server/services/queue/types';
 
 /**
@@ -575,54 +572,6 @@ describe('calculatePriority', () => {
 			expect(Number.isFinite(result.score)).toBe(true);
 			expect(result.breakdown.failurePenalty).toBe(10000); // 1000 * 10
 		});
-	});
-});
-
-describe('comparePriority', () => {
-	const now = new Date('2024-07-01T12:00:00Z');
-
-	it('should sort higher priority first', () => {
-		const highPriorityInput = createInput({
-			contentDate: daysAgo(7, now),
-			attemptCount: 0
-		});
-		const lowPriorityInput = createInput({
-			contentDate: daysAgo(365, now),
-			attemptCount: 5
-		});
-
-		const highResult = calculatePriority(highPriorityInput, DEFAULT_PRIORITY_WEIGHTS, now);
-		const lowResult = calculatePriority(lowPriorityInput, DEFAULT_PRIORITY_WEIGHTS, now);
-
-		const comparison = comparePriority(highResult, lowResult);
-
-		// Negative value means highResult comes first
-		expect(comparison).toBeLessThan(0);
-	});
-
-	it('should return 0 for equal priorities', () => {
-		const input = createInput();
-		const result1 = calculatePriority(input, DEFAULT_PRIORITY_WEIGHTS, now);
-		const result2 = calculatePriority(input, DEFAULT_PRIORITY_WEIGHTS, now);
-
-		expect(comparePriority(result1, result2)).toBe(0);
-	});
-
-	it('should correctly sort an array of priorities', () => {
-		const inputs = [
-			createInput({ attemptCount: 5 }),
-			createInput({ attemptCount: 0 }),
-			createInput({ attemptCount: 2 }),
-			createInput({ attemptCount: 10 })
-		];
-
-		const results = inputs.map((input) => calculatePriority(input, DEFAULT_PRIORITY_WEIGHTS, now));
-		results.sort(comparePriority);
-
-		// Should be sorted by score descending (fewer failures first)
-		for (let i = 0; i < results.length - 1; i++) {
-			expect(results[i]!.score).toBeGreaterThanOrEqual(results[i + 1]!.score);
-		}
 	});
 });
 

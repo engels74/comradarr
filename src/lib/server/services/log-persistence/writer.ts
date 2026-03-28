@@ -64,11 +64,6 @@ export function enableLogPersistence(): void {
 	state.enabled = true;
 }
 
-export function disableLogPersistence(): void {
-	const state = getWriterState();
-	state.enabled = false;
-}
-
 export function isLogPersistenceEnabled(): boolean {
 	return getWriterState().enabled;
 }
@@ -118,12 +113,4 @@ export async function shutdown(): Promise<number> {
 	state.isShuttingDown = false;
 
 	return flushed;
-}
-
-export function getBufferStats(): { pending: number; enabled: boolean } {
-	const state = getWriterState();
-	return {
-		pending: state.buffer.length,
-		enabled: state.enabled
-	};
 }

@@ -18,7 +18,7 @@ let { entry, class: className }: Props = $props();
 let isExpanded = $state(false);
 let isCopied = $state(false);
 
-const formattedTime = $derived(() => {
+const formattedTime = $derived.by(() => {
 	const date = new Date(entry.timestamp);
 	return date.toLocaleTimeString('en-US', {
 		hour: '2-digit',
@@ -28,7 +28,7 @@ const formattedTime = $derived(() => {
 	});
 });
 
-const formattedDate = $derived(() => {
+const formattedDate = $derived.by(() => {
 	const date = new Date(entry.timestamp);
 	return date.toLocaleDateString('en-US', {
 		month: 'short',
@@ -84,8 +84,8 @@ function toggleExpanded() {
 
 		<!-- Timestamp -->
 		<div class="shrink-0 w-20 text-xs text-muted-foreground tabular-nums">
-			<div>{formattedTime()}</div>
-			<div class="text-[10px] opacity-70">{formattedDate()}</div>
+			<div>{formattedTime}</div>
+			<div class="text-[10px] opacity-70">{formattedDate}</div>
 		</div>
 
 		<!-- Level Badge -->

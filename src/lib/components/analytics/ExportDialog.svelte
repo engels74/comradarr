@@ -21,7 +21,7 @@ const thirtyDaysAgo = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000);
 let startDate = $state(formatDate(thirtyDaysAgo));
 let endDate = $state(formatDate(today));
 
-const isValidRange = $derived(() => {
+const isValidRange = $derived.by(() => {
 	if (!startDate || !endDate) return false;
 	const start = new Date(startDate);
 	const end = new Date(endDate);
@@ -33,7 +33,7 @@ function formatDate(date: Date): string {
 }
 
 async function handleExport() {
-	if (!isValidRange()) {
+	if (!isValidRange) {
 		errorMessage = 'Start date must be before or equal to end date.';
 		return;
 	}
@@ -139,7 +139,7 @@ function handleDialogChange(open: boolean) {
 						<Button {...props} variant="outline" disabled={isExporting}>Cancel</Button>
 					{/snippet}
 				</Dialog.Close>
-				<Button onclick={handleExport} disabled={isExporting || !isValidRange()}>
+				<Button onclick={handleExport} disabled={isExporting || !isValidRange}>
 					{#if isExporting}
 						<svg class="size-4 mr-1.5 animate-spin" fill="none" viewBox="0 0 24 24">
 							<circle

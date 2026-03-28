@@ -30,61 +30,6 @@ export function mockJsonResponse(data: unknown, status = 200): Response {
 	});
 }
 
-export function mockFetchCapture() {
-	let capturedUrl: string | undefined;
-	let capturedHeaders: Headers | undefined;
-	let capturedMethod: string | undefined;
-	let capturedBody: unknown;
-
-	const mock = vi.fn().mockImplementation(async (url: string, init?: RequestInit) => {
-		capturedUrl = url;
-		capturedHeaders = new Headers(init?.headers);
-		capturedMethod = init?.method;
-		capturedBody = init?.body ? JSON.parse(init.body as string) : undefined;
-		return mockJsonResponse([]);
-	});
-
-	return {
-		mock,
-		get url() {
-			return capturedUrl;
-		},
-		get headers() {
-			return capturedHeaders;
-		},
-		get method() {
-			return capturedMethod;
-		},
-		get body() {
-			return capturedBody;
-		},
-		withResponse(data: unknown, status = 200) {
-			mock.mockImplementation(async (url: string, init?: RequestInit) => {
-				capturedUrl = url;
-				capturedHeaders = new Headers(init?.headers);
-				capturedMethod = init?.method;
-				capturedBody = init?.body ? JSON.parse(init.body as string) : undefined;
-				return mockJsonResponse(data, status);
-			});
-			return {
-				mock,
-				get url() {
-					return capturedUrl;
-				},
-				get headers() {
-					return capturedHeaders;
-				},
-				get method() {
-					return capturedMethod;
-				},
-				get body() {
-					return capturedBody;
-				}
-			};
-		}
-	};
-}
-
 interface PingTestConfig {
 	ClientClass: new (config: { baseUrl: string; apiKey: string }) => { ping(): Promise<boolean> };
 	baseUrl: string;

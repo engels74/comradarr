@@ -57,7 +57,7 @@ const formattedType = $derived(connector.type.charAt(0).toUpperCase() + connecto
 /**
  * Truncate URL for display
  */
-const truncatedUrl = $derived(() => {
+const truncatedUrl = $derived.by(() => {
 	const maxLength = 35;
 	if (connector.url.length <= maxLength) return connector.url;
 	return `${connector.url.substring(0, maxLength)}...`;
@@ -111,7 +111,7 @@ const truncatedUrl = $derived(() => {
 	<Card.Content class="space-y-3">
 		<!-- URL -->
 		<div class="text-sm text-muted-foreground truncate" title={connector.url}>
-			{truncatedUrl()}
+			{truncatedUrl}
 		</div>
 
 		<!-- Quick Stats -->

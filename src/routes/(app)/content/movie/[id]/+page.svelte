@@ -25,7 +25,7 @@ const typeColor = $derived(typeColors[data.movie.connectorType] ?? 'bg-gray-500/
 const yearDisplay = $derived(data.movie.year ? `(${data.movie.year})` : '');
 
 // Compute movie status
-const movieStatus = $derived(() => {
+const movieStatus = $derived.by(() => {
 	if (!data.movie.hasFile) {
 		return { label: 'Missing', variant: 'destructive' as const };
 	}
@@ -105,8 +105,8 @@ function formatLastSearchTime(date: Date | null): string {
 			<span class={cn('rounded-md px-2 py-1 text-xs font-medium', typeColor)}>
 				{data.movie.connectorName}
 			</span>
-			<Badge variant={movieStatus().variant}>
-				{movieStatus().label}
+			<Badge variant={movieStatus.variant}>
+				{movieStatus.label}
 			</Badge>
 			{#if !data.movie.monitored}
 				<Badge variant="outline">Unmonitored</Badge>
@@ -173,8 +173,8 @@ function formatLastSearchTime(date: Date | null): string {
 				<div class="space-y-4">
 					<div class="flex items-center justify-between rounded bg-muted/50 p-3">
 						<span class="text-sm text-muted-foreground">Status</span>
-						<Badge variant={movieStatus().variant}>
-							{movieStatus().label}
+						<Badge variant={movieStatus.variant}>
+							{movieStatus.label}
 						</Badge>
 					</div>
 					<div class="flex items-center justify-between rounded bg-muted/50 p-3">

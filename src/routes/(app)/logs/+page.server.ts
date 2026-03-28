@@ -51,8 +51,6 @@ export const load: PageServerLoad = async ({ url, depends }) => {
 	return {
 		entries: result.entries,
 		total: result.total,
-		hasMore: result.hasMore,
-		source: result.source,
 		buffer: bufferConfig,
 		levelCounts,
 		modules,

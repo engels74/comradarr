@@ -33,7 +33,7 @@ let {
 let canvas: HTMLCanvasElement;
 let chart: import('chart.js').Chart | null = null;
 
-const timeConfig = $derived(() => {
+const timeConfig = $derived.by(() => {
 	switch (period) {
 		case '24h':
 			return {
@@ -56,7 +56,7 @@ const timeConfig = $derived(() => {
 	}
 });
 
-const chartData = $derived(() => ({
+const chartData = $derived.by(() => ({
 	datasets: datasets.map((ds) => {
 		const dataset: {
 			label: string;
@@ -97,10 +97,10 @@ onMount(async () => {
 
 	Chart.register(...registerables);
 
-	const config = timeConfig();
+	const config = timeConfig;
 	chart = new Chart(canvas, {
 		type: 'line',
-		data: chartData(),
+		data: chartData,
 		options: {
 			responsive: true,
 			maintainAspectRatio: false,
@@ -173,8 +173,8 @@ onMount(async () => {
 
 $effect(() => {
 	if (chart) {
-		const config = timeConfig();
-		chart.data = chartData();
+		const config = timeConfig;
+		chart.data = chartData;
 		if (chart.options.scales?.x && 'time' in chart.options.scales.x) {
 			(
 				chart.options.scales.x as {

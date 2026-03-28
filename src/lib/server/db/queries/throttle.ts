@@ -206,23 +206,6 @@ export async function getThrottleProfileForConnector(
 	return DEFAULT_FALLBACK_PRESET;
 }
 
-export async function getThrottleProfileForConnectorRecord(
-	connector: Pick<Connector, 'throttleProfileId'>
-): Promise<EffectiveThrottleConfig> {
-	// 1. Check connector's assigned profile
-	if (connector.throttleProfileId !== null && connector.throttleProfileId !== undefined) {
-		const profile = await getThrottleProfile(connector.throttleProfileId);
-		if (profile) return profile;
-	}
-
-	// 2. Try default profile
-	const defaultProfile = await getDefaultThrottleProfile();
-	if (defaultProfile) return defaultProfile;
-
-	// 3. Fallback to Moderate preset constants
-	return DEFAULT_FALLBACK_PRESET;
-}
-
 export async function assignThrottleProfileToConnector(
 	connectorId: number,
 	profileId: number | null
@@ -237,14 +220,6 @@ export async function assignThrottleProfileToConnector(
 		.returning();
 
 	return result[0] ?? null;
-}
-
-export async function getConnectorsUsingProfile(profileId: number): Promise<Connector[]> {
-	return db
-		.select()
-		.from(connectors)
-		.where(eq(connectors.throttleProfileId, profileId))
-		.orderBy(connectors.name);
 }
 
 export async function getConnectorCountUsingProfile(profileId: number): Promise<number> {
@@ -271,10 +246,6 @@ export async function setDefaultThrottleProfile(id: number): Promise<ThrottlePro
 		.returning();
 
 	return result[0] ?? null;
-}
-
-export function isThrottleProfile(config: EffectiveThrottleConfig): config is ThrottleProfile {
-	return 'id' in config;
 }
 
 export * from './throttle-state';

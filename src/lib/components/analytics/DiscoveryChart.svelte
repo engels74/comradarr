@@ -18,7 +18,7 @@ const connectorColors: Record<string, string> = {
 	whisparr: 'rgb(168, 85, 247)'
 };
 
-const datasets = $derived(() => {
+const datasets = $derived.by(() => {
 	const result: {
 		label: string;
 		data: { timestamp: string; value: number }[];
@@ -56,7 +56,7 @@ const hasData = $derived(metrics.length > 0 && metrics.some((m) => m.gapsDiscove
 	</Card.Header>
 	<Card.Content>
 		{#if hasData}
-			<TimeSeriesChart datasets={datasets()} yAxisLabel="Items Discovered" {period} height={280} />
+			<TimeSeriesChart datasets={datasets} yAxisLabel="Items Discovered" {period} height={280} />
 		{:else}
 			<div class="flex flex-col items-center justify-center py-12 text-muted-foreground">
 				<div class="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-glass/50 mb-3">

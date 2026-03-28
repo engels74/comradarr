@@ -97,97 +97,9 @@ def find_process_on_port(port: int) -> int | None:
     return None
 
 
-def find_processes_by_pattern(pattern: str) -> list[int]:
-    """Find PIDs of processes matching the given pattern."""
-    result = subprocess.run(
-        ["pgrep", "-f", pattern],
-        capture_output=True,
-        text=True,
-    )
-
-    if result.returncode == 0 and result.stdout.strip():
-        pids: list[int] = []
-        for line in result.stdout.strip().split("\n"):
-            try:
-                pids.append(int(line))
-            except ValueError:
-                continue
-        return pids
-
-    return []
-
-
-def wait_for_port(port: int, *, timeout: float = 30.0) -> bool:
-    """Wait for a port to become available (process listening)."""
-    start = time.monotonic()
-    while (time.monotonic() - start) < timeout:
-        if find_process_on_port(port) is not None:
-            return True
-        time.sleep(0.5)
-    return False
-
-
 def is_port_in_use(port: int) -> bool:
     """Check if a port is in use."""
     return find_process_on_port(port) is not None
-
-
-def run_command(
-    cmd: list[str],
-    *,
-    cwd: Path | None = None,
-    env: dict[str, str] | None = None,
-    check: bool = True,
-    capture_output: bool = True,
-) -> subprocess.CompletedProcess[str]:
-    """Run a command with optional environment variables."""
-    full_env = os.environ.copy()
-    if env:
-        full_env.update(env)
-
-    return subprocess.run(
-        cmd,
-        cwd=cwd,
-        env=full_env,
-        capture_output=capture_output,
-        text=True,
-        check=check,
-    )
-
-
-def run_background(
-    cmd: list[str],
-    *,
-    cwd: Path | None = None,
-    env: dict[str, str] | None = None,
-    log_file: Path | None = None,
-) -> subprocess.Popen[str]:
-    """Run a command in the background."""
-    full_env = os.environ.copy()
-    if env:
-        full_env.update(env)
-
-    if log_file:
-        log_handle = log_file.open("w")
-        return subprocess.Popen(
-            cmd,
-            cwd=cwd,
-            env=full_env,
-            stdout=log_handle,
-            stderr=subprocess.STDOUT,
-            text=True,
-            start_new_session=True,
-        )
-
-    return subprocess.Popen(
-        cmd,
-        cwd=cwd,
-        env=full_env,
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
-        text=True,
-        start_new_session=True,
-    )
 
 
 def run_streaming(

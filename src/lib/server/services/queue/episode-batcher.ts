@@ -1,6 +1,6 @@
 // SeasonSearch: fully aired AND missing% >= threshold AND count >= min; else EpisodeSearch
 
-import { BATCHING_CONFIG, getBatchingConfig } from './config';
+import { BATCHING_CONFIG } from './config';
 
 export type EpisodeSearchCommand = 'SeasonSearch' | 'EpisodeSearch';
 
@@ -125,24 +125,6 @@ export function determineBatchingDecision(
 	};
 }
 
-// If season pack previously failed, fall back to individual episode searches
-export function determineBatchingDecisionWithFallback(
-	stats: SeasonStatistics,
-	seasonPackFailed: boolean,
-	config?: Partial<BatchingConfig>
-): BatchingDecision {
-	// If season pack search previously failed, fall back to individual episodes
-	if (seasonPackFailed) {
-		return {
-			command: 'EpisodeSearch',
-			reason: 'season_pack_fallback'
-		};
-	}
-
-	// Otherwise, use normal decision logic
-	return determineBatchingDecision(stats, config);
-}
-
 export function groupEpisodesBySeries(
 	episodes: readonly EpisodeForGrouping[]
 ): Map<number, EpisodeForGrouping[]> {
@@ -219,32 +201,4 @@ export function createMovieBatches(
 	}
 
 	return batches;
-}
-
-// Async version that fetches thresholds from database settings
-export async function determineBatchingDecisionWithConfig(
-	stats: SeasonStatistics
-): Promise<BatchingDecision> {
-	const batchingConfig = await getBatchingConfig();
-
-	const config: BatchingConfig = {
-		seasonSearchMinMissingPercent: batchingConfig.SEASON_SEARCH_MIN_MISSING_PERCENT,
-		seasonSearchMinMissingCount: batchingConfig.SEASON_SEARCH_MIN_MISSING_COUNT
-	};
-
-	return determineBatchingDecision(stats, config);
-}
-
-export async function determineBatchingDecisionWithFallbackAndConfig(
-	stats: SeasonStatistics,
-	seasonPackFailed: boolean
-): Promise<BatchingDecision> {
-	const batchingConfig = await getBatchingConfig();
-
-	const config: BatchingConfig = {
-		seasonSearchMinMissingPercent: batchingConfig.SEASON_SEARCH_MIN_MISSING_PERCENT,
-		seasonSearchMinMissingCount: batchingConfig.SEASON_SEARCH_MIN_MISSING_COUNT
-	};
-
-	return determineBatchingDecisionWithFallback(stats, seasonPackFailed, config);
 }

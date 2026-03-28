@@ -39,12 +39,6 @@ export async function calculateNextEligibleTimeWithConfig(
 	return new Date(now.getTime() + delayMs);
 }
 
-/** Async version using database-configured max attempts. */
-export async function shouldMarkExhaustedWithConfig(attemptCount: number): Promise<boolean> {
-	const stateConfig = await getStateTransitionConfig();
-	return attemptCount >= stateConfig.MAX_ATTEMPTS;
-}
-
 /** Check if item should enter backlog (after exhausting normal retries). */
 export function shouldEnterBacklog(attemptCount: number, maxAttempts: number): boolean {
 	return attemptCount >= maxAttempts;

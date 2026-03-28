@@ -1,9 +1,5 @@
 export {
 	deleteLogsBefore,
-	getDistinctModules,
-	getLogCount,
-	getOldestLogTimestamp,
-	getPersistedLogLevelCounts,
 	insertLogBatch,
 	queryPersistedLogs
 } from './queries';
@@ -16,10 +12,8 @@ export type {
 } from './types';
 export {
 	add,
-	disableLogPersistence,
 	enableLogPersistence,
 	flush,
-	getBufferStats,
 	isLogPersistenceEnabled,
 	shutdown
 } from './writer';

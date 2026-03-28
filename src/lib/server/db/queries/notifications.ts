@@ -1,4 +1,4 @@
-import { and, count, desc, eq, gte, inArray, sql } from 'drizzle-orm';
+import { and, count, eq, gte, inArray, sql } from 'drizzle-orm';
 import { DecryptionError, decrypt, encrypt, SecretKeyError } from '$lib/server/crypto';
 import { db } from '$lib/server/db';
 import {
@@ -169,16 +169,6 @@ export async function getChannelsForEventType(
 	});
 }
 
-export async function getNotificationChannelsByType(
-	type: NotificationChannelType
-): Promise<NotificationChannel[]> {
-	return db
-		.select()
-		.from(notificationChannels)
-		.where(eq(notificationChannels.type, type))
-		.orderBy(notificationChannels.name);
-}
-
 export async function getDecryptedSensitiveConfig(
 	channel: NotificationChannel
 ): Promise<Record<string, unknown>> {
@@ -321,28 +311,6 @@ export async function updateNotificationHistoryStatus(
 		.returning();
 
 	return result[0] ?? null;
-}
-
-export async function getNotificationHistoryForChannel(
-	channelId: number,
-	limit: number = 50
-): Promise<NotificationHistory[]> {
-	return db
-		.select()
-		.from(notificationHistory)
-		.where(eq(notificationHistory.channelId, channelId))
-		.orderBy(desc(notificationHistory.createdAt))
-		.limit(limit);
-}
-
-export async function getRecentNotificationHistory(
-	limit: number = 50
-): Promise<NotificationHistory[]> {
-	return db
-		.select()
-		.from(notificationHistory)
-		.orderBy(desc(notificationHistory.createdAt))
-		.limit(limit);
 }
 
 export async function getPendingNotificationsForBatching(

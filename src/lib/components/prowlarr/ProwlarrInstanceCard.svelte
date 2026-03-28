@@ -26,7 +26,7 @@ let { instance, stats, class: className }: Props = $props();
 /**
  * Truncate URL for display
  */
-const truncatedUrl = $derived(() => {
+const truncatedUrl = $derived.by(() => {
 	const maxLength = 35;
 	if (instance.url.length <= maxLength) return instance.url;
 	return `${instance.url.substring(0, maxLength)}...`;
@@ -86,7 +86,7 @@ const truncatedUrl = $derived(() => {
 	<Card.Content class="space-y-3">
 		<!-- URL -->
 		<div class="text-sm text-muted-foreground truncate" title={instance.url}>
-			{truncatedUrl()}
+			{truncatedUrl}
 		</div>
 
 		<!-- Quick Stats -->

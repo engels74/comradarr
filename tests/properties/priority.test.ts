@@ -9,10 +9,7 @@ import * as fc from 'fast-check';
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_PRIORITY_WEIGHTS } from '../../src/lib/server/services/queue/config';
 // Import directly from specific files to avoid loading database-dependent queue-service.ts
-import {
-	calculatePriority,
-	comparePriority
-} from '../../src/lib/server/services/queue/priority-calculator';
+import { calculatePriority } from '../../src/lib/server/services/queue/priority-calculator';
 import type { PriorityInput, PriorityWeights } from '../../src/lib/server/services/queue/types';
 
 /**
@@ -579,58 +576,6 @@ describe('Priority Calculation Properties', () => {
 						const shorterResult = calculatePriority(shorterInput, DEFAULT_PRIORITY_WEIGHTS, now);
 
 						expect(longerResult.score).toBeGreaterThanOrEqual(shorterResult.score);
-					}
-				),
-				{ numRuns: 100 }
-			);
-		});
-	});
-});
-
-describe('comparePriority Properties', () => {
-	describe('Property: Comparison Consistency', () => {
-		it('comparePriority is consistent with score ordering', () => {
-			fc.assert(
-				fc.property(
-					priorityInputArbitrary,
-					priorityInputArbitrary,
-					nowArbitrary,
-					(input1, input2, now) => {
-						const result1 = calculatePriority(input1, DEFAULT_PRIORITY_WEIGHTS, now);
-						const result2 = calculatePriority(input2, DEFAULT_PRIORITY_WEIGHTS, now);
-
-						const comparison = comparePriority(result1, result2);
-
-						if (result1.score > result2.score) {
-							expect(comparison).toBeLessThan(0); // result1 comes first
-						} else if (result1.score < result2.score) {
-							expect(comparison).toBeGreaterThan(0); // result2 comes first
-						} else {
-							expect(comparison).toBe(0);
-						}
-					}
-				),
-				{ numRuns: 100 }
-			);
-		});
-	});
-
-	describe('Property: Sorting Stability', () => {
-		it('sorted array is in descending score order', () => {
-			fc.assert(
-				fc.property(
-					fc.array(priorityInputArbitrary, { minLength: 1, maxLength: 20 }),
-					nowArbitrary,
-					(inputs, now) => {
-						const results = inputs.map((input) =>
-							calculatePriority(input, DEFAULT_PRIORITY_WEIGHTS, now)
-						);
-						const sorted = [...results].sort(comparePriority);
-
-						// Verify descending order
-						for (let i = 0; i < sorted.length - 1; i++) {
-							expect(sorted[i]!.score).toBeGreaterThanOrEqual(sorted[i + 1]!.score);
-						}
 					}
 				),
 				{ numRuns: 100 }

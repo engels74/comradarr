@@ -85,15 +85,6 @@ export function isSupportedChannelType(channelType: string): boolean {
 	return supportedTypes.includes(channelType);
 }
 
-export function getSupportedChannelTypes(): string[] {
-	return ['discord', 'telegram', 'slack', 'email', 'webhook'];
-}
-
-/** Clear the sender cache (for testing). */
-export function clearSenderCache(): void {
-	senderInstances.clear();
-}
-
 export { type AggregatedPayloadMetadata, buildAggregatePayload } from './aggregators';
 export {
 	type BatchProcessingResult,
@@ -106,7 +97,6 @@ export {
 export {
 	type DispatchOptions,
 	type DispatchResult,
-	getNotificationDispatcher,
 	NotificationDispatcher,
 	notify
 } from './dispatcher';

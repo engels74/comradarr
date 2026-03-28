@@ -105,16 +105,6 @@ export async function getApiKeysByUser(userId: number): Promise<ApiKeyDisplay[]>
 	return results.map(toDisplay);
 }
 
-export async function getApiKey(id: number, userId: number): Promise<ApiKeyDisplay | null> {
-	const result = await db
-		.select()
-		.from(apiKeys)
-		.where(and(eq(apiKeys.id, id), eq(apiKeys.userId, userId)))
-		.limit(1);
-
-	return result[0] ? toDisplay(result[0]) : null;
-}
-
 export interface ValidateApiKeyResult {
 	userId: number;
 	scope: ApiKeyScope;
@@ -185,15 +175,6 @@ export async function revokeApiKey(id: number, userId: number): Promise<boolean>
 		.returning({ id: apiKeys.id });
 
 	return result.length > 0;
-}
-
-export async function deleteAllApiKeys(userId: number): Promise<number> {
-	const result = await db
-		.delete(apiKeys)
-		.where(eq(apiKeys.userId, userId))
-		.returning({ id: apiKeys.id });
-
-	return result.length;
 }
 
 export async function apiKeyNameExists(

@@ -24,7 +24,7 @@ const logger = createLogger('connectors');
 /**
  * Stats for a Prowlarr instance.
  */
-export interface ProwlarrInstanceStats {
+interface ProwlarrInstanceStats {
 	instanceId: number;
 	totalIndexers: number;
 	rateLimitedIndexers: number;

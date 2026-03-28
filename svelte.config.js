@@ -11,10 +11,7 @@ const config = {
 			precompress: true,
 			envPrefix: ''
 		}),
-		alias: {
-			$components: 'src/lib/components',
-			$server: 'src/lib/server'
-		}
+		alias: {}
 	}
 };
 

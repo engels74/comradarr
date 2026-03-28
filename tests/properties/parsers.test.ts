@@ -14,30 +14,9 @@ import * as v from 'valibot';
 import { describe, expect, it } from 'vitest';
 import {
 	parseCommandResponse,
-	parsePaginatedResponse,
-	parsePaginatedResponseLenient,
-	parseQualityModel,
-	parseRecordsWithWarnings
+	parsePaginatedResponseLenient
 } from '../../src/lib/server/connectors/common/parsers';
 import type { CommandStatus } from '../../src/lib/server/connectors/common/types';
-import type { QualityModel } from '../../src/lib/utils/quality';
-
-/**
- * Arbitrary generator for valid QualityModel objects.
- */
-const qualityModelArbitrary: fc.Arbitrary<QualityModel> = fc.record({
-	quality: fc.record({
-		id: fc.integer({ min: 0, max: 100 }),
-		name: fc.string({ minLength: 1, maxLength: 50 }),
-		source: fc.string({ minLength: 1, maxLength: 50 }),
-		resolution: fc.constantFrom(480, 576, 720, 1080, 2160)
-	}),
-	revision: fc.record({
-		version: fc.integer({ min: 0, max: 100 }),
-		real: fc.integer({ min: 0, max: 10 }),
-		isRepack: fc.boolean()
-	})
-});
 
 /**
  * Arbitrary generator for valid CommandResponse objects.
@@ -97,27 +76,6 @@ const simpleRecordArbitrary = fc.record({
 
 describe('API Response Parsers - Property Tests', () => {
 	describe('Property 13: API Response Parsing Completeness', () => {
-		it('parseQualityModel extracts all required fields from valid input', () => {
-			fc.assert(
-				fc.property(qualityModelArbitrary, (qualityModel) => {
-					const result = parseQualityModel(qualityModel);
-
-					expect(result.success).toBe(true);
-					if (result.success) {
-						// Verify all required fields are extracted (Req 27.5)
-						expect(result.data.quality.id).toBe(qualityModel.quality.id);
-						expect(result.data.quality.name).toBe(qualityModel.quality.name);
-						expect(result.data.quality.source).toBe(qualityModel.quality.source);
-						expect(result.data.quality.resolution).toBe(qualityModel.quality.resolution);
-						expect(result.data.revision.version).toBe(qualityModel.revision.version);
-						expect(result.data.revision.real).toBe(qualityModel.revision.real);
-						expect(result.data.revision.isRepack).toBe(qualityModel.revision.isRepack);
-					}
-				}),
-				{ numRuns: 100 }
-			);
-		});
-
 		it('parseCommandResponse extracts all required fields from valid input', () => {
 			fc.assert(
 				fc.property(commandResponseArbitrary, (commandResponse) => {
@@ -145,70 +103,9 @@ describe('API Response Parsers - Property Tests', () => {
 				{ numRuns: 100 }
 			);
 		});
-
-		it('parsePaginatedResponse extracts all required fields from valid input', () => {
-			fc.assert(
-				fc.property(paginatedResponseArbitrary(simpleRecordArbitrary), (paginatedResponse) => {
-					const result = parsePaginatedResponse(paginatedResponse, SimpleRecordSchema);
-
-					expect(result.success).toBe(true);
-					if (result.success) {
-						// Verify all required fields are extracted (Req 27.1)
-						expect(result.data.page).toBe(paginatedResponse.page);
-						expect(result.data.pageSize).toBe(paginatedResponse.pageSize);
-						expect(result.data.totalRecords).toBe(paginatedResponse.totalRecords);
-						expect(result.data.records).toHaveLength(paginatedResponse.records.length);
-
-						// Verify records are preserved
-						for (let i = 0; i < paginatedResponse.records.length; i++) {
-							expect(result.data.records[i]).toEqual(paginatedResponse.records[i]);
-						}
-					}
-				}),
-				{ numRuns: 100 }
-			);
-		});
 	});
 
 	describe('Property 14: Parser Robustness to Extra Fields', () => {
-		it('parseQualityModel ignores unknown fields', () => {
-			fc.assert(
-				fc.property(
-					qualityModelArbitrary,
-					fc.dictionary(fc.string({ minLength: 1, maxLength: 20 }), fc.anything()),
-					(qualityModel, extraFields) => {
-						// Add extra unknown fields to the input
-						const inputWithExtras = {
-							...qualityModel,
-							...extraFields,
-							quality: {
-								...qualityModel.quality,
-								unknownField: 'should be ignored',
-								anotherExtra: 12345
-							},
-							revision: {
-								...qualityModel.revision,
-								extraRevisionField: true
-							}
-						};
-
-						const result = parseQualityModel(inputWithExtras);
-
-						// Should still parse successfully (Req 27.7)
-						expect(result.success).toBe(true);
-						if (result.success) {
-							// Original fields should be preserved
-							expect(result.data.quality.id).toBe(qualityModel.quality.id);
-							expect(result.data.quality.name).toBe(qualityModel.quality.name);
-							expect(result.data.quality.source).toBe(qualityModel.quality.source);
-							expect(result.data.quality.resolution).toBe(qualityModel.quality.resolution);
-						}
-					}
-				),
-				{ numRuns: 100 }
-			);
-		});
-
 		it('parseCommandResponse ignores unknown fields', () => {
 			fc.assert(
 				fc.property(commandResponseArbitrary, (commandResponse) => {
@@ -234,59 +131,9 @@ describe('API Response Parsers - Property Tests', () => {
 				{ numRuns: 100 }
 			);
 		});
-
-		it('parsePaginatedResponse ignores unknown fields', () => {
-			fc.assert(
-				fc.property(paginatedResponseArbitrary(simpleRecordArbitrary), (paginatedResponse) => {
-					const inputWithExtras = {
-						...paginatedResponse,
-						unknownPaginationField: 'ignored',
-						extraMetadata: { version: '2.0' }
-					};
-
-					const result = parsePaginatedResponse(inputWithExtras, SimpleRecordSchema);
-
-					// Should still parse successfully (Req 27.7)
-					expect(result.success).toBe(true);
-					if (result.success) {
-						expect(result.data.page).toBe(paginatedResponse.page);
-						expect(result.data.totalRecords).toBe(paginatedResponse.totalRecords);
-					}
-				}),
-				{ numRuns: 100 }
-			);
-		});
 	});
 
 	describe('Property 15: Parser Graceful Degradation', () => {
-		it('parseQualityModel returns error for malformed input without throwing', () => {
-			const malformedInputs = [
-				null,
-				undefined,
-				'string',
-				123,
-				[],
-				{},
-				{ quality: null },
-				{ quality: { id: 'not a number' } },
-				{ quality: { id: 1, name: 123 } }, // name should be string
-				{ quality: { id: 1, name: 'test' } }, // missing source, resolution
-				{ quality: { id: 1, name: 'test', source: 'web', resolution: 1080 } } // missing revision
-			];
-
-			for (const input of malformedInputs) {
-				// Should not throw (Req 27.8)
-				expect(() => parseQualityModel(input)).not.toThrow();
-
-				const result = parseQualityModel(input);
-				expect(result.success).toBe(false);
-				if (!result.success) {
-					expect(result.error).toBeDefined();
-					expect(typeof result.error).toBe('string');
-				}
-			}
-		});
-
 		it('parseCommandResponse returns error for malformed input without throwing', () => {
 			const malformedInputs = [
 				null,
@@ -313,114 +160,9 @@ describe('API Response Parsers - Property Tests', () => {
 				}
 			}
 		});
-
-		it('parsePaginatedResponse returns error for malformed input without throwing', () => {
-			const malformedInputs = [
-				null,
-				undefined,
-				'string',
-				123,
-				[],
-				{},
-				{ page: 'not a number' },
-				{ page: 1, pageSize: 10 }, // missing totalRecords, records
-				{ page: 1, pageSize: 10, totalRecords: 100, records: 'not an array' }
-			];
-
-			for (const input of malformedInputs) {
-				// Should not throw (Req 27.8)
-				expect(() => parsePaginatedResponse(input, SimpleRecordSchema)).not.toThrow();
-
-				const result = parsePaginatedResponse(input, SimpleRecordSchema);
-				expect(result.success).toBe(false);
-				if (!result.success) {
-					expect(result.error).toBeDefined();
-					expect(typeof result.error).toBe('string');
-				}
-			}
-		});
-
-		it('parseRecordsWithWarnings filters invalid records without throwing', () => {
-			fc.assert(
-				fc.property(
-					fc.array(simpleRecordArbitrary, { minLength: 1, maxLength: 10 }),
-					(validRecords) => {
-						// Mix valid records with invalid ones
-						const mixedRecords = [
-							...validRecords,
-							null,
-							{ id: 'invalid' },
-							{ title: 123 },
-							'not an object'
-						];
-
-						const warnings: string[] = [];
-
-						// Should not throw
-						expect(() =>
-							parseRecordsWithWarnings(mixedRecords, SimpleRecordSchema, (_, error) => {
-								warnings.push(error);
-							})
-						).not.toThrow();
-
-						const result = parseRecordsWithWarnings(mixedRecords, SimpleRecordSchema);
-
-						// Should only return valid records
-						expect(result).toHaveLength(validRecords.length);
-						for (let i = 0; i < validRecords.length; i++) {
-							expect(result[i]).toEqual(validRecords[i]);
-						}
-					}
-				),
-				{ numRuns: 100 }
-			);
-		});
 	});
 
 	describe('Type Preservation', () => {
-		it('parseQualityModel preserves numeric types', () => {
-			fc.assert(
-				fc.property(qualityModelArbitrary, (qualityModel) => {
-					const result = parseQualityModel(qualityModel);
-
-					if (result.success) {
-						expect(typeof result.data.quality.id).toBe('number');
-						expect(typeof result.data.quality.resolution).toBe('number');
-						expect(typeof result.data.revision.version).toBe('number');
-						expect(typeof result.data.revision.real).toBe('number');
-					}
-				}),
-				{ numRuns: 100 }
-			);
-		});
-
-		it('parseQualityModel preserves string types', () => {
-			fc.assert(
-				fc.property(qualityModelArbitrary, (qualityModel) => {
-					const result = parseQualityModel(qualityModel);
-
-					if (result.success) {
-						expect(typeof result.data.quality.name).toBe('string');
-						expect(typeof result.data.quality.source).toBe('string');
-					}
-				}),
-				{ numRuns: 100 }
-			);
-		});
-
-		it('parseQualityModel preserves boolean types', () => {
-			fc.assert(
-				fc.property(qualityModelArbitrary, (qualityModel) => {
-					const result = parseQualityModel(qualityModel);
-
-					if (result.success) {
-						expect(typeof result.data.revision.isRepack).toBe('boolean');
-					}
-				}),
-				{ numRuns: 100 }
-			);
-		});
-
 		it('parseCommandResponse preserves status enum values', () => {
 			fc.assert(
 				fc.property(commandResponseArbitrary, (commandResponse) => {

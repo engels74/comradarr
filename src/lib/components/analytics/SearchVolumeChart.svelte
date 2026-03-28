@@ -19,7 +19,7 @@ const statusColors = {
 	noResults: 'rgb(245, 158, 11)'
 };
 
-const aggregatedDatasets = $derived(() => {
+const aggregatedDatasets = $derived.by(() => {
 	if (metrics.length === 0) return [];
 
 	const timestampMap = new Map<
@@ -115,7 +115,7 @@ const hasData = $derived(
 	<Card.Content>
 		{#if hasData}
 			<TimeSeriesChart
-				datasets={aggregatedDatasets()}
+				datasets={aggregatedDatasets}
 				yAxisLabel="Searches"
 				{period}
 				height={280}

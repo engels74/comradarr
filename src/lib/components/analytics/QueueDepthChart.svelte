@@ -18,7 +18,7 @@ const connectorColors: Record<string, string> = {
 	whisparr: 'rgb(168, 85, 247)'
 };
 
-const datasets = $derived(() => {
+const datasets = $derived.by(() => {
 	const result: {
 		label: string;
 		data: { timestamp: string; value: number }[];
@@ -60,7 +60,7 @@ const hasData = $derived(metrics.length > 0 && metrics.some((m) => m.avgQueueDep
 	</Card.Header>
 	<Card.Content>
 		{#if hasData}
-			<TimeSeriesChart datasets={datasets()} yAxisLabel="Items in Queue" {period} height={280} />
+			<TimeSeriesChart datasets={datasets} yAxisLabel="Items in Queue" {period} height={280} />
 		{:else}
 			<div class="flex flex-col items-center justify-center py-12 text-muted-foreground">
 				<ListTodoIcon class="h-8 w-8 mb-2 opacity-50" />

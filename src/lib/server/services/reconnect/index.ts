@@ -2,8 +2,6 @@ export { RECONNECT_CONFIG, type ReconnectConfig } from './config';
 
 export {
 	attemptReconnect,
-	calculateBackoffDelay,
-	calculateNextReconnectTime,
 	getConnectorReconnectState,
 	initializeReconnectForOfflineConnector,
 	type ProcessReconnectionsResult,

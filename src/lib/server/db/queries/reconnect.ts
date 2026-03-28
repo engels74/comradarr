@@ -81,18 +81,6 @@ export async function getConnectorsDueForReconnect(): Promise<ConnectorWithRecon
 	}));
 }
 
-export async function getOfflineConnectors(): Promise<Connector[]> {
-	return db
-		.select()
-		.from(connectors)
-		.where(
-			and(
-				eq(connectors.enabled, true),
-				or(eq(connectors.healthStatus, 'offline'), eq(connectors.healthStatus, 'unhealthy'))
-			)
-		);
-}
-
 export async function resetReconnectState(connectorId: number): Promise<void> {
 	await db
 		.update(syncState)

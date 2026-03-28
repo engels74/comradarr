@@ -18,7 +18,7 @@ interface Props {
 
 let { conflictCount, conflictNames = [], class: className = '' }: Props = $props();
 
-const tooltipText = $derived(() => {
+const tooltipText = $derived.by(() => {
 	if (conflictNames.length === 0) {
 		return `${conflictCount} conflict${conflictCount > 1 ? 's' : ''} within 5 minutes`;
 	}
@@ -42,7 +42,7 @@ const tooltipText = $derived(() => {
 			</Tooltip.Trigger>
 			<Tooltip.Portal>
 				<Tooltip.Content>
-					<p>{tooltipText()}</p>
+					<p>{tooltipText}</p>
 				</Tooltip.Content>
 			</Tooltip.Portal>
 		</Tooltip.Root>

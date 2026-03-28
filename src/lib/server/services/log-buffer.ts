@@ -59,22 +59,6 @@ function getLogBufferState(): LogBufferState {
 	return globalThis.__logBufferState;
 }
 
-// Clears existing entries if size is reduced
-export function configureBufferSize(size: number): void {
-	const state = getLogBufferState();
-
-	if (size < 100) {
-		throw new Error('Buffer size must be at least 100 entries');
-	}
-
-	if (size < state.bufferSize) {
-		// Clear and reset when reducing size
-		clearLogBuffer();
-	}
-
-	state.bufferSize = size;
-}
-
 export function getBufferConfig(): { size: number; used: number; totalWritten: number } {
 	const state = getLogBufferState();
 	return {
@@ -191,11 +175,6 @@ export function queryLogs(filter?: LogFilter, pagination?: LogPagination): LogQu
 		total,
 		hasMore: offset + limit < total
 	};
-}
-
-export function getLogEntryById(id: number): BufferedLogEntry | null {
-	const state = getLogBufferState();
-	return state.buffer.find((entry) => entry?.id === id) ?? null;
 }
 
 export function getUniqueModules(): string[] {

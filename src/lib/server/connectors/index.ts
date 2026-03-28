@@ -13,22 +13,12 @@ export {
 	SSLError,
 	TimeoutError
 } from './common/errors.js';
-export type { FetchAllPagesOptions, PageFetcher, PaginationMetadata } from './common/pagination.js';
-export {
-	collectAllPages,
-	collectAllPagesWithMetadata,
-	DEFAULT_PAGE_SIZE,
-	fetchAllPages
-} from './common/pagination.js';
 export type { ParseResult } from './common/parsers.js';
 export {
 	CommandResponseSchema,
 	CommandStatusSchema,
 	createPaginatedResponseSchema,
 	parseCommandResponse,
-	parsePaginatedResponse,
-	parseQualityModel,
-	parseRecordsWithWarnings,
 	QualityModelSchema
 } from './common/parsers.js';
 export { calculateBackoffDelay, DEFAULT_RETRY_CONFIG, withRetry } from './common/retry.js';
@@ -57,7 +47,6 @@ export type { RadarrMovie, RadarrMovieFile } from './radarr/types.js';
 export { SonarrClient } from './sonarr/client.js';
 export {
 	parsePaginatedEpisodesLenient,
-	parsePaginatedSeriesLenient,
 	parseSonarrEpisode,
 	parseSonarrSeries,
 	SonarrEpisodeFileSchema,
@@ -78,7 +67,6 @@ export type {
 export { WhisparrClient } from './whisparr/client.js';
 export {
 	parsePaginatedWhisparrEpisodesLenient,
-	parsePaginatedWhisparrSeriesLenient,
 	parseWhisparrEpisode,
 	parseWhisparrSeries,
 	WhisparrEpisodeFileSchema,

@@ -1,5 +1,4 @@
 import * as v from 'valibot';
-import type { QualityModel } from '$lib/utils/quality';
 import type { CommandResponse, CommandStatus, PaginatedResponse } from './types';
 
 export type ParseResult<T> =
@@ -64,20 +63,6 @@ export function createPaginatedResponseSchema<T extends v.GenericSchema>(recordS
 	});
 }
 
-export function parseQualityModel(data: unknown): ParseResult<QualityModel> {
-	const result = v.safeParse(QualityModelSchema, data);
-
-	if (result.success) {
-		return { success: true, data: result.output };
-	}
-
-	return {
-		success: false,
-		error: `Invalid quality model: ${result.issues.map((i) => i.message).join(', ')}`,
-		issues: result.issues
-	};
-}
-
 export function parseCommandResponse(data: unknown): ParseResult<CommandResponse> {
 	const result = v.safeParse(CommandResponseSchema, data);
 
@@ -114,35 +99,8 @@ export function parseCommandResponse(data: unknown): ParseResult<CommandResponse
 	};
 }
 
-export function parsePaginatedResponse<T extends v.GenericSchema>(
-	data: unknown,
-	recordSchema: T
-): ParseResult<PaginatedResponse<v.InferOutput<T>>> {
-	const schema = createPaginatedResponseSchema(recordSchema);
-	const result = v.safeParse(schema, data);
-
-	if (result.success) {
-		const output = result.output;
-		const paginatedResponse: PaginatedResponse<v.InferOutput<T>> = {
-			page: output.page,
-			pageSize: output.pageSize,
-			sortKey: output.sortKey ?? '',
-			sortDirection: output.sortDirection ?? 'ascending',
-			totalRecords: output.totalRecords,
-			records: output.records
-		};
-		return { success: true, data: paginatedResponse };
-	}
-
-	return {
-		success: false,
-		error: `Invalid paginated response: ${result.issues.map((i) => i.message).join(', ')}`,
-		issues: result.issues
-	};
-}
-
 /** Filters out invalid records, calling onInvalid callback for skipped items. */
-export function parseRecordsWithWarnings<T extends v.GenericSchema>(
+function parseRecordsWithWarnings<T extends v.GenericSchema>(
 	records: unknown[],
 	recordSchema: T,
 	onInvalid?: (record: unknown, error: string) => void
