@@ -1097,11 +1097,7 @@ export function initializeScheduler(): void {
 			}
 		},
 		withJobContext('session-cleanup', async () => {
-			const deleted = await cleanupExpiredSessions();
-
-			if (deleted > 0) {
-				logger.info('Expired sessions cleaned up', { sessionsDeleted: deleted });
-			}
+			await cleanupExpiredSessions();
 		})
 	);
 

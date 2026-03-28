@@ -126,6 +126,8 @@ export async function cleanupExpiredSessions(): Promise<number> {
 		.where(lt(sessions.expiresAt, new Date()))
 		.returning({ id: sessions.id });
 
-	logger.info('Expired sessions cleaned up', { count: result.length });
+	if (result.length > 0) {
+		logger.info('Expired sessions cleaned up', { deleted: result.length });
+	}
 	return result.length;
 }
