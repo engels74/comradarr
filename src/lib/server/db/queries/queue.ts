@@ -363,67 +363,6 @@ export async function getConnectorsForQueueFilter(): Promise<QueueConnector[]> {
 	}));
 }
 
-export async function getThrottleInfo(connectorId: number): Promise<QueueThrottleInfo | null> {
-	const result = await db
-		.select({
-			connectorId: connectors.id,
-			queuePaused: connectors.queuePaused,
-			pausedUntil: throttleState.pausedUntil,
-			pauseReason: throttleState.pauseReason,
-			requestsThisMinute: throttleState.requestsThisMinute,
-			requestsToday: throttleState.requestsToday,
-			minuteWindowStart: throttleState.minuteWindowStart,
-			dayWindowStart: throttleState.dayWindowStart,
-			requestsPerMinute: sql<number>`COALESCE(${throttleProfiles.requestsPerMinute}, 5)`.as(
-				'requests_per_minute'
-			),
-			dailyBudget: throttleProfiles.dailyBudget
-		})
-		.from(connectors)
-		.leftJoin(throttleState, eq(connectors.id, throttleState.connectorId))
-		.leftJoin(throttleProfiles, eq(connectors.throttleProfileId, throttleProfiles.id))
-		.where(eq(connectors.id, connectorId))
-		.limit(1);
-
-	if (result.length === 0) {
-		return null;
-	}
-
-	const row = result[0]!;
-	const now = new Date();
-	const isPaused = row.queuePaused || (row.pausedUntil !== null && row.pausedUntil > now);
-
-	// Reset counters if their time windows have expired (matches throttleEnforcer.getStatus behavior)
-	const minuteWindowExpired = isMinuteWindowExpired(row.minuteWindowStart, now);
-	let requestsThisMinute = row.requestsThisMinute ?? 0;
-	if (minuteWindowExpired) {
-		requestsThisMinute = 0;
-	}
-
-	let requestsToday = row.requestsToday ?? 0;
-	if (isDayWindowExpired(row.dayWindowStart, now)) {
-		requestsToday = 0;
-	}
-
-	let minuteWindowExpiry: Date | null = null;
-	if (row.minuteWindowStart && !minuteWindowExpired) {
-		minuteWindowExpiry = new Date(row.minuteWindowStart.getTime() + 60000);
-	}
-
-	return {
-		connectorId: row.connectorId,
-		isPaused,
-		pausedUntil: row.pausedUntil,
-		pauseReason: row.pauseReason,
-		requestsPerMinute: row.requestsPerMinute,
-		requestsThisMinute,
-		dailyBudget: row.dailyBudget,
-		requestsToday,
-		minuteWindowStart: minuteWindowExpired ? null : row.minuteWindowStart,
-		minuteWindowExpiry
-	};
-}
-
 export async function getAllThrottleInfo(): Promise<Map<number, QueueThrottleInfo>> {
 	const result = await db
 		.select({

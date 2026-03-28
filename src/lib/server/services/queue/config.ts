@@ -75,12 +75,6 @@ export const QUEUE_CONFIG = {
 	DEFAULT_BATCH_SIZE: 1000,
 
 	/**
-	 * Chunk size for priority calculation.
-	 * Controls how many items are processed per iteration.
-	 */
-	PRIORITY_CHUNK_SIZE: 500,
-
-	/**
 	 * Default number of items to dequeue in a single call.
 	 */
 	DEFAULT_DEQUEUE_LIMIT: 10,
@@ -186,29 +180,6 @@ export async function getSearchConfig(): Promise<SearchSettings> {
 export function invalidateSearchConfigCache(): void {
 	cachedSettings = null;
 	cacheTimestamp = 0;
-}
-
-export async function getPriorityWeights(): Promise<PriorityWeights> {
-	const config = await getSearchConfig();
-	return config.priorityWeights;
-}
-
-export interface RuntimeBatchingConfig {
-	SEASON_SEARCH_MIN_MISSING_PERCENT: number;
-	SEASON_SEARCH_MIN_MISSING_COUNT: number;
-	MAX_EPISODES_PER_SEARCH: number;
-	MAX_MOVIES_PER_SEARCH: number;
-}
-
-export async function getBatchingConfig(): Promise<RuntimeBatchingConfig> {
-	const config = await getSearchConfig();
-	return {
-		SEASON_SEARCH_MIN_MISSING_PERCENT: config.seasonPackThresholds.minMissingPercent,
-		SEASON_SEARCH_MIN_MISSING_COUNT: config.seasonPackThresholds.minMissingCount,
-		// API limits remain constant - not user-configurable
-		MAX_EPISODES_PER_SEARCH: BATCHING_CONFIG.MAX_EPISODES_PER_SEARCH,
-		MAX_MOVIES_PER_SEARCH: BATCHING_CONFIG.MAX_MOVIES_PER_SEARCH
-	};
 }
 
 export interface RuntimeStateTransitionConfig {

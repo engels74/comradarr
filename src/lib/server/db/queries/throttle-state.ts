@@ -5,7 +5,6 @@ import { getStartOfDayUTC } from '$lib/server/services/throttle/time-utils';
 
 export {
 	getStartOfDayUTC,
-	getStartOfNextDayUTC,
 	isDayWindowExpired,
 	isMinuteWindowExpired,
 	msUntilMidnightUTC,
@@ -51,22 +50,6 @@ export async function getOrCreateThrottleState(connectorId: number): Promise<Thr
 	}
 
 	return result[0]!;
-}
-
-export async function updateThrottleState(
-	connectorId: number,
-	updates: Partial<Omit<ThrottleState, 'id' | 'connectorId' | 'createdAt'>>
-): Promise<ThrottleState | null> {
-	const result = await db
-		.update(throttleState)
-		.set({
-			...updates,
-			updatedAt: new Date()
-		})
-		.where(eq(throttleState.connectorId, connectorId))
-		.returning();
-
-	return result[0] ?? null;
 }
 
 export async function incrementRequestCounters(connectorId: number): Promise<ThrottleState> {

@@ -99,7 +99,7 @@ export interface BackupOptions {
 	type?: 'manual' | 'scheduled' | undefined;
 }
 
-export type BackupErrorCode =
+type BackupErrorCode =
 	| 'EXPORT_FAILED'
 	| 'CHECKSUM_FAILED'
 	| 'STORAGE_FAILED'

@@ -13,7 +13,6 @@ import * as v from 'valibot';
 import { describe, expect, it, vi } from 'vitest';
 import {
 	CommandResponseSchema,
-	createPaginatedResponseSchema,
 	parseCommandResponse,
 	parsePaginatedResponseLenient,
 	QualityModelSchema
@@ -164,47 +163,6 @@ describe('parseCommandResponse', () => {
 				expect(result.data.updateScheduledTask).toBe(false);
 			}
 		});
-	});
-});
-
-describe('createPaginatedResponseSchema', () => {
-	it('should create a schema that validates against the record schema', () => {
-		const RecordSchema = v.object({
-			id: v.number(),
-			title: v.string(),
-			year: v.number()
-		});
-
-		const PaginatedSchema = createPaginatedResponseSchema(RecordSchema);
-
-		const validInput = {
-			page: 1,
-			pageSize: 10,
-			totalRecords: 1,
-			records: [{ id: 1, title: 'Test Movie', year: 2024 }]
-		};
-
-		const result = v.safeParse(PaginatedSchema, validInput);
-		expect(result.success).toBe(true);
-	});
-
-	it('should fail validation when records do not match schema', () => {
-		const RecordSchema = v.object({
-			id: v.number(),
-			title: v.string()
-		});
-
-		const PaginatedSchema = createPaginatedResponseSchema(RecordSchema);
-
-		const invalidInput = {
-			page: 1,
-			pageSize: 10,
-			totalRecords: 1,
-			records: [{ id: 'wrong type', title: 123 }] // Both wrong types
-		};
-
-		const result = v.safeParse(PaginatedSchema, invalidInput);
-		expect(result.success).toBe(false);
 	});
 });
 

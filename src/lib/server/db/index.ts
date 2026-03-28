@@ -69,7 +69,20 @@ const createShutdownHandler = (signal: 'SIGTERM' | 'SIGINT') => {
 		shuttingDown = true;
 		logger.info('Received shutdown signal', { signal });
 
-		closePool()
+		// Dynamic import to avoid circular dependency: db -> log-persistence -> queries -> db
+		import('$lib/server/services/log-persistence')
+			.then(({ shutdown }) => shutdown())
+			.then((flushed) => {
+				if (flushed > 0) {
+					logger.info('Flushed pending logs', { count: flushed });
+				}
+			})
+			.catch((err) =>
+				logger.error('Failed to flush pending logs', {
+					error: err instanceof Error ? err.message : 'Unknown error'
+				})
+			)
+			.then(() => closePool())
 			.then(() => logger.info('Connection pool closed'))
 			.catch((err) =>
 				logger.error('Error closing connection pool', {

@@ -69,17 +69,6 @@ export interface PaginatedResponse<T> {
 	records: T[];
 }
 
-export interface PaginationOptions {
-	page?: number;
-	pageSize?: number;
-	sortKey?: string;
-	sortDirection?: 'ascending' | 'descending';
-}
-
-export interface WantedOptions extends PaginationOptions {
-	monitored?: boolean;
-}
-
 export interface CommandResponse {
 	id: number;
 	name: string;

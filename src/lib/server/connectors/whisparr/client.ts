@@ -1,12 +1,8 @@
 import { createLogger } from '$lib/server/logger';
 import { BaseArrClient } from '../common/base-client.js';
 import { parseCommandResponse } from '../common/parsers.js';
-import type { CommandResponse, WantedOptions } from '../common/types.js';
-import {
-	parsePaginatedWhisparrEpisodesLenient,
-	parseWhisparrEpisode,
-	parseWhisparrSeries
-} from './parsers.js';
+import type { CommandResponse } from '../common/types.js';
+import { parseWhisparrEpisode, parseWhisparrSeries } from './parsers.js';
 import type { WhisparrEpisode, WhisparrSeries } from './types.js';
 
 const logger = createLogger('whisparr-client');
@@ -35,14 +31,6 @@ export class WhisparrClient extends BaseArrClient {
 
 		logger.debug('Episodes fetched', { seriesId, total: episodes.length });
 		return episodes;
-	}
-
-	async getWantedMissing(options?: WantedOptions): Promise<WhisparrEpisode[]> {
-		return this.fetchAllPaginated('wanted/missing', parsePaginatedWhisparrEpisodesLenient, options);
-	}
-
-	async getWantedCutoff(options?: WantedOptions): Promise<WhisparrEpisode[]> {
-		return this.fetchAllPaginated('wanted/cutoff', parsePaginatedWhisparrEpisodesLenient, options);
 	}
 
 	async sendEpisodeSearch(episodeIds: number[]): Promise<CommandResponse> {

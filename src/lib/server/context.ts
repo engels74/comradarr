@@ -26,10 +26,6 @@ export function getCorrelationId(): string | undefined {
 	return asyncLocalStorage.getStore()?.correlationId;
 }
 
-export function hasContext(): boolean {
-	return asyncLocalStorage.getStore() !== undefined;
-}
-
 export function generateCorrelationId(): string {
 	return crypto.randomUUID();
 }

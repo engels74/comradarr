@@ -1,4 +1,4 @@
-import { and, eq, inArray, isNull, lt, sql } from 'drizzle-orm';
+import { and, eq, isNull, lt, sql } from 'drizzle-orm';
 import { db } from '$lib/server/db';
 import {
 	type NewPendingCommand,
@@ -6,9 +6,9 @@ import {
 	pendingCommands
 } from '$lib/server/db/schema';
 
-export type CommandStatus = 'queued' | 'started' | 'completed' | 'failed';
+type CommandStatus = 'queued' | 'started' | 'completed' | 'failed';
 
-export interface CreatePendingCommandInput {
+interface CreatePendingCommandInput {
 	connectorId: number;
 	searchRegistryId: number;
 	commandId: number;
@@ -33,15 +33,6 @@ export async function createPendingCommand(
 	const result = await db.insert(pendingCommands).values(values).returning();
 
 	return result[0]!;
-}
-
-export async function getPendingCommandsByConnector(
-	connectorId: number
-): Promise<PendingCommand[]> {
-	return db
-		.select()
-		.from(pendingCommands)
-		.where(and(eq(pendingCommands.connectorId, connectorId), isNull(pendingCommands.completedAt)));
 }
 
 export async function getPendingCommandsForContent(
@@ -133,12 +124,6 @@ export async function getUncompletedCommands(connectorId: number): Promise<Pendi
 		.select()
 		.from(pendingCommands)
 		.where(and(eq(pendingCommands.connectorId, connectorId), isNull(pendingCommands.completedAt)));
-}
-
-export async function getCommandsByIds(ids: number[]): Promise<PendingCommand[]> {
-	if (ids.length === 0) return [];
-
-	return db.select().from(pendingCommands).where(inArray(pendingCommands.id, ids));
 }
 
 export async function deleteCompletedCommands(retentionDays: number = 7): Promise<number> {

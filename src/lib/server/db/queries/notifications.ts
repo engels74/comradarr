@@ -1,5 +1,5 @@
-import { and, count, eq, gte, inArray, sql } from 'drizzle-orm';
-import { DecryptionError, decrypt, encrypt, SecretKeyError } from '$lib/server/crypto';
+import { and, count, eq, gte, inArray } from 'drizzle-orm';
+import { decrypt, encrypt } from '$lib/server/crypto';
 import { db } from '$lib/server/db';
 import {
 	type NewNotificationChannel,
@@ -9,8 +9,6 @@ import {
 	notificationChannels,
 	notificationHistory
 } from '$lib/server/db/schema';
-
-export { DecryptionError, SecretKeyError };
 
 export type SafeNotificationChannel = Omit<NotificationChannel, 'configEncrypted'>;
 
@@ -403,16 +401,4 @@ export async function getNotificationChannelStats(
 	}
 
 	return stats;
-}
-
-export async function pruneNotificationHistory(olderThanDays: number): Promise<number> {
-	const cutoffDate = new Date();
-	cutoffDate.setDate(cutoffDate.getDate() - olderThanDays);
-
-	const result = await db
-		.delete(notificationHistory)
-		.where(sql`${notificationHistory.createdAt} < ${cutoffDate}`)
-		.returning({ id: notificationHistory.id });
-
-	return result.length;
 }
