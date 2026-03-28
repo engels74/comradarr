@@ -159,8 +159,16 @@ export async function hasUsers(): Promise<boolean> {
 	return result.length > 0;
 }
 
+export async function hashSessionId(sessionId: string): Promise<string> {
+	const data = new TextEncoder().encode(sessionId);
+	const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+	return Array.from(new Uint8Array(hashBuffer))
+		.map((b) => b.toString(16).padStart(2, '0'))
+		.join('');
+}
+
 export interface UserSession {
-	id: string;
+	revocationId: string;
 	createdAt: Date;
 	lastAccessedAt: Date;
 	expiresAt: Date;
@@ -188,19 +196,45 @@ export async function getUserSessions(
 		.where(and(eq(sessions.userId, userId), sql`${sessions.expiresAt} > ${now}`))
 		.orderBy(desc(sessions.lastAccessedAt));
 
-	return result.map((session) => ({
-		...session,
-		isCurrent: session.id === currentSessionId
-	}));
+	return Promise.all(
+		result.map(async (session) => ({
+			revocationId: await hashSessionId(session.id),
+			createdAt: session.createdAt,
+			lastAccessedAt: session.lastAccessedAt,
+			expiresAt: session.expiresAt,
+			userAgent: session.userAgent,
+			ipAddress: session.ipAddress,
+			isCurrent: session.id === currentSessionId
+		}))
+	);
 }
 
-export async function deleteUserSession(userId: number, sessionId: string): Promise<boolean> {
+async function deleteUserSession(userId: number, sessionId: string): Promise<boolean> {
 	const result = await db
 		.delete(sessions)
 		.where(and(eq(sessions.id, sessionId), eq(sessions.userId, userId)))
 		.returning({ id: sessions.id });
 
 	return result.length > 0;
+}
+
+export async function deleteUserSessionByRevocationId(
+	userId: number,
+	revocationId: string
+): Promise<boolean> {
+	const userSessions = await db
+		.select({ id: sessions.id })
+		.from(sessions)
+		.where(and(eq(sessions.userId, userId), sql`${sessions.expiresAt} > ${new Date()}`));
+
+	for (const session of userSessions) {
+		const hash = await hashSessionId(session.id);
+		if (hash === revocationId) {
+			return deleteUserSession(userId, session.id);
+		}
+	}
+
+	return false;
 }
 
 export async function deleteOtherUserSessions(

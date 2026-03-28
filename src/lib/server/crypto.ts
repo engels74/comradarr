@@ -5,7 +5,7 @@
 
 const ALGORITHM = 'AES-GCM';
 const _KEY_LENGTH = 256;
-const IV_LENGTH = 16;
+const IV_LENGTH = 12;
 const AUTH_TAG_LENGTH = 128;
 
 export class DecryptionError extends Error {
@@ -112,8 +112,8 @@ export async function decrypt(encrypted: string): Promise<string> {
 
 	const [ivHex, authTagHex, ciphertextHex] = parts;
 
-	if (!ivHex || ivHex.length !== IV_LENGTH * 2) {
-		throw new DecryptionError(`Invalid IV length: expected ${IV_LENGTH * 2} hex characters`);
+	if (!ivHex || (ivHex.length !== 24 && ivHex.length !== 32)) {
+		throw new DecryptionError('Invalid IV length: expected 12 or 16 bytes');
 	}
 	if (!authTagHex || authTagHex.length !== (AUTH_TAG_LENGTH / 8) * 2) {
 		throw new DecryptionError(

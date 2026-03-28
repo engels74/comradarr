@@ -1,7 +1,7 @@
 import type { Handle } from '@sveltejs/kit';
 import { json } from '@sveltejs/kit';
 import { eq } from 'drizzle-orm';
-import { getClientIP, isLocalNetworkIP, validateSession } from '$lib/server/auth';
+import { getClientIP, validateLocalBypassSource, validateSession } from '$lib/server/auth';
 import { type RequestContext, runWithContext } from '$lib/server/context';
 import { db, warmupPool } from '$lib/server/db';
 import { logApiKeyUsage, validateApiKey } from '$lib/server/db/queries/api-keys';
@@ -201,9 +201,10 @@ export const handle: Handle = async ({ event, resolve }) => {
 			const securitySettings = await getSecuritySettings();
 			if (securitySettings.authMode === 'local_bypass') {
 				const clientIP = getClientIP(event.request, event.getClientAddress);
-				if (isLocalNetworkIP(clientIP)) {
+				const bypassResult = validateLocalBypassSource(clientIP, event.platform);
+
+				if (bypassResult.allowed) {
 					event.locals.isLocalBypass = true;
-					// Set synthetic user for bypass access with admin role
 					event.locals.user = {
 						id: 0,
 						username: 'local',
@@ -211,6 +212,18 @@ export const handle: Handle = async ({ event, resolve }) => {
 						role: 'admin'
 					};
 					logger.debug('Local network bypass authenticated', { clientIP });
+				} else if (bypassResult.reason === 'socket_ip_not_local') {
+					logger.warn('Local bypass denied: potential XFF spoofing', {
+						clientIP,
+						socketIP: bypassResult.socketIP,
+						reason: bypassResult.reason
+					});
+				} else if (bypassResult.reason) {
+					logger.debug('Local bypass denied', {
+						clientIP,
+						socketIP: bypassResult.socketIP,
+						reason: bypassResult.reason
+					});
 				}
 			}
 		} catch {
