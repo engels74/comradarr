@@ -131,8 +131,6 @@ src/
 
 ### Path Aliases
 - `$lib` - src/lib
-- `$components` - src/lib/components
-- `$server` - src/lib/server
 
 ## Code Style
 
