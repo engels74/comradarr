@@ -11,8 +11,7 @@ export {
 	RateLimitError,
 	ServerError,
 	SSLError,
-	TimeoutError,
-	ValidationError
+	TimeoutError
 } from './common/errors.js';
 export type { FetchAllPagesOptions, PageFetcher, PaginationMetadata } from './common/pagination.js';
 export {
@@ -49,7 +48,6 @@ export type {
 export { createConnectorClient } from './factory.js';
 export { RadarrClient } from './radarr/client.js';
 export {
-	parsePaginatedMovies,
 	parsePaginatedMoviesLenient,
 	parseRadarrMovie,
 	RadarrMovieFileSchema,
@@ -58,8 +56,8 @@ export {
 export type { RadarrMovie, RadarrMovieFile } from './radarr/types.js';
 export { SonarrClient } from './sonarr/client.js';
 export {
-	parsePaginatedEpisodes,
-	parsePaginatedSeries,
+	parsePaginatedEpisodesLenient,
+	parsePaginatedSeriesLenient,
 	parseSonarrEpisode,
 	parseSonarrSeries,
 	SonarrEpisodeFileSchema,
@@ -79,8 +77,8 @@ export type {
 } from './sonarr/types.js';
 export { WhisparrClient } from './whisparr/client.js';
 export {
-	parsePaginatedWhisparrEpisodes,
-	parsePaginatedWhisparrSeries,
+	parsePaginatedWhisparrEpisodesLenient,
+	parsePaginatedWhisparrSeriesLenient,
 	parseWhisparrEpisode,
 	parseWhisparrSeries,
 	WhisparrEpisodeFileSchema,

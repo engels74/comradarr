@@ -4,7 +4,6 @@ export type ErrorCategory =
 	| 'rate_limit'
 	| 'server'
 	| 'timeout'
-	| 'validation'
 	| 'not_found'
 	| 'ssl';
 
@@ -74,19 +73,6 @@ export class TimeoutError extends ArrClientError {
 	constructor(public readonly timeoutMs: number) {
 		super(`Request timed out after ${timeoutMs}ms`);
 		this.name = 'TimeoutError';
-	}
-}
-
-export class ValidationError extends ArrClientError {
-	readonly category = 'validation' as const;
-	readonly retryable = false;
-
-	constructor(
-		message: string,
-		public readonly field?: string
-	) {
-		super(message);
-		this.name = 'ValidationError';
 	}
 }
 

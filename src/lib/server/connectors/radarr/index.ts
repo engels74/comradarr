@@ -1,6 +1,5 @@
 export { RadarrClient } from './client.js';
 export {
-	parsePaginatedMovies,
 	parsePaginatedMoviesLenient,
 	parseRadarrMovie,
 	RadarrMovieFileSchema,

@@ -67,8 +67,6 @@ export const PRIORITY_CONSTANTS = {
 	FILE_LOST_DECAY_DAYS: 30
 } as const;
 
-export type PriorityConstantsType = typeof PRIORITY_CONSTANTS;
-
 export const QUEUE_CONFIG = {
 	/**
 	 * Default batch size for database operations.
@@ -92,8 +90,6 @@ export const QUEUE_CONFIG = {
 	 */
 	MAX_DEQUEUE_LIMIT: 100
 } as const;
-
-export type QueueConfigType = typeof QUEUE_CONFIG;
 
 export const STATE_TRANSITION_CONFIG = {
 	/**
@@ -128,8 +124,6 @@ export const STATE_TRANSITION_CONFIG = {
 	COOLDOWN_JITTER: true
 } as const;
 
-export type StateTransitionConfigType = typeof STATE_TRANSITION_CONFIG;
-
 export const BACKLOG_CONFIG = {
 	/** Whether backlog recovery is enabled (items never permanently exhausted) */
 	ENABLED: true,
@@ -140,8 +134,6 @@ export const BACKLOG_CONFIG = {
 	/** Maximum backlog tier (items stay at this tier indefinitely with 30-day retries) */
 	MAX_TIER: 5
 } as const;
-
-export type BacklogConfigType = typeof BACKLOG_CONFIG;
 
 // SeasonSearch: fully aired AND missing% >= threshold AND count >= min; else EpisodeSearch
 export const BATCHING_CONFIG = {
@@ -173,8 +165,6 @@ export const BATCHING_CONFIG = {
 	 */
 	MAX_MOVIES_PER_SEARCH: 10
 } as const;
-
-export type BatchingConfigType = typeof BATCHING_CONFIG;
 
 let cachedSettings: SearchSettings | null = null;
 let cacheTimestamp: number = 0;
