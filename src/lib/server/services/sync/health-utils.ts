@@ -43,7 +43,6 @@ export function shouldRetrySync(error: unknown, attemptCount: number): boolean {
 		return false;
 	}
 
-	// Don't retry non-retryable errors (auth, validation, not found, SSL)
 	if (error !== undefined && isArrClientError(error) && !error.retryable) {
 		return false;
 	}
