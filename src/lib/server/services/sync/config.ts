@@ -6,12 +6,6 @@ export const SYNC_CONFIG = {
 	UNHEALTHY_THRESHOLD: 5,
 
 	/**
-	 * Number of consecutive failures before marking connector as degraded.
-	 * First failure(s) result in degraded status.
-	 */
-	DEGRADED_THRESHOLD: 2,
-
-	/**
 	 * Maximum number of retries for entire sync operation.
 	 * This is separate from HTTP-level retries which handle individual requests.
 	 */
@@ -35,5 +29,3 @@ export const SYNC_CONFIG = {
 	 */
 	SYNC_RETRY_MULTIPLIER: 2
 } as const;
-
-export type SyncConfig = typeof SYNC_CONFIG;

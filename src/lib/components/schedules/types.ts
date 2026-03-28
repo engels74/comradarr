@@ -137,29 +137,6 @@ export function formatTime(isoDate: string): string {
 }
 
 /**
- * Format relative time (e.g., "in 5 min", "in 2 hours").
- */
-export function formatRelativeTime(isoDate: string): string {
-	const now = Date.now();
-	const target = new Date(isoDate).getTime();
-	const diffMs = target - now;
-
-	if (diffMs < 0) return 'now';
-
-	const diffSecs = Math.floor(diffMs / 1000);
-	if (diffSecs < 60) return diffSecs <= 0 ? 'now' : `in ${diffSecs}s`;
-
-	const diffMins = Math.floor(diffMs / 60000);
-	if (diffMins < 60) return `in ${diffMins} min`;
-
-	const diffHours = Math.floor(diffMins / 60);
-	if (diffHours < 24) return `in ${diffHours}h`;
-
-	const diffDays = Math.floor(diffHours / 24);
-	return `in ${diffDays}d`;
-}
-
-/**
  * Get short day name (e.g., "Mon", "Tue").
  */
 export function getShortDayName(dayOfWeek: number): string {

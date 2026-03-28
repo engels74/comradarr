@@ -50,12 +50,12 @@ export interface ProcessReconnectionsResult {
 	results: ReconnectResult[];
 }
 
-export function calculateNextReconnectTime(attemptCount: number): Date {
+function calculateNextReconnectTime(attemptCount: number): Date {
 	const delay = calculateBackoffDelay(attemptCount);
 	return new Date(Date.now() + delay);
 }
 
-export function calculateBackoffDelay(attemptCount: number): number {
+function calculateBackoffDelay(attemptCount: number): number {
 	const baseDelay = RECONNECT_CONFIG.BASE_DELAY_MS * RECONNECT_CONFIG.MULTIPLIER ** attemptCount;
 	const cappedDelay = Math.min(baseDelay, RECONNECT_CONFIG.MAX_DELAY_MS);
 

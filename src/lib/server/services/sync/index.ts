@@ -1,4 +1,4 @@
-export { SYNC_CONFIG, type SyncConfig } from './config';
+export { SYNC_CONFIG } from './config';
 export { runFullReconciliation } from './full-reconciliation';
 export { updateHealthFromSyncResult } from './health';
 export {

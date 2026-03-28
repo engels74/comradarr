@@ -30,7 +30,7 @@ export {
 	groupEpisodesBySeries,
 	isSeasonFullyAired
 } from './episode-batcher';
-export { calculatePriority, comparePriority } from './priority-calculator';
+export { calculatePriority } from './priority-calculator';
 export {
 	clearQueue,
 	dequeuePriorityItems,

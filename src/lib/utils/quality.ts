@@ -11,11 +11,3 @@ export interface QualityModel {
 		isRepack: boolean;
 	};
 }
-
-export function serializeQuality(quality: QualityModel): string {
-	return JSON.stringify(quality);
-}
-
-export function deserializeQuality(json: string): QualityModel {
-	return JSON.parse(json) as QualityModel;
-}

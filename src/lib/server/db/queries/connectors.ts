@@ -189,45 +189,6 @@ export interface ConnectorStats {
 	queueDepth: number;
 }
 
-export async function getConnectorStats(connectorId: number): Promise<ConnectorStats> {
-	const episodeGapsResult = await db
-		.select({ count: count() })
-		.from(episodes)
-		.where(
-			and(
-				eq(episodes.connectorId, connectorId),
-				eq(episodes.hasFile, false),
-				eq(episodes.monitored, true)
-			)
-		);
-
-	const movieGapsResult = await db
-		.select({ count: count() })
-		.from(movies)
-		.where(
-			and(
-				eq(movies.connectorId, connectorId),
-				eq(movies.hasFile, false),
-				eq(movies.monitored, true)
-			)
-		);
-
-	const queueResult = await db
-		.select({ count: count() })
-		.from(requestQueue)
-		.where(eq(requestQueue.connectorId, connectorId));
-
-	const episodeGaps = episodeGapsResult[0]?.count ?? 0;
-	const movieGaps = movieGapsResult[0]?.count ?? 0;
-	const queueDepth = queueResult[0]?.count ?? 0;
-
-	return {
-		connectorId,
-		gapsCount: episodeGaps + movieGaps,
-		queueDepth
-	};
-}
-
 export async function getAllConnectorStats(): Promise<Map<number, ConnectorStats>> {
 	const allConnectors = await db.select({ id: connectors.id }).from(connectors);
 	const connectorIds = allConnectors.map((c) => c.id);

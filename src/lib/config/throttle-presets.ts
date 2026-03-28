@@ -52,12 +52,3 @@ export const PRESETS = {
 export type PresetName = keyof typeof PRESETS;
 
 export const DEFAULT_FALLBACK_PRESET = MODERATE_PRESET;
-
-export function getPresetByName(name: string): ThrottlePreset | undefined {
-	const key = name.toLowerCase() as PresetName;
-	return PRESETS[key];
-}
-
-export function isPresetName(name: string): name is PresetName {
-	return name.toLowerCase() in PRESETS;
-}

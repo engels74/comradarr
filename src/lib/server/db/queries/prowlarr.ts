@@ -263,15 +263,6 @@ export async function deleteStaleIndexerHealth(
 	return result.length;
 }
 
-export async function clearIndexerHealthCache(instanceId: number): Promise<number> {
-	const result = await db
-		.delete(prowlarrIndexerHealth)
-		.where(eq(prowlarrIndexerHealth.prowlarrInstanceId, instanceId))
-		.returning({ id: prowlarrIndexerHealth.id });
-
-	return result.length;
-}
-
 export async function getIndexerHealthSummary(instanceId: number): Promise<{
 	totalIndexers: number;
 	enabledIndexers: number;

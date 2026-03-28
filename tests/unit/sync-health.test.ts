@@ -12,7 +12,6 @@ import { determineHealthFromChecks } from '../../src/lib/server/services/sync/he
 describe('SYNC_CONFIG', () => {
 	it('should have expected default threshold values', () => {
 		expect(SYNC_CONFIG.UNHEALTHY_THRESHOLD).toBe(5);
-		expect(SYNC_CONFIG.DEGRADED_THRESHOLD).toBe(2);
 	});
 
 	it('should have expected retry configuration', () => {

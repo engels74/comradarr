@@ -1,6 +1,6 @@
 // Deterministic priority scoring: newer content, longer missing, fewer failures = higher priority
 
-import { DEFAULT_PRIORITY_WEIGHTS, getPriorityWeights, PRIORITY_CONSTANTS } from './config';
+import { DEFAULT_PRIORITY_WEIGHTS, PRIORITY_CONSTANTS } from './config';
 import type { PriorityBreakdown, PriorityInput, PriorityResult, PriorityWeights } from './types';
 
 export function calculatePriority(
@@ -97,17 +97,4 @@ function calculateFileLostBonus(
 	const decayFactor = Math.max(0, 1 - daysSinceLost / PRIORITY_CONSTANTS.FILE_LOST_DECAY_DAYS);
 
 	return bonusWeight * decayFactor;
-}
-
-// Higher score = higher priority = comes first
-export function comparePriority(a: PriorityResult, b: PriorityResult): number {
-	return b.score - a.score;
-}
-
-export async function calculatePriorityWithConfig(
-	input: PriorityInput,
-	now: Date = new Date()
-): Promise<PriorityResult> {
-	const weights = await getPriorityWeights();
-	return calculatePriority(input, weights, now);
 }

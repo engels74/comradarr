@@ -140,16 +140,6 @@ export function parseSonarrEpisode(data: unknown): ParseResult<SonarrEpisode> {
 	};
 }
 
-export function parsePaginatedSeriesLenient(
-	data: unknown,
-	onInvalid?: (record: unknown, error: string) => void
-): LenientParseResult<PaginatedResponse<SonarrSeries>> {
-	const result = parsePaginatedResponseLenient(data, SonarrSeriesSchema, onInvalid);
-	// Type assertion needed due to exactOptionalPropertyTypes - Valibot infers
-	// optional fields as `Type | undefined` but our types use `property?: Type`
-	return result as LenientParseResult<PaginatedResponse<SonarrSeries>>;
-}
-
 export function parsePaginatedEpisodesLenient(
 	data: unknown,
 	onInvalid?: (record: unknown, error: string) => void

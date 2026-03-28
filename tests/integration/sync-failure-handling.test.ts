@@ -230,18 +230,8 @@ describe('Sync state consecutive failures', () => {
 });
 
 describe('SYNC_CONFIG thresholds', () => {
-	it('should have degraded threshold less than unhealthy threshold', () => {
-		expect(SYNC_CONFIG.DEGRADED_THRESHOLD).toBeLessThan(SYNC_CONFIG.UNHEALTHY_THRESHOLD);
-	});
-
 	it('should use correct status at each threshold boundary', () => {
-		// Just below degraded threshold
-		expect(determineHealthStatus(false, SYNC_CONFIG.DEGRADED_THRESHOLD - 1)).toBe('degraded');
-
-		// At degraded threshold
-		expect(determineHealthStatus(false, SYNC_CONFIG.DEGRADED_THRESHOLD)).toBe('degraded');
-
-		// Just below unhealthy threshold
+		// Below unhealthy threshold
 		expect(determineHealthStatus(false, SYNC_CONFIG.UNHEALTHY_THRESHOLD - 1)).toBe('degraded');
 
 		// At unhealthy threshold

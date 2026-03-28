@@ -563,7 +563,6 @@ export type Connector = typeof connectors.$inferSelect;
 export type NewConnector = typeof connectors.$inferInsert;
 
 export type ThrottleState = typeof throttleState.$inferSelect;
-export type NewThrottleState = typeof throttleState.$inferInsert;
 
 export type Series = typeof series.$inferSelect;
 export type NewSeries = typeof series.$inferInsert;
@@ -577,38 +576,18 @@ export type NewEpisode = typeof episodes.$inferInsert;
 export type Movie = typeof movies.$inferSelect;
 export type NewMovie = typeof movies.$inferInsert;
 
-export type SearchRegistry = typeof searchRegistry.$inferSelect;
-export type NewSearchRegistry = typeof searchRegistry.$inferInsert;
-
-export type RequestQueue = typeof requestQueue.$inferSelect;
-export type NewRequestQueue = typeof requestQueue.$inferInsert;
-
-export type SearchHistory = typeof searchHistory.$inferSelect;
-export type NewSearchHistory = typeof searchHistory.$inferInsert;
-
 export type SyncState = typeof syncState.$inferSelect;
-export type NewSyncState = typeof syncState.$inferInsert;
 
 export type User = typeof users.$inferSelect;
-export type NewUser = typeof users.$inferInsert;
-
-export type Session = typeof sessions.$inferSelect;
-export type NewSession = typeof sessions.$inferInsert;
 
 export type ApiKey = typeof apiKeys.$inferSelect;
-export type NewApiKey = typeof apiKeys.$inferInsert;
-
-export type ApiKeyUsageLog = typeof apiKeyUsageLogs.$inferSelect;
-export type NewApiKeyUsageLog = typeof apiKeyUsageLogs.$inferInsert;
 
 export type ApiKeyRateLimitState = typeof apiKeyRateLimitState.$inferSelect;
-export type NewApiKeyRateLimitState = typeof apiKeyRateLimitState.$inferInsert;
 
 export type ProwlarrInstance = typeof prowlarrInstances.$inferSelect;
 export type NewProwlarrInstance = typeof prowlarrInstances.$inferInsert;
 
 export type ProwlarrIndexerHealth = typeof prowlarrIndexerHealth.$inferSelect;
-export type NewProwlarrIndexerHealth = typeof prowlarrIndexerHealth.$inferInsert;
 
 // =============================================================================
 // Notification Channels Table
@@ -722,7 +701,6 @@ export const completionSnapshots = pgTable(
 );
 
 export type CompletionSnapshot = typeof completionSnapshots.$inferSelect;
-export type NewCompletionSnapshot = typeof completionSnapshots.$inferInsert;
 
 // =============================================================================
 // Sweep Schedules Table
@@ -792,9 +770,6 @@ export const analyticsEvents = pgTable(
 	]
 );
 
-export type AnalyticsEvent = typeof analyticsEvents.$inferSelect;
-export type NewAnalyticsEvent = typeof analyticsEvents.$inferInsert;
-
 // =============================================================================
 // Analytics Hourly Statistics Table
 // =============================================================================
@@ -843,9 +818,6 @@ export const analyticsHourlyStats = pgTable(
 	]
 );
 
-export type AnalyticsHourlyStat = typeof analyticsHourlyStats.$inferSelect;
-export type NewAnalyticsHourlyStat = typeof analyticsHourlyStats.$inferInsert;
-
 // =============================================================================
 // Analytics Daily Statistics Table
 // =============================================================================
@@ -893,9 +865,6 @@ export const analyticsDailyStats = pgTable(
 	]
 );
 
-export type AnalyticsDailyStat = typeof analyticsDailyStats.$inferSelect;
-export type NewAnalyticsDailyStat = typeof analyticsDailyStats.$inferInsert;
-
 // =============================================================================
 // App Settings Table
 // =============================================================================
@@ -912,7 +881,6 @@ export const appSettings = pgTable('app_settings', {
 });
 
 export type AppSetting = typeof appSettings.$inferSelect;
-export type NewAppSetting = typeof appSettings.$inferInsert;
 
 // =============================================================================
 // Application Logs Table
@@ -941,6 +909,3 @@ export const applicationLogs = pgTable(
 		index('application_logs_created_idx').on(table.createdAt)
 	]
 );
-
-export type ApplicationLog = typeof applicationLogs.$inferSelect;
-export type NewApplicationLog = typeof applicationLogs.$inferInsert;

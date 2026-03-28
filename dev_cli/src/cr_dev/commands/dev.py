@@ -389,8 +389,6 @@ def _display_banner(config: DevConfig, _project_root: Path) -> None:
     console.print(f"  [cyan]Database:[/cyan]     {config.db_name}")
     console.print("  [cyan]Admin User:[/cyan]   admin")
     console.print(f"  [cyan]Admin Pass:[/cyan]   {config.admin_password}")
-    if config.skip_auth:
-        console.print("  [yellow]Auth:[/yellow]         BYPASSED (--skip-auth)")
 
     console.print()
     console.print("  [dim]Press Ctrl+C to stop the server[/dim]")
@@ -414,7 +412,6 @@ def setup_dev_server(
     admin_password: str | None = None,
     port: int = 5173,
     db_port: int = 5432,
-    skip_auth: bool = False,
 ) -> DevServerSetupResult | None:
     """Setup dev server without starting it - for TUI use.
 
@@ -440,7 +437,6 @@ def setup_dev_server(
     config = DevConfig(
         port=port,
         db_port=db_port,
-        skip_auth=skip_auth,
     )
 
     if admin_password:
@@ -541,8 +537,6 @@ def setup_dev_server(
     env = os.environ.copy()
     env["DATABASE_URL"] = config.database_url
     env["SECRET_KEY"] = config.secret_key
-    if config.skip_auth:
-        env["AUTH_MODE"] = "local_bypass"
 
     cmd = ["bun", "run", "dev", "--port", str(port)]
 
@@ -570,9 +564,6 @@ def dev_command(
     ] = None,
     port: Annotated[int, typer.Option("--port", help="Dev server port")] = 5173,
     db_port: Annotated[int, typer.Option("--db-port", help="Database port")] = 5432,
-    skip_auth: Annotated[
-        bool, typer.Option("--skip-auth", help="Enable local_bypass auth mode")
-    ] = False,
     no_logs: Annotated[
         bool, typer.Option("--no-logs", help="Don't write log file")
     ] = False,
@@ -599,7 +590,6 @@ def dev_command(
     config = DevConfig(
         port=port,
         db_port=db_port,
-        skip_auth=skip_auth,
     )
 
     if admin_password:
@@ -704,8 +694,6 @@ def dev_command(
     env = os.environ.copy()
     env["DATABASE_URL"] = config.database_url
     env["SECRET_KEY"] = config.secret_key
-    if config.skip_auth:
-        env["AUTH_MODE"] = "local_bypass"
 
     _display_banner(config, project_root)
 

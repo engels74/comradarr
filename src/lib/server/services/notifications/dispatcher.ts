@@ -3,7 +3,6 @@ import {
 	createNotificationHistory,
 	getChannelsForEventType,
 	getDecryptedSensitiveConfig,
-	getNotificationChannel,
 	updateNotificationHistoryStatus
 } from '$lib/server/db/queries/notifications';
 import type { NotificationChannel } from '$lib/server/db/schema';
@@ -148,38 +147,6 @@ export class NotificationDispatcher {
 		}
 	}
 
-	async sendToChannel(
-		channelId: number,
-		payload: NotificationPayload,
-		options?: DispatchOptions
-	): Promise<NotificationResult> {
-		const channel = await getNotificationChannel(channelId);
-
-		if (!channel) {
-			return {
-				success: false,
-				channelId,
-				channelType: 'unknown',
-				error: 'Channel not found',
-				durationMs: 0
-			};
-		}
-
-		const result = await this.sendToChannelInternal(channel, payload, options);
-
-		if (result === null) {
-			return {
-				success: false,
-				channelId,
-				channelType: channel.type,
-				error: `Channel type '${channel.type}' is not yet supported`,
-				durationMs: 0
-			};
-		}
-
-		return result;
-	}
-
 	private async sendToChannelInternal(
 		channel: NotificationChannel,
 		payload: NotificationPayload,
@@ -280,7 +247,7 @@ export class NotificationDispatcher {
 
 let dispatcherInstance: NotificationDispatcher | null = null;
 
-export function getNotificationDispatcher(): NotificationDispatcher {
+function getNotificationDispatcher(): NotificationDispatcher {
 	if (!dispatcherInstance) {
 		dispatcherInstance = new NotificationDispatcher();
 	}

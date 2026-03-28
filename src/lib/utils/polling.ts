@@ -120,6 +120,5 @@ export function createPollingController(config: PollingConfig): PollingControlle
 
 export const POLLING_INTERVALS = {
 	FAST: 5000,
-	STANDARD: 10000,
 	SLOW: 30000
 } as const;

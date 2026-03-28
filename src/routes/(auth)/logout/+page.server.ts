@@ -5,7 +5,7 @@
 import { redirect } from '@sveltejs/kit';
 import { deleteSession } from '$lib/server/auth/session';
 import { createLogger } from '$lib/server/logger';
-import type { Actions, PageServerLoad } from './$types';
+import type { PageServerLoad } from './$types';
 
 const logger = createLogger('auth');
 
@@ -21,18 +21,4 @@ export const load: PageServerLoad = async ({ cookies }) => {
 	}
 
 	redirect(303, '/login');
-};
-
-export const actions: Actions = {
-	default: async ({ cookies }) => {
-		const sessionId = cookies.get(SESSION_COOKIE_NAME);
-
-		if (sessionId) {
-			await deleteSession(sessionId);
-			cookies.delete(SESSION_COOKIE_NAME, { path: '/' });
-			logger.info('User logged out');
-		}
-
-		redirect(303, '/login');
-	}
 };

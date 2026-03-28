@@ -1,4 +1,4 @@
-import { eq, isNull, or } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 import { db } from '$lib/server/db';
 import {
 	connectors,
@@ -97,14 +97,6 @@ export async function getScheduleById(id: number): Promise<ScheduleWithRelations
 	};
 }
 
-export async function getSchedulesForConnector(connectorId: number): Promise<SweepSchedule[]> {
-	return db
-		.select()
-		.from(sweepSchedules)
-		.where(or(eq(sweepSchedules.connectorId, connectorId), isNull(sweepSchedules.connectorId)))
-		.orderBy(sweepSchedules.name);
-}
-
 export async function getEnabledSchedules(): Promise<ScheduleWithRelations[]> {
 	const results = await db
 		.select({
@@ -199,23 +191,5 @@ export async function updateNextRunAt(id: number, nextRunAt: Date): Promise<void
 	await db
 		.update(sweepSchedules)
 		.set({ nextRunAt, updatedAt: new Date() })
-		.where(eq(sweepSchedules.id, id));
-}
-
-export async function updateLastRunAt(id: number, lastRunAt: Date): Promise<void> {
-	await db
-		.update(sweepSchedules)
-		.set({ lastRunAt, updatedAt: new Date() })
-		.where(eq(sweepSchedules.id, id));
-}
-
-export async function updateScheduleRunTimes(
-	id: number,
-	lastRunAt: Date,
-	nextRunAt: Date
-): Promise<void> {
-	await db
-		.update(sweepSchedules)
-		.set({ lastRunAt, nextRunAt, updatedAt: new Date() })
 		.where(eq(sweepSchedules.id, id));
 }

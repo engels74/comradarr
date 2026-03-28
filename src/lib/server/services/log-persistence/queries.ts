@@ -95,41 +95,6 @@ export async function queryPersistedLogs(
 	};
 }
 
-export async function getDistinctModules(): Promise<string[]> {
-	const result = await db
-		.selectDistinct({ module: applicationLogs.module })
-		.from(applicationLogs)
-		.orderBy(applicationLogs.module);
-
-	return result.map((r) => r.module);
-}
-
-export async function getPersistedLogLevelCounts(): Promise<Record<LogLevel, number>> {
-	const result = await db
-		.select({
-			level: applicationLogs.level,
-			count: count()
-		})
-		.from(applicationLogs)
-		.groupBy(applicationLogs.level);
-
-	const counts: Record<LogLevel, number> = {
-		error: 0,
-		warn: 0,
-		info: 0,
-		debug: 0,
-		trace: 0
-	};
-
-	for (const row of result) {
-		if (row.level in counts) {
-			counts[row.level as LogLevel] = row.count;
-		}
-	}
-
-	return counts;
-}
-
 export async function insertLogBatch(
 	entries: Array<{
 		timestamp: Date;
@@ -174,19 +139,4 @@ export async function deleteLogsBefore(
 	`);
 
 	return result.length;
-}
-
-export async function getOldestLogTimestamp(): Promise<Date | null> {
-	const result = await db
-		.select({ timestamp: applicationLogs.timestamp })
-		.from(applicationLogs)
-		.orderBy(applicationLogs.timestamp)
-		.limit(1);
-
-	return result[0]?.timestamp ?? null;
-}
-
-export async function getLogCount(): Promise<number> {
-	const result = await db.select({ count: count() }).from(applicationLogs);
-	return result[0]?.count ?? 0;
 }

@@ -19,28 +19,9 @@ import type { PageServerLoad } from './$types';
 
 const logger = createLogger('dashboard');
 
-export interface DashboardQueryError {
-	query: string;
-	message: string;
-}
-
-const USER_FRIENDLY_ERRORS: Record<string, string> = {
-	connectors: 'Unable to load connectors',
-	connectorStats: 'Unable to load connector statistics',
-	contentStats: 'Unable to load content statistics',
-	todayStats: "Unable to load today's search statistics",
-	recentActivity: 'Unable to load recent activity',
-	completionTrends: 'Unable to load completion trends'
-};
-
-async function safeQuery<T>(
-	queryName: string,
-	queryFn: () => Promise<T>,
-	fallback: T
-): Promise<{ data: T; error: DashboardQueryError | null }> {
+async function safeQuery<T>(queryName: string, queryFn: () => Promise<T>, fallback: T): Promise<T> {
 	try {
-		const data = await queryFn();
-		return { data, error: null };
+		return await queryFn();
 	} catch (err) {
 		const detailedMessage = err instanceof Error ? err.message : String(err);
 		logger.error(`Query failed: ${queryName}`, {
@@ -48,8 +29,7 @@ async function safeQuery<T>(
 			error: detailedMessage,
 			stack: err instanceof Error ? err.stack : undefined
 		});
-		const userMessage = USER_FRIENDLY_ERRORS[queryName] ?? 'An error occurred loading data';
-		return { data: fallback, error: { query: queryName, message: userMessage } };
+		return fallback;
 	}
 }
 
@@ -112,8 +92,6 @@ const JOB_METADATA: Record<string, { displayName: string; description: string }>
 export const load: PageServerLoad = async ({ parent }) => {
 	const parentData = await parent();
 	const schedulerStatus = getSchedulerStatus();
-	const queryErrors: DashboardQueryError[] = [];
-
 	// Define fallback values for graceful degradation
 	const fallbacks = {
 		connectors: [],
@@ -136,45 +114,21 @@ export const load: PageServerLoad = async ({ parent }) => {
 	};
 
 	// Execute all queries with error handling - failures return fallback values
-	const [
-		connectorsResult,
-		statsMapResult,
-		contentStatsResult,
-		todayStatsResult,
-		recentActivityResult,
-		completionDataResult
-	] = await Promise.all([
-		safeQuery('connectors', getAllConnectors, fallbacks.connectors),
-		safeQuery('connectorStats', getAllConnectorStats, fallbacks.statsMap),
-		safeQuery('contentStats', getContentStatusCounts, fallbacks.contentStats),
-		safeQuery('todayStats', getTodaySearchStats, fallbacks.todayStats),
-		safeQuery('recentActivity', () => getRecentActivity(15), fallbacks.recentActivity),
-		safeQuery(
-			'completionTrends',
-			() => getAllConnectorCompletionWithTrends(14),
-			fallbacks.completionData
-		)
-	]);
+	const [rawConnectors, statsMap, contentStats, todayStats, recentActivity, completionData] =
+		await Promise.all([
+			safeQuery('connectors', getAllConnectors, fallbacks.connectors),
+			safeQuery('connectorStats', getAllConnectorStats, fallbacks.statsMap),
+			safeQuery('contentStats', getContentStatusCounts, fallbacks.contentStats),
+			safeQuery('todayStats', getTodaySearchStats, fallbacks.todayStats),
+			safeQuery('recentActivity', () => getRecentActivity(15), fallbacks.recentActivity),
+			safeQuery(
+				'completionTrends',
+				() => getAllConnectorCompletionWithTrends(14),
+				fallbacks.completionData
+			)
+		]);
 
-	// Collect any errors for potential UI display
-	for (const result of [
-		connectorsResult,
-		statsMapResult,
-		contentStatsResult,
-		todayStatsResult,
-		recentActivityResult,
-		completionDataResult
-	]) {
-		if (result.error) queryErrors.push(result.error);
-	}
-
-	// Extract data (fallbacks already applied by safeQuery)
-	const connectors = connectorsResult.data.map(toSafeConnector);
-	const statsMap = statsMapResult.data;
-	const contentStats = contentStatsResult.data;
-	const todayStats = todayStatsResult.data;
-	const recentActivity = recentActivityResult.data;
-	const completionData = completionDataResult.data;
+	const connectors = rawConnectors.map(toSafeConnector);
 
 	const stats: Record<number, ConnectorStats> = {};
 	for (const [id, stat] of statsMap) {
@@ -233,7 +187,6 @@ export const load: PageServerLoad = async ({ parent }) => {
 		todayStats,
 		activities,
 		completionData: completionWithSerializedTrends,
-		scheduledJobs,
-		queryErrors: queryErrors.length > 0 ? queryErrors : null
+		scheduledJobs
 	};
 };

@@ -17,7 +17,7 @@ interface Props {
 let { contentStats, todayStats, class: className = '' }: Props = $props();
 
 // Determine success rate styling based on percentage
-const successRateColors = $derived(() => {
+const successRateColors = $derived.by(() => {
 	if (todayStats.completedToday === 0)
 		return { bg: 'bg-muted/50', text: 'text-muted-foreground', glow: '' };
 	if (todayStats.successRate >= 70)
@@ -85,9 +85,9 @@ const stats: StatCard[] = $derived([
 		value: `${todayStats.successRate}%`,
 		label: 'Success',
 		icon: TargetIcon,
-		bgColor: successRateColors().bg,
-		textColor: successRateColors().text,
-		glowColor: successRateColors().glow
+		bgColor: successRateColors.bg,
+		textColor: successRateColors.text,
+		glowColor: successRateColors.glow
 	}
 ]);
 </script>

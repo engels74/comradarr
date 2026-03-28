@@ -1,10 +1,6 @@
 import { eq, isNull, lt, or, sql } from 'drizzle-orm';
 import { db } from '$lib/server/db';
 import { type ApiKeyRateLimitState, apiKeyRateLimitState } from '$lib/server/db/schema';
-import {
-	isMinuteWindowExpired,
-	msUntilMinuteWindowExpires
-} from '$lib/server/services/throttle/time-utils';
 
 export {
 	isMinuteWindowExpired,
@@ -104,39 +100,4 @@ export async function resetExpiredMinuteWindows(): Promise<number> {
 		.returning({ id: apiKeyRateLimitState.id });
 
 	return result.length;
-}
-
-export async function getCurrentRequestCount(apiKeyId: number): Promise<number> {
-	const state = await getRateLimitState(apiKeyId);
-	if (!state) {
-		return 0;
-	}
-
-	// If window expired, count is effectively 0
-	if (isMinuteWindowExpired(state.minuteWindowStart)) {
-		return 0;
-	}
-
-	return state.requestsThisMinute;
-}
-
-export async function getRemainingRequests(
-	apiKeyId: number,
-	rateLimitPerMinute: number | null
-): Promise<number | null> {
-	if (rateLimitPerMinute === null) {
-		return null; // Unlimited
-	}
-
-	const currentCount = await getCurrentRequestCount(apiKeyId);
-	return Math.max(0, rateLimitPerMinute - currentCount);
-}
-
-export async function getTimeUntilReset(apiKeyId: number): Promise<number> {
-	const state = await getRateLimitState(apiKeyId);
-	if (!state || !state.minuteWindowStart) {
-		return 0;
-	}
-
-	return msUntilMinuteWindowExpires(state.minuteWindowStart);
 }

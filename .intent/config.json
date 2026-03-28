@@ -1,0 +1,160 @@
+{
+  "scripts": [
+    {
+      "name": "postinstall",
+      "command": "npm run postinstall",
+      "mode": "command",
+      "category": "other"
+    },
+    {
+      "name": "dev",
+      "command": "npm run dev",
+      "mode": "service",
+      "category": "dev"
+    },
+    {
+      "name": "build",
+      "command": "npm run build",
+      "mode": "command",
+      "category": "build"
+    },
+    {
+      "name": "start",
+      "command": "npm run start",
+      "mode": "service",
+      "category": "dev"
+    },
+    {
+      "name": "preview",
+      "command": "npm run preview",
+      "mode": "service",
+      "category": "dev"
+    },
+    {
+      "name": "prepare",
+      "command": "npm run prepare",
+      "mode": "command",
+      "category": "other"
+    },
+    {
+      "name": "check",
+      "command": "npm run check",
+      "mode": "command",
+      "category": "typecheck"
+    },
+    {
+      "name": "check:watch",
+      "command": "npm run check:watch",
+      "mode": "command",
+      "category": "other"
+    },
+    {
+      "name": "test",
+      "command": "npm run test",
+      "mode": "command",
+      "category": "test"
+    },
+    {
+      "name": "test:unit",
+      "command": "npm run test:unit",
+      "mode": "command",
+      "category": "test"
+    },
+    {
+      "name": "test:integration",
+      "command": "npm run test:integration",
+      "mode": "command",
+      "category": "test"
+    },
+    {
+      "name": "test:watch",
+      "command": "npm run test:watch",
+      "mode": "command",
+      "category": "test"
+    },
+    {
+      "name": "test:db:setup",
+      "command": "npm run test:db:setup",
+      "mode": "command",
+      "category": "test"
+    },
+    {
+      "name": "test:db:teardown",
+      "command": "npm run test:db:teardown",
+      "mode": "command",
+      "category": "test"
+    },
+    {
+      "name": "test:db:reset",
+      "command": "npm run test:db:reset",
+      "mode": "command",
+      "category": "test"
+    },
+    {
+      "name": "test:db:status",
+      "command": "npm run test:db:status",
+      "mode": "command",
+      "category": "test"
+    },
+    {
+      "name": "typecheck",
+      "command": "npm run typecheck",
+      "mode": "command",
+      "category": "typecheck"
+    },
+    {
+      "name": "db:generate",
+      "command": "npm run db:generate",
+      "mode": "command",
+      "category": "other"
+    },
+    {
+      "name": "db:migrate",
+      "command": "npm run db:migrate",
+      "mode": "command",
+      "category": "other"
+    },
+    {
+      "name": "db:push",
+      "command": "npm run db:push",
+      "mode": "command",
+      "category": "other"
+    },
+    {
+      "name": "db:studio",
+      "command": "npm run db:studio",
+      "mode": "command",
+      "category": "other"
+    },
+    {
+      "name": "format",
+      "command": "npm run format",
+      "mode": "command",
+      "category": "format"
+    },
+    {
+      "name": "format:check",
+      "command": "npm run format:check",
+      "mode": "command",
+      "category": "format"
+    },
+    {
+      "name": "lint",
+      "command": "npm run lint",
+      "mode": "command",
+      "category": "lint"
+    },
+    {
+      "name": "lint:fix",
+      "command": "npm run lint:fix",
+      "mode": "command",
+      "category": "lint"
+    },
+    {
+      "name": "check:biome",
+      "command": "npm run check:biome",
+      "mode": "command",
+      "category": "other"
+    }
+  ]
+}

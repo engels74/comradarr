@@ -45,7 +45,6 @@ class DevConfig:
     secret_key: str = field(default_factory=_generate_secret_key)
     persist: bool = False
     reconnect: bool = False
-    skip_auth: bool = False
     log_file: str | None = None
 
     @property

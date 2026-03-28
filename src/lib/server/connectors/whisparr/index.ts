@@ -1,7 +1,6 @@
 export { WhisparrClient } from './client.js';
 export {
 	parsePaginatedWhisparrEpisodesLenient,
-	parsePaginatedWhisparrSeriesLenient,
 	parseWhisparrEpisode,
 	parseWhisparrSeries,
 	WhisparrEpisodeFileSchema,
