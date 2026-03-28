@@ -30,10 +30,10 @@ declare global {
 		// interface PageData {}
 		// interface PageState {}
 		interface Platform {
-			server: {
+			server?: {
 				requestIP(request: Request): { address: string } | null;
 			};
-			request: Request;
+			request?: Request;
 		}
 	}
 }
