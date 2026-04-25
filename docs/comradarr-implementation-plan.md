@@ -16,7 +16,7 @@
 - [ ] Rotation engine with tier-based priority, planner protocol per arr type, dispatcher, tracker, budget abstraction (default + Prowlarr), and priority search bypass.
 - [ ] Three authentication providers (local Argon2id + trusted-header + OIDC with mandatory PKCE), unified session model, persistent rate limits, API keys with scopes, audit log with role-separated DB privileges, AES-256-GCM field encryption with key versioning, and master-key denylist.
 - [ ] Setup wizard with bootstrap-token + setup-claim cookie + admin-session three-credential bootstrap, three wizard phases (claim, HTTP boundary verification, admin account), and CSRF-exempt bootstrap claim only.
-- [ ] HTTP boundary hardening: trusted proxy chain, public origin, allowed origins, allowed hosts, CORS, double-submit CSRF, security headers, CSP, cookie attributes.
+- [ ] HTTP boundary hardening: trusted proxy chain, public origin, allowed origins, allowed hosts, CORS, Origin/Referer CSRF validation, security headers, CSP, cookie attributes.
 - [ ] In-process event bus + SSE endpoint feeding the dashboard.
 - [ ] Notification system: apprise + webhook channels, template engine (`{{var}}` + `{{#if}}`), per-user routes, coalescing window, gettext integration.
 - [ ] Frontend SvelteKit 2 + Svelte 5 Runes app shell with Northern Lights theme, sidebar layout, dashboard, content browser at scale (cursor pagination + virtual scrolling), connectors, settings, audit log, notifications, i18n via Weblate, WCAG 2.2 AA.
@@ -34,23 +34,23 @@ Out of scope for v1 (explicitly captured for backlog): command palette (Cmd+K), 
 
 ## 3. Assumptions and Open Questions
 
-- [ ] **Repo layout.** Assume the monorepo root contains `backend/` (PRD Appendix A) and `frontend/` (PRD §25 / frontend rules §7) as siblings, with `dev_cli/` (PRD §5) at the root. Confirm with maintainer before scaffolding.
-- [ ] **OpenAPI spec source location.** Assume Litestar serves the spec at `/schema/openapi.json` (frontend rules `RULE-OAPI-001`); confirm Litestar 2.19 default vs. an override.
-- [ ] **Frontend i18n library.** PRD §28 leaves the choice between `svelte-i18n` and `@inlang/paraglide-js-adapter-sveltekit` open. **Default proposal:** Paraglide (cleaner Svelte 5 Runes + per-message tree-shaking) — confirm before integration.
-- [ ] **`uv` version pin.** Backend rules pin `>=0.11,<0.12`. Confirm the exact 0.11.x to install via `uv self update` in CI.
-- [ ] **Bun lockfile format.** Backend mentions `bun.lock` (text) since 1.2; assume text lockfile and `bun install --frozen-lockfile` for CI.
-- [ ] **shadcn-svelte CLI under UnoCSS workaround.** Frontend rules `RULE-SHADCN-002` requires an empty `tailwind.config.js` stub; confirm with maintainer that this stub will be committed and `.gitignore`d from formatters appropriately.
-- [ ] **PostgreSQL major version inside the bundled image.** PRD §24 says "same as test PG"; assume PostgreSQL 16.x and pin in the Dockerfile.
-- [ ] **Granian worker count.** PRD §24 specifies single worker; confirm whether the operator override is required for v1.
-- [ ] **Telemetry library choices.** PRD §29 mentions Prometheus + OTLP. Assume `prometheus_client` for metrics and `opentelemetry-distro` + `opentelemetry-exporter-otlp` (OTLP-HTTP) for traces. Confirm.
-- [ ] **Encryption key denylist source.** PRD §15 references a weak-value denylist; assume an embedded list of 100–500 known-bad keys plus refusing all-zeros / all-FF / repeating-byte patterns. Maintainer to confirm corpus.
-- [ ] **Apprise version.** PRD §14 cites apprise as BSD-2-Clause; pin to current LTS (>=1.9 verified AGPL-compatible). Confirm.
-- [ ] **OpenAPI annotations on Litestar.** Confirm `litestar.openapi.OpenAPIController` is exposed (per frontend rules §RULE-OAPI-001) and not gated behind setup completion (it is; the setup gate middleware allowlists `/schema`).
-- [ ] **Renovate vs. Dependabot.** PRD §23 leaves the choice open. **Default proposal:** Renovate (richer grouping rules; better fit for `uv.lock` + `bun.lock` + workflow files). Confirm.
-- [ ] **Trusted-header role claim.** PRD §26 sketches `X-Comradarr-Role` for trusted-header role assignment post-v1; in v1 ignore the header but reserve the schema column. Confirm.
-- [ ] **Friendly install name.** PRD §30 references an install's "friendly name" in snapshot filenames; not specified elsewhere. Assume an `install_name` row in `app_config` editable in settings, defaulting to `comradarr`.
-- [ ] **Dev CLI command surface.** PRD §5 specifies the dev CLI at a high level. Confirm the canonical command names (`dev_cli check`, `dev_cli regen-types`, `dev_cli db-up`, `dev_cli pg`, etc.).
-- [ ] **Rotation backoff vs Prowlarr indexer status.** PRD §11 references Prowlarr health driving budget; confirm whether disabled indexers should remove their share from the budget immediately or after a debounce.
+- [ ] **Repo layout.** Assume the monorepo root contains `backend/` (PRD Appendix A) and `frontend/` (PRD §25 / frontend rules §7) as siblings, with `dev_cli/` (PRD §5) at the root. `[needs maintainer confirmation]` before scaffolding.
+- [ ] **OpenAPI spec source location.** Assume Litestar serves the spec at `/schema/openapi.json` (frontend rules `RULE-OAPI-001`); confirm Litestar 2.19 default vs. an override. `[needs maintainer confirmation]`
+- [ ] **Frontend i18n library.** PRD §28 leaves the choice between `svelte-i18n` and `@inlang/paraglide-js-adapter-sveltekit` open. **Default proposal:** Paraglide (cleaner Svelte 5 Runes + per-message tree-shaking). `[needs maintainer confirmation]` before integration.
+- [ ] **`uv` version pin.** Backend rules pin `>=0.11,<0.12`. Confirm the exact 0.11.x to install via `uv self update` in CI. `[needs maintainer confirmation]`
+- [x] **Bun lockfile format.** Resolved: text `bun.lock` (default since Bun 1.2) with `bun install --frozen-lockfile` for CI (backend rules canonical).
+- [x] **shadcn-svelte CLI under UnoCSS workaround.** Resolved: per `RULE-SHADCN-002`, an empty `tailwind.config.js` stub is committed at the frontend root and excluded from Biome formatting via `biome.json` overrides.
+- [x] **PostgreSQL major version inside the bundled image.** Resolved: PostgreSQL 16.x is the supported floor per PRD §24; the Dockerfile pins to 16.x.
+- [x] **Granian worker count.** Resolved per PRD §24: single worker, single threaded, uvloop, 6h worker lifetime; no operator override in v1.
+- [ ] **Telemetry library choices.** PRD §29 mentions Prometheus + OTLP. Assume `prometheus_client` for metrics and `opentelemetry-distro` + `opentelemetry-exporter-otlp` (OTLP-HTTP) for traces. `[needs maintainer confirmation]`
+- [ ] **Encryption key denylist source.** PRD §15 references a weak-value denylist; assume an embedded list of 100–500 known-bad keys plus refusing all-zeros / all-FF / repeating-byte patterns. Corpus source `[needs maintainer confirmation]`.
+- [x] **Apprise version.** Resolved: pin to >=1.9 (BSD-2-Clause; AGPL-compatible per PRD §14).
+- [x] **OpenAPI annotations on Litestar.** Resolved: `litestar.openapi.OpenAPIController` is exposed; the setup-gate middleware allowlists `/schema`, `/api/schema`, `/api/docs`, `/api/redoc` (cross-ref §5.1.4 + §5.13.4).
+- [x] **Renovate vs. Dependabot.** Resolved: Renovate (richer grouping rules; better fit for `uv.lock` + `bun.lock` + workflow files).
+- [x] **Trusted-header role claim.** Resolved per PRD §26: in v1 ignore `X-Comradarr-Role` but reserve the schema column for post-v1.
+- [x] **Friendly install name.** Resolved per PRD §15 + §30: store `install_name` as a key/value row in the `app_config` table, defaulting to `comradarr`. The setup wizard's confirmation step writes the initial value; the post-setup settings UI exposes it for later editing. Used in snapshot filenames (`<install_name>-<ISO timestamp>.comradarr-snapshot`).
+- [ ] **Dev CLI command surface.** PRD §5 specifies the dev CLI at a high level. Confirm the canonical command names (`dev_cli check`, `dev_cli regen-types`, `dev_cli db-up`, `dev_cli pg`, etc.). `[needs maintainer confirmation]`
+- [ ] **Rotation backoff vs Prowlarr indexer status.** PRD §11 references Prowlarr health driving budget; confirm whether disabled indexers should remove their share from the budget immediately or after a debounce. `[needs maintainer confirmation]`
 
 ---
 
@@ -138,8 +138,10 @@ Phases are ordered so each one's outputs unblock the next. Workstreams (B = Back
 #### 5.1.1 Settings (`comradarr/config.py`)
 
 - [ ] Define `Settings(msgspec.Struct, frozen=True, kw_only=True)` capturing all environment variables in PRD §19: `comradarr_secret_key` (Secret bytes), `database_url` (default points at the bundled PG socket), `comradarr_insecure_cookies`, `comradarr_csp_report_only`, `comradarr_log_level`, `comradarr_log_format`, `comradarr_recovery_mode`, `comradarr_disable_local_login`, OIDC provider env names. (Backend §8.1, no pydantic-settings.)
+- [ ] Enumerate the OIDC env-var pattern explicitly per provider short-name `<PROVIDER>` (PRD §15 lines 855, 865): `COMRADARR_OIDC_<PROVIDER>_CLIENT_ID`, `COMRADARR_OIDC_<PROVIDER>_CLIENT_SECRET_FILE` (Docker-secret path — value is the path; loader reads the file's contents and never the literal string), `COMRADARR_OIDC_<PROVIDER>_DISCOVERY_URL`, `COMRADARR_OIDC_<PROVIDER>_REDIRECT_URI`, `COMRADARR_OIDC_<PROVIDER>_SCOPES` (space-delimited; defaults to `openid email profile`), `COMRADARR_OIDC_<PROVIDER>_LINK_POLICY` with values `link` (default) and `require_separate`.
+- [ ] Master-key versioning pattern (PRD §15 lines 1034, 1084): `COMRADARR_SECRET_KEY_FILE` (v1), `COMRADARR_SECRET_KEY_V2_FILE` (v2), `COMRADARR_SECRET_KEY_V3_FILE`, etc., parsed into the key registry with one entry per version; the inline-value forms (`COMRADARR_SECRET_KEY`, `COMRADARR_SECRET_KEY_V2`, …) are also accepted but the `_FILE` form wins on conflict (logged warning). Settings exposes the registry plus the "current version" pointer for new encryptions.
 - [ ] Implement `load_settings()` reading env, supporting `_FILE` suffix for every secret-bearing variable, and validating with `msgspec.convert`.
-- [ ] Refuse to start when `COMRADARR_SECRET_KEY` is missing, unparseable, or in the denylist (PRD §15); surface as a `ConfigurationError` raised before lifespan runs.
+- [ ] Refuse to start when any registered key is missing, unparseable, below the 64-hex-char (32-byte) entropy threshold, or matches the leaked/weak denylist (PRD §15 line 1082: `changeme`, `secret`, `password`, all-zeros, sequential digits, obvious repetition, plus an extensible list of known-leaked keys); surface as a `ConfigurationError` raised before lifespan runs. There is no "weak key warning" continuation path.
 
 #### 5.1.2 Logging (`comradarr/core/logging.py`)
 
@@ -162,7 +164,7 @@ Phases are ordered so each one's outputs unblock the next. Workstreams (B = Back
 - [ ] Register Plugins: `SQLAlchemyPlugin` (advanced-alchemy `before_send_handler="autocommit"`), `StructlogPlugin`.
 - [ ] Register middleware order: correlation ID → logging → trusted proxy → setup gate → CORS → CSRF → security headers → auth → permission check (PRD §16, §15).
 - [ ] Register exception handlers from `comradarr/errors/`.
-- [ ] Register OpenAPI controller with title `Comradarr API`, version pulled from `pyproject.toml`, and serve at `/schema`.
+- [ ] Register OpenAPI controller with title `Comradarr API`, version pulled from `pyproject.toml`, and serve the spec at **`/api/schema`** with Swagger UI at **`/api/docs`** and ReDoc at **`/api/redoc`** (PRD §15 / §16 — no schema discovery before authentication). These three routes require an authenticated session or API key; unauthenticated requests return **HTTP 401 with no response body and no CORS headers** (the auth middleware fails closed before CORS / problem-details rendering for this prefix). Apply a dedicated **per-IP rate limit of 10 requests/hour** to the `/api/schema`, `/api/docs`, and `/api/redoc` routes via the rate-limit machinery in §5.4.7 (scope `schema_ip`).
 - [ ] Register controllers (deferred to Phase 13; placeholder import).
 
 #### 5.1.5 Lifespan (`comradarr/core/lifespan.py`)
@@ -235,10 +237,10 @@ Phases are ordered so each one's outputs unblock the next. Workstreams (B = Back
 
 #### 5.3.2 Crypto service (`comradarr/core/crypto.py`)
 
-- [ ] AES-256-GCM encrypt/decrypt with version registry; in v1 register a single key derived from `COMRADARR_SECRET_KEY`.
-- [ ] AAD wiring per call site (connector UUID, OIDC provider name, channel UUID, setup-claim constant).
-- [ ] Key denylist enforcement at startup; raise `ConfigurationError` (PRD §15).
-- [ ] Argon2id helper using `argon2-cffi` with PRD-defined parameters for password hashing and a separate, stronger parameter set for snapshot key derivation (PRD §15, §30).
+- [ ] AES-256-GCM encrypt/decrypt with version registry; in v1 register a single key derived from `COMRADARR_SECRET_KEY` (PRD §15 lines 1034–1038). Column layout pinned at **4 columns per encrypted field**: `<field>_nonce` (96-bit random, fresh per encryption — never derived, never counter-based, never reused under the same key — PRD §15 line 1017), `<field>_ciphertext` (AES-256-GCM output), `<field>_tag` (128-bit GCM authentication tag), `<field>_key_version` (smallint into the key registry). Reflected by the `EncryptedField` ORM helper in §5.2.1.
+- [ ] AAD wiring per call site, **bound to row identity** so an attacker with database write access cannot swap ciphertext between rows (PRD §15 lines 1024–1030). Convention: `f"{tablename}:{row_pk}:{column_name}"` — concretely `connectors:<uuid>:api_key`, `oidc_providers:<provider_name>:client_secret`, `notification_channels:<uuid>:config`, `app_config:setup_claim:proof` (fixed constant for the singleton claim row). AAD inputs must be stable for the lifetime of the row; mutable fields (name, URL) are never used as AAD.
+- [ ] Key denylist + entropy enforcement at startup for every registered version; raise `ConfigurationError` before lifespan starts (PRD §15 line 1082).
+- [ ] Argon2id helper using `argon2-cffi`. **Password / bootstrap-token / recovery-token hashing parameters are pinned in code** (not configurable — PRD §15 line 1090): **64 MiB memory cost, 3 iterations (time cost), 4 lanes (parallelism)**, matching current OWASP guidance for interactive auth. Parameters are encoded into each hash so login can detect drift and trigger rehash-on-login (§5.4.2). A **separate, stronger parameter set for snapshot key derivation** is owned by another agent (PRD §30) and intentionally not pinned here — the helper exposes distinct entry points so the two parameter sets cannot be cross-wired.
 
 #### 5.3.3 Audit log writer (`comradarr/services/audit/`)
 
@@ -256,29 +258,39 @@ Phases are ordered so each one's outputs unblock the next. Workstreams (B = Back
 
 #### 5.4.2 Local password provider
 
-- [ ] `LocalPasswordProvider` using Argon2id; rehash on login when parameters drift (App. B users); disabled when `COMRADARR_DISABLE_LOCAL_LOGIN=1`; users with sentinel password hash structurally rejected.
-- [ ] Per-IP and per-username rate limit checks (PRD §15) reading/writing `auth_rate_limits` with an in-memory hot cache.
+- [ ] `LocalPasswordProvider` using Argon2id (parameters from §5.3.2); rehash on login when parameters drift (App. B users, PRD §15 line 1092); disabled when `COMRADARR_DISABLE_LOCAL_LOGIN=1` (login form not rendered, login endpoint returns 403 — PRD §15 line 825); users carrying the trusted-header sentinel password hash (§5.4.3) are structurally rejected here, not merely "fail to verify".
+- [ ] Constant-time username-enumeration defense: when the username is unknown, run a dummy Argon2id verify against a fixed placeholder hash so failed-known and failed-unknown paths take indistinguishable time (PRD §15 line 821). All failures return a single generic `authentication.invalid_credentials` problem detail.
+- [ ] Per-IP and per-username rate limit checks (PRD §15 lines 899–905) reading/writing `auth_rate_limits` with an in-memory hot cache.
+- [ ] **Per-username deterministic backoff sequence pinned at `1s, 2s, 4s, 8s, 16s, capped at 60s`** (PRD §15 line 901). Driven by a counter persisted on `auth_rate_limits` keyed by `(scope='login_username', key=submitted_username_lowercased)`; the sleep before responding is a pure function of that counter so timing is identical for known and unknown usernames. The counter increments on every failed attempt and is **reset on successful authentication for that username**. No hard lockout (PRD §15 line 903) — backoff is the only friction.
+- [ ] **Session rotation on privilege change** (PRD §15 lines 875, 911): on password change, mint a new session token (replacing the current row's hash and updating the response cookie) **AND revoke all other active sessions for that user** by deleting their rows in the same transaction. Emit `password_changed` and `session_revoked` audit entries for each killed session.
 
 #### 5.4.3 Trusted-header provider
 
-- [ ] Verify TCP socket peer is in `trusted_header_auth_proxy_ips` (never trust XFF for that check) (PRD §15).
-- [ ] Resolve user via configured username/email header; provision per `trusted_header_auth_provision_policy`.
-- [ ] Logout redirects to the configured `trusted_header_auth_logout_url`.
+- [ ] Verify TCP socket peer is in `trusted_header_auth_proxy_ips` (the socket peer as Granian sees it — **never** XFF, X-Real-IP, or any header-based source — PRD §15 line 839). The check is the first thing the middleware does and runs before any header is read.
+- [ ] Resolve user via configured username/email header; provision per `trusted_header_auth_provision_policy` (default auto-provision, strict-match available).
+- [ ] On auto-provision, write a **non-hashable sentinel** value into `users.password_hash` for the new row (PRD §15 line 843) — a fixed string that is structurally not a valid Argon2id hash (e.g., `!locked-trusted-header!`) so `LocalPasswordProvider` short-circuits to reject these users before any verify call rather than relying on hash-mismatch timing. `LocalPasswordProvider` checks for this sentinel by exact equality.
+- [ ] Logout redirects to the configured `trusted_header_auth_logout_url`. **Warning log on settings save when this URL is empty/missing** (PRD §15 line 847) — operator footgun: clicking logout with no logout URL just lands the user back on a page the proxy will immediately re-authenticate. The warning is structured (`logger.warning("trusted_header.logout_url_missing", ...)`) so it surfaces in the admin notifications panel as well.
+- [ ] Backend accepts and validates the **typed-out IP allowlist confirmation** the settings UI requires (PRD §15 line 833 — the literal phrase the operator must type, e.g., `I understand` — verified server-side as a guard against accidental clicks). The settings UI itself lives in §5.18.2 (owned by another agent); this provider exposes the validation entry point. Audit log records both the authenticating user and the trusted-proxy IP that attached the identity header on every successful login.
 
 #### 5.4.4 OIDC provider
 
-- [ ] Implement authorization code flow with mandatory PKCE per provider (PRD §15 + Glossary).
-- [ ] JWKS cache: in-memory only, refresh on startup and validation failure.
-- [ ] Validate issuer, audience, expiry, `nonce`, `iat` window; reject `alg=none`.
-- [ ] Discovery doc cache in `oidc_providers` row.
-- [ ] Map OIDC subject + issuer to the local `users` row; create on first login per provisioning policy.
-- [ ] Logout calls provider end_session_endpoint when present.
+- [ ] Implement authorization code flow with **mandatory PKCE on every flow, S256 only — `plain` is never offered or accepted** (PRD §15 line 859, regardless of client_secret presence, regardless of what discovery advertises). The code_verifier is generated with `secrets.token_urlsafe(64)`; the challenge is the URL-safe base64 of its SHA-256 digest. There is no non-PKCE code path.
+- [ ] **State + nonce on every authorize request, verified on callback** (PRD §15 line 859): `state` is a CSRF-protected nonce bound to the browser's pre-auth session and rejected on mismatch; `nonce` is included in the authorize URL and required to appear unchanged in the ID token's `nonce` claim. Both are single-use.
+- [ ] JWKS cache: in-memory only, **24-hour periodic refresh** (PRD §15 line 857) **plus refresh-on-signature-failure** with a one-shot retry, throttled to **at most one refresh per 60 seconds per provider** to prevent a flood of bad tokens from triggering unbounded JWKS fetches.
+- [ ] Validate issuer (`iss`), audience (`aud` matches our `client_id`), expiry (`exp`), not-before (`nbf`) when present, issued-at (`iat`), and the `nonce` claim. **Allow `60` seconds of clock-skew tolerance on `iat` / `nbf` / `exp` checks** (legitimate skew between the IdP and the Comradarr host is normal; tighter than this rejects valid tokens). **Explicitly reject `alg=none` even if the discovery document advertises it** (PRD §15 line 861 — `python-jose` rejected for this class of bug); the JOSE wrapper enforces an allowlist of asymmetric algs and treats `none` as a parse error before any signature path runs.
+- [ ] Discovery doc cache in `oidc_providers` row (24h refresh; refetched on JWKS miss).
+- [ ] Map OIDC `sub` + `iss` to the local `users` row; create on first login per provisioning policy. Provisioned users get the trusted-header-style non-hashable sentinel password hash so they cannot fall through to local-password auth.
+- [ ] **Account-linking policy** (PRD §15 line 865) configurable per provider via `COMRADARR_OIDC_<PROVIDER>_LINK_POLICY`: `link` (default — when an existing local-password user shares the OIDC verified email, reuse that user row and record `auth_provider=oidc` on the new session; the local password remains usable for direct login but is not required for OIDC) and `require_separate` (refuse to authenticate via OIDC when a local-password user with the same email exists; the operator must delete the local user first). Linking only happens when the IdP-asserted email is verified (`email_verified=true`); unverified emails always fall through to provisioning under the OIDC identity.
+- [ ] Logout calls provider `end_session_endpoint` when discovery advertises it; otherwise clears the local session only.
+- [ ] **JOSE / OIDC library pinned: use `authlib`** (PRD §15 line 861 short-listed `authlib` and `joserfc` as defensible; `authlib` chosen here for its integrated OIDC client + JWKS + discovery handling and active CVE response history; `python-jose` is explicitly rejected). `joserfc` may be substituted for primitives if `authlib` later drops a relevant feature, but the v1 implementation targets `authlib` only.
 
 #### 5.4.5 Sessions
 
 - [ ] Issue session: random 256-bit token, hash on insert (sha256), set HttpOnly + Secure (gated by `COMRADARR_INSECURE_COOKIES` for dev) + SameSite=Lax cookie (PRD §16).
-- [ ] Validate session: constant-time hash lookup, idle + absolute timeout enforcement, last_seen_at update (best-effort).
-- [ ] Revocation: delete the row.
+- [ ] Validate session: constant-time hash lookup, idle + absolute timeout enforcement (defaults: 7-day idle, 30-day absolute — PRD §15 line 871), best-effort `last_seen_at` update (fire-and-forget; auth never fails because of the activity write).
+- [ ] **Concurrent sessions** allowed without limit (PRD §15 line 877). Provide a `revoke_all_other_sessions(user_id, except_session_id)` operation that deletes every active session for the user except the caller's; surfaced in the sessions UI as "revoke all other sessions" and reused by §5.4.2's session-rotation-on-privilege-change path. IP and user-agent on session rows are informational only and never used for authorization.
+- [ ] **Rotation on privilege change** mirrors §5.4.2: any operation that mutates security-relevant fields (password change, future role assignment) generates a new token, replaces the current row's hash, updates the response cookie, and revokes every other session row for that user (PRD §15 line 875).
+- [ ] Revocation: delete the row (PRD §15 line 879 — no "expired" tombstone; replayed cookies find no row and 401).
 
 #### 5.4.6 API keys
 
@@ -290,37 +302,51 @@ Phases are ordered so each one's outputs unblock the next. Workstreams (B = Back
 
 #### 5.4.7 Rate limit machinery
 
-- [ ] Persistent counters keyed on `(scope, key)` survive restarts.
-- [ ] Login per-username: progressive backoff; per-IP: window cap.
+- [ ] Persistent counters keyed on `(scope, key)` survive restarts (PRD §15 line 905 — an attacker cannot reset state by cycling the container). Hot-path in-memory cache backs the `auth_rate_limits` table.
+- [ ] **Login per-username: deterministic progressive backoff `1s, 2s, 4s, 8s, 16s, capped at 60s`** (PRD §15 line 901). The canonical implementation lives here and is invoked by §5.4.2 — counter on the row, identical timing for known and unknown usernames, cleared on success. No hard lockout.
+- [ ] **Login per-IP: window cap of 10 attempts/minute and 50 attempts/hour** (PRD §15 line 899); 429 with `Retry-After` on exceedance.
+- [ ] Schema-endpoint scope (`schema_ip`): 10 requests/hour/IP for `/api/schema`, `/api/docs`, `/api/redoc` (per §5.1.4).
 - [ ] Bootstrap-IP scope used during setup wizard claim (PRD §15 / §16 / §15 setup details).
+- [ ] API-key auth failures rate-limited per source IP (PRD §15 line 893 — per-key limiting is defeated by key rotation; per-IP catches the realistic abuse pattern).
 
 ### 5.5 Phase 5 — Setup gate + bootstrap + setup wizard backend
 
 #### 5.5.1 Setup gate middleware
 
 - [ ] Read `setup_completed` from `app_config` once per request (cache invalidated on change).
-- [ ] Allowlist while incomplete: `/`, `/setup/*`, `/health`, `/static/*`, `/schema/*`, `/_app/*` (frontend assets), the bootstrap claim endpoint (the only CSRF-exempt POST), and frontend setup wizard pages.
-- [ ] Redirect every other route to `/setup` with 302 (or 401 for API).
+- [ ] Allowlist while incomplete (minimal, per PRD §15 "Setup Gate Middleware"): `/setup` and frontend setup wizard pages, `/api/setup/*` (the only CSRF-exempt POST is the bootstrap claim within this prefix), `/api/health`, and the static assets required for the setup UI to render (`/static/*`, `/_app/*`). The OpenAPI schema is NOT in the allowlist — it lives at `/api/schema` under auth (see §5.1.4 / §5.13.4 owned by another agent).
+- [ ] For HTML / browser-navigation requests outside the allowlist: redirect to `/setup` with 302.
+- [ ] For API requests outside the allowlist: return **HTTP 503 Service Unavailable** (Problem Details body, `context.reason="setup_incomplete"`) — never 401, since 401 implies "authenticate" but no auth surface yet exists.
 
 #### 5.5.2 Bootstrap token flow
 
-- [ ] At startup, when `setup_completed` is false: generate a random token, log a prominent banner to stdout, write it to a deterministic on-disk path inside the container (PRD §15 — the operator can fish it out of either logs or the file), expire the in-memory copy after a fixed TTL.
-- [ ] Audit log: `bootstrap_token_generated` (no token value).
+- [ ] Generate token at startup if and only if `setup_completed != "true"`. Format: **Crockford base32** alphabet (no `0/O/1/I/L`), **80 bits of entropy = 16 base32 chars**, hyphenated into **5-character segments** as `XXXXX-XXXXX-XXXXX-X` (PRD §15 "Three Distinct Credentials").
+- [ ] **TTL: 15 minutes** from process start (PRD §15 "TTL Ordering Is Intentional"); in-memory expiry timer clears the plaintext at TTL.
+- [ ] Storage: keep only the **Argon2id hash** (same params as the password hasher — 64 MiB / 3 iters / 4 lanes, PRD §15 "Argon2id Parameters") for comparison; never compare in plaintext. The plaintext is held in process memory only long enough to write the startup banner, then dropped.
+- [ ] Dual emission per PRD §15 "Token Generation and Visibility": stderr/stdout banner **and** a 0600-mode file at a documented path inside the container. The file is auto-deleted on token expiry, on successful Phase 3 completion, or on process restart.
+- [ ] Banner contents (stderr) must include, inside a visually distinctive separator block: (a) the full bootstrap setup URL with `0.0.0.0` (or any bind-all address) substituted to `localhost`, with the bootstrap token as a query parameter; (b) the absolute UTC expiry timestamp (ISO 8601); (c) explicit text noting the token is single-use, validated without consume, and consumed only on successful Phase 3 wizard completion.
+- [ ] **Token is consumed (cleared from memory + on-disk file deleted) ONLY on successful Phase 3 wizard completion (admin user written + `setup_completed="true"`).** It is NOT consumed on first claim — see §5.5.3 validate-without-consume.
+- [ ] Audit log: `bootstrap_token_generated` at emission (no token value, no hash); single-worker warning logged if multi-worker mode is detected while setup is incomplete (PRD §15 "Single-Worker Requirement").
 
 #### 5.5.3 Setup-claim endpoint
 
-- [ ] `POST /setup/claim` accepts the bootstrap token; CSRF-exempt; per-IP rate limited.
-- [ ] On success: clear the token from memory + disk; set strict-same-site path-scoped HttpOnly setup-claim cookie; record `setup_claim_granted`.
-- [ ] On rejection: increment per-IP counter; record `setup_claim_rejected`.
+- [ ] `POST /api/setup/claim` accepts the bootstrap token; CSRF-exempt (the only such POST in the application, per PRD §15 "CSRF During Setup"); per-IP rate-limited via the bootstrap-IP scope from §5.4.7.
+- [ ] **Validate-without-consume semantics (default):** verify the submitted token against the stored Argon2id hash with constant-time comparison; on success, issue a `comradarr_setup_claim` cookie (HttpOnly, Secure, SameSite=Strict, Path=`/setup`) carrying a random claim proof (UUIDv4) whose AES-GCM-encrypted form is persisted in `app_config` with a fixed-context AAD (PRD §15 "Claim Flow"). **Do NOT clear the bootstrap token.** The token remains valid until its 15-minute TTL or successful Phase 3 finalize.
+- [ ] **10-minute sliding TTL** on the claim cookie: each successful wizard action that re-presents the cookie renews the cookie + persisted-proof timestamp by another 10 minutes.
+- [ ] **Same-browser re-claim renews TTL:** if the request arrives bearing a still-valid `comradarr_setup_claim` cookie whose proof matches the persisted record, return 200, regenerate-or-refresh the proof timestamp, and reset the 10-minute window. Token re-validation still occurs so a stolen cookie cannot ride past its TTL without the token.
+- [ ] **Second-browser claim returns HTTP 409 Conflict** (Problem Details, `context.reason="active_claim_from_other_origin"`) when an unexpired claim proof exists and the request does not bear the matching cookie. This is the claim-takeover defense from PRD §15 "Claim Flow".
+- [ ] **Strict-mode override (operator escape hatch):** when `COMRADARR_BOOTSTRAP_STRICT_MODE=1` is set, the endpoint switches to single-shot consume-on-claim semantics — first successful claim clears the bootstrap token immediately and any subsequent claim attempt requires a process restart (PRD §15 "Validate Without Consume").
+- [ ] **Three-credential admin-session bootstrap invariant:** every wizard endpoint under `/api/setup/*` (Phases 2 and 3) must validate all three of (a) the bootstrap token *not yet consumed*, (b) the `comradarr_setup_claim` cookie matching the persisted proof and not TTL-expired, and (c) — from Phase 3 onwards once the admin session is issued — the admin session cookie. The token is not cleared until the wizard's Phase 3 finalize step writes the admin user successfully.
+- [ ] Audit log: `setup_claim_granted` on success (records whether claim was new vs. renewal vs. strict-mode consume); `setup_claim_rejected` on failure with `context.reason` ∈ {`bad_token`, `expired_token`, `rate_limited`, `claim_conflict`}.
 
-#### 5.5.4 HTTP boundary verification endpoints
+#### 5.5.4 HTTP boundary verification wizard (Phase 2 of PRD §15)
 
-- [ ] Wizard step 1 (proxy trust): server captures observed peer IP + observed `X-Forwarded-For`; proposes a value; live-test endpoint that the operator's browser hits to confirm the chain resolves correctly.
-- [ ] Wizard step 2 (public origin): server proposes from observed `Host` + scheme; live-test endpoint that issues a redirect to the proposed origin and verifies the round trip.
-- [ ] Wizard step 3 (allowed origins): proposes `[public_origin]`; live-test that a fetch from each origin succeeds with credentials and CORS pre-flight passes.
-- [ ] Wizard step 4 (allowed hosts): proposes the hostnames seen in step 1's chain; live-test rejects non-allowed Host headers with 421.
-- [ ] Each step persists only on a successful live test; failure returns Problem Details with `context.proposed` and `context.error_kind`.
-- [ ] Audit log: `http_boundary_changed` per step.
+The wizard exposes exactly **four operator-visible steps** under `/api/setup/*`. Every step requires the three-credential admin-session bootstrap from §5.5.3 (token-not-consumed + claim cookie + — once Phase 3 issues it — admin session). Each step persists only on a successful live test; failure returns Problem Details with `context.proposed` and `context.error_kind`. Each successful step emits an `http_boundary_changed` audit entry.
+
+- [ ] **Step A — Proxy trust configuration.** Configure trusted-proxy CIDRs and TCP socket peer ranges. Server captures the observed socket peer IP only (PRD §15 "Socket peer address, never headers" / §16). The endpoint **must reject any X-Forwarded-For input** from the operator form — proxy trust is determined by socket peer alone. Live-test: the operator's browser hits a verification endpoint and the server confirms the configured chain resolves the operator's expected client IP.
+- [ ] **Step B — Public origin.** Set the canonical public origin URL. Server proposes from observed `Host` + scheme (resolved through the now-trusted proxy chain from Step A). Live-test issues a redirect to the proposed origin and verifies the round trip.
+- [ ] **Step C — Allowed origins AND allowed hosts (single combined step).** Both lists are configured together before the wizard advances: allowed origins feed the CORS allowlist + CSRF Origin/Referer check; allowed hosts feed Host-header validation. Defaults are seeded from Step B (`[public_origin]` for origins; the hostname seen in Step A's chain for hosts). Live-test: a credentialed fetch from each allowed origin completes including CORS pre-flight, AND a request bearing a non-allowed Host header is rejected with 421.
+- [ ] **Step D — Rollup confirmation.** Display all settings persisted in Steps A/B/C. Require the operator to type a fixed confirmation string (per PRD §15 trusted-header friction model — typed-out, not click-through) before the rollup is committed. On confirm, persist the full HTTP boundary configuration atomically and unlock Phase 3 admin account creation.
 
 #### 5.5.5 Admin account creation endpoint
 
@@ -332,48 +358,66 @@ Phases are ordered so each one's outputs unblock the next. Workstreams (B = Back
 
 #### 5.6.1 Trusted proxy resolver
 
-- [ ] Resolve client IP by walking `Forwarded`/`X-Forwarded-For` only when the socket peer is in `trusted_proxy_ips`; fall back to the socket peer otherwise (PRD §16).
+- [ ] Resolve client IP using the **TCP socket peer only** as the trust input; consult `Forwarded`/`X-Forwarded-For` solely when the socket peer matches `trusted_proxy_ips`, never the other way around (PRD §16, "Resolution Algorithm After Configuration").
+- [ ] When the peer is trusted, parse the `X-Forwarded-For` chain left-to-right and select the leftmost entry that is not itself in `trusted_proxy_ips`; honor `X-Forwarded-Proto`/`X-Forwarded-Host` only from trusted peers; on empty/malformed chain, fall back to the socket peer and log at INFO; on syntactically invalid (non-IP) entries, reject the chain and fall back to the socket peer.
+- [ ] Stamp resolved (ip, scheme, host) onto request state in a single early middleware so the rate limiter, audit log, OIDC redirect builder, CSRF Origin check, and CORS comparator all read from the same source.
 - [ ] Bind the resolved IP to structlog contextvars for every request.
 
 #### 5.6.2 Public origin canonicalization
 
-- [ ] Reject requests whose `Host` header is not in `allowed_hosts` with 421.
-- [ ] Build outgoing redirect URLs from `public_origin`, never from request headers.
+- [ ] Reject requests whose `Host` header is not in `allowed_hosts` with **HTTP 421 Misdirected Request** (PRD §16, "Host Header Validation"); reject lone-wildcard entries at config-write time.
+- [ ] Build outgoing redirect URLs (OIDC callbacks, absolute links) from `public_origin`, never from request headers.
 
 #### 5.6.3 CORS
 
-- [ ] Configure Litestar CORS with `allowed_origins`, `allow_credentials=True`, `allow_methods` matching the API surface, `allowed_headers` minimal, `max_age=86400`.
+- [ ] Configure Litestar CORS with `allowed_origins` (exact-string allowlist after lowercase scheme/host + default-port elision; **no wildcards**), `allow_credentials=True`, `allow_methods` matching the API surface, `allowed_headers` minimal (including the API key and content-type headers), and **`max_age=600`** (10-minute preflight cache per PRD §16).
+- [ ] On every CORS response (allowed and disallowed alike), emit **`Vary: Origin`** so intermediate caches do not cross-pollinate responses between origins; echo the request's `Origin` back verbatim on allowed origins (never `*`); emit no CORS headers on disallowed origins (do not leak the allowlist).
+- [ ] Treat requests with no `Origin` header as non-CORS (no CORS headers emitted); apply the same middleware to the SSE endpoint.
 
 #### 5.6.4 CSRF
 
-- [ ] Implement double-submit token (PRD §16): cookie `comradarr_csrf` (HttpOnly=false, SameSite=Strict) and `X-CSRF-Token` header on every state-changing request.
-- [ ] Verify Origin header matches `allowed_origins` on every state-changing request; the only exception is `/setup/claim` (PRD §16 + Glossary).
-- [ ] Issue token on first GET; rotate per session.
+- [ ] Implement CSRF defense as **`Origin`/`Referer` header validation** against `allowed_origins` on every state-changing verb (POST, PUT, PATCH, DELETE) (PRD §16, "CSRF"). Do **not** implement a double-submit cookie/token pattern; there is no `comradarr_csrf` cookie.
+- [ ] On a mutating request: require `Origin`; if absent, fall back to `Referer`'s origin component; if both are absent or neither matches `allowed_origins`, reject with 403 and a generic "missing or invalid origin" message (do not distinguish absent from wrong).
+- [ ] Exempt only two paths from this check: (a) `POST /setup/claim` (the bootstrap claim, which runs before `allowed_origins` exists and is protected by the bootstrap token + SameSite=Strict claim cookie + per-IP rate limit); (b) requests authenticated by `Authorization: Bearer <api_key>` / `X-Api-Key` whose API key validation succeeded — detect via the resolved auth mechanism on request state, not via header presence, so a bogus key falls back to the cookie path where CSRF still applies.
+- [ ] Ensure the SvelteKit `hooks.server.ts` forwards the user's original `Origin` on backend calls so the backend's check sees the genuine browser origin (PRD §16, "SvelteKit Form Actions").
 
 #### 5.6.5 Security response headers
 
-- [ ] Apply: `Strict-Transport-Security: max-age=63072000; includeSubDomains; preload`, `X-Content-Type-Options: nosniff`, `Referrer-Policy: strict-origin-when-cross-origin`, `X-Frame-Options: DENY`, `Permissions-Policy` minimal, `Cross-Origin-Opener-Policy: same-origin`, `Cross-Origin-Resource-Policy: same-origin` (PRD §16).
+- [ ] Apply on every response: **`Strict-Transport-Security: max-age=31536000; includeSubDomains`** (NO `preload` directive — preload is a deliberate operator decision, not an automatic opt-in; PRD §16) and emit it only when the request was received over HTTPS.
+- [ ] Apply on every response: `X-Content-Type-Options: nosniff`; `Referrer-Policy: strict-origin-when-cross-origin`; `X-Frame-Options: DENY`; `Permissions-Policy: accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()`; `Cross-Origin-Opener-Policy: same-origin`; `Cross-Origin-Resource-Policy: same-origin`.
+- [ ] Suppress the `Server` header (no `granian/x.y.z` advertisement) and never emit `X-Powered-By`.
 
 #### 5.6.6 CSP
 
-- [ ] Build CSP from `default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'; frame-ancestors 'none';` plus the SSE endpoint origin.
-- [ ] Switch to report-only when `COMRADARR_CSP_REPORT_ONLY=1`; emit a startup warning (PRD §16, §19).
+- [ ] Generate a fresh **128-bit cryptographic nonce per request** in a Litestar middleware, stamp it onto request state, and have the SvelteKit SSR layer read it from request state to emit on every inline `<script>` and `<style>` tag it serves.
+- [ ] Build the production CSP header verbatim as: `default-src 'self'; img-src 'self' data:; style-src 'self' 'nonce-<value>'; script-src 'self' 'nonce-<value>'; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'; upgrade-insecure-requests`. **Forbid `'unsafe-inline'` and `'unsafe-eval'` everywhere** — both keywords MUST NOT appear in any directive.
+- [ ] Implement `POST /api/csp-report` to receive browser violation reports (rate-limited per source IP, bounded context fields: violated directive, blocked URI, document URI only — never user-content fields); use this endpoint during a parallel report-only rollout window before flipping to enforce mode.
+- [ ] Switch to `Content-Security-Policy-Report-Only` when `COMRADARR_CSP_REPORT_ONLY=1`; emit a startup warning (PRD §16, §19).
 
 #### 5.6.7 Cookie attribute matrix
 
-- [ ] Document and apply the per-cookie attributes (PRD §16): session cookie HttpOnly + Secure + SameSite=Lax, csrf cookie HttpOnly=false + SameSite=Strict, theme-pref cookie HttpOnly=false + SameSite=Lax, setup-claim cookie HttpOnly + Secure + SameSite=Strict + path scoped.
+- [ ] Document and apply exactly **three** cookies (PRD §16, "Cookie Attributes"); there is no `comradarr_csrf` cookie:
+  - `comradarr_session`: `HttpOnly` + `Secure` + `SameSite=Lax` + `Path=/`, no `Domain` attribute, no `Expires`/`Max-Age` (server-side session row enforces lifetime).
+  - `comradarr_setup_claim`: `HttpOnly` + `Secure` + `SameSite=Strict` + `Path=/setup`, 10-minute TTL renewed on each successful wizard action.
+  - `comradarr_theme_pref`: non-`HttpOnly` + `SameSite=Lax` (UI preference only; carries no security data).
+- [ ] `COMRADARR_INSECURE_COOKIES=1` disables only the `Secure` attribute on the two HttpOnly cookies (development over HTTP); `HttpOnly` and `SameSite` remain enforced; emit a loud startup warning.
 
 ### 5.7 Phase 7 — Connector subsystem (HTTP client, factory, errors)
 
 #### 5.7.1 SSRF-defended HTTP client (`comradarr/connectors/http.py`)
 
 - [ ] Build an `httpx.AsyncClient` factory that:
-  - [ ] re-resolves DNS on every request and re-classifies the resolved IP (defense against DNS rebinding) (PRD §7 + Glossary);
+  - [ ] re-resolves DNS on every request and re-classifies every resolved IP **at every redirect hop** against the private-IP / link-local / loopback / metadata denylist — RFC 1918 (`10/8`, `172.16/12`, `192.168/16`), `127.0.0.0/8`, IPv6 `::1` and `fe80::/10`, CGN `100.64.0.0/10`, `169.254.0.0/16` (covers AWS/GCP/Azure metadata at `169.254.169.254`), broadcast/multicast, IPv4-mapped exotic ranges (PRD §7 + Glossary);
   - [ ] enforces the URL classification policy (default / strict / permissive) configured by `COMRADARR_CONNECTOR_URL_POLICY`;
-  - [ ] applies an explicit `httpx.Timeout` and `httpx.Limits` (RULE-HTTP-002);
+  - [ ] applies explicit timeouts — `httpx.Timeout(connect=5.0, read=30.0, write=10.0, pool=5.0)` totalling at most 60 s wall-clock per request — and a per-host bounded connection pool `httpx.Limits(max_connections=10, max_keepalive_connections=5)` (RULE-HTTP-002 / RULE-HTTP-003);
+  - [ ] sets `User-Agent: comradarr/0.1.0 (+https://github.com/engels74/comradarr)` on every outbound request;
   - [ ] respects per-connector TLS toggles (`insecure_skip_tls_verify`, `tls_ca_bundle_path`);
-  - [ ] caps response size and aborts on hostile-response patterns (PRD §7 — gzip bombs, recursive nesting, oversized JSON);
-  - [ ] runs JSON parsing through msgspec with hard limits.
+  - [ ] caps the response body at **10 MiB** (`COMRADARR_CONNECTOR_RESPONSE_CAP_BYTES = 10 * 1024 * 1024`), enforced as a true byte budget over the streamed body regardless of `Content-Length`, and aborts with `HostileResponseError` on oversized, malformed-JSON, or unexpected-content-type responses (PRD §7 — gzip bombs, recursive nesting, oversized JSON);
+  - [ ] runs JSON parsing through msgspec with hard limits — **max nesting depth 64**, **max object/array length 100 000 elements** — plus `strict=True` and the per-Struct `msgspec.Meta` size constraints from PRD §7, rejecting hostile payloads *before* the parse completes.
+- [ ] Maintain a per-connector consecutive-hostile-response counter (incremented on malformed JSON, oversized response, unexpected content-type, or msgspec validation failure):
+  - [ ] **5 consecutive hostile responses → connector marked `degraded`** (rotation dispatch rate reduced; UI badge yellow);
+  - [ ] **20 consecutive hostile responses → connector marked `unhealthy`** (rotation engine stops dispatching; only health probes continue);
+  - [ ] every successful response decrements the counter; reaching zero restores `healthy` status (PRD §7 "Health Degradation Rather Than Crash").
 - [ ] Implement error normalization: every httpx exception is wrapped in a `ComradarrError` subclass with request/response stripped from the message (PRD §20 traceback hygiene) and a transient/permanent classification (PRD §21).
 - [ ] One app-scoped client per connector type; created in lifespan (RULE-HTTP-003 + DECIDE-HTTP-CLIENT).
 
@@ -411,6 +455,7 @@ Phases are ordered so each one's outputs unblock the next. Workstreams (B = Back
 
 - [ ] msgspec models: Indexer, Tag, IndexerStatus.
 - [ ] Methods: `list_indexers`, `get_indexer`, `system_status`.
+- [ ] **In-memory indexer cache with a 5-minute TTL** (PRD §12 line 617 — operators tweak indexer lists frequently, so the cache must refresh quickly enough to reflect adds/removes/disables). Cache is invalidated on Prowlarr-emitted health events and on explicit operator-triggered refresh from the connector detail page; never persisted across process restarts.
 - [ ] `mapper.py` mapping Prowlarr indexer → Sonarr/Radarr "indexer in this connector?" via tag matching.
 - [ ] `health.py` background task polling Prowlarr indexer status; emits events to the bus when status changes.
 
@@ -465,8 +510,8 @@ Phases are ordered so each one's outputs unblock the next. Workstreams (B = Back
 #### 5.10.3 Budget protocol + implementations (`comradarr/services/budget/`)
 
 - [ ] `protocol.py`: `Budget.available_for(connector_id) -> int`.
-- [ ] `default.py`: per-connector daily limit + concurrent limit fallback.
-- [ ] `prowlarr.py`: derives budget from Prowlarr indexer limits read via the mapper; reduces budget when indicators flip to disabled.
+- [ ] `default.py`: per-connector defaults — **daily limit 100 commands**, **max 2 concurrent in-flight commands**, **30-second minimum interval between commands** (PRD §11 line 577). Daily budget is spread evenly across the 24-hour window (no burst consumption — PRD §11 line 579).
+- [ ] `prowlarr.py`: derives budget from Prowlarr indexer limits read via the 5-minute-TTL mapper cache; the effective per-connector budget is the **most restrictive indexer** serving that connector (PRD §12 line 619), and a **20% safety margin is subtracted off each indexer's own cap** before the minimum is taken — i.e. `effective_indexer_budget = floor(indexer_limits_max * 0.80) - usage_today` — to leave headroom for non-Comradarr traffic (Sonarr RSS sync, manual searches, other tools); reduces budget further when indexers flip to disabled (PRD §12 lines 633–635).
 - [ ] `resolver.py`: chooses the right Budget at startup based on whether a Prowlarr connector is configured; can re-resolve when connectors change.
 
 #### 5.10.4 Dispatcher (`comradarr/services/rotation/dispatcher.py`)
@@ -493,41 +538,49 @@ Phases are ordered so each one's outputs unblock the next. Workstreams (B = Back
 
 #### 5.11.1 Event bus (`comradarr/core/events.py`)
 
-- [ ] In-process pub/sub keyed on a typed enum of event names; subscribers are async iterators (PRD §13).
-- [ ] No event Struct contains a `Secret[T]` field (enforce at code review; add a unit test that scans event Struct annotations).
+- [ ] **In-process pub/sub** keyed on a typed enum of event names; subscribers are async iterators (PRD §13). **No external message broker** in v1 — Redis, RabbitMQ, NATS, etc. are explicitly out of scope; the bus lives in the same Python process as the rotation/sync/notification subscribers.
+- [ ] **No event Struct contains a `Secret[T]` field.** The `msgspec` encode hook would refuse to serialize a `Secret[T]` (PRD §15 line 1058), and event payloads are emitted on-the-wire to the browser via SSE — secrets must never reach that surface. Enforced at code review **and** at runtime startup: a unit test scans every Struct annotation under `comradarr.core.events` for `Secret[...]` types and fails the test suite if any are found; the same scan runs as a startup self-check that aborts boot with a `ConfigurationError`.
 
 #### 5.11.2 SSE controller (`comradarr/api/controllers/events.py`)
 
-- [ ] `GET /api/events/stream` returning `text/event-stream`; per-client backpressure with bounded queue (PRD §13).
+- [ ] `GET /api/events/stream` returning `text/event-stream`; **per-client bounded queue with drop-on-full backpressure** — when a client's send queue fills (slow consumer), new events for that client are silently dropped rather than blocking the bus (PRD §13 line 663). The bus itself never awaits a client send. SSE clients reconnect and re-fetch state via regular API calls, so dropped events do not break correctness.
 - [ ] Filters events by user permission (e.g., audit-log events to admins only).
-- [ ] Emit a heartbeat every 15s to keep proxies alive.
+- [ ] **Emit a heartbeat keepalive every 15 seconds** (`: heartbeat\n\n` SSE comment line) to keep idle reverse proxies and load balancers from closing the long-lived connection.
 
 ### 5.12 Phase 12 — Notifications
 
 #### 5.12.1 Channels (`comradarr/services/notifications/channels/`)
 
-- [ ] Apprise channel: lazy import `apprise`, encrypted config (URL).
+- [ ] Apprise channel: lazy import `apprise`, encrypted config (URL). Supports any apprise URI scheme, including a **guided SMTP flow** that builds `mailto://` and `mailtos://` apprise URIs from a structured form (host, port, username, password, from-address, recipient list, TLS mode) — the operator never has to hand-craft the apprise URL.
 - [ ] Webhook channel: encrypted bundle (URL, method, headers, body template).
-- [ ] Per-channel TLS toggles wired through.
-- [ ] Test-before-commit: `POST /api/notifications/channels/test` runs a one-shot send; only persists when successful (PRD §14).
+- [ ] Per-channel TLS toggles wired through (`insecure_skip_tls_verify`, `tls_ca_bundle_path`) — same shape as connector TLS overrides per PRD §7 "Reuse by the Notification System".
+- [ ] **URL classification re-runs at SAVE AND at SEND.** Both the channel-write path (`POST` / `PATCH /api/notifications/channels`) and the per-dispatch path re-classify every outbound URL — including every redirect hop — against the same SSRF denylist used by connectors (§5.7.1). A previously-saved channel config can become hostile if the denylist or `COMRADARR_CONNECTOR_URL_POLICY` is tightened, so write-time checks alone are not sufficient (PRD §7 "Reuse by the Notification System"). Send-time rejection logs a structured `notification.delivery.blocked_ssrf` event and counts as a permanent failure — no retries.
+- [ ] Test-before-commit: `POST /api/notifications/channels/test` runs a one-shot send through the same dispatcher (including SSRF re-classification); only persists when successful (PRD §14).
 
 #### 5.12.2 Routes
 
 - [ ] `(user, event_type, channel)` rows; absence is the off-switch.
 - [ ] Predicate column null in v1.
+- [ ] **Default routing profile for security-critical events** seeded on first-channel-creation per user (PRD §14 lines 725–733). Operators inherit the profile out of the box; each row can be toggled off per-channel afterward. The profile enables, on the user's first channel:
+  - **Security events** (always-on by default): login anomalies (new session opened, burst of 5+ failed logins within 5 minutes), password change, API key created/revoked, **OIDC failures** (provider authentication errors, token validation failures), **audit-log gaps** (missed/dropped audit-log writes), **recovery-mode usage** (any successful recovery-token redemption or recovery-mode session start);
+  - **Operational health** (admin only): connector reachability flips, indexer disabled/re-enabled (coalesced — see §5.12.4), 3+ consecutive sync failures, 80% daily-cap budget threshold;
+  - **User-initiated**: priority search completed.
+- [ ] The defaults are seeded **once per `(user, channel)` pair on first-channel creation**, not on every channel; subsequent channels start with all routes off so an operator who silenced "new session" on channel A does not get it re-enabled on channel B (PRD §14 line 727).
 
 #### 5.12.3 Templates
 
-- [ ] Constrained engine: `{{var}}` substitution + `{{#if var}}…{{/if}}` (PRD §14 + Glossary).
+- [ ] Constrained engine — accepts **only** three constructs: `{{variable_name}}` substitution, `{{#if variable_name}}…{{/if}}` conditional blocks (no nesting, no `else`, no expressions), and gettext built-ins resolved at render time (PRD §14 lines 747–751). Any other syntax — method calls, attribute access, computed values, loops, macros, partials, `{{>...}}`, `{{!...}}`, or anything else — is **rejected at parse time** with `TemplateValidationError`. The renderer is a regex-driven pass with no expression evaluator, by construction eliminating the SSTI surface.
 - [ ] Lookup order at send: user override → translated built-in for recipient locale → English (PRD §14).
 - [ ] Built-in defaults registered as gettext message keys under `notification.{event_type}.{channel_kind}.{subject|body}` (PRD §28).
 
 #### 5.12.4 Dispatcher
 
-- [ ] Subscribes to the event bus; resolves routes per event; renders templates; sends.
-- [ ] Coalescing window: 60-second rolling group for operational-health events of the same category (PRD §14 + Glossary).
-- [ ] Security and user-initiated events bypass coalescing.
-- [ ] Audit-log delivery success/failure under `notification.delivery.sent` and `.failed` (PRD §20).
+- [ ] Subscribes to the event bus; resolves routes per event; renders templates; sends. **Fire-and-forget** from the bus subscriber's perspective — sends are scheduled on an `asyncio.TaskGroup` so a slow destination cannot backpressure the bus (PRD §14 line 775).
+- [ ] **Retry sequence pinned in code** (PRD §14 line 773): initial attempt with **10 s timeout**; on failure, retry after **1 s with 15 s timeout**, then after **5 s with 20 s timeout**, then after **30 s with 30 s timeout**. **3 retries total after the initial attempt**, then abandon and log a `notification.delivery.failed` WARN entry. **No dead-letter queue, no delivery-attempt table** — the structured log stream is the only delivery record (PRD §14 line 777).
+- [ ] **`notifications_enabled` global kill-switch** in the `app_config` table (PRD §14 line 801, default `true`). When `false`, the dispatcher's bus subscriber stays attached but every delivery short-circuits to a no-op before any adapter is invoked. The audit log still records that the originating event fired and that the notification was suppressed (`notification.dispatch.suppressed`); the structured log stream records nothing per-attempt because there is no attempt. The settings UI surfaces the toggle prominently and renders a banner on every notification-related settings page whenever the switch is off.
+- [ ] **60-second rolling coalescing window for operational-health events** (PRD §14 lines 781–787): when the first event in the operational-health category arrives, a coalescing timer starts; subsequent operational-health events arriving during the window are accumulated in memory; on window expiry, a single grouped notification is rendered from the summary template. The 60-second value is a code constant, not configuration.
+- [ ] **Security events and user-initiated events bypass coalescing entirely** — each fires its own notification regardless of category volume (PRD §14 line 785). The dispatcher routes by event-category tag, not by event name, so adding a new security event automatically inherits the bypass.
+- [ ] Audit-log delivery success/failure under `notification.delivery.sent` and `.failed` (PRD §20); kill-switch suppression under `notification.dispatch.suppressed`.
 
 ### 5.13 Phase 13 — API layer
 
@@ -549,7 +602,9 @@ Phases are ordered so each one's outputs unblock the next. Workstreams (B = Back
 #### 5.13.4 Endpoint surface
 
 - [ ] **Auth:** login, logout, session validate, password change, OIDC start, OIDC callback, trusted-header probe, recovery flow (gated by `COMRADARR_RECOVERY_MODE`).
+- [ ] **Recovery-mode acknowledgement.** Per PRD §15 "On successful recovery, the recovery-mode flag is cleared": because the backend cannot mutate the operator's environment, on a successful recovery-token claim the backend writes a `recovery_mode_acknowledged_at` timestamp row to `app_config`. On every subsequent boot, if `COMRADARR_RECOVERY_MODE=1` is still set in the environment, the bootstrap path compares the acknowledgement timestamp against the process start time: when the acknowledgement is newer than process start, the backend logs a prominent warning instructing the operator to unset the env var and refuses to issue a new recovery token (the recovery flow is inert until the env var is cleared and the next boot writes a new process-start timestamp). This preserves the "log access = privilege" trust model while preventing the env var from re-arming a recovery flow that has already been consumed.
 - [ ] **API keys:** create (returns plaintext once), list, revoke (own + admin all).
+- [ ] **Sessions:** list active sessions for the current user (creation time, last-seen, source IP, user-agent — all informational per PRD §15), revoke individual session, "revoke all other sessions" action.
 - [ ] **Connectors:** list, add (with live test), edit, delete, pause, manual sync trigger.
 - [ ] **Content:** search/filter/sort with cursor pagination at scale (500k+ items); detail view; trigger manual search; pause/unpause item.
 - [ ] **Sync:** status per connector, manual full/deep/incremental.
@@ -560,6 +615,7 @@ Phases are ordered so each one's outputs unblock the next. Workstreams (B = Back
 - [ ] **Notifications:** channels CRUD + test, routes CRUD, templates CRUD.
 - [ ] **Snapshots:** export, import (Phase 21).
 - [ ] **Users:** v1 self-service only; admin-level management deferred but endpoints stub permission checks.
+- [ ] **OpenAPI documentation routes (cross-ref §5.1.4).** `/api/schema`, `/api/docs`, `/api/redoc` are authenticated, rate-limited at 10/hr/IP, and on unauthenticated access return `401` with no response body and no CORS headers (per the §5.1.4 owner's decision). The setup-gate middleware allowlists these routes pre-setup-completion so the wizard's API client can introspect the schema.
 
 #### 5.13.5 BFF endpoints
 
@@ -642,7 +698,7 @@ Phases are ordered so each one's outputs unblock the next. Workstreams (B = Back
 - [ ] No aurora wash in the data grid.
 - [ ] Mobile breakpoint collapses to one-line rows.
 
-### 5.18 Phase 18 — Frontend connectors / settings / audit log / API keys / OIDC / notifications
+### 5.18 Phase 18 — Frontend connectors / settings / audit log / API keys / OIDC / notifications / sessions
 
 #### 5.18.1 Connectors
 
@@ -654,9 +710,23 @@ Phases are ordered so each one's outputs unblock the next. Workstreams (B = Back
 
 - [ ] HTTP boundary editor with the same affordance used in the wizard (observed/proposed/testing/committed) — shared component lives at `src/lib/components/TestDrivenField.svelte`.
 - [ ] OIDC providers list/edit; secret rotation flows.
-- [ ] Trusted-header settings.
+- [ ] **Trusted-header settings page.** Implements the PRD §15 trusted-header authentication surface:
+  - Enable/disable toggle, header-name picker (presets for authelia/authentik/traefik ForwardAuth/nginx-ingress + custom), optional companion email header field, provisioning policy selector (auto-provision vs. strict-match), and a `logout_url` field.
+  - **Typed-out confirmation modal** when adding or changing entries in the trusted-proxy IP allowlist. The modal renders the literal PRD §15 copy: "Adding this IP or range grants permission to log in as any user by setting an HTTP header. Only proceed if you control every host in this range and every process on it. Do you want to continue?" The operator must type a confirmation phrase verbatim (a click-through is not sufficient — PRD §15 mandates typed confirmation). Exact phrase to type `[needs maintainer confirmation]`; default proposal: the IP/CIDR being added (so the typed string is content-bound and cannot be muscle-memoried), with `I understand` as a fallback.
+  - **Warning banner** rendered prominently on the trusted-header settings page whenever the trusted-header provider is enabled and the `logout_url` field is empty (per PRD §15: "When the trusted-header provider is enabled, the settings UI flags a missing logout URL as a warning").
+  - Form-level validation rejects invalid IP/CIDR entries with a specific error.
+  - Audit log entries surface both the authenticating user and the trusted-proxy IP that attached the identity header.
 - [ ] Connection policy selector (default / strict / permissive) with explanatory copy and a "this is destructive" warning when permissive is chosen.
 - [ ] Theme + locale + timezone preferences.
+- [ ] **Install name editor** (PRD §15 + §30 + §3 resolution): edit the `install_name` row in `app_config`; default `comradarr`. Used in snapshot filenames.
+
+#### 5.18.6 Sessions
+
+- [ ] Sessions list page (PRD §15 mandates this UI affordance) showing every active session for the current user — creation time, last-seen, source IP, user-agent, authenticating provider (local / trusted-header / oidc:&lt;provider&gt;), and a marker for the current session.
+- [ ] Per-row "revoke" action.
+- [ ] **"Revoke all other sessions" button** that revokes every session for the current user except the one making the request. Confirmation dialog warns this signs out every other browser/device.
+- [ ] Audit-log entries on every revocation.
+- [ ] Reflect SSE-driven updates so a session revoked elsewhere disappears live.
 
 #### 5.18.3 Audit log
 
@@ -734,20 +804,28 @@ Phases are ordered so each one's outputs unblock the next. Workstreams (B = Back
 
 #### 5.21.1 Snapshot format
 
-- [ ] Define inner JSON schema with version integer; populate exactly the fields enumerated in PRD §30 (and exclude every excluded item).
-- [ ] Define the encryption envelope: header (format version, Argon2id parameters, salt, GCM nonce) + ciphertext (PRD §30).
+- [ ] Define inner JSON schema with a **schema version integer** in the envelope (advances on every breaking structural change); populate exactly the fields enumerated in PRD §30 (and exclude every excluded item — mirror tables, schedule, planned commands, sync state, sessions, rate limit state, audit log).
+- [ ] Define the encryption envelope: header (format version, Argon2id parameters, salt, GCM nonce) + authenticated ciphertext (PRD §30). The format version is independent of the inner schema version and changes only on cryptographic primitive changes.
+- [ ] Decryption code for old format versions is retained indefinitely (snapshot files in the wild cannot be retroactively re-encrypted, per PRD §30).
+- [ ] Inner schema imports support one major version behind current (per PRD §30); older snapshots are rejected with a structured error directing the operator to import incrementally.
 
 #### 5.21.2 Export endpoint
 
-- [ ] `POST /api/snapshots/export` accepts a passphrase (with confirm); produces an in-memory plaintext doc, derives key with strong Argon2id, encrypts, returns `application/octet-stream` with `.comradarr-snapshot` extension and a filename containing install name + ISO timestamp.
-- [ ] Plaintext doc never written to disk; cleared from memory immediately after encryption (PRD §30).
-- [ ] Audit-log entry with the high-level summary + size.
+- [ ] `POST /api/snapshots/export` accepts a passphrase + confirm field; produces an in-memory plaintext document.
+- [ ] **Passphrase KDF parameters (pinned).** Argon2id with **memory = 1 GiB**, **iterations = 4**, **lanes = 4**, **salt = 16 bytes random per export**. These are intentionally heavier than interactive password hashing because snapshots are offline attack targets (PRD §30: "higher than the interactive-authentication parameters used for password hashing, because snapshot decryption is a rare operation and can tolerate a longer derivation step"). Parameters are embedded in the header so future tightening does not break old snapshots.
+- [ ] **File-level encryption (pinned).** **AES-256-GCM** over the serialized JSON document, with a 96-bit random nonce per export and the standard 128-bit auth tag. Same primitive as at-rest field encryption (PRD §15) but applied to the whole document.
+- [ ] **Plaintext document never written to disk.** Encryption happens in-memory only; the plaintext bytes are zeroed/cleared immediately after the GCM seal call returns. Only the encrypted blob touches the filesystem (and only as the response stream — no temporary file). Plaintext is never logged, never included in tracebacks, never passed through any path that could leak it (PRD §30).
+- [ ] Returns `application/octet-stream` with `.comradarr-snapshot` extension; filename is `<install_name>-<ISO timestamp>.comradarr-snapshot` where `install_name` is read from `app_config` (default `comradarr`).
+- [ ] Audit-log entry with the high-level summary (connector count, user count, OIDC provider count, etc.) + download size; passphrase never logged.
+- [ ] Wizard enforces minimum passphrase length and rejects passphrases on the local-password denylist (PRD §30).
 
 #### 5.21.3 Import wizard
 
-- [ ] Frontend `(app)/settings/import/+page.svelte` with file upload + passphrase + dangerous-operation confirmation; preview screen showing what would change; conflict policy selector (replace / merge / skip).
-- [ ] `POST /api/snapshots/import` validates schema version; applies in a single transaction; re-encrypts every secret with the target instance's `COMRADARR_SECRET_KEY`.
-- [ ] Audit log on success and on every failure (with error kind, never the passphrase).
+- [ ] Frontend `(app)/settings/import/+page.svelte` with file upload + passphrase + dangerous-operation confirmation; preview screen showing what would change.
+- [ ] **Conflict policy selector (per-table choice).** `replace` (snapshot wins; default — matches the "I am restoring from a backup" case per PRD §30), `merge` (snapshot fields that are set replace current fields; unset fields preserve current state), `skip` (current install rows preserved; conflicting snapshot entries discarded). The selector is per-table so an operator can, for example, replace connectors but merge OIDC providers.
+- [ ] `POST /api/snapshots/import` validates the schema version against the supported range; applies the snapshot in a single database transaction; re-encrypts every secret field with the target instance's `COMRADARR_SECRET_KEY` (so no re-entry of secrets is required after import — PRD §30).
+- [ ] On schema-version mismatch (older than one major behind, or newer than current), refuse import with a structured error.
+- [ ] Audit log on success and on every failure (with error kind: wrong-passphrase, corrupted-file, version-mismatch — never the passphrase).
 
 ### 5.22 Phase 22 — Testing matrix
 
@@ -831,6 +909,12 @@ Phases are ordered so each one's outputs unblock the next. Workstreams (B = Back
 - [ ] Author CHANGELOG.md with v0.1.0 entry.
 - [ ] CI release workflow: on tag push matching `^[0-9]+\.[0-9]+\.[0-9]+$`, build multi-arch image, push, attach SBOM, publish GitHub Release with `v` prefix in title (PRD §23).
 - [ ] Confirm release-cadence policy in CONTRIBUTING.md (no schedule, releases when ready).
+- [ ] **Upgrade-path documentation** (PRD §27 explicitly requires this deliverable). Author `docs/upgrades.md` covering:
+  - **(a) Alembic migration ordering** for v0.1.0 → v0.2.0. v0.2.0 is a hypothetical placeholder for v0.1.0 release; the doc lays out the template (forward-only migrations, run order during init, what to do on a failed migration → restore the pre-upgrade DB backup per PRD §27 "Downgrades"). Update this section on every minor version bump.
+  - **(b) Snapshot export/import as a migration safety net.** Document the recommended pattern of "export a snapshot before any minor-version upgrade, then verify the snapshot decrypts on the target version before relying on the live database." Cross-reference §5.21.
+  - **(c) Master-key rotation procedure.** Document the `COMRADARR_SECRET_KEY_V2_FILE` (or equivalent next-version variable name) flow: how key versions are referenced by the four-column ciphertext layout (PRD §15), the staged rotation sequence (deploy with both keys → re-encrypt rows in the background → remove the old key after every row's `key_version` has advanced), and how to verify completion.
+  - **(d) Env-var inventory checklist.** Enumerate every `COMRADARR_*` environment variable the operator should review on each upgrade — `COMRADARR_SECRET_KEY`, `COMRADARR_SECRET_KEY_FILE`, `COMRADARR_RECOVERY_MODE`, `COMRADARR_DISABLE_LOCAL_LOGIN`, `COMRADARR_INSECURE_COOKIES`, `COMRADARR_CSP_REPORT_ONLY`, `COMRADARR_LOG_LEVEL`, `COMRADARR_LOG_FORMAT`, `COMRADARR_OIDC_<NAME>_*`, `DATABASE_URL` — with notes on which were added/removed/renamed in each release. Cross-reference PRD §27 "The Upgrade Path".
+  - Linked from CHANGELOG.md and from the README's upgrade section.
 
 ---
 
@@ -902,7 +986,7 @@ Phases are ordered so each one's outputs unblock the next. Workstreams (B = Back
 - [ ] **shadcn-svelte CLI depending on Tailwind config.** Mitigated by empty stub; risk is CLI evolution. Track upstream and revisit `RULE-SHADCN-002`.
 - [ ] **Setup-wizard test endpoints reachable pre-completion.** Mitigated by setup-gate allowlist; risk of allowlist regression. Test cases enforce.
 - [ ] **Bootstrap token leakage.** Token printed to stdout is also written to a file inside the container; risk if the file is mounted to a shared volume. Mitigation: file lives under `/var/lib/comradarr/bootstrap` (not under the operator's data volume).
-- [ ] **CSRF + double-submit cookie + SameSite trade-offs.** Risk that an aggressive CSP blocks the inline theme script. Mitigation: nonce-based CSP for the inline theme script, documented.
+- [ ] **CSRF Origin/Referer validation + SameSite + CSP trade-offs.** Risk that an aggressive CSP blocks the inline theme script. Mitigation: nonce-based CSP for the inline theme script, documented.
 - [ ] **Argon2id parameter selection.** Need separate parameter sets for password vs. snapshot key derivation. Risk: under-parameterized snapshot key derivation. Mitigation: snapshot params set well above interactive thresholds (e.g., 1 GiB, 4 iters, 4 lanes) per PRD §30.
 - [ ] **OIDC clock skew.** Risk: token validation fails on slightly-skewed clocks. Mitigation: tolerate 60s skew on `iat` / `exp`.
 - [ ] **PostgreSQL major version drift between bundled and external.** Risk: SQL behavior differs on older operator-managed Postgres. Mitigation: README states minimum 16.x; init script aborts on older.
