@@ -23,13 +23,12 @@ jobs:
           uv run ruff check .
           uv run ruff format --check .
           uv run basedpyright
+          uv run pytest -q -n auto
       # pip-audit is wrapped per §3.1 deviation — see tools/lint/run-pip-audit.sh.
       # Plan §5.0.4 step 6 specifies bare `uv run pip-audit --strict`; the wrapper
       # exists because the editable local pkg + CVE-2026-3219 in pip 26.0.1
       # combination is incompatible with bare --strict. F-11 tracks unwinding.
       - run: tools/lint/run-pip-audit.sh
-        # pytest deliberately omitted in Phase 0 — re-added in Phase 1 (F-4)
-        # when first integration test lands.
   frontend:
     runs-on: ubuntu-latest
     steps:

@@ -19,6 +19,7 @@ uv sync --frozen
 uv run ruff check .
 uv run ruff format --check .
 uv run basedpyright
+uv run pytest -q
 ../tools/lint/run-pip-audit.sh
 ```
 

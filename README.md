@@ -86,6 +86,37 @@ local package + an unfixable transitive CVE in pip 26.0.1 make the bare
 See `docs/comradarr-implementation-plan.md` §3.1 for the documented deviation
 and follow-up F-11 for the unwinding plan.
 
+## Definition of Done — Phase 1
+
+A third-party deterministic "Phase 1 done" check (plan §3 step 12):
+
+```sh
+prek run --all-files                                                                              # exits 0
+( cd backend \
+  && uv sync --frozen \
+  && uv run ruff check . \
+  && uv run ruff format --check . \
+  && uv run basedpyright \
+  && uv run pytest -q -n auto \
+  && ../tools/lint/run-pip-audit.sh )                                                             # exits 0
+( cd frontend && bun install --frozen-lockfile && bun run check && bunx tsc --noEmit && bun run lint && bun test )                                            # exits 0
+tools/lint/check-bun-pin-parity.sh                                                                # exits 0
+tools/lint/no_future_annotations.sh                                                               # exits 0
+# Boot smoke: app factory builds under stub env (NO real Postgres required — stub DSN never connects)
+( cd backend \
+  && COMRADARR_SECRET_KEY="$(python -c 'import secrets; print(secrets.token_hex(32))')" \
+     DATABASE_URL='postgresql+asyncpg://stub:stub@localhost:1/stub' \
+     uv run python -c "from comradarr.app import create_app; app = create_app(); assert app is not None; print('boot ok')" )   # prints 'boot ok'
+```
+
+> **⚠️ Security warning — Phase 1 is NOT production-ready.**
+> The Phase 1 backend skeleton binds `0.0.0.0:8000` with NO authentication and
+> exposes the OpenAPI spec (`/api/schema`), Swagger UI (`/api/docs`), and ReDoc
+> (`/api/redoc`) UNAUTHENTICATED. Do **NOT** expose this image to a non-loopback
+> network until Phase 5's setup gate ships and Phase 4 wires up authentication.
+> Setting `COMRADARR_RUN_MODE=dev` binds `127.0.0.1:8000` instead — use that
+> mode for any local development against an untrusted LAN.
+
 ## License
 
 [AGPL-3.0-or-later](LICENSE).
