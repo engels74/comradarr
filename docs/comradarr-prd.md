@@ -1786,6 +1786,8 @@ Formatting is also handled by ruff (using its built-in formatter, not black) wit
 
 Dead-code detection and import-cycle detection are enabled through the relevant ruff rules and through basedpyright's configuration; the combination catches unreachable functions, unused imports across modules, and circular imports at type-check time rather than at runtime.
 
+Frontend linting and formatting are handled by **Biome** (`@biomejs/biome` v2.4+). Biome supersedes both Prettier and ESLint with a single Rust-native binary that lints and formats JavaScript, TypeScript, JSON/JSONC, CSS, and the `<script>` / `<style>` blocks of Svelte files. The recommended rule set is Biome's `recommended` plus the nursery rule `useSortedClasses` (set to `warn`) for Tailwind/UnoCSS class ordering. Configuration lives in a project-root `biome.json` keyed to the published 2.4 schema. The `--files-ignore-unknown=true --no-errors-on-unmatched` flags on `biome check` make the runner safe for mixed-language working trees. Svelte template markup itself (control-flow blocks, bindings, slots) is *not* parsed by Biome — that surface is covered by `svelte-check` and the Svelte compiler, both of which run alongside Biome in the pre-commit suite (Section 23.3). Like ruff, Biome runs in check mode in CI and in write mode locally through the pre-commit hook.
+
 ### Type Checking
 
 Type checking is performed by basedpyright in its recommended mode, which is stricter than pyright's default "basic" mode and catches a superset of issues including implicit Any, untyped function definitions, and unsafe casts. The `Secret[T]` wrapper type (Section 15) relies on this strictness — the type system is what prevents accidental concatenation of secrets with plain strings and forces explicit `.expose()` calls at the narrow set of exfiltration boundaries.
@@ -1794,11 +1796,54 @@ basedpyright runs on every PR as part of the CI static check set. Like ruff, its
 
 ### Pre-commit Hook Execution
 
-The pre-commit hook suite is managed by `prek` (a Rust-native reimplementation of the `pre-commit` framework, used by CPython, FastAPI, Airflow, and others for its speed and zero-Python-runtime startup). `prek` reads the same `.pre-commit-config.yaml` format as upstream `pre-commit`, so the configuration is portable; the choice of runner is a performance and ergonomics decision rather than a policy one. Developers install `prek` as part of the standard development setup (via `uv tool install prek` or the standalone installer), and the git hooks are registered once per clone.
+The pre-commit hook suite is managed by `prek` (a Rust-native reimplementation of the `pre-commit` framework, used by CPython, FastAPI, Airflow, and others for its speed and zero-Python-runtime startup). Comradarr commits to the `prek.toml` configuration format (documented at <https://prek.j178.dev/configuration/>) as the canonical pre-commit configuration; prek also accepts the upstream `.pre-commit-config.yaml` format, but the project standardises on TOML for clarity and to keep the Python and frontend hook surfaces in one schema-typed file. Developers install `prek` as part of the standard development setup (via `uv tool install prek` or the standalone installer), and the git hooks are registered once per clone.
 
-The hook suite enforces, at minimum: ruff lint in check mode, ruff format in check mode, basedpyright in recommended mode, `uv lock --check` to ensure `uv.lock` is consistent with `pyproject.toml`, and a handful of standard sanity hooks (no merge conflict markers, no trailing whitespace, newline at end of file, no large files, no accidentally-committed private keys). Every hook runs on every commit by default; developers can skip with `git commit --no-verify` for emergency cases but the CI pipeline runs the same hooks and will reject the push if they fail.
+The hook suite enforces, at minimum: **ruff lint in check mode, ruff format in check mode, basedpyright in recommended mode**, `uv lock --check` to ensure `uv.lock` is consistent with `pyproject.toml`, **Biome `check` in write mode for the frontend (with `--files-ignore-unknown=true --no-errors-on-unmatched`), `svelte-check --threshold warning` for Svelte template/type issues, and `tsc --noEmit` for full-project TypeScript type checking**, and a handful of standard sanity hooks (no merge conflict markers, no trailing whitespace, newline at end of file, no large files, no accidentally-committed private keys, no direct commits to `main`). Every hook runs on every commit by default; developers can skip with `git commit --no-verify` for emergency cases but the CI pipeline runs the same hooks and will reject the push if they fail.
 
 CI's initial scope — the "fast static checks on every PR" bar — is exactly the `prek run --all-files` invocation plus the dependency vulnerability scan. Heavier checks (integration tests, the full test suite with database, frontend build verification) are added incrementally as the project matures; the initial set is chosen to be fast enough that CI completes in under two minutes on a typical PR, keeping the feedback loop tight.
+
+The canonical `prek.toml` for the Comradarr monorepo is:
+
+```toml
+# prek.toml — pre-commit hooks configuration
+# Docs: https://prek.j178.dev/configuration/
+
+# Builtin hooks — fast, offline, Rust-native
+[[repos]]
+repo = "builtin"
+hooks = [
+  { id = "trailing-whitespace" },
+  { id = "end-of-file-fixer" },
+  { id = "check-merge-conflict" },
+  { id = "check-added-large-files" },
+  { id = "detect-private-key" },
+  { id = "check-json" },
+  { id = "check-toml" },
+  { id = "check-yaml" },
+  { id = "no-commit-to-branch", args = ["--branch", "main"] },
+]
+
+# Backend (Python) — ruff, basedpyright, uv lockfile drift
+[[repos]]
+repo = "local"
+hooks = [
+  { id = "ruff-lint",   name = "ruff lint",      entry = "uv run ruff check --fix",       language = "system", types = ["python"], pass_filenames = true },
+  { id = "ruff-format", name = "ruff format",    entry = "uv run ruff format",            language = "system", types = ["python"], pass_filenames = true },
+  { id = "basedpyright", name = "basedpyright",  entry = "uv run basedpyright",           language = "system", types = ["python"], pass_filenames = false, always_run = true },
+  { id = "uv-lock",     name = "uv lock --check", entry = "uv lock --check",              language = "system", files = "(^pyproject\\.toml$|^uv\\.lock$)", pass_filenames = false },
+]
+
+# Frontend (SvelteKit / Bun) — biome, svelte-check, tsc
+[[repos]]
+repo = "local"
+hooks = [
+  { id = "biome-check", name = "biome check",   entry = "bunx biome check --write --files-ignore-unknown=true --no-errors-on-unmatched", language = "system", types = ["text"], files = "\\.(js|ts|jsx|tsx|json|jsonc|css|svelte)$" },
+  { id = "svelte-check", name = "svelte check", entry = "bunx svelte-check --threshold warning", language = "system", always_run = true, pass_filenames = false },
+  { id = "type-check",  name = "tsc type check", entry = "bunx tsc --noEmit",            language = "system", always_run = true, pass_filenames = false },
+]
+```
+
+The three `[[repos]]` blocks correspond to the three layers of static checks: cheap repository hygiene first, then the Python toolchain (ruff/basedpyright/uv), then the frontend toolchain (Biome/svelte-check/tsc). The `frontend` block is omitted in clones that do not yet contain a `frontend/` directory; prek's `local` repos are inert when their hooks have no matching files, so the same `prek.toml` is checked in unconditionally.
 
 ### Code-Level Bans
 
@@ -1882,7 +1927,7 @@ Comradarr must be able to reach the Sonarr, Radarr, and optionally Prowlarr inst
 
 ### Technology Stack (Deferred Implementation)
 
-The frontend will be built with SvelteKit 2 using Svelte 5 Runes, Bun as the runtime and package manager, UnoCSS with presetWind4 and presetShadcn for styling, and shadcn-svelte for the UI component library. It will use svelte-adapter-bun for production deployment. The visual token set is installed from the tweakcn "Northern Lights" theme via `bunx shadcn@latest add https://tweakcn.com/r/themes/northern-lights.json`, which seeds the project's `globals.css` with the full OKLCH color palette, typography stack, radius scale, shadow values, and tracking variables that the rest of the frontend consumes.
+The frontend will be built with SvelteKit 2 using Svelte 5 Runes, Bun as the runtime and package manager, UnoCSS with presetWind4 and presetShadcn for styling, and shadcn-svelte for the UI component library. **Biome** (linter + formatter for JS/TS/CSS/JSON and Svelte `<script>`/`<style>` blocks; replaces Prettier and ESLint) handles all static formatting and linting; Svelte template markup is covered by `svelte-check` and the Svelte compiler. It will use svelte-adapter-bun for production deployment. The visual token set is installed from the tweakcn "Northern Lights" theme via `bunx shadcn@latest add https://tweakcn.com/r/themes/northern-lights.json`, which seeds the project's `globals.css` with the full OKLCH color palette, typography stack, radius scale, shadow values, and tracking variables that the rest of the frontend consumes.
 
 ### Aesthetic Direction: "Watching the Sky"
 
@@ -2476,13 +2521,15 @@ All tables described below are accessed through the role model defined in Sectio
 
 **Hash-Chain Reservation** — Two nullable columns (`previous_hash` and `content_hash`) on the audit log table that are populated with null in v1 but reserved for a future integrity upgrade in which each entry's hash depends on the previous entry's hash, making historical tampering structurally detectable. The columns are included at v1 so that retrofitting does not require altering a potentially-large audit table during application operation.
 
-**prek** — A Rust-native reimplementation of the pre-commit framework, used as Comradarr's pre-commit hook runner. It reads the same `.pre-commit-config.yaml` format as upstream pre-commit, so configurations are portable; the choice of runner is a performance and ergonomics decision. prek is used by CPython, FastAPI, Airflow, and other large Python projects for its speed and its zero-Python-runtime startup.
+**prek** — A Rust-native reimplementation of the pre-commit framework, used as Comradarr's pre-commit hook runner. Configuration lives in `prek.toml` (documented at <https://prek.j178.dev/configuration/>); prek also accepts the upstream `.pre-commit-config.yaml` format, but Comradarr standardises on TOML. prek is used by CPython, FastAPI, Airflow, and other large Python projects for its speed and its zero-Python-runtime startup.
 
 **Lockfile-Enforced Install** — The CI and production install pattern in which `uv sync --frozen` (or the equivalent `--locked` flag) refuses to install any dependency whose content hash does not match the committed `uv.lock`. This defeats compromised-mirror substitution attacks at install time rather than detecting them after the fact. The same pattern applies to the frontend lockfile when it lands.
 
 **Ruff S Category** — The security-focused ruff lint rule category, derived from Bandit. Enabled in full in Comradarr's configuration with errors (not warnings), covering dangerous primitives including `pickle`, `eval`/`exec`, `subprocess` with `shell=True`, string-formatted SQL construction, weak hash primitives used for security, hardcoded secrets, and binding to non-loopback interfaces when loopback was intended. Specific rule suppressions require a justified `# noqa` comment that a reviewer validates.
 
 **basedpyright Recommended Mode** — The type-checking strictness level Comradarr runs in CI and in the pre-commit hook. Stricter than pyright's default "basic" mode; catches implicit Any, untyped function definitions, unsafe casts, and a broader set of type-level issues. The `Secret[T]` wrapper type's leak-prevention guarantees depend on this strictness level.
+
+**Biome** — The Rust-native linter and formatter that supersedes Prettier and ESLint for Comradarr's frontend. Biome v2.4+ formats and lints JavaScript, TypeScript, JSON, CSS, and the `<script>` / `<style>` blocks of Svelte files; Svelte template markup is covered by `svelte-check` rather than Biome. Configuration lives in `biome.json`. Biome runs in write mode locally through the pre-commit hook and in check mode in CI.
 
 **Permission-Check Middleware** — The authorization layer that runs on every authenticated endpoint and resolves the current user's role, looks up the role's permission set, and either allows the request or returns 403. In v1 the only role is admin (with every permission), so the check is trivially true for the single account; the middleware runs anyway so post-v1 role additions are a feature change rather than a codebase-wide audit.
 

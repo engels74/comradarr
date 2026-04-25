@@ -55,6 +55,7 @@ Stack-specific search examples:
 | API types | `openapi-typescript` | 7.x | OpenAPI 3.x → TypeScript types ([Source](https://openapi-ts.dev/cli)) |
 | API client | `openapi-fetch` | current | Thin typed `fetch` wrapper driven by generated types ([Source](https://openapi-ts.dev/openapi-fetch/)) |
 | Backend (spec source) | Litestar | 2.x | OpenAPI 3.1 schema served at `/schema/openapi.json` ([Source](https://docs.litestar.dev/2/usage/openapi/schema_generation.html)) |
+| Linter + formatter | Biome | 2.4.x | Single Rust-native tool for JS/TS/CSS/JSON and Svelte `<script>`/`<style>` blocks; replaces Prettier and ESLint ([Source](https://biomejs.dev/internals/language-support/#html-super-languages-support)) |
 
 ## 2. Status & Adoption Policy
 
@@ -773,7 +774,7 @@ export const actions: Actions = {
   bunx svelte-kit sync && bunx svelte-check --tsconfig ./tsconfig.json
   ```
   Exposed as `"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json"` and run as `bun run check`. Must be green before merging. ([Source](https://socket.dev/npm/package/svelte-check/overview/1.2.5))
-- **VERIFY-LINT-001 — ESLint + Prettier.** `bun run lint` runs `prettier --check .` + `eslint .`; `bun run format` writes Prettier. Use `eslint-plugin-svelte` v3 with ESLint flat config (`eslint.config.js`). ([Source](https://sveltejs.github.io/eslint-plugin-svelte/migration/))
+- **VERIFY-LINT-001 — Biome (lint + format).** `bun run check` runs `biome check --files-ignore-unknown=true --no-errors-on-unmatched`; `bun run format` runs `biome format --write .`; `bun run lint` runs `biome lint --write .`. Biome replaces Prettier *and* ESLint — install only `@biomejs/biome` as a dev dep. For `.svelte` files, Biome formats and lints the `<script>` and `<style>` blocks; template markup (`{#if}`, bindings, slots) is covered by `svelte-check` (VERIFY-CHECK-001), not Biome. Tailwind/UnoCSS class sorting is enabled via the nursery rule `useSortedClasses` at `warn` level. ([Source](https://biomejs.dev/internals/language-support/#html-super-languages-support))
 - **VERIFY-BUILD-001 — Production build.** `bun run build`. Confirms `svelte-adapter-bun` emits `build/index.js`. ([Source](https://www.npmjs.com/package/svelte-adapter-bun))
 - **VERIFY-RUN-001 — Smoke run.** `ORIGIN=http://localhost:3000 bun ./build/index.js`; expect a 200 on `/` and correct form action behavior. ([Source](https://www.npmjs.com/package/svelte-adapter-bun))
 - **VERIFY-API-001 — Regenerate API types.** `bun run api:sync` (see `RECIPE-OAPI-CLIENT`). Follow with `bun run check`. ([Source](https://openapi-ts.dev/cli))
@@ -872,7 +873,8 @@ export const actions: Actions = {
 - **SOURCE-OAPI-V7-ANNOUNCE** — *"v7 Preview"*, openapi-ts/openapi-typescript #1368. <https://github.com/openapi-ts/openapi-typescript/issues/1368>. Supports: v6 → v7 behavior changes.
 - **SOURCE-LITESTAR-OPENAPI** — *"OpenAPI"*, Litestar Docs. <https://docs.litestar.dev/2/usage/openapi/index.html>. Supports: OpenAPI 3.1 + YAML/JSON generation.
 - **SOURCE-SVELTE-CHECK** — *"svelte-check"*, Socket. <https://socket.dev/npm/package/svelte-check/overview/1.2.5>. Supports: canonical check command.
-- **SOURCE-ESLINT-SVELTE-3** — *"Migration Guide - From eslint-plugin-svelte2 to v3"*. <https://sveltejs.github.io/eslint-plugin-svelte/migration/>. Supports: flat-config requirement, Svelte 5 rule support.
+- **SOURCE-BIOME-LANG** — *"Language Support — HTML super-languages support"*, Biome Docs. <https://biomejs.dev/internals/language-support/#html-super-languages-support>. Supports: Biome's coverage of Svelte `<script>` / `<style>` blocks, experimental status of template markup parsing.
+- **SOURCE-BIOME-CONFIG** — *"Configuration"*, Biome Docs. <https://biomejs.dev/reference/configuration/>. Supports: schema URL, formatter / linter / files / css / javascript / html keys.
 - **SOURCE-VITEST-BROWSER** — *"From JSDOM to Real Browsers"*, Scott Spence. <https://scottspence.com/posts/testing-with-vitest-browser-svelte-guide>. Supports: Vitest Browser Mode with Playwright for Svelte 5.
 - **SOURCE-SVELTEST** — *"Sveltest Getting Started"*. <https://sveltest.dev/docs/getting-started>. Supports: recommended multi-project test config.
 - **SOURCE-SK-FORMS** — *"Forms in SvelteKit — Actions, Validation & Progressive Enhancement"*. <https://dev.to/a1guy/forms-in-sveltekit-actions-validation-progressive-enhancement-3leh>. Supports: `use:enhance` pattern.
