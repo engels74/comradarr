@@ -136,6 +136,9 @@ Hard gates (§4):
 - RULE-TEST-002 xdist-safe DB isolation via `PYTEST_XDIST_WORKER` and per-worker schemas
 - RULE-SRV-001 Production serving: `granian --interface asgi …`; dev: `uv run granian --reload`
 - RULE-SEC-001 No secrets in code, `pyproject.toml`, or logs; environment variables only
+- RULE-API-002 HTTP error responses use RFC 9457 problem-details (`application/problem+json`); RFC 7807 is obsoleted — do not cite in new code
+- RULE-AUTHZ-MATCH-001 Allowlist comparators in security-adjacent paths use exact-string equality; permissive defaults forbidden unless PRD-mandated
+- RULE-TOOL-LINT-001 Ruff `S` (flake8-bandit) selection is enabled and unwaived; per-line `# noqa: S###` requires a justification comment
 - RULE-MIGR-001 Alembic uses the async env template; never `op.batch_alter_table` on PostgreSQL
 
 Decision trees (§6): DECIDE-HANDLER, DECIDE-DTO, DECIDE-SYNC, DECIDE-EAGER-LOAD, DECIDE-TYPING, DECIDE-NOGIL, DECIDE-HTTP-CLIENT, DECIDE-TEST-CLIENT, DECIDE-ID.
@@ -185,6 +188,10 @@ Recipes (§11): RECIPE-PROJECT-INIT, RECIPE-CRUD, RECIPE-DB-SESSION, RECIPE-ALEM
 **RULE-SRV-001** — Production: `granian --interface asgi --host 0.0.0.0 --port 8000 --workers N --loop uvloop --log-access app.main:app`. Dev: add `--reload`. Do **not** use `uvicorn` CLI flags (`--reload-dir`, `--workers` semantics differ) [Source](https://github.com/emmett-framework/granian).
 
 **RULE-MIGR-001** — Alembic environment is initialized with `alembic init -t async` (or the newer `pyproject_async` template) [Source](https://alembic.sqlalchemy.org/en/latest/cookbook.html). `op.batch_alter_table(...)` is SQLite-only; on PostgreSQL it is unnecessary and Reject.
+
+**RULE-AUTHZ-MATCH-001** — Allowlist comparators in security-adjacent code paths (CORS, CSRF Origin/Referer, route-prefix gating, OAuth/OIDC redirect URIs, IP/host filters, trusted-proxy peer checks, allowed-host validation) MUST use exact-string equality against an explicit list. Permissive defaults — wildcard, prefix-only, case-insensitive substring — are forbidden unless the PRD explicitly mandates them. An empty allowlist denies everything; it never falls back to "allow all". The matcher is the same shape regardless of source language: backend uses `value in allowlist` against a normalized list; frontend uses `URL.pathname.startsWith(prefix)` only when the prefix itself is in the allowlist (never `String.prototype.includes`/substring/regex/fuzzy match).
+
+**RULE-TOOL-LINT-001** — Ruff `S` (flake8-bandit) selection MUST be enabled in `[tool.ruff.lint] select` and unwaived in CI. Per-line `# noqa: S###` requires a justification comment on the same line; bare `# noqa` and file-level `# ruff: noqa: S` are Reject. Pre-commit (`prek`) and CI both run `ruff check`; the rule is the enforcement point for "no eval, no exec, no hardcoded passwords, no weak crypto, no SSL verify-disable, no `requests` without timeout" and similar bandit-class findings [Source](https://docs.astral.sh/ruff/rules/#flake8-bandit-s).
 
 ## 5. Top Anti-Patterns
 
@@ -401,6 +408,10 @@ bind_contextvars(request_id=request_id)
 - Raise `litestar.exceptions.HTTPException` subclasses (`NotFoundException`, `PermissionDeniedException`, `ValidationException`) for 4xx.
 - Business errors subclass a project `AppError` and are translated by a single `exception_handlers={AppError: handle_app_error}` entry on the `Litestar(...)`.
 - Responses follow RFC 9457 (Problem Details) — Litestar 2 supports this natively [Source](https://github.com/litestar-org/litestar).
+
+**RULE-API-002** — All HTTP error responses MUST conform to RFC 9457 problem-details: `Content-Type: application/problem+json`; required members `type`, `title`, `status`, `detail`, `instance`; extensions allowed (Comradarr adds `errors[]` for validation, `context` for domain data, `retryable` boolean for connector classification). RFC 7807 is the obsoleted predecessor (superseded July 2023); do not cite RFC 7807 in new code, schemas, OpenAPI documentation, or commit messages. The on-the-wire shape is identical to 7807 — the change is the citation, not the bytes [Source](https://datatracker.ietf.org/doc/html/rfc9457).
+
+**ANTI-API-002** — Citing RFC 7807 in new code, error-class docstrings, OpenAPI `description` fields, or response schemas. Replace with RFC 9457. Pre-existing wording in third-party docs the project does not own (e.g. upstream Litestar source) is fine; project-owned text is not.
 
 ## 10. Canonical Patterns
 
