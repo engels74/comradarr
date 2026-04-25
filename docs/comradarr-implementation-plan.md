@@ -35,7 +35,7 @@ Out of scope for v1 (explicitly captured for backlog): command palette (Cmd+K), 
 ## 3. Assumptions and Open Questions
 
 - [ ] **Repo layout.** Assume the monorepo root contains `backend/` (PRD Appendix A) and `frontend/` (PRD §25 / frontend rules §7) as siblings, with `dev_cli/` (PRD §5) at the root. `[needs maintainer confirmation]` before scaffolding.
-- [ ] **OpenAPI spec source location.** Assume Litestar serves the spec at `/schema/openapi.json` (frontend rules `RULE-OAPI-001`); confirm Litestar 2.19 default vs. an override. `[needs maintainer confirmation]`
+- [x] **OpenAPI spec source location.** Resolved per §5.1.4 / §5.13.4: Litestar's OpenAPI controller is mounted at `/api/schema` (JSON spec at `/api/schema/openapi.json`, Swagger UI at `/api/docs`, ReDoc at `/api/redoc`). All three routes are authenticated (no schema discovery before auth — PRD §15 / §16) and rate-limited at 10 req/hr/IP. The `/api/schema` prefix supersedes the earlier `/schema/openapi.json` placement; consume from this location everywhere (frontend rules `RULE-OAPI-001`).
 - [ ] **Frontend i18n library.** PRD §28 leaves the choice between `svelte-i18n` and `@inlang/paraglide-js-adapter-sveltekit` open. **Default proposal:** Paraglide (cleaner Svelte 5 Runes + per-message tree-shaking). `[needs maintainer confirmation]` before integration.
 - [ ] **`uv` version pin.** Backend rules pin `>=0.11,<0.12`. Confirm the exact 0.11.x to install via `uv self update` in CI. `[needs maintainer confirmation]`
 - [x] **Bun lockfile format.** Resolved: text `bun.lock` (default since Bun 1.2) with `bun install --frozen-lockfile` for CI (backend rules canonical).
@@ -95,13 +95,13 @@ Phases are ordered so each one's outputs unblock the next. Workstreams (B = Back
 
 - [ ] Confirm monorepo layout: `backend/`, `frontend/`, `dev_cli/`, `docs/`, `.github/`, `prek.toml`, `LICENSE`, `README.md`, `CHANGELOG.md`, `CONTRIBUTING.md`, `Dockerfile`, `compose.example.yaml`.
 - [ ] Initialize backend with `uv init comradarr --build-backend uv_build` inside `backend/` (PRD Appendix A header) producing `pyproject.toml`, `uv.lock`, `.python-version` (`3.14`), `src/comradarr/__init__.py`, and a `py.typed` marker. Pin `requires-python = ">=3.14"` (RULE-PY-001).
-- [ ] Initialize frontend with `bun create svelte@latest frontend` then convert to the canonical layout in frontend rules §7 (`uno.config.ts`, `vite.config.ts`, `svelte.config.js` using `svelte-adapter-bun`, `components.json`, empty `tailwind.config.js`, `bunfig.toml`, `bun.lock`).
+- [ ] Initialize frontend with `bun create svelte@latest frontend` then convert to the canonical layout in frontend rules §7 (`uno.config.ts`, `vite.config.ts`, `svelte.config.js` using `svelte-adapter-bun`, `components.json`, empty `tailwind.config.js`, `bunfig.toml`, `bun.lock`) per RULE-BUN-001..004 (Bun runtime + adapter, lockfile committed, frozen-install in CI).
 - [ ] Add LICENSE (AGPL-3.0) at the repo root and a license header note in CONTRIBUTING.md per PRD §23.
 - [ ] Create `.gitignore` covering `__pycache__/`, `.venv/`, `node_modules/`, `dist/`, `build/`, `.svelte-kit/`, `*.comradarr-snapshot`, `coverage*`, `.DS_Store`, `.env*`.
 
 #### 5.0.2 Backend tooling
 
-- [ ] Add `[tool.ruff]` to `backend/pyproject.toml` with `target-version = "py314"`, `line-length = 100`, and `select = ["E","W","F","I","UP","B","C4","SIM","RET","TID","TCH","S"]` (PRD §23, ruff §S category in full).
+- [ ] Add `[tool.ruff]` to `backend/pyproject.toml` with `target-version = "py314"`, `line-length = 100`, and `select = ["E","W","F","I","UP","B","C4","SIM","RET","TID","TC","FA","ASYNC","N","PTH","S"]` (PRD §23, ruff `S` category in full; `TC` is the modern Ruff name — the legacy `TCH` alias is deprecated; `FA`, `ASYNC`, `N`, `PTH` enforce `from __future__ import annotations`, async correctness, naming, and pathlib usage per RULE-PY-002 / RULE-TOOL-002).
 - [ ] Add `[tool.basedpyright]` with `typeCheckingMode = "recommended"`, `enableTypeIgnoreComments = false`, `pythonVersion = "3.14"` (RULE-TOOL-003).
 - [ ] Add `[tool.pytest.ini_options]` with `asyncio_mode = "auto"`, `asyncio_default_fixture_loop_scope = "session"` (RULE-TEST-001).
 - [ ] Add Alembic config (`alembic.ini`) and run `uv run alembic init -t async migrations` to bootstrap the async env template (RULE-MIGR-001).
@@ -311,6 +311,8 @@ Phases are ordered so each one's outputs unblock the next. Workstreams (B = Back
 
 ### 5.5 Phase 5 — Setup gate + bootstrap + setup wizard backend
 
+> **Phase ordering note (cross-ref §7.3).** Phase 5 numerically precedes Phase 6 but **logically depends on the Phase 6 HTTP-boundary middleware skeleton** (CSP nonce, Origin/Referer CSRF check, security headers, allowed-hosts, cookie attribute matrix) being in place — the wizard renders SSR pages, sets the `comradarr_setup_claim` cookie, and serves SSE updates that all flow through that middleware. The two phases must be implemented in this order: **(a) land the Phase 6 middleware skeleton first** (controllers can be empty stubs at this point — middleware order, CSP nonce plumbing, Origin/Referer validator, Host validator, three-cookie attribute matrix, security-header set), **(b) then build Phase 5 wizard endpoints + setup-gate allowlist on top of that skeleton.** Wizard backend tasks below assume the skeleton already exists; do not start Phase 5 controllers until Phase 6 §5.6.1–§5.6.7 land. The numbering is preserved for cross-reference stability — the phases run in the dependency order, not the numeric order.
+
 #### 5.5.1 Setup gate middleware
 
 - [ ] Read `setup_completed` from `app_config` once per request (cache invalidated on change).
@@ -323,8 +325,8 @@ Phases are ordered so each one's outputs unblock the next. Workstreams (B = Back
 - [ ] Generate token at startup if and only if `setup_completed != "true"`. Format: **Crockford base32** alphabet (no `0/O/1/I/L`), **80 bits of entropy = 16 base32 chars**, hyphenated into **5-character segments** as `XXXXX-XXXXX-XXXXX-X` (PRD §15 "Three Distinct Credentials").
 - [ ] **TTL: 15 minutes** from process start (PRD §15 "TTL Ordering Is Intentional"); in-memory expiry timer clears the plaintext at TTL.
 - [ ] Storage: keep only the **Argon2id hash** (same params as the password hasher — 64 MiB / 3 iters / 4 lanes, PRD §15 "Argon2id Parameters") for comparison; never compare in plaintext. The plaintext is held in process memory only long enough to write the startup banner, then dropped.
-- [ ] Dual emission per PRD §15 "Token Generation and Visibility": stderr/stdout banner **and** a 0600-mode file at a documented path inside the container. The file is auto-deleted on token expiry, on successful Phase 3 completion, or on process restart.
-- [ ] Banner contents (stderr) must include, inside a visually distinctive separator block: (a) the full bootstrap setup URL with `0.0.0.0` (or any bind-all address) substituted to `localhost`, with the bootstrap token as a query parameter; (b) the absolute UTC expiry timestamp (ISO 8601); (c) explicit text noting the token is single-use, validated without consume, and consumed only on successful Phase 3 wizard completion.
+- [ ] Dual emission per PRD §15 "Token Generation and Visibility": **stdout banner** (canonical, captured by `docker logs`/`compose logs`) **and** a 0600-mode file at a documented path inside the container. The file is auto-deleted on token expiry, on successful Phase 3 completion, or on process restart. Stdout is the canonical stream because container log collectors default to capturing stdout; structured operational logs continue to go to stderr (the banner is intentionally cross-stream-aware so it surfaces under both default and reconfigured log routings).
+- [ ] Banner contents (stdout) must include, inside a visually distinctive separator block: (a) the full bootstrap setup URL with `0.0.0.0` (or any bind-all address) substituted to `localhost`, with the bootstrap token as a query parameter; (b) the absolute UTC expiry timestamp (ISO 8601); (c) explicit text noting the token is single-use, validated without consume, and consumed only on successful Phase 3 wizard completion.
 - [ ] **Token is consumed (cleared from memory + on-disk file deleted) ONLY on successful Phase 3 wizard completion (admin user written + `setup_completed="true"`).** It is NOT consumed on first claim — see §5.5.3 validate-without-consume.
 - [ ] Audit log: `bootstrap_token_generated` at emission (no token value, no hash); single-worker warning logged if multi-worker mode is detected while setup is incomplete (PRD §15 "Single-Worker Requirement").
 
@@ -412,7 +414,7 @@ The wizard exposes exactly **four operator-visible steps** under `/api/setup/*`.
   - [ ] applies explicit timeouts — `httpx.Timeout(connect=5.0, read=30.0, write=10.0, pool=5.0)` totalling at most 60 s wall-clock per request — and a per-host bounded connection pool `httpx.Limits(max_connections=10, max_keepalive_connections=5)` (RULE-HTTP-002 / RULE-HTTP-003);
   - [ ] sets `User-Agent: comradarr/0.1.0 (+https://github.com/engels74/comradarr)` on every outbound request;
   - [ ] respects per-connector TLS toggles (`insecure_skip_tls_verify`, `tls_ca_bundle_path`);
-  - [ ] caps the response body at **10 MiB** (`COMRADARR_CONNECTOR_RESPONSE_CAP_BYTES = 10 * 1024 * 1024`), enforced as a true byte budget over the streamed body regardless of `Content-Length`, and aborts with `HostileResponseError` on oversized, malformed-JSON, or unexpected-content-type responses (PRD §7 — gzip bombs, recursive nesting, oversized JSON);
+  - [ ] caps the response body at **256 MB by default, configurable per connector** (`COMRADARR_CONNECTOR_RESPONSE_CAP_BYTES = 256 * 1024 * 1024` at the global default; `connectors.response_cap_bytes` overrides per row), enforced as a **true byte budget over the streamed body regardless of `Content-Length`** (PRD §7 lines 275, 319), and aborts with `HostileResponseError` on oversized, malformed-JSON, or unexpected-content-type responses (PRD §7 — gzip bombs, recursive nesting, oversized JSON). The cap is the byte ceiling for legitimate Sonarr/Radarr large-payload responses (history pages, full library refreshes); per-connector overrides exist so an operator running an unusually large Sonarr instance can raise it without globally relaxing the SSRF posture;
   - [ ] runs JSON parsing through msgspec with hard limits — **max nesting depth 64**, **max object/array length 100 000 elements** — plus `strict=True` and the per-Struct `msgspec.Meta` size constraints from PRD §7, rejecting hostile payloads *before* the parse completes.
 - [ ] Maintain a per-connector consecutive-hostile-response counter (incremented on malformed JSON, oversized response, unexpected content-type, or msgspec validation failure):
   - [ ] **5 consecutive hostile responses → connector marked `degraded`** (rotation dispatch rate reduced; UI badge yellow);
@@ -593,6 +595,13 @@ The wizard exposes exactly **four operator-visible steps** under `/api/setup/*`.
 
 - [ ] `auth.py`, `connectors.py`, `content.py`, `views.py`, `common.py` — every request and response is a `msgspec.Struct` (RULE-SER-001).
 - [ ] DTOs only when shape projection differs from the Struct (DECIDE-DTO).
+- [ ] **`msgspec.Meta` constraint enumeration on every input field — defense in depth alongside the streaming byte budget from §5.7.1** (PRD §15.6 / §7 hostile-response defenses). Required `Annotated[..., msgspec.Meta(...)]` constraints by category:
+  - **Strings**: `max_length` on every free-form text field (usernames ≤ 64; passwords ≤ 1024; display names ≤ 200; URLs ≤ 2048; CIDRs ≤ 43; arbitrary notes ≤ 4096). `pattern` regex on identifier-shaped fields (provider short-names: `^[a-z][a-z0-9_-]{0,31}$`; connector names; permission names). `min_length=1` wherever empty is invalid.
+  - **Integers**: `ge`/`le` on every numeric field (port `ge=1, le=65535`; per-connector daily limit `ge=1, le=10000`; concurrent in-flight `ge=1, le=100`; pagination `size` `ge=1, le=500`; budget percentages `ge=0, le=100`).
+  - **Collections**: `max_length` on every list/dict field (allowed_origins ≤ 50; trusted-proxy IPs ≤ 100; api_key_scopes ≤ 32; oidc scopes ≤ 16; route predicates ≤ 16). Reject empty lists where the schema requires at least one entry.
+  - **Discriminated unions**: `tag_field` + `tag` on every polymorphic Struct (connector type, notification channel kind, OIDC provider kind) so msgspec rejects unknown tags before any handler runs.
+  - **Forbid extras**: every Struct uses `forbid_unknown_fields=True` (default for `msgspec.Struct` — keep it default, never override).
+- [ ] Constraint regression test: a Hypothesis property test that round-trips arbitrary JSON through every input Struct and asserts that any payload exceeding any declared `Meta` bound is rejected with `msgspec.ValidationError` *before* the handler runs (covers the bound is wired, not just declared).
 
 #### 5.13.3 Cursor pagination
 
@@ -636,14 +645,14 @@ The wizard exposes exactly **four operator-visible steps** under `/api/setup/*`.
 
 #### 5.14.2 Theme + UnoCSS
 
-- [ ] Confirm `presetWind4` + `unocss-preset-shadcn` + `extractorSvelte` registered (RULE-UNO-001).
+- [ ] Confirm `presetWind4` + `unocss-preset-shadcn` + `extractorSvelte` registered (RULE-UNO-001 / RULE-UNO-002 / RULE-UNO-003 — preset order, preset-shadcn integration, extractor for Svelte components).
 - [ ] Move tweakcn Northern Lights tokens into `src/app.css` `:root` and `[data-theme="dark"]`.
 - [ ] Add `--spacing-local` override mechanism per surface (PRD §25 density scales).
 - [ ] Implement `useReducedMotion` composable (PRD §25 motion contract).
 
 #### 5.14.3 OpenAPI client (`src/lib/api/`)
 
-- [ ] `scripts/gen-api.ts` runs `openapi-typescript http://localhost:8000/schema/openapi.json -o src/lib/api/schema.d.ts`.
+- [ ] `scripts/gen-api.ts` runs `openapi-typescript http://localhost:8000/api/schema/openapi.json -o src/lib/api/schema.d.ts` (RULE-OAPI-001 — consume Litestar's OpenAPI surface at the canonical `/api/schema` mount from §5.1.4).
 - [ ] `client.ts` exports `createBrowserClient()` returning `createClient<paths>({ baseUrl: '' })`.
 - [ ] `server.ts` exports `createServerClient(event)` returning `createClient<paths>({ baseUrl: '', fetch: event.fetch })` (RULE-OAPI-003).
 - [ ] Add the `gen-api` script to dev-CLI and to a CI step that fails when the regenerated file diffs from the committed one.
@@ -682,9 +691,9 @@ The wizard exposes exactly **four operator-visible steps** under `/api/setup/*`.
 
 ### 5.16 Phase 16 — Frontend dashboard
 
-- [ ] `(app)/+page.svelte` dashboard with: rotation heartbeat status card, sync progress per connector, search throughput, budget consumption, recent activity feed; each card consumes a typed slice of the BFF payload.
+- [ ] `(app)/+page.svelte` dashboard with: rotation heartbeat status card, sync progress per connector, search throughput, budget consumption, recent activity feed; each card consumes a typed slice of the BFF payload (RULE-RUNES-001 / RULE-RUNES-002 — `$state` for component-local reactivity, `$derived` for computed slices, no legacy `let`-based stores).
 - [ ] `+page.server.ts` calls `GET /api/views/dashboard`.
-- [ ] `src/lib/state/sse.svelte.ts` class-based store wrapping `EventSource('/api/events/stream')`; reconnect with backoff; exposes `events` reactive list and per-event `subscribe` callbacks.
+- [ ] `src/lib/state/sse.svelte.ts` class-based store wrapping `EventSource('/api/events/stream')`; reconnect with backoff; exposes `events` reactive list and per-event `subscribe` callbacks (RULE-RUNES-003 / RULE-RUNES-004 — class-based stores using `$state` over module-level let bindings; `$effect` for lifecycle wiring; RULE-EVENTS-001 — typed event names from `comradarr/core/events.py` shared across the SSE boundary).
 - [ ] On every applicable SSE event, call `invalidate('app:dashboard')` so SvelteKit re-runs the load.
 - [ ] Tint-on-change wraps every counter; numerals render `font-mono`.
 - [ ] Hero area carries the subtle aurora gradient wash (PRD §25).
@@ -712,21 +721,13 @@ The wizard exposes exactly **four operator-visible steps** under `/api/setup/*`.
 - [ ] OIDC providers list/edit; secret rotation flows.
 - [ ] **Trusted-header settings page.** Implements the PRD §15 trusted-header authentication surface:
   - Enable/disable toggle, header-name picker (presets for authelia/authentik/traefik ForwardAuth/nginx-ingress + custom), optional companion email header field, provisioning policy selector (auto-provision vs. strict-match), and a `logout_url` field.
-  - **Typed-out confirmation modal** when adding or changing entries in the trusted-proxy IP allowlist. The modal renders the literal PRD §15 copy: "Adding this IP or range grants permission to log in as any user by setting an HTTP header. Only proceed if you control every host in this range and every process on it. Do you want to continue?" The operator must type a confirmation phrase verbatim (a click-through is not sufficient — PRD §15 mandates typed confirmation). Exact phrase to type `[needs maintainer confirmation]`; default proposal: the IP/CIDR being added (so the typed string is content-bound and cannot be muscle-memoried), with `I understand` as a fallback.
+  - **Typed-out confirmation modal** when adding or changing entries in the trusted-proxy IP allowlist. The modal renders the literal PRD §15 copy: "Adding this IP or range grants permission to log in as any user by setting an HTTP header. Only proceed if you control every host in this range and every process on it. Do you want to continue?" The operator must type a confirmation phrase verbatim (a click-through is not sufficient — PRD §15 mandates typed confirmation). **Exact phrase to type: the literal IP or CIDR being added** (e.g. typing `10.0.0.5` to confirm adding `10.0.0.5`, or typing `192.168.1.0/24` to confirm adding that range). Content-binding the typed string to the value being added defeats muscle-memorisation across multiple ranges and forces the operator to look at the IP/CIDR they are about to grant header-auth to. The validation is server-side (§5.4.3) so a tampered front end cannot bypass it.
   - **Warning banner** rendered prominently on the trusted-header settings page whenever the trusted-header provider is enabled and the `logout_url` field is empty (per PRD §15: "When the trusted-header provider is enabled, the settings UI flags a missing logout URL as a warning").
   - Form-level validation rejects invalid IP/CIDR entries with a specific error.
   - Audit log entries surface both the authenticating user and the trusted-proxy IP that attached the identity header.
 - [ ] Connection policy selector (default / strict / permissive) with explanatory copy and a "this is destructive" warning when permissive is chosen.
 - [ ] Theme + locale + timezone preferences.
 - [ ] **Install name editor** (PRD §15 + §30 + §3 resolution): edit the `install_name` row in `app_config`; default `comradarr`. Used in snapshot filenames.
-
-#### 5.18.6 Sessions
-
-- [ ] Sessions list page (PRD §15 mandates this UI affordance) showing every active session for the current user — creation time, last-seen, source IP, user-agent, authenticating provider (local / trusted-header / oidc:&lt;provider&gt;), and a marker for the current session.
-- [ ] Per-row "revoke" action.
-- [ ] **"Revoke all other sessions" button** that revokes every session for the current user except the one making the request. Confirmation dialog warns this signs out every other browser/device.
-- [ ] Audit-log entries on every revocation.
-- [ ] Reflect SSE-driven updates so a session revoked elsewhere disappears live.
 
 #### 5.18.3 Audit log
 
@@ -746,6 +747,14 @@ The wizard exposes exactly **four operator-visible steps** under `/api/setup/*`.
 - [ ] Routes matrix UI: rows = event types, columns = channels, cells = enabled toggle.
 - [ ] Templates editor per `(event_type, channel_kind)` showing built-in default + override field; warns when `{{variable}}` placeholders are dropped.
 - [ ] Test send button per channel.
+
+#### 5.18.6 Sessions
+
+- [ ] Sessions list page (PRD §15 mandates this UI affordance) showing every active session for the current user — creation time, last-seen, source IP, user-agent, authenticating provider (local / trusted-header / oidc:&lt;provider&gt;), and a marker for the current session.
+- [ ] Per-row "revoke" action.
+- [ ] **"Revoke all other sessions" button** that revokes every session for the current user except the one making the request. Confirmation dialog warns this signs out every other browser/device.
+- [ ] Audit-log entries on every revocation.
+- [ ] Reflect SSE-driven updates so a session revoked elsewhere disappears live.
 
 ### 5.19 Phase 19 — i18n + accessibility
 
@@ -792,9 +801,16 @@ The wizard exposes exactly **four operator-visible steps** under `/api/setup/*`.
 
 #### 5.20.3 Prometheus
 
-- [ ] `/metrics` opt-in via `app_config`; IP allowlist enforced at the endpoint level.
+- [ ] `/metrics` opt-in via `app_config` (`prometheus_metrics_enabled`, default `false`); when disabled the route is unregistered (returns 404, not 401/403, to avoid leaking the feature's existence). PRD §22 mandates this surface live behind an **independent IP allowlist distinct from the auth gate** — `/metrics` must be reachable by Prometheus scrapers that do not have an admin session and must not be reachable by the open internet even after auth is configured.
+- [ ] **Allowlist enforcement mechanism (pinned).** A dedicated **route guard on the `/metrics` controller** runs *before* the auth/permission middleware short-circuits and consults a separate config row (`metrics_allowed_ips` in `app_config`, list of IP/CIDR strings, default `[]` = all-deny). The guard:
+  - reads the **resolved client IP from the trusted-proxy chain** stamped on request state by §5.6.1 — never raw `X-Forwarded-For`, never the socket peer when behind a trusted proxy, exactly the same source the auth middleware uses;
+  - matches the resolved IP against `metrics_allowed_ips` using `ipaddress.ip_address(...) in ipaddress.ip_network(cidr)` for every entry (loopback/private ranges are NOT auto-allowed — operators must list them explicitly so a misconfiguration fails closed);
+  - on miss returns **HTTP 403 with empty body and no headers beyond the security-header baseline** (no Problem Details — Prometheus scrapers do not parse problem+json and the structured body would help reconnaissance);
+  - on hit, hands off to the metrics renderer **bypassing the auth/CSRF/permission middleware** entirely — the IP allowlist is the only authentication on this route.
+- [ ] **Why a route guard, not the auth gate or a reverse-proxy contract.** PRD §22 requires the allowlist to be enforced *inside the application* so a misconfigured reverse proxy cannot accidentally expose `/metrics` to the public internet (the auth gate blocks unauthenticated users in general but `/metrics` must be reachable without auth — the guard is the only layer that enforces "no auth AND specific IPs only"). A reverse-proxy-only contract was rejected because it ties the security posture to operator-managed infrastructure outside this codebase's control.
 - [ ] Expose: HTTP request counts/latencies (per route + status), sync duration per connector, rotation dispatch counts per tick, command tracking latencies, budget consumption per connector, active session count, DB pool saturation, Python process metrics (PRD §29).
 - [ ] No user-identifying labels.
+- [ ] Acceptance test: a request to `/metrics` from an IP not in `metrics_allowed_ips` returns 403 with empty body even when the request bears a valid admin session cookie; a request from an allowed IP without any session returns the metrics text format with status 200.
 
 #### 5.20.4 OpenTelemetry
 
@@ -805,7 +821,46 @@ The wizard exposes exactly **four operator-visible steps** under `/api/setup/*`.
 #### 5.21.1 Snapshot format
 
 - [ ] Define inner JSON schema with a **schema version integer** in the envelope (advances on every breaking structural change); populate exactly the fields enumerated in PRD §30 (and exclude every excluded item — mirror tables, schedule, planned commands, sync state, sessions, rate limit state, audit log).
-- [ ] Define the encryption envelope: header (format version, Argon2id parameters, salt, GCM nonce) + authenticated ciphertext (PRD §30). The format version is independent of the inner schema version and changes only on cryptographic primitive changes.
+- [ ] **Snapshot file binary header layout (pinned, big-endian, all multi-byte integers network order).** The header is an unencrypted, GCM-authenticated prefix; every field below is included verbatim in the AES-GCM **AAD** for the ciphertext that follows it (so any tamper of the header invalidates the auth tag and the import refuses):
+  ```
+  Offset  Size  Field                       Notes
+  ------  ----  --------------------------  --------------------------------------
+  0x00    4     magic_bytes                 ASCII "CRSN" (Comradarr SNapshot)
+  0x04    2     format_version              uint16; v1 = 0x0001 (changes on
+                                            crypto-primitive breaks only — NOT on
+                                            inner JSON schema bumps; that lives in
+                                            the encrypted payload's `schema_version`)
+  0x06    2     header_length               uint16 byte length of the full header
+                                            (including this field, excluding tag)
+  0x08    1     kdf_id                      uint8; 0x01 = Argon2id (only value
+                                            defined for v1)
+  0x09    4     argon2_memory_kib           uint32 KiB; v1 default = 1048576 (1 GiB)
+  0x0D    4     argon2_iterations           uint32; v1 default = 4
+  0x0E    1     argon2_lanes                uint8; v1 default = 4
+  0x0F    1     salt_length                 uint8; v1 fixed = 16
+  0x10    16    salt                        random per export
+  0x20    1     cipher_id                   uint8; 0x01 = AES-256-GCM
+                                            (only value defined for v1)
+  0x21    1     nonce_length                uint8; v1 fixed = 12
+  0x22    12    gcm_nonce                   96-bit random per export
+  0x2E    8     plaintext_length            uint64 byte length of the plaintext
+                                            JSON document (sanity-check the
+                                            decrypted size matches before parsing)
+  0x36    32    install_name_hash           SHA-256 of the install_name string at
+                                            export time; informational only — not a
+                                            secret, used to display "exported from
+                                            <name>" in the import preview
+  0x56    ...   reserved/extension_tlv      remaining bytes up to header_length;
+                                            reserved for forward-compat TLV blobs
+                                            (type:uint8, length:uint16, value:bytes)
+  N       16    gcm_auth_tag                128-bit AES-GCM tag binding header AAD
+                                            + ciphertext
+  N+16    ...   ciphertext                  AES-256-GCM-encrypted JSON document
+  ```
+  - **AAD scheme:** the entire byte range `[0x00 .. 0x00+header_length)` is fed to the GCM AAD before any plaintext bytes; the auth tag is verified before any decrypted byte is exposed to the JSON parser. Any header field tamper (including `format_version`, KDF parameter cranking, or salt swap) invalidates the tag and the import refuses with `SnapshotIntegrityError`.
+  - **Magic bytes** make the file type identifiable to `file(1)` and to defensive checks at import (refuse files that do not start with `CRSN`).
+  - **Format version is independent of inner JSON schema version.** `format_version` advances only when cryptographic primitives change (e.g. swapping AES-256-GCM for ChaCha20-Poly1305, or Argon2id for Argon2id-with-different-defaults). Inner schema changes (added/removed JSON fields) bump only the `schema_version` integer inside the encrypted payload — the file's binary frame stays at format_version=1 across many schema-version bumps.
+  - **Reserved TLV region** lets future versions add fields (e.g. an HKDF-Extract context, a key-version pointer) without bumping `format_version` — readers that see an unknown TLV type ignore it; readers that require an unknown TLV type bump `format_version`.
 - [ ] Decryption code for old format versions is retained indefinitely (snapshot files in the wild cannot be retroactively re-encrypted, per PRD §30).
 - [ ] Inner schema imports support one major version behind current (per PRD §30); older snapshots are rejected with a structured error directing the operator to import incrementally.
 
@@ -846,6 +901,7 @@ The wizard exposes exactly **four operator-visible steps** under `/api/setup/*`.
 - [ ] `tests/connectors/` replaying recorded fixtures via `httpx.MockTransport`.
 - [ ] One scenario per connector method.
 - [ ] Nightly canary workflow runs a small subset against demo upstream; on diff, opens an issue automatically.
+- [ ] **DNS-rebinding regression test (PRD §15.4).** A dedicated test under `tests/connectors/test_ssrf_dns_rebind.py` constructs a stub DNS resolver that returns a public IP on the first lookup of `attacker.example` (passing the URL classifier at validation time) and `127.0.0.1` on every subsequent lookup. Inject it via `httpx.AsyncClient(transport=httpx.AsyncHTTPTransport(local_address=...))` with a custom resolver hook so the SSRF-defended client (§5.7.1) sees the rebound result on the actual GET request. Assert: (a) the request raises `UrlClassificationError` (private IP rejection) — never reaches the upstream socket; (b) the per-connector hostile-response counter does NOT increment (rebinding is a URL-policy reject, not a hostile response); (c) **the same assertion holds on every redirect hop** — a 302 to a hostname that resolves to a private IP is rejected at the redirect-classification step. Run on every CI build (not just nightly) — DNS rebind is the highest-impact SSRF regression class.
 
 #### 5.22.4 API tests
 
