@@ -1,0 +1,55 @@
+# prek.toml — pre-commit hooks configuration
+# Docs: https://prek.j178.dev/configuration/
+#
+# Monorepo adaptation of PRD §23 lines 1808-1844 (the canonical verbatim block).
+# Backend hooks `cd backend &&` and frontend hooks `cd frontend &&` because
+# `uv run` and `bunx` resolve their configs from cwd, and there is no
+# pyproject.toml / package.json at the repo root. Project-scoped hooks
+# (basedpyright, biome-check, svelte-check, tsc, uv-lock, ruff) use
+# `pass_filenames = false` so prek does not append repo-root-relative paths
+# that would not resolve under the per-block cwd. `files` regexes still
+# trigger the hook only when the relevant subtree changes. Documented as
+# §3.1 deviation in Milestone E ("PRD §23 prek block monorepo adaptation").
+
+# Builtin hooks — fast, offline, Rust-native
+[[repos]]
+repo = "builtin"
+hooks = [
+  { id = "trailing-whitespace" },
+  { id = "end-of-file-fixer" },
+  { id = "check-merge-conflict" },
+  { id = "check-added-large-files" },
+  { id = "detect-private-key" },
+  { id = "check-json" },
+  { id = "check-toml" },
+  { id = "check-yaml" },
+  { id = "no-commit-to-branch", args = ["--branch", "main"] },
+]
+
+# Backend (Python) — ruff, basedpyright, uv lockfile drift
+[[repos]]
+repo = "local"
+hooks = [
+  { id = "ruff-lint",   name = "ruff lint",       entry = "bash -c 'cd backend && uv run ruff check --fix .'", language = "system", types = ["python"], pass_filenames = false, files = "^backend/" },
+  { id = "ruff-format", name = "ruff format",     entry = "bash -c 'cd backend && uv run ruff format .'",      language = "system", types = ["python"], pass_filenames = false, files = "^backend/" },
+  { id = "basedpyright", name = "basedpyright",   entry = "bash -c 'cd backend && uv run basedpyright'",       language = "system", types = ["python"], pass_filenames = false, always_run = true },
+  { id = "uv-lock",     name = "uv lock --check", entry = "bash -c 'cd backend && uv lock --check'",           language = "system", files = "^backend/(pyproject\\.toml|uv\\.lock)$", pass_filenames = false },
+]
+
+# Frontend (SvelteKit / Bun) — biome, svelte-check, tsc
+[[repos]]
+repo = "local"
+hooks = [
+  { id = "biome-check", name = "biome check",   entry = "bash -c 'cd frontend && bunx biome check --write --files-ignore-unknown=true --no-errors-on-unmatched .'", language = "system", types = ["text"], files = "^frontend/.*\\.(js|ts|jsx|tsx|json|jsonc|css|svelte)$", pass_filenames = false },
+  { id = "svelte-check", name = "svelte check", entry = "bash -c 'cd frontend && bunx svelte-check --threshold warning'", language = "system", always_run = true, pass_filenames = false },
+  { id = "type-check",  name = "tsc type check", entry = "bash -c 'cd frontend && bunx tsc --noEmit'",        language = "system", always_run = true, pass_filenames = false },
+]
+
+# Project-local — Bun pin parity (Refinement #4, plan-only project decision).
+# Project-local additions are permitted (PRD §23 mandates verbatim core blocks,
+# does not forbid extensions). Documented as §3.1 deviation in Milestone E.
+[[repos]]
+repo = "local"
+hooks = [
+  { id = "check-bun-pin-parity", name = "check bun pin parity", entry = "tools/lint/check-bun-pin-parity.sh", language = "system", files = "^(frontend/package\\.json|frontend/bunfig\\.toml|\\.tool-versions)$", pass_filenames = false },
+]

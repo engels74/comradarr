@@ -1,0 +1,50 @@
+# CI fast-lane budget: cold cache ~5 min (one-time), warm cache <2 min per PRD §23.
+# Action pinning posture: tag-pin per PRD §23 line 1775 (NOT SHA-pin — see §3.1 if amended).
+# Tag versions below: actions/checkout@v6 is doc-anchored (PRD §23:1775, plan §5.0.4:134).
+# setup-python@v6, setup-uv@v6, setup-bun@v2 are [plan-only project decision] — confirm
+# current major tags exist at sign-off (Q-8); update via Renovate per PRD §23:1777.
+name: ci
+on: [push, pull_request]
+permissions:
+  contents: read
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  backend:
+    runs-on: ubuntu-latest # Q-6
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6   # reads .tool-versions
+      - uses: astral-sh/setup-uv@v6
+      - working-directory: backend
+        run: |
+          uv sync --frozen
+          uv run ruff check .
+          uv run ruff format --check .
+          uv run basedpyright
+      # pip-audit is wrapped per §3.1 deviation — see tools/lint/run-pip-audit.sh.
+      # Plan §5.0.4 step 6 specifies bare `uv run pip-audit --strict`; the wrapper
+      # exists because the editable local pkg + CVE-2026-3219 in pip 26.0.1
+      # combination is incompatible with bare --strict. F-11 tracks unwinding.
+      - run: tools/lint/run-pip-audit.sh
+        # pytest deliberately omitted in Phase 0 — re-added in Phase 1 (F-4)
+        # when first integration test lands.
+  frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: oven-sh/setup-bun@v2     # bun-version: from .tool-versions OR pinned to 1.3.x
+      - working-directory: frontend
+        run: |
+          bun install --frozen-lockfile
+          bun run check
+          bunx tsc --noEmit
+          bun run lint
+          bun test
+  prek:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - run: pip install prek
+      - run: prek run --all-files
