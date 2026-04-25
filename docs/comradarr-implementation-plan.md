@@ -4,7 +4,7 @@
 
 **Title:** Comradarr v0.1.0 implementation plan.
 
-**Objective:** Deliver a single-container, self-hosted rotation/orchestration layer over Sonarr, Radarr, and (optionally) Prowlarr that continuously cycles every library item through search, mirrors *arr state in PostgreSQL, ships with a setup wizard, three authentication providers, an audit log, a notification system, an SSE-driven SvelteKit frontend, and the supply chain / observability / deployment posture documented in `docs/comradarr-prd.md` (sections 1–30 + appendices A–C). All work strictly conforms to `.augment/rules/backend-dev-pro.md` (Litestar 2.x / Granian 2.x / msgspec 0.20 / SQLAlchemy 2.0 async / Python 3.14+ / structlog / uv / ruff / basedpyright recommended) and `.augment/rules/frontend-dev-pro.md` (SvelteKit 2 + Svelte 5 Runes, Bun 1.3.x, UnoCSS presetWind4, unocss-preset-shadcn, shadcn-svelte 1.1.x, openapi-typescript + openapi-fetch, Biome 2.4.x, svelte-adapter-bun).
+**Objective:** Deliver a single-container, self-hosted rotation/orchestration layer over Sonarr, Radarr, and (optionally) Prowlarr that continuously cycles every library item through search, mirrors *arr state in PostgreSQL, ships with a setup wizard, three authentication providers, an audit log, a notification system, an SSE-driven SvelteKit frontend, and the supply chain / observability / deployment posture documented in `docs/comradarr-prd.md` (sections 1–30 + appendices A–C). All work strictly conforms to `.augment/rules/backend-dev-pro.md` (Litestar 2.x / Granian 2.x / msgspec 0.20 / SQLAlchemy 2.0 async / Python 3.14+ / structlog / uv / ruff / basedpyright recommended) and `.augment/rules/frontend-dev-pro.md` (SvelteKit 2 + Svelte 5 Runes, **Bun 1.3.x runtime with `bun.lock` text-format lockfile floor of Bun 1.2** per RULE-BUN-001..004, UnoCSS presetWind4, unocss-preset-shadcn, shadcn-svelte 1.1.x, openapi-typescript + openapi-fetch, Biome 2.4.x, svelte-adapter-bun).
 
 ---
 
@@ -21,7 +21,7 @@
 - [ ] Notification system: apprise + webhook channels, template engine (`{{var}}` + `{{#if}}`), per-user routes, coalescing window, gettext integration.
 - [ ] Frontend SvelteKit 2 + Svelte 5 Runes app shell with Northern Lights theme, sidebar layout, dashboard, content browser at scale (cursor pagination + virtual scrolling), connectors, settings, audit log, notifications, i18n via Weblate, WCAG 2.2 AA.
 - [ ] Observability: structured logging (structlog), Prometheus `/metrics` (opt-in), OpenTelemetry traces (opt-in), `/health`, traceback hygiene, log redaction.
-- [ ] RFC 7807 Problem Details error model end-to-end.
+- [ ] RFC 9457 Problem Details error model end-to-end (per backend rules `RULE-API-002`; supersedes the obsoleted RFC 7807 wording carried in PRD §17 / §21 / Glossary — the on-the-wire shape is identical, the citation IETF tracks RFC 9457 since July 2023; PRD wording will be reconciled in a follow-up doc pass).
 - [ ] Import/export: passphrase-encrypted snapshot via Argon2id + AES-256-GCM.
 - [ ] Supply chain: `uv.lock` + `bun.lock` frozen installs, vulnerability scanning, code-level bans via ruff `S`, `prek` pre-commit using `prek.toml`, Biome + svelte-check + tsc.
 - [ ] Single Docker image bundling Granian + pre-built SvelteKit assets + supervised PostgreSQL, with `DATABASE_URL` override path.
@@ -36,7 +36,7 @@ Out of scope for v1 (explicitly captured for backlog): command palette (Cmd+K), 
 
 - [ ] **Repo layout.** Assume the monorepo root contains `backend/` (PRD Appendix A) and `frontend/` (PRD §25 / frontend rules §7) as siblings, with `dev_cli/` (PRD §5) at the root. `[needs maintainer confirmation]` before scaffolding.
 - [x] **OpenAPI spec source location.** Resolved per §5.1.4 / §5.13.4: Litestar's OpenAPI controller is mounted at `/api/schema` (JSON spec at `/api/schema/openapi.json`, Swagger UI at `/api/docs`, ReDoc at `/api/redoc`). All three routes are authenticated (no schema discovery before auth — PRD §15 / §16) and rate-limited at 10 req/hr/IP. The `/api/schema` prefix supersedes the earlier `/schema/openapi.json` placement; consume from this location everywhere (frontend rules `RULE-OAPI-001`).
-- [ ] **Frontend i18n library.** PRD §28 leaves the choice between `svelte-i18n` and `@inlang/paraglide-js-adapter-sveltekit` open. **Default proposal:** Paraglide (cleaner Svelte 5 Runes + per-message tree-shaking). `[needs maintainer confirmation]` before integration.
+- [x] **Frontend i18n library.** Resolved: **Paraglide (`@inlang/paraglide-js-adapter-sveltekit`)** is the chosen library — cleaner Svelte 5 Runes integration, per-message tree-shaking, and SSR locale resolution match the rest of the frontend stack. `svelte-i18n` is the documented fallback if Paraglide upstream stalls; revisit only on a Paraglide-specific blocker. PRD §28 wording reconciled in this plan.
 - [ ] **`uv` version pin.** Backend rules pin `>=0.11,<0.12`. Confirm the exact 0.11.x to install via `uv self update` in CI. `[needs maintainer confirmation]`
 - [x] **Bun lockfile format.** Resolved: text `bun.lock` (default since Bun 1.2) with `bun install --frozen-lockfile` for CI (backend rules canonical).
 - [x] **shadcn-svelte CLI under UnoCSS workaround.** Resolved: per `RULE-SHADCN-002`, an empty `tailwind.config.js` stub is committed at the frontend root and excluded from Biome formatting via `biome.json` overrides.
@@ -49,7 +49,7 @@ Out of scope for v1 (explicitly captured for backlog): command palette (Cmd+K), 
 - [x] **Renovate vs. Dependabot.** Resolved: Renovate (richer grouping rules; better fit for `uv.lock` + `bun.lock` + workflow files).
 - [x] **Trusted-header role claim.** Resolved per PRD §26: in v1 ignore `X-Comradarr-Role` but reserve the schema column for post-v1.
 - [x] **Friendly install name.** Resolved per PRD §15 + §30: store `install_name` as a key/value row in the `app_config` table, defaulting to `comradarr`. The setup wizard's confirmation step writes the initial value; the post-setup settings UI exposes it for later editing. Used in snapshot filenames (`<install_name>-<ISO timestamp>.comradarr-snapshot`).
-- [ ] **Dev CLI command surface.** PRD §5 specifies the dev CLI at a high level. Confirm the canonical command names (`dev_cli check`, `dev_cli regen-types`, `dev_cli db-up`, `dev_cli pg`, etc.). `[needs maintainer confirmation]`
+- [x] **Dev CLI command surface.** Resolved: canonical command set pinned at `dev_cli check / format / lint / typecheck / test / test-fast / db-up / db-down / migrate / pg / regen-types / i18n extract / serve / record-fixture / replay-canary / snapshot-export / snapshot-import` (cross-ref §5.24.3). The `dev_cli check` umbrella runs the same gates as the CI fast lane so local-pass implies CI-pass per PRD §23.
 - [ ] **Rotation backoff vs Prowlarr indexer status.** PRD §11 references Prowlarr health driving budget; confirm whether disabled indexers should remove their share from the budget immediately or after a debounce. `[needs maintainer confirmation]`
 
 ---
@@ -67,7 +67,7 @@ Phases are ordered so each one's outputs unblock the next. Workstreams (B = Back
 - [ ] **Phase 6 — HTTP boundary hardening.** Trusted proxy resolver, public origin canonicalization, CORS, allowed-hosts middleware, double-submit CSRF, security headers, CSP, cookie attributes (B, S).
 - [ ] **Phase 7 — Connector subsystem.** SSRF + hostile-response HTTP client wrapper, URL classifier with three policies, per-connector TLS toggles, connector factory, connector model + repository, error normalization, base shapes (B).
 - [ ] **Phase 8 — Sonarr / Radarr / Prowlarr clients.** msgspec models, typed client methods, Prowlarr indexer health mapper, recorded-fixture replay infrastructure (B, Q).
-- [ ] **Phase 9 — Sync engine.** Fingerprint computation, three-tier sync (full / deep / incremental), differ, applier, sync coordinator background task, mappers per arr type, schedule writer (B).
+- [ ] **Phase 9 — Sync engine.** Fingerprint computation, three-tier sync (full / deep / incremental), differ, applier, sync coordinator background task, mappers per arr type with semantic validation, schedule writer that materializes `search_schedule` rows from the applied diff (B).
 - [ ] **Phase 10 — Rotation engine.** Tier classifier, schedule reader, planner protocol + Sonarr/Radarr planners, budget protocol + default + Prowlarr resolvers, dispatcher, tracker, priority search consumer, rotation engine background loop (B).
 - [ ] **Phase 11 — Event bus + SSE.** Typed in-process event bus, SSE controller with per-client backpressure, event filter for SSE-safe payloads (B, F).
 - [ ] **Phase 12 — Notifications.** Notification channels (apprise + webhook) with test-before-commit, routes, templates with constrained engine, dispatcher with coalescing window, gettext catalog wiring, notification audit hooks (B, S).
@@ -94,14 +94,14 @@ Phases are ordered so each one's outputs unblock the next. Workstreams (B = Back
 #### 5.0.1 Repo scaffold
 
 - [ ] Confirm monorepo layout: `backend/`, `frontend/`, `dev_cli/`, `docs/`, `.github/`, `prek.toml`, `LICENSE`, `README.md`, `CHANGELOG.md`, `CONTRIBUTING.md`, `Dockerfile`, `compose.example.yaml`.
-- [ ] Initialize backend with `uv init comradarr --build-backend uv_build` inside `backend/` (PRD Appendix A header) producing `pyproject.toml`, `uv.lock`, `.python-version` (`3.14`), `src/comradarr/__init__.py`, and a `py.typed` marker. Pin `requires-python = ">=3.14"` (RULE-PY-001).
-- [ ] Initialize frontend with `bun create svelte@latest frontend` then convert to the canonical layout in frontend rules §7 (`uno.config.ts`, `vite.config.ts`, `svelte.config.js` using `svelte-adapter-bun`, `components.json`, empty `tailwind.config.js`, `bunfig.toml`, `bun.lock`) per RULE-BUN-001..004 (Bun runtime + adapter, lockfile committed, frozen-install in CI).
+- [ ] Initialize backend with `uv init comradarr --build-backend uv_build` inside `backend/` (PRD Appendix A header) producing `pyproject.toml`, `uv.lock`, `.python-version` (`3.14`), `src/comradarr/__init__.py`, and a `py.typed` marker. Pin `requires-python = ">=3.14"` (RULE-PY-001). Commit `uv.lock` and gate CI on `uv sync --frozen` per **RULE-TOOL-001** (uv is the only sanctioned package/lock manager — pip, poetry, hatch, pdm, conda are forbidden) and **RULE-TOOL-002** (frozen-install in CI).
+- [ ] Initialize frontend with `bun create svelte@latest frontend` then convert to the canonical layout in frontend rules §7 (`uno.config.ts`, `vite.config.ts`, `svelte.config.js` using `svelte-adapter-bun`, `components.json`, empty `tailwind.config.js`, `bunfig.toml`, `bun.lock`) per **RULE-BUN-001** (Bun runtime), **RULE-BUN-002** (svelte-adapter-bun), **RULE-BUN-003** (text `bun.lock` committed), **RULE-BUN-004** (frozen-install in CI), and **ANTI-PM-001 / ANTI-PM-002** — npm, pnpm, and yarn are forbidden anywhere in the frontend, including lockfile fragments, `package-lock.json` / `pnpm-lock.yaml` / `yarn.lock` artifacts, scripts that invoke them, or CI steps that fall through to them. Pre-commit blocks committing any of those files; CI fails on their presence.
 - [ ] Add LICENSE (AGPL-3.0) at the repo root and a license header note in CONTRIBUTING.md per PRD §23.
 - [ ] Create `.gitignore` covering `__pycache__/`, `.venv/`, `node_modules/`, `dist/`, `build/`, `.svelte-kit/`, `*.comradarr-snapshot`, `coverage*`, `.DS_Store`, `.env*`.
 
 #### 5.0.2 Backend tooling
 
-- [ ] Add `[tool.ruff]` to `backend/pyproject.toml` with `target-version = "py314"`, `line-length = 100`, and `select = ["E","W","F","I","UP","B","C4","SIM","RET","TID","TC","FA","ASYNC","N","PTH","S"]` (PRD §23, ruff `S` category in full; `TC` is the modern Ruff name — the legacy `TCH` alias is deprecated; `FA`, `ASYNC`, `N`, `PTH` enforce `from __future__ import annotations`, async correctness, naming, and pathlib usage per RULE-PY-002 / RULE-TOOL-002).
+- [ ] Add `[tool.ruff]` to `backend/pyproject.toml` with `target-version = "py314"`, `line-length = 100`, and `select = ["E","W","F","I","UP","B","C4","SIM","RET","TID","TC","FA","ASYNC","N","PTH","S"]` (PRD §23, ruff `S` category in full; `TC` is the modern Ruff name — the legacy `TCH` alias is deprecated). **`FA` enforces the absence of `from __future__ import annotations` per RULE-PY-002** — on a Python 3.14 target the import is unused (PEP 649 deferred-evaluation handles forward refs natively), so `FA100` / `FA102` warn whenever the import or its compatibility-only equivalents appear. `ASYNC`, `N`, `PTH` enforce async-correctness (RULE-ASYNC-001 / RULE-ASYNC-002), naming, and `pathlib`-over-`os.path` per RULE-PY-002. The full ruff toolchain pin lives in RULE-TOOL-002.
 - [ ] Add `[tool.basedpyright]` with `typeCheckingMode = "recommended"`, `enableTypeIgnoreComments = false`, `pythonVersion = "3.14"` (RULE-TOOL-003).
 - [ ] Add `[tool.pytest.ini_options]` with `asyncio_mode = "auto"`, `asyncio_default_fixture_loop_scope = "session"` (RULE-TEST-001).
 - [ ] Add Alembic config (`alembic.ini`) and run `uv run alembic init -t async migrations` to bootstrap the async env template (RULE-MIGR-001).
@@ -121,8 +121,8 @@ Phases are ordered so each one's outputs unblock the next. Workstreams (B = Back
 
 #### 5.0.4 Pre-commit and CI fast lane
 
-- [ ] Author `prek.toml` matching PRD §23 verbatim (three `[[repos]]` blocks: builtin, backend, frontend).
-- [ ] Add `.github/workflows/ci.yaml` invoking `prek run --all-files` plus `uv run pip-audit` for vulnerability scanning (PRD §23).
+- [ ] Author `prek.toml` matching PRD §23 verbatim (three `[[repos]]` blocks: builtin, backend, frontend) including ruff `S` category enforcement per **RULE-SEC-001** (security-relevant findings — eval, exec, hardcoded passwords, weak crypto, request timeout, SSL verify-disable, etc. — block on commit; no `# noqa` without justified comment).
+- [ ] Add `.github/workflows/ci.yaml` invoking `prek run --all-files` plus `uv run pip-audit` for vulnerability scanning (PRD §23) — these are the **RULE-SEC-001** enforcement points: pre-commit catches author-time, CI catches author-bypass.
 - [ ] Add `.github/workflows/integration.yaml` running integration tests with a PostgreSQL service container.
 - [ ] Add `.github/workflows/canary.yaml` scheduled nightly to run fixture-canary tests against demo upstream instances.
 - [ ] Pin every `uses:` to a concrete tag per PRD §23 (e.g., `actions/checkout@v6`); document the tag-pinning posture in CONTRIBUTING.md.
@@ -148,18 +148,18 @@ Phases are ordered so each one's outputs unblock the next. Workstreams (B = Back
 - [ ] Configure structlog per RECIPE-STRUCTLOG: `merge_contextvars` first, JSON renderer in prod, console renderer in dev, `format_exc_info`, `dict_tracebacks`.
 - [ ] Add a header-redaction processor and a secret-pattern redaction processor (PRD §20).
 - [ ] Add a level-based filter and per-event ratelimit/dedup processor (PRD §20 log volume controls).
-- [ ] Wire to Litestar via `StructlogPlugin(config=...)` (PATTERN-APP).
+- [ ] Wire to Litestar via `StructlogPlugin(config=...)` (PATTERN-APP + **RULE-LOG-001** — structlog is the only sanctioned logging surface; the stdlib `logging` module is forbidden in app code).
 
 #### 5.1.3 Exceptions and Problem Details (`comradarr/errors/`)
 
 - [ ] Implement `ComradarrError` base with `code`, `default_message`, `status_code`, `context`.
 - [ ] Define every domain error class listed in PRD §21 (`authentication.invalid_credentials`, `authentication.session_expired`, `authentication.api_key_revoked`, `authorization.forbidden`, `authorization.permission_required`, `connector.unavailable`, `connector.api_error`, `connector.url_rejected`, `validation.failed`, `validation.field_invalid`, `internal.unexpected`, etc.).
 - [ ] Implement Litestar `exception_handler` for `ComradarrError` and a fallback handler for unhandled exceptions (PRD §21 unhandled exceptions section).
-- [ ] Render Problem Details fields: `type`, `title`, `status`, `detail`, `instance`, plus `errors[]` for validation, `context` for domain data, and a `retryable` boolean derived from connector classification (PRD §21).
+- [ ] Render Problem Details per **RFC 9457** (the active spec; obsoletes RFC 7807 — wire shape unchanged) with media-type `application/problem+json`: `type`, `title`, `status`, `detail`, `instance`, plus `errors[]` for validation, `context` for domain data, and a `retryable` boolean derived from connector classification (PRD §21). Backend rules `RULE-API-002` is the canonical citation; PRD §17 / §21 / Glossary still carry the older RFC 7807 wording — reconcile in a follow-up doc pass.
 
 #### 5.1.4 Application factory (`comradarr/app.py`)
 
-- [ ] Implement `create_app(settings: Settings | None = None) -> Litestar` per RULE-PY-003 + PATTERN-APP, accepting a settings override for tests (PRD §18 + §22).
+- [ ] Implement `create_app(settings: Settings | None = None) -> Litestar` per **PATTERN-APP** (the canonical app-factory recipe in backend rules). The factory is synchronous (returns the Litestar instance directly), accepts a settings override for tests (PRD §18 + §22), and never starts background work itself — all I/O-driven setup runs inside the lifespan context managers wired in below, satisfying **RULE-ASYNC-001** (only async functions perform outbound I/O) and **RULE-ASYNC-002** (no `asyncio.run` / `loop.run_until_complete` inside app code; the ASGI server owns the event loop). PRD §18 is the architectural cross-reference.
 - [ ] Wire `lifespan=[db_lifespan, services_lifespan]` (PRD §18) producing single `AsyncIterator[None]` context managers.
 - [ ] Register Plugins: `SQLAlchemyPlugin` (advanced-alchemy `before_send_handler="autocommit"`), `StructlogPlugin`.
 - [ ] Register middleware order: correlation ID → logging → trusted proxy → setup gate → CORS → CSRF → security headers → auth → permission check (PRD §16, §15).
@@ -169,9 +169,9 @@ Phases are ordered so each one's outputs unblock the next. Workstreams (B = Back
 
 #### 5.1.5 Lifespan (`comradarr/core/lifespan.py`)
 
-- [ ] Implement `db_lifespan(app)` creating `create_async_engine` + `async_sessionmaker(expire_on_commit=False)` (RULE-DB-001), running pending migrations conditionally, exposing on `app.state` (PRD §18).
-- [ ] Implement `services_lifespan(app)` instantiating: event bus, crypto service, client factory, planners, dispatcher, tracker, sync coordinator, rotation engine, prowlarr health monitor, retention vacuum, notification dispatcher; storing on `app.state`; launching background tasks via `asyncio.TaskGroup`.
-- [ ] On shutdown, cancel tasks, await `TaskGroup` exit, close httpx clients, dispose engine (PRD §18).
+- [ ] Implement `db_lifespan(app)` as an `async` `@asynccontextmanager` (RULE-ASYNC-001 — async-only outbound I/O) creating `create_async_engine` + `async_sessionmaker(expire_on_commit=False)` (RULE-DB-001), running pending migrations conditionally, exposing on `app.state` (PRD §18). Yields exactly once between setup and teardown; teardown awaits engine disposal.
+- [ ] Implement `services_lifespan(app)` as an `async` `@asynccontextmanager` (RULE-ASYNC-001) instantiating: event bus, crypto service, client factory, planners, dispatcher, tracker, sync coordinator, rotation engine, prowlarr health monitor, retention vacuum, notification dispatcher; storing on `app.state`; launching background tasks via `asyncio.TaskGroup`. Per **RULE-ASYNC-002** the lifespan never calls `asyncio.run` or `loop.run_until_complete`; the ASGI server owns the loop and the lifespan participates as an `async with` consumer.
+- [ ] On shutdown, cancel tasks, await `TaskGroup` exit (RULE-ASYNC-001 — every cancellation/cleanup hop is awaited, never bridged through `run_coroutine_threadsafe` or sync wrappers), close httpx clients, dispose engine (PRD §18).
 
 #### 5.1.6 Health endpoint (`comradarr/api/controllers/health.py`)
 
@@ -210,7 +210,7 @@ Phases are ordered so each one's outputs unblock the next. Workstreams (B = Back
 - [ ] `notification_channels` — UUID PK, user_id FK, name, kind enum, enabled, encrypted config (AAD = channel UUID), per-channel TLS toggles, last_tested_at, last_test_status enum; indexes on `(user_id)` and `(enabled, kind)`.
 - [ ] `notification_routes` — `(user_id, event_type, channel_id)` PK with enabled, predicate JSONB nullable; FK with `ON DELETE CASCADE`; composite index on `(user_id, event_type)`.
 - [ ] `notification_templates` — `(user_id, event_type, channel_kind)` unique; subject_template, body_template.
-- [ ] `audit_log` — UUID PK, timestamp, action enum, actor (user_id or ip), context JSONB, ip, user_agent, `previous_hash` + `content_hash` nullable; indexes `(timestamp DESC)` and `(action, timestamp DESC)`.
+- [ ] `audit_log` — UUID PK, timestamp, action enum, actor (user_id or ip), context JSONB, ip, user_agent, **`correlation_id`** (UUID nullable, propagated from the structlog request context per RULE-LOG-001 + PRD §21 instance field, so audit entries can be cross-referenced with the structured-log stream for the same request), `previous_hash` + `content_hash` nullable; indexes `(timestamp DESC)` and `(action, timestamp DESC)`.
 
 #### 5.2.3 Alembic baseline migration
 
@@ -315,7 +315,7 @@ Phases are ordered so each one's outputs unblock the next. Workstreams (B = Back
 
 #### 5.5.1 Setup gate middleware
 
-- [ ] Read `setup_completed` from `app_config` once per request (cache invalidated on change).
+- [ ] Read `setup_completed` from `app_config` once per request (cache invalidated on change). **Sentinel semantics (pinned):** the column stores the literal string `"true"` once the wizard's Phase 3 finalize step (admin user written) succeeds; every other value — absent row, empty string, `"false"`, `"0"`, `"yes"`, any case-variant of `"true"` — counts as **not completed** and the gate stays armed. Comparison is exact-string-equal `value == "true"` against the lower-cased trimmed read; this prevents an accidental `app_config` row mutation (capitalisation, whitespace, "True", boolean-typed JSONB cast) from silently lowering the gate.
 - [ ] Allowlist while incomplete (minimal, per PRD §15 "Setup Gate Middleware"): `/setup` and frontend setup wizard pages, `/api/setup/*` (the only CSRF-exempt POST is the bootstrap claim within this prefix), `/api/health`, and the static assets required for the setup UI to render (`/static/*`, `/_app/*`). The OpenAPI schema is NOT in the allowlist — it lives at `/api/schema` under auth (see §5.1.4 / §5.13.4 owned by another agent).
 - [ ] For HTML / browser-navigation requests outside the allowlist: redirect to `/setup` with 302.
 - [ ] For API requests outside the allowlist: return **HTTP 503 Service Unavailable** (Problem Details body, `context.reason="setup_incomplete"`) — never 401, since 401 implies "authenticate" but no auth surface yet exists.
@@ -354,7 +354,7 @@ The wizard exposes exactly **four operator-visible steps** under `/api/setup/*`.
 
 - [ ] `POST /setup/admin` accepts username + email + password; enforces the password length minimum + denylist (PRD §15).
 - [ ] On success: provision the admin user with `provisioning_provider="local"`, role=`admin`, issue a session immediately so the wizard can proceed without a separate login.
-- [ ] Mark `setup_completed=true` in `app_config`; emit `admin_account_created` and `setup_completed` audit entries.
+- [ ] Write the literal lower-case string `"true"` (not `True`, not boolean cast, not JSON-true) into `app_config.setup_completed` — matches the §5.5.1 sentinel comparator exactly; emit `admin_account_created` and `setup_completed` audit entries.
 
 ### 5.6 Phase 6 — HTTP boundary hardening
 
@@ -378,7 +378,7 @@ The wizard exposes exactly **four operator-visible steps** under `/api/setup/*`.
 
 #### 5.6.4 CSRF
 
-- [ ] Implement CSRF defense as **`Origin`/`Referer` header validation** against `allowed_origins` on every state-changing verb (POST, PUT, PATCH, DELETE) (PRD §16, "CSRF"). Do **not** implement a double-submit cookie/token pattern; there is no `comradarr_csrf` cookie.
+- [ ] Implement CSRF defense as **`Origin`/`Referer` header validation** against `allowed_origins` on every state-changing verb (POST, PUT, PATCH, DELETE) (PRD §16, "CSRF"). Do **not** implement a double-submit cookie/token pattern; there is no `comradarr_csrf` cookie. Per **ANTI-SEC-001** the matcher is exact-string equality (no `String.prototype.includes`/substring/contains-style checks) and per **ANTI-SEC-002** the comparator never falls back to a permissive default — empty/missing `allowed_origins` rejects every cross-origin write rather than allowing all.
 - [ ] On a mutating request: require `Origin`; if absent, fall back to `Referer`'s origin component; if both are absent or neither matches `allowed_origins`, reject with 403 and a generic "missing or invalid origin" message (do not distinguish absent from wrong).
 - [ ] Exempt only two paths from this check: (a) `POST /setup/claim` (the bootstrap claim, which runs before `allowed_origins` exists and is protected by the bootstrap token + SameSite=Strict claim cookie + per-IP rate limit); (b) requests authenticated by `Authorization: Bearer <api_key>` / `X-Api-Key` whose API key validation succeeded — detect via the resolved auth mechanism on request state, not via header presence, so a bogus key falls back to the cookie path where CSRF still applies.
 - [ ] Ensure the SvelteKit `hooks.server.ts` forwards the user's original `Origin` on backend calls so the backend's check sees the genuine browser origin (PRD §16, "SvelteKit Form Actions").
@@ -408,13 +408,15 @@ The wizard exposes exactly **four operator-visible steps** under `/api/setup/*`.
 
 #### 5.7.1 SSRF-defended HTTP client (`comradarr/connectors/http.py`)
 
-- [ ] Build an `httpx.AsyncClient` factory that:
-  - [ ] re-resolves DNS on every request and re-classifies every resolved IP **at every redirect hop** against the private-IP / link-local / loopback / metadata denylist — RFC 1918 (`10/8`, `172.16/12`, `192.168/16`), `127.0.0.0/8`, IPv6 `::1` and `fe80::/10`, CGN `100.64.0.0/10`, `169.254.0.0/16` (covers AWS/GCP/Azure metadata at `169.254.169.254`), broadcast/multicast, IPv4-mapped exotic ranges (PRD §7 + Glossary);
+- [ ] Build an `httpx.AsyncClient` factory (RULE-ASYNC-001 — async-only outbound I/O; RULE-HTTP-001 — `httpx.AsyncClient` is the only sanctioned outbound HTTP primitive, sync `requests`/`urllib3` are forbidden) that:
+  - [ ] **Pins `follow_redirects=False` on every connector request** (PRD §7 "Redirect Policy", prd:L261-L263). The *arr APIs do not legitimately use HTTP redirects, and a malicious or compromised *arr clone returning `302 Location: http://evil.example/api/v3/series` would otherwise cause the connector's `Authorization` / `X-Api-Key` header to be sent to the attacker's host (httpx forwards auth headers across redirects by default). Any 3xx response is wrapped in a transient `ConnectorRedirectError` with the redirect target stripped from the message before logging — the operator sees only "redirect refused; check upstream proxy configuration" and a structured `connector.redirect_refused` log event so they can investigate. Per-hop IP reclassification is a defence-in-depth backstop **only** — under no URL classification policy (default / strict / permissive) is httpx ever permitted to follow a redirect.
+  - [ ] re-resolves DNS on every outbound request and classifies every resolved IP against the private-IP / link-local / loopback / metadata denylist — RFC 1918 (`10/8`, `172.16/12`, `192.168/16`), `127.0.0.0/8`, IPv6 `::1` and `fe80::/10`, CGN `100.64.0.0/10`, `169.254.0.0/16` (covers AWS/GCP/Azure metadata at `169.254.169.254`), broadcast/multicast, IPv4-mapped exotic ranges (PRD §7 + Glossary);
   - [ ] enforces the URL classification policy (default / strict / permissive) configured by `COMRADARR_CONNECTOR_URL_POLICY`;
   - [ ] applies explicit timeouts — `httpx.Timeout(connect=5.0, read=30.0, write=10.0, pool=5.0)` totalling at most 60 s wall-clock per request — and a per-host bounded connection pool `httpx.Limits(max_connections=10, max_keepalive_connections=5)` (RULE-HTTP-002 / RULE-HTTP-003);
   - [ ] sets `User-Agent: comradarr/0.1.0 (+https://github.com/engels74/comradarr)` on every outbound request;
   - [ ] respects per-connector TLS toggles (`insecure_skip_tls_verify`, `tls_ca_bundle_path`);
   - [ ] caps the response body at **256 MB by default, configurable per connector** (`COMRADARR_CONNECTOR_RESPONSE_CAP_BYTES = 256 * 1024 * 1024` at the global default; `connectors.response_cap_bytes` overrides per row), enforced as a **true byte budget over the streamed body regardless of `Content-Length`** (PRD §7 lines 275, 319), and aborts with `HostileResponseError` on oversized, malformed-JSON, or unexpected-content-type responses (PRD §7 — gzip bombs, recursive nesting, oversized JSON). The cap is the byte ceiling for legitimate Sonarr/Radarr large-payload responses (history pages, full library refreshes); per-connector overrides exist so an operator running an unusually large Sonarr instance can raise it without globally relaxing the SSRF posture;
+  - [ ] **decompression-bomb defense.** When a Content-Encoding (gzip / deflate / br / zstd) is present, the streaming decoder enforces a **decompressed:compressed ratio cap of 100:1** in addition to the absolute 256 MB ceiling — a 1 MB compressed body that expands beyond 100 MB aborts with `HostileResponseError` mid-stream, before the full payload is buffered. The ratio cap is a code constant; per-connector overrides apply only to the absolute cap (PRD §7 hostile-response defenses). A decompressed-size-exceeded event increments the same hostile-response counter as oversized responses.
   - [ ] runs JSON parsing through msgspec with hard limits — **max nesting depth 64**, **max object/array length 100 000 elements** — plus `strict=True` and the per-Struct `msgspec.Meta` size constraints from PRD §7, rejecting hostile payloads *before* the parse completes.
 - [ ] Maintain a per-connector consecutive-hostile-response counter (incremented on malformed JSON, oversized response, unexpected content-type, or msgspec validation failure):
   - [ ] **5 consecutive hostile responses → connector marked `degraded`** (rotation dispatch rate reduced; UI badge yellow);
@@ -440,13 +442,13 @@ The wizard exposes exactly **four operator-visible steps** under `/api/setup/*`.
 
 #### 5.8.1 Shared models (`comradarr/connectors/shared/`)
 
-- [ ] Define msgspec Structs for shared command and queue shapes.
+- [ ] Define msgspec Structs for the **shared command-status response shape** consumed by the rotation tracker (`CommandResource`-equivalent: `id`, `name`, `status` enum, `started_at`, `ended_at`, `errors[]`) and the **shared system-status shape** consumed by health probes. Note: the *arr download-queue surface (`/api/v3/queue`) is **out of scope for v1** — Comradarr only schedules searches, it does not introspect or manipulate the *arr download queue (PRD §6 / §11).
 
 #### 5.8.2 Sonarr client (`comradarr/connectors/sonarr/`)
 
 - [ ] msgspec models: Series, Season, Episode, Tag, QualityProfile, Command, SystemStatus.
 - [ ] Methods: `list_series`, `get_series`, `list_episodes`, `command_episode_search`, `command_season_search`, `command_series_search`, `command_status`, `system_status`.
-- [ ] Strict response validation (RULE-SER-001) — reject unexpected shape with `ConnectorApiError`.
+- [ ] Strict response validation (RULE-SER-001) — every connector-response Struct uses **`forbid_unknown_fields=True`** (the msgspec default — keep it) so a hostile or compromised *arr returning extra/unexpected fields is rejected with `ConnectorApiError` *before* the parse completes (PRD §7 hostile-response defenses). Mirror-table ORM rows have no equivalent constraint because they own their schema; the strict policy applies only to the on-the-wire connector response Structs that consume external bytes.
 
 #### 5.8.3 Radarr client (`comradarr/connectors/radarr/`)
 
@@ -492,10 +494,17 @@ The wizard exposes exactly **four operator-visible steps** under `/api/setup/*`.
 
 #### 5.9.5 Mappers (`comradarr/services/sync/mappers/`)
 
-- [ ] `sonarr.py`: connector model → mirror tables.
-- [ ] `radarr.py`: connector model → mirror tables.
+- [ ] `sonarr.py`: connector model → mirror tables. The mapper validates **semantic invariants the wire schema cannot express** (PRD §6) — `season_number >= 0`, `episode_number >= 1` on aired episodes, `runtime_minutes >= 0`, monitored-flag consistency between series and its episodes — and rejects an offending row with `ConnectorSemanticError` so the differ never feeds malformed state into the applier. msgspec `Meta` constraints catch the structural floor; the mapper catches the cross-field invariants.
+- [ ] `radarr.py`: connector model → mirror tables. Same semantic-validation discipline as sonarr — `runtime_minutes >= 0`, monitored flag well-formed, no negative IDs, no empty title strings.
+
+#### 5.9.6 Schedule writer (`comradarr/services/sync/schedule_writer.py`)
+
+- [ ] Materialize `search_schedule` rows from the applied mirror diff in the **same database transaction** as the applier write (PRD §6 — schedule and mirror state must never disagree across a sync boundary). For every added mirror row, insert a `(connector_id, content_type, content_arr_id)` schedule row at tier 0 (MISSING) — or the tier classifier's chosen tier if the row arrives already monitored — with `last_searched_at = NULL`. For every removed mirror row, delete the corresponding schedule row. For modified rows, re-evaluate the tier and update only the `tier` column; never reset `last_searched_at` on a tier change (avoids re-spamming searches on a benign edit).
+- [ ] Idempotent across replays: the writer is keyed on the same `(connector_id, content_type, content_arr_id)` PK as the schedule table, so a re-run on the same diff is a no-op. Emit a per-tick summary log event with insert/delete/tier-update counts.
 
 ### 5.10 Phase 10 — Rotation engine
+
+> **Continuous-rotation principle (cross-ref PRD §10 / §11).** The rotation engine is a **continuous tier-prioritised cycle** over `search_schedule`, not a queue with a head and a tail. There is no "next-up batch," no FIFO ordering across the library, and no operator-visible "queue depth." The dispatcher selects eligible rows on every tick by `(tier ASC, last_searched_at NULLS FIRST)` and the cycle never pauses unless the budget is exhausted, the connector is `unhealthy`, or the operator pauses individual rows. Wording across this phase uses "schedule," "tier," "dispatch," "tick" — never "queue" — to keep the implementation aligned with PRD §10's invariant.
 
 #### 5.10.1 Tier classifier
 
@@ -504,10 +513,10 @@ The wizard exposes exactly **four operator-visible steps** under `/api/setup/*`.
 
 #### 5.10.2 Planner protocol + implementations (`comradarr/services/rotation/planners/`)
 
-- [ ] Protocol `Planner.plan(eligible_items, budget) -> list[Command]` (PRD §11).
-- [ ] Sonarr planner groups episodes → seasons → series; respects per-command limits; minimizes commands (planner invariants per PRD §22 property tests).
-- [ ] Radarr planner groups movies into batched MoviesSearch commands.
-- [ ] Property tests: output covers all eligible items; no command crosses connectors; total commands ≤ items.
+- [ ] Protocol `Planner.plan(eligible_items, budget) -> list[Command]` (PRD §11). **Cover-all contract (pinned, enforced by §6.1 property tests):** for every input item the planner MUST emit at least one `Command` whose payload covers it. The planner is allowed to fold N items into one command when the underlying *arr API supports a batched search (e.g. `EpisodeSearch` over an episode list, `SeasonSearch` over a whole season, `MoviesSearch` over a movie batch), but it MUST NOT silently drop, deduplicate-via-loss, or reorder-with-loss any input item. Output cardinality is `1 ≤ |commands| ≤ |items|`; aggregate per-item coverage is exactly the input set.
+- [ ] Sonarr planner groups episodes → seasons → series; respects per-command limits; minimises commands (planner invariants per PRD §22 property tests). Grouping promotion follows the rule "promote a season-search when ≥75 % of the season's episodes are eligible; promote a series-search when ≥75 % of the series' seasons would be promoted" — the threshold is a code constant, not configuration.
+- [ ] Radarr planner groups movies into batched MoviesSearch commands sized to the per-command limit of the connector.
+- [ ] Property tests (cross-ref §6.1): (a) output covers every eligible item exactly once across the resulting command set; (b) no command crosses connectors; (c) total commands ≤ items; (d) re-running the planner with the same input produces a permutation-equivalent plan (deterministic up to set-equivalence).
 
 #### 5.10.3 Budget protocol + implementations (`comradarr/services/budget/`)
 
@@ -545,8 +554,8 @@ The wizard exposes exactly **four operator-visible steps** under `/api/setup/*`.
 
 #### 5.11.2 SSE controller (`comradarr/api/controllers/events.py`)
 
-- [ ] `GET /api/events/stream` returning `text/event-stream`; **per-client bounded queue with drop-on-full backpressure** — when a client's send queue fills (slow consumer), new events for that client are silently dropped rather than blocking the bus (PRD §13 line 663). The bus itself never awaits a client send. SSE clients reconnect and re-fetch state via regular API calls, so dropped events do not break correctness.
-- [ ] Filters events by user permission (e.g., audit-log events to admins only).
+- [ ] `GET /api/events/stream` returning `text/event-stream`. The handler is `async def` per **RULE-ASYNC-001** and uses an `async` generator yielding `bytes` chunks; the generator awaits `asyncio.Queue.get()` with a timeout for the heartbeat tick — never `time.sleep`, never sync I/O, never thread-pool offload (RULE-ASYNC-002). **Per-client bounded queue with drop-on-full backpressure** — when a client's send queue fills (slow consumer), new events for that client are silently dropped rather than blocking the bus (PRD §13 line 663). The bus itself never awaits a client send. SSE clients reconnect and re-fetch state via regular API calls, so dropped events do not break correctness.
+- [ ] Filters events by **scope + permission** (PRD §13 + §14 lines 685–687 — system-scope vs user-scope split). System-scope events (`connector.*`, `sync.*`, `rotation.*`, `auth.failed.*`, `audit_log.gap`, `notifications.suppressed`) are visible to **admins only** regardless of which user opens the SSE stream — they describe the install, not the user. User-scope events (`notification.delivery.*` for the operator's own channels, `priority_search.completed` for their own queued search, `session.opened`/`.revoked` for their own sessions) are visible to the owning user only. The filter is per-event-name with the scope encoded on the event Struct itself (system|user) so a future event automatically inherits the right routing.
 - [ ] **Emit a heartbeat keepalive every 15 seconds** (`: heartbeat\n\n` SSE comment line) to keep idle reverse proxies and load balancers from closing the long-lived connection.
 
 ### 5.12 Phase 12 — Notifications
@@ -554,7 +563,7 @@ The wizard exposes exactly **four operator-visible steps** under `/api/setup/*`.
 #### 5.12.1 Channels (`comradarr/services/notifications/channels/`)
 
 - [ ] Apprise channel: lazy import `apprise`, encrypted config (URL). Supports any apprise URI scheme, including a **guided SMTP flow** that builds `mailto://` and `mailtos://` apprise URIs from a structured form (host, port, username, password, from-address, recipient list, TLS mode) — the operator never has to hand-craft the apprise URL.
-- [ ] Webhook channel: encrypted bundle (URL, method, headers, body template).
+- [ ] Webhook channel: encrypted bundle (URL, method, headers, body template). The dispatcher's outbound httpx call **pins `follow_redirects=False` on every webhook request** — same posture as the connector client (§5.7.1, PRD §7 redirect policy) — so a compromised webhook destination returning `302 Location: http://internal.example/secret` cannot trick the channel into leaking the operator's auth headers or reaching an internal SSRF target on the next hop. Any 3xx is wrapped in a transient `NotificationRedirectError` (target stripped from message) and counted as a delivery failure for retry; the operator sees `notification.delivery.redirect_refused` in the structured log.
 - [ ] Per-channel TLS toggles wired through (`insecure_skip_tls_verify`, `tls_ca_bundle_path`) — same shape as connector TLS overrides per PRD §7 "Reuse by the Notification System".
 - [ ] **URL classification re-runs at SAVE AND at SEND.** Both the channel-write path (`POST` / `PATCH /api/notifications/channels`) and the per-dispatch path re-classify every outbound URL — including every redirect hop — against the same SSRF denylist used by connectors (§5.7.1). A previously-saved channel config can become hostile if the denylist or `COMRADARR_CONNECTOR_URL_POLICY` is tightened, so write-time checks alone are not sufficient (PRD §7 "Reuse by the Notification System"). Send-time rejection logs a structured `notification.delivery.blocked_ssrf` event and counts as a permanent failure — no retries.
 - [ ] Test-before-commit: `POST /api/notifications/channels/test` runs a one-shot send through the same dispatcher (including SSRF re-classification); only persists when successful (PRD §14).
@@ -639,7 +648,7 @@ The wizard exposes exactly **four operator-visible steps** under `/api/setup/*`.
 
 - [ ] Confirm folder layout per frontend rules §7: `src/lib/`, `src/lib/server/`, `src/lib/state/`, `src/lib/api/`, `src/lib/components/ui/`, route groups `(app)/`, `(auth)/`, `(setup)/`, `(public)/`.
 - [ ] Configure `app.html` with the inline 4-line theme-resolution script (PRD §25 SSR theme handling).
-- [ ] Configure `hooks.server.ts` to: read session cookie, call backend session-validate, populate `event.locals.user` / `event.locals.session`, redirect non-public routes to login when missing (RULE-SEC-003).
+- [ ] Configure `hooks.server.ts` to: read session cookie, call backend session-validate, populate `event.locals.user` / `event.locals.session`, redirect non-public routes to login when missing (RULE-SEC-003 + **ANTI-SEC-001** — route-allow checks use exact-pathname or `URL.pathname.startsWith(prefix)` against a fixed allowlist, never `String.includes("login")` / regex / fuzzy matches that an attacker can satisfy with a crafted path; **ANTI-SEC-002** — if the session-validate call fails with anything other than 401/403 the hook treats it as `not authenticated` and redirects, never as `authenticated by default`).
 - [ ] Configure `app.d.ts` `App.Locals`, `App.PageData`, `App.Error`.
 - [ ] Configure `src/lib/utils.ts` `cn()` helper for shadcn class composition (frontend rules §10).
 
@@ -652,14 +661,14 @@ The wizard exposes exactly **four operator-visible steps** under `/api/setup/*`.
 
 #### 5.14.3 OpenAPI client (`src/lib/api/`)
 
-- [ ] `scripts/gen-api.ts` runs `openapi-typescript http://localhost:8000/api/schema/openapi.json -o src/lib/api/schema.d.ts` (RULE-OAPI-001 — consume Litestar's OpenAPI surface at the canonical `/api/schema` mount from §5.1.4).
+- [ ] `scripts/gen-api.ts` runs `openapi-typescript http://localhost:8000/api/schema/openapi.json -o src/lib/api/schema.d.ts` (**RULE-OAPI-001** — consume Litestar's OpenAPI surface at the canonical `/api/schema` mount from §5.1.4) and emits the file with **`@ts-nocheck`/checksum header** so **RULE-OAPI-002** (generated types are machine-owned — never hand-edited) is enforceable as a CI lint: a pre-commit / CI step diffs the regenerated file against the committed copy and fails on any drift, so a developer who hand-edits `schema.d.ts` is caught at PR time. Per **ANTI-SEC-002** the openapi-fetch wrapper never silently coerces a non-2xx response into success — every consumer must check the discriminated `data | error` union before reading.
 - [ ] `client.ts` exports `createBrowserClient()` returning `createClient<paths>({ baseUrl: '' })`.
 - [ ] `server.ts` exports `createServerClient(event)` returning `createClient<paths>({ baseUrl: '', fetch: event.fetch })` (RULE-OAPI-003).
 - [ ] Add the `gen-api` script to dev-CLI and to a CI step that fails when the regenerated file diffs from the committed one.
 
 #### 5.14.4 App shell
 
-- [ ] Implement sidebar navigation in `src/routes/(app)/+layout.svelte` using shadcn Sidebar primitive; collapses below `md`, hamburger below `sm` (PRD §25 app shell).
+- [ ] Implement sidebar navigation in `src/routes/(app)/+layout.svelte` using shadcn Sidebar primitive; collapses below `md`, hamburger below `sm` (PRD §25 app shell). All Svelte 5 component code in this layout follows **RULE-SNIPPETS-001** — render fragments use `{#snippet}` / `{@render}` (Svelte 5 native), never the legacy `<svelte:fragment slot="…">` / `<slot />` slot API which is deprecated for new code on a Svelte 5 target. Existing shadcn-svelte components that still expose slot props are wrapped at the consumer site with snippet-bridges, never copied into local code as slot-based.
 - [ ] Sidebar consumes only `sidebar-*` tokens.
 - [ ] Implement persistent rotation heartbeat indicator near the wordmark — bound to a `RotationStatusStore` derived from SSE.
 - [ ] Implement focus-ring style using `ring` token (a11y baseline).
@@ -691,9 +700,9 @@ The wizard exposes exactly **four operator-visible steps** under `/api/setup/*`.
 
 ### 5.16 Phase 16 — Frontend dashboard
 
-- [ ] `(app)/+page.svelte` dashboard with: rotation heartbeat status card, sync progress per connector, search throughput, budget consumption, recent activity feed; each card consumes a typed slice of the BFF payload (RULE-RUNES-001 / RULE-RUNES-002 — `$state` for component-local reactivity, `$derived` for computed slices, no legacy `let`-based stores).
+- [ ] `(app)/+page.svelte` dashboard with: rotation heartbeat status card, sync progress per connector, search throughput, budget consumption, recent activity feed; each card consumes a typed slice of the BFF payload (RULE-RUNES-001 / RULE-RUNES-002 — `$state` for component-local reactivity, `$derived` for computed slices, no legacy `let`-based stores). **ANTI-EFFECT-001** — never use `$effect` to derive state from other state (use `$derived`); **ANTI-EFFECT-002** — never use `$effect` to chain reactive writes back into the same dependency graph (the cycle warning is a defect, not a noise to silence). `$effect` is reserved for genuine lifecycle side-effects (DOM measurement, EventSource wiring, subscription teardown).
 - [ ] `+page.server.ts` calls `GET /api/views/dashboard`.
-- [ ] `src/lib/state/sse.svelte.ts` class-based store wrapping `EventSource('/api/events/stream')`; reconnect with backoff; exposes `events` reactive list and per-event `subscribe` callbacks (RULE-RUNES-003 / RULE-RUNES-004 — class-based stores using `$state` over module-level let bindings; `$effect` for lifecycle wiring; RULE-EVENTS-001 — typed event names from `comradarr/core/events.py` shared across the SSE boundary).
+- [ ] `src/lib/state/sse.svelte.ts` class-based store wrapping `EventSource('/api/events/stream')`; reconnect with backoff; exposes `events` reactive list and per-event `subscribe` callbacks (RULE-RUNES-003 / RULE-RUNES-004 — class-based stores using `$state` over module-level let bindings; `$effect` for lifecycle wiring **only**, not for derivations — see ANTI-EFFECT-001 / ANTI-EFFECT-002 above; **RULE-EVENTS-001** — typed event names imported from a shared TypeScript module generated from `comradarr/core/events.py` so a backend rename surfaces as a frontend type error at `bun run check` time, never at runtime).
 - [ ] On every applicable SSE event, call `invalidate('app:dashboard')` so SvelteKit re-runs the load.
 - [ ] Tint-on-change wraps every counter; numerals render `font-mono`.
 - [ ] Hero area carries the subtle aurora gradient wash (PRD §25).
@@ -708,6 +717,8 @@ The wizard exposes exactly **four operator-visible steps** under `/api/setup/*`.
 - [ ] Mobile breakpoint collapses to one-line rows.
 
 ### 5.18 Phase 18 — Frontend connectors / settings / audit log / API keys / OIDC / notifications / sessions
+
+> **Phase-wide rule citations.** Every component in §5.18.1–§5.18.6 follows: **RULE-RUNES-001/002/003/004** (`$state` / `$derived` / class-stores / `$effect` for lifecycle only), **ANTI-EFFECT-001/002** (no derivations and no reactive write-loops in `$effect`), **RULE-SNIPPETS-001** (`{#snippet}` + `{@render}` for slotting — no `<slot />` / `<svelte:fragment slot>` in new code on a Svelte 5 target), **RULE-OAPI-001/002** (typed paths via the openapi-typescript-generated `schema.d.ts` — never hand-edited), and **ANTI-SEC-001/002** (exact-string allowlists for any path/origin/role check; no permissive defaults on auth-adjacent comparisons). Cited once here so individual section bullets can reference behaviour without re-citing the rule on every line.
 
 #### 5.18.1 Connectors
 
@@ -767,7 +778,7 @@ The wizard exposes exactly **four operator-visible steps** under `/api/setup/*`.
 
 #### 5.19.2 Frontend i18n
 
-- [ ] Adopt the chosen library (default Paraglide; confirm in §3) and configure JSON catalogs by feature area under `frontend/messages/`.
+- [ ] Adopt **Paraglide (`@inlang/paraglide-js-adapter-sveltekit`)** per the §3 resolution and configure JSON catalogs by feature area under `frontend/messages/`. The compiled message functions are Svelte-5-Runes-friendly and tree-shake per-route.
 - [ ] Wire SSR-time locale resolution from `event.locals.user.locale` (authenticated) or `Accept-Language` (unauthenticated), output to the html `lang` attribute.
 - [ ] Locale selector in user preferences; gates incomplete locales behind a "show incomplete translations" toggle.
 
@@ -789,8 +800,10 @@ The wizard exposes exactly **four operator-visible steps** under `/api/setup/*`.
 
 #### 5.20.1 Logging finalization
 
+> **Audit log vs structured log — separation of concerns (PRD §15 + §20).** The `audit_log` database table and the structlog stream are **two separate surfaces with two separate retention models**. Audit log: durable, role-separated DB privileges (write via app role, vacuum via audit-admin role only — §5.2.3 / §5.3.3), exhaustive enum of operator-visible actions (`bootstrap_token_generated`, `connector_added`, `password_changed`, …), filterable from the admin UI (§5.18.3), exportable as JSON-lines, retained until the configured cap. Structured log: ephemeral container stdout/stderr stream consumed by the operator's log collector, request-completion events + service-tick summaries + tracebacks + WARN/ERROR signal, never the operator's source of truth for "did X happen". A given event may emit to both surfaces (e.g. `auth.login_success` → audit-log row AND structlog `auth.login.success` event), but neither surface ever shadows the other and the structured-log stream is never queried as evidence of a privileged operation.
+
 - [ ] Implement structlog configuration switching `console`/`json` per `COMRADARR_LOG_FORMAT` (PRD §20).
-- [ ] Implement event-name taxonomy across the codebase (`sync.*`, `rotation.*`, `connector.*`, `auth.*`, `notification.*`).
+- [ ] **Single source of truth for the cross-stack event taxonomy** lives at `comradarr/core/events.py` (declared in §5.0.5 and consumed via the SSE bridge in §5.16). The structured-log event names (`sync.*`, `rotation.*`, `connector.*`, `auth.*`, `notification.*`) are **derived from the same enum**, never hand-typed at log call sites; structlog binds the enum value directly so a renamed event surfaces as a type error at `basedpyright` time. The previously duplicated taxonomy bullet here was redundant with §5.0.5 — the registry lives there; this phase only enforces the typing contract on log emit sites.
 - [ ] Implement request logging policy: completion event with method, path (query values stripped), status, size, timing, resolved IP; never log request or response bodies; redact sensitive headers (PRD §20).
 - [ ] Implement traceback hygiene: for unhandled exceptions, log type/message/relevant frame/fingerprint without locals (PRD §20).
 - [ ] Implement deduplication processor for repeated ERROR events (PRD §20 log volume controls).
@@ -901,7 +914,7 @@ The wizard exposes exactly **four operator-visible steps** under `/api/setup/*`.
 - [ ] `tests/connectors/` replaying recorded fixtures via `httpx.MockTransport`.
 - [ ] One scenario per connector method.
 - [ ] Nightly canary workflow runs a small subset against demo upstream; on diff, opens an issue automatically.
-- [ ] **DNS-rebinding regression test (PRD §15.4).** A dedicated test under `tests/connectors/test_ssrf_dns_rebind.py` constructs a stub DNS resolver that returns a public IP on the first lookup of `attacker.example` (passing the URL classifier at validation time) and `127.0.0.1` on every subsequent lookup. Inject it via `httpx.AsyncClient(transport=httpx.AsyncHTTPTransport(local_address=...))` with a custom resolver hook so the SSRF-defended client (§5.7.1) sees the rebound result on the actual GET request. Assert: (a) the request raises `UrlClassificationError` (private IP rejection) — never reaches the upstream socket; (b) the per-connector hostile-response counter does NOT increment (rebinding is a URL-policy reject, not a hostile response); (c) **the same assertion holds on every redirect hop** — a 302 to a hostname that resolves to a private IP is rejected at the redirect-classification step. Run on every CI build (not just nightly) — DNS rebind is the highest-impact SSRF regression class.
+- [ ] **DNS-rebinding regression test (PRD §15.4).** A dedicated test under `tests/connectors/test_ssrf_dns_rebind.py` constructs a stub DNS resolver that returns a public IP on the first lookup of `attacker.example` (passing the URL classifier at validation time) and `127.0.0.1` on every subsequent lookup. Inject it via `httpx.AsyncClient(transport=httpx.AsyncHTTPTransport(local_address=...))` with a custom resolver hook so the SSRF-defended client (§5.7.1) sees the rebound result on the actual GET request. Assert: (a) the request raises `UrlClassificationError` (private IP rejection) — never reaches the upstream socket; (b) the per-connector hostile-response counter does NOT increment (rebinding is a URL-policy reject, not a hostile response); (c) **a 302 response is itself refused** before any redirect hop is followed — the test injects a stub server that returns `302 Location: http://attacker.example/v3/series` and asserts the call raises `ConnectorRedirectError` (target stripped from message), `connector.redirect_refused` is logged exactly once, and httpx's redirect machinery is never invoked. The per-hop IP reclassification path is exercised by a separate test where the redirect policy is hypothetically permissive — kept as a defence-in-depth fixture, but the production posture is "redirects are never followed". Run on every CI build (not just nightly) — DNS rebind is the highest-impact SSRF regression class.
 
 #### 5.22.4 API tests
 
@@ -929,6 +942,7 @@ The wizard exposes exactly **four operator-visible steps** under `/api/setup/*`.
 - [ ] Renovate config separating security updates (auto-PR) from routine bumps (manual review).
 - [ ] Pin every GitHub Action to a tag; document the tag-pinning posture (PRD §23).
 - [ ] Add `bunx biome ci` step; integrate `svelte-check --threshold warning` and `tsc --noEmit` per PRD §23.
+- [ ] **`Secret[T].expose()` audit gate.** A pre-commit + CI lint enumerates every `.expose()` call site in backend code and fails the build when a new call site appears outside an explicit allowlist (`comradarr/connectors/factory.py`, `comradarr/services/auth/oidc.py`, `comradarr/services/notifications/dispatcher.py`, `comradarr/services/snapshots/export.py`, etc. — every legitimate consumer recorded with a one-line justification). The intent is "every `.expose()` is an audited boundary crossing" — a new call site requires a PR-level review and a justification line, not silent addition. Implementation: a `dev_cli check expose-audit` subcommand that walks the AST, collects call sites, and diffs against `tools/expose_allowlist.toml`.
 
 ### 5.24 Phase 24 — Deployment artifacts
 
@@ -939,6 +953,7 @@ The wizard exposes exactly **four operator-visible steps** under `/api/setup/*`.
 - [ ] Configure the bundled PG to listen on a Unix socket only (no TCP) and conservative defaults.
 - [ ] Init script: if `DATABASE_URL` is unset → start bundled PG, wait for ready, run migrations, exec Granian; else → skip bundled PG, run migrations against external DB, exec Granian.
 - [ ] Granian launch: single worker, single threaded, uvloop, 6h worker lifetime, respawn on failure (PRD §24).
+- [ ] **Bundled SvelteKit Bun-runtime supervision (PRD §24).** The frontend is shipped as a `svelte-adapter-bun` build that runs inside the same container as Granian. The init script supervises **two long-running processes** plus bundled PG: (a) Granian → ASGI on a Unix socket; (b) `bun run build/index.js` → SvelteKit Bun adapter on a separate Unix socket; (c) bundled PostgreSQL on its own socket. A reverse-proxy stub (caddy or a tiny Bun HTTP front) inside the image fans `/api/*`, `/health`, `/metrics`, `/setup/claim`, `/api/events/stream` to Granian and everything else to the SvelteKit Bun process; both backend sockets are reachable only from inside the container. The supervisor is a small `tini`-fronted shell script that exits non-zero (and the container with it) when **any** of the three processes terminates — there is no "frontend down, backend up" partial-availability mode in v1; an operator restart resolves either failure class. Health checks probe all three sockets before reporting `ready`.
 
 #### 5.24.2 Image tagging
 
@@ -962,6 +977,7 @@ The wizard exposes exactly **four operator-visible steps** under `/api/setup/*`.
 - [ ] Ensure every Python source file's license header references AGPL-3.0.
 - [ ] Generate API reference docs from the OpenAPI spec; publish as part of the docs site.
 - [ ] Author CONTRIBUTING.md covering: AGPL inbound-equals-outbound, dependency license matrix, fixture recording, prek setup.
+- [ ] **Glossary alignment pass.** Reconcile the Comradarr glossary in `docs/glossary.md` (or as an appendix of the PRD) to match the v0.1.0 implementation: every term defined in PRD §Glossary that this plan refines (test-driven configuration affordance, hostile-response defenses, tier 0/1/2/3, continuous rotation, three-credential bootstrap, audit log vs structured log) gets a single canonical definition with a cross-reference to the matching §5 task; remove any glossary entry that referred to deferred-to-backlog features (command palette, hash-chain audit, partial import, multi-role assignment UI, custom icons). PRD-only wording for "RFC 7807" is retained but annotated `(superseded by RFC 9457 — same wire shape; this plan and RULE-API-002 cite RFC 9457)`.
 - [ ] Author CHANGELOG.md with v0.1.0 entry.
 - [ ] CI release workflow: on tag push matching `^[0-9]+\.[0-9]+\.[0-9]+$`, build multi-arch image, push, attach SBOM, publish GitHub Release with `v` prefix in title (PRD §23).
 - [ ] Confirm release-cadence policy in CONTRIBUTING.md (no schedule, releases when ready).
@@ -987,6 +1003,8 @@ The wizard exposes exactly **four operator-visible steps** under `/api/setup/*`.
 - [ ] CSRF / CORS / allowed-hosts behavior covered end-to-end.
 - [ ] Setup-wizard end-to-end test: bootstrap claim → boundary phases → admin account creation; subsequent requests routed normally.
 - [ ] Auth: local login + lockout, trusted-header trust matrix, OIDC happy path + invalid `nonce` + expired `iat` + invalid issuer + invalid audience + JWKS rotation, session idle/absolute timeout, API key permission scoping.
+- [ ] **Hostile-response degradation thresholds (PRD §7 / §5.7.1).** Regression test that drives the per-connector consecutive-hostile-response counter against a `httpx.MockTransport` returning malformed JSON: assert (a) at exactly 5 consecutive hostile responses the connector flips to `degraded` and the SSE feed emits `connector.health.degraded`; (b) at exactly 20 consecutive hostile responses it flips to `unhealthy` and rotation dispatch stops; (c) a single successful response decrements the counter and a return to zero restores `healthy`; (d) the counter does NOT increment on a 5xx upstream error (transport-level failure) — only on hostile-payload signals (oversized, malformed JSON, unexpected content-type, msgspec validation failure, decompression-bomb ratio exceeded).
+- [ ] **System-vs-user notification scope routing (PRD §13 / §14 / §5.11.2 + §5.12.2).** End-to-end test driving two SSE clients — one admin and one non-admin — that asserts: (a) `connector.health.degraded` (system scope) is delivered to the admin client only; (b) `priority_search.completed` for user X (user scope) is delivered to user X only; (c) `notification.delivery.failed` for user X's webhook is delivered to user X and to admins; (d) the default routing-profile seeding inserts the right `(event_type, channel)` rows on a user's first channel creation and does NOT re-seed on the second channel.
 
 ### 6.2 Frontend test gates
 
