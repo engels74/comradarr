@@ -1,0 +1,54 @@
+[project]
+name = "comradarr"
+version = "0.0.0"
+description = "A media library completion service that integrates with *arr applications."
+license = "AGPL-3.0-or-later"
+authors = [
+  { name = "engels74", email = "141435164+engels74@users.noreply.github.com" },
+]
+requires-python = ">=3.14,<3.15"
+dependencies = []
+
+[build-system]
+requires = ["uv_build>=0.11.7,<0.12.0"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+  "ruff",
+  "basedpyright",
+  "pytest",
+  "pytest-asyncio",
+  "pip-audit",
+]
+
+[tool.uv.build-backend]
+module-name = "comradarr"
+
+[tool.ruff]
+target-version = "py314"
+line-length = 100
+
+[tool.ruff.lint]
+select = [
+  "E", "W", "F", "I", "UP", "B", "C4", "SIM", "RET", "TID", "TC",
+  "FA", "ASYNC", "N", "PTH", "S",
+]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+line-ending = "lf"
+docstring-code-format = true
+
+[tool.basedpyright]
+typeCheckingMode = "recommended"
+enableTypeIgnoreComments = false
+pythonVersion = "3.14"
+include = ["src"]
+# `tests/` is added to `include` in Phase 1 when the first integration test lands (F-4).
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "session"
+testpaths = ["tests"]
