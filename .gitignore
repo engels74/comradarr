@@ -1,3 +1,4 @@
+# --- Existing project conventions (preserved) ---
 .omx/
 .codex/*
 !.codex/agents/
@@ -9,3 +10,53 @@
 !.codex/prompts/**
 
 AGENTS.md
+
+# --- Python (Phase 0) ---
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.venv/
+venv/
+*.egg-info/
+*.egg
+dist/
+build/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.basedpyright/
+.coverage
+htmlcov/
+
+# --- Node / Bun (Phase 0) ---
+node_modules/
+.svelte-kit/
+.bun/
+# bun.lockb is the binary lockfile format — explicitly forbidden by ANTI-LOCK-001
+# (Bun >=1.3 uses the text-format bun.lock; bun.lockb must never be committed)
+bun.lockb
+
+# --- IDE ---
+.idea/
+.vscode/
+!.vscode/settings.json
+
+# --- OS ---
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+
+# --- Coverage / env ---
+coverage/
+.env
+.env.*
+!.env.example
+.envrc
+
+# --- Comradarr-specific ---
+.omc/
+dev_cli/state/
+*.local
+*.comradarr-snapshot
