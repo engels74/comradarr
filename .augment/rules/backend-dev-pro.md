@@ -346,6 +346,7 @@ No `pydantic-settings`. msgspec's `convert` provides validation [Source](https:/
 
 ### 8.3 Dependency Injection
 
+- **RULE-DI-001:** Litestar dependency injection uses `dependencies={"name": Provide(factory)}` at the smallest enclosing scope (app/router/controller/handler); async by default, sync requires explicit `sync_to_thread=False|True`; never `Depends()` (FastAPI — see ANTI-002, ANTI-101).
 - Async `Provide(fn)` is default. Sync dependencies must pass `sync_to_thread=False|True` explicitly — Litestar warns otherwise [Source](https://docs.litestar.dev/2/usage/dependency-injection.html).
 - Scope dependencies to the smallest enclosing layer. DB sessions are handler-scoped (auto-commit/rollback via Advanced-Alchemy `before_send_handler="autocommit"`). HTTP clients are app-scoped.
 
