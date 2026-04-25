@@ -43,7 +43,6 @@ docstring-code-format = true
 
 [tool.basedpyright]
 typeCheckingMode = "recommended"
-enableTypeIgnoreComments = false
 pythonVersion = "3.14"
 include = ["src"]
 # `tests/` is added to `include` in Phase 1 when the first integration test lands (F-4).
