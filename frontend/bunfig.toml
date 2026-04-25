@@ -1,0 +1,11 @@
+[install]
+# Reproducibility: pin exact versions; text-format lock (Bun >=1.3 <1.4).
+# `exact = true` governs how `bun add` writes new dependency entries to
+# package.json (no caret/tilde ranges); the LOAD-BEARING reproducibility
+# guarantee is `bun install --frozen-lockfile` (CI + the §5 third-party
+# check), backed by triple-pin (package.json#engines.bun, .tool-versions,
+# this file).
+exact = true
+
+# Bun runtime range: matches package.json#engines.bun and .tool-versions.
+# Triple-pin parity is enforced by tools/lint/check-bun-pin-parity.sh.
