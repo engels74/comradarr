@@ -1,0 +1,21 @@
+# Comradarr leaked-key denylist — Phase 1 seed.
+#
+# Format: one hex-encoded 32-byte key per line. Lines starting with `#` and
+# blank lines are ignored. Keys are exact-byte-match — no fuzzy / prefix
+# matching. The full corpus expansion is tracked under open question Q-11
+# (PRD §15 line 1082); this file ships the four hardcoded patterns plus this
+# TODO marker so the deny-on-fail surface exists from PR-1.
+#
+# TODO(Q-11): expand corpus from public leak sources (HIBP-style hashes are
+# unsuitable here because they fingerprint passwords, not 32-byte keys —
+# Q-11 needs a key-shaped corpus).
+#
+# 1) "changeme" repeated to fill 32 bytes (32 / 8 = 4 repetitions).
+6368616e67656d656368616e67656d656368616e67656d656368616e67656d65
+# 2) "secret" repeated to fill 32 bytes (5 reps × 6 bytes + 2 bytes).
+73656372657473656372657473656372657473656372657473656372657473
+# 3) "password" repeated to fill 32 bytes (32 / 8 = 4 repetitions).
+70617373776f726470617373776f726470617373776f726470617373776f7264
+# 4) all-zero 32 bytes (also caught by the structural all-zero check —
+#    listed here so the denylist surface is exercised).
+0000000000000000000000000000000000000000000000000000000000000000
