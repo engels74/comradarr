@@ -30,6 +30,12 @@ _OIDC_RE: Final = re.compile(
     r"^COMRADARR_OIDC_(?P<provider>[A-Z0-9]+)_(?P<field>[A-Z_]+?)(?P<file>_FILE)?$"
 )
 _REQUIRED_DSN_PREFIX: Final = "postgresql+asyncpg://"
+# Operator-misconfiguration guardrail: an env var like
+# ``COMRADARR_SECRET_KEY_V99999999999999999999`` would otherwise parse to an
+# arbitrary-precision int and pin that absurd version as ``current_version``.
+# 1024 is generous compared to any plausible rotation cadence (a key-per-day
+# rotation lasts ~3 years before hitting the ceiling).
+_MAX_KEY_VERSION: Final = 1024
 
 # Field-name → expected env-var-suffix table for OIDC providers. Matches the
 # per-provider env pattern documented in PRD §19 and plan §5.1.1 Step 2.2.
@@ -121,7 +127,15 @@ def _parse_secret_key_registry(env: Mapping[str, str]) -> dict[int, bytes]:
         match = _SECRET_KEY_RE.match(key)
         if not match:
             continue
-        version = int(match.group(1)) if match.group(1) else 1
+        raw_version = match.group(1)
+        if raw_version is None:
+            version = 1
+        else:
+            version = int(raw_version)
+            if not (1 <= version <= _MAX_KEY_VERSION):
+                raise ConfigurationError(
+                    f"{key}: version must be between 1 and {_MAX_KEY_VERSION}, got {version}"
+                )
         slot = "file" if match.group(2) == "_FILE" else "inline"
         by_version.setdefault(version, {})[slot] = value
 

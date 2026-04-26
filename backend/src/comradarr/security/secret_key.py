@@ -41,9 +41,18 @@ def _parse_denylist_lines(lines: Iterable[str]) -> frozenset[bytes]:
 def _load_denylist() -> frozenset[bytes]:
     global _denylist_cache
     if _denylist_cache is None:
-        _denylist_cache = _parse_denylist_lines(
-            _DENYLIST_PATH.read_text(encoding="utf-8").splitlines()
-        )
+        parsed = _parse_denylist_lines(_DENYLIST_PATH.read_text(encoding="utf-8").splitlines())
+        # Corpus self-check: every entry must be a complete 32-byte key. A
+        # 31-byte typo (or any short entry) is unreachable because
+        # ``validate_secret_key`` rejects sub-32-byte inputs at the length
+        # gate before the denylist check fires — a silent dead entry.
+        wrong = sorted({len(k) for k in parsed if len(k) != _MIN_LENGTH})
+        if wrong:
+            raise ConfigurationError(
+                "leaked_keys.dat: corrupt corpus — entries with byte lengths "
+                + f"{wrong!r} (every entry must be exactly {_MIN_LENGTH} bytes)"
+            )
+        _denylist_cache = parsed
     return _denylist_cache
 
 

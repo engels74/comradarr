@@ -159,10 +159,15 @@ def _spawn_migration_subprocess(base_url: str, schema: str) -> subprocess.Popen[
     Returns the live :class:`subprocess.Popen` so the caller can collect
     its exit code and stdout once the race finishes.
     """
+    # Build env from scratch (NOT inheriting ``os.environ``) so a developer's
+    # locally-set ``COMRADARR_SECRET_KEY`` cannot leak into subprocess stdout
+    # or CI logs. Mirrors the discipline in ``test_e2e_boot.py``.
     env: dict[str, str] = {
-        **os.environ,
+        "PATH": os.environ.get("PATH", ""),
+        "HOME": os.environ.get("HOME", ""),
         "DATABASE_URL": base_url,
         "SEARCH_PATH": schema,
+        "COMRADARR_SECRET_KEY": secrets.token_hex(32),
     }
     return subprocess.Popen(  # noqa: S603 — fixed argv, no shell
         [sys.executable, "-c", _HARNESS_SCRIPT],
@@ -316,9 +321,14 @@ async def test_concurrent_migrations_alembic_clean(fresh_schema: tuple[str, str]
         text=True,
         timeout=30,
         env={
-            **os.environ,
+            # See ``_spawn_migration_subprocess`` — env from scratch so the
+            # operator's ``COMRADARR_SECRET_KEY`` cannot bleed into the
+            # ``alembic check`` subprocess's stdout/CI logs.
+            "PATH": os.environ.get("PATH", ""),
+            "HOME": os.environ.get("HOME", ""),
             "DATABASE_URL": base_url,
             "PGOPTIONS": f"-csearch_path={schema}",
+            "COMRADARR_SECRET_KEY": secrets.token_hex(32),
         },
     )
     assert proc.returncode == 0, (

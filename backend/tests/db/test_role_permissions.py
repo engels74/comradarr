@@ -605,6 +605,51 @@ async def test_migration_delete_privilege_present_on_all_tables(
             await outer.rollback()
 
 
+@pytest.mark.parametrize(
+    "ddl_stmt",
+    [
+        "CREATE TABLE _x_priv_probe (id INT)",
+        "CREATE FUNCTION _x_priv_probe() RETURNS INT AS $$ SELECT 1 $$ LANGUAGE SQL",
+        "CREATE INDEX _x_priv_probe_idx ON users (id)",
+        "DROP TABLE users",
+        "TRUNCATE TABLE users",
+        "ALTER TABLE users DROP COLUMN password_hash",
+    ],
+)
+async def test_app_role_cannot_perform_ddl(
+    db_engine: AsyncEngine,
+    ddl_stmt: str,
+) -> None:
+    """comradarr_app must raise InsufficientPrivilege for any DDL escalation.
+
+    The PRD §8 GRANT matrix limits ``comradarr_app`` to DML on non-audit tables
+    + SELECT/INSERT on audit_log. A future migration that accidentally widens
+    the grant (e.g. ``GRANT ALL`` in place of explicit DML verbs) gets caught
+    here on first contact: each vector covers a different DDL surface —
+    schema-level CREATE (TABLE/FUNCTION), table-owner-only structural changes
+    (CREATE INDEX, ALTER TABLE, DROP), and TRUNCATE.
+
+    Postgres reports SQLSTATE 42501 (insufficient_privilege) with two distinct
+    user-visible phrasings: "permission denied" for GRANT-level checks
+    (TRUNCATE, schema CREATE) and "must be owner" for owner-only DDL
+    (CREATE INDEX, DROP TABLE, ALTER TABLE). Both indicate the role lacks
+    authority; we accept either.
+    """
+    async with db_engine.connect() as conn:
+        outer = await conn.begin()
+        try:
+            await _set_role(conn, _APP_ROLE)
+            with pytest.raises(ProgrammingError) as excinfo:
+                _ = await conn.execute(text(ddl_stmt))
+            err_text = str(excinfo.value).lower()
+            assert "permission denied" in err_text or "must be owner" in err_text, (
+                f"expected SQLSTATE 42501 phrasing for DDL escalation: {ddl_stmt!r}; "
+                f"got: {excinfo.value!s}"
+            )
+        finally:
+            await outer.rollback()
+
+
 # Suppress unused-name warnings on the sentinel constants — they document
 # intent for future test extensions even when not directly referenced here.
 _ = _SENTINEL_UUID
