@@ -22,7 +22,7 @@ if TYPE_CHECKING:
 
 from comradarr.core.types import Secret
 from comradarr.errors.configuration import ConfigurationError
-from comradarr.security.secret_key import validate_secret_key
+from comradarr.security.secret_key import validate_secret_key_registry
 
 LogFormat = Literal["json", "console"]
 LinkPolicy = Literal["link", "require_separate"]
@@ -111,6 +111,11 @@ class Settings(msgspec.Struct, frozen=True, kw_only=True):
     comradarr_disable_local_login: bool = False
     # Q4 implementation: default False in Phase 1; Phase 2 flips per environment.
     comradarr_run_migrations_on_startup: bool = False
+    # Phase 3 §5.3.5 architect rework: probes are decoupled from migrations so
+    # an out-of-band migration runner still gets the SELECT 1 + enum-membership
+    # boot gate. Default True; stub_settings() injects False for tests that
+    # rely on the Phase 1 stub-DSN contract.
+    comradarr_run_db_probes_on_startup: bool = True
 
     oidc_providers: dict[str, OIDCProviderSettings] = msgspec.field(default_factory=dict)
 
@@ -315,13 +320,17 @@ def load_settings(env: Mapping[str, str] | None = None) -> Settings:
             "COMRADARR_SECRET_KEY (or COMRADARR_SECRET_KEY_FILE / "
             + "COMRADARR_SECRET_KEY_V<n>[_FILE]) must be set"
         )
-    for version, key_bytes in versions.items():
-        try:
-            validate_secret_key(key_bytes)
-        except ConfigurationError as exc:
-            raise ConfigurationError(f"COMRADARR_SECRET_KEY[v{version}]: {exc}") from exc
 
     current_version = max(versions)
+    # Architect rework (Phase 3 §5.3.5 Iter 1 Critic): the registry validator
+    # ships as the boot gate. Retired keys are decryption-only and intentionally
+    # skip the entropy/denylist checks (so a key that was acceptable when
+    # minted but later landed on the denylist still decrypts old rows). Phase
+    # 30 owns the full-registry sweep that triggers re-encryption.
+    try:
+        validate_secret_key_registry(versions, current_version)
+    except ConfigurationError as exc:
+        raise ConfigurationError(f"COMRADARR_SECRET_KEY[v{current_version}]: {exc}") from exc
 
     database_url = source.get("DATABASE_URL")
     if not database_url:
@@ -382,6 +391,9 @@ def load_settings(env: Mapping[str, str] | None = None) -> Settings:
         ),
         comradarr_run_migrations_on_startup=_parse_bool(
             source, "COMRADARR_RUN_MIGRATIONS_ON_STARTUP", default=False
+        ),
+        comradarr_run_db_probes_on_startup=_parse_bool(
+            source, "COMRADARR_RUN_DB_PROBES_ON_STARTUP", default=True
         ),
         oidc_providers=_parse_oidc_providers(source),
     )

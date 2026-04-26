@@ -141,11 +141,18 @@ def stub_settings(
     The default env supplies the minimum to satisfy ``load_settings`` (a
     high-entropy secret key + an asyncpg DSN). Tests pass ``overrides`` to flip
     individual fields without leaking real process env vars.
+
+    ``COMRADARR_RUN_DB_PROBES_ON_STARTUP=false`` is injected by default because
+    the stub DSN points at ``localhost:1`` which would fail the SELECT 1 probe;
+    DB-integration tests opt back in by passing
+    ``overrides={"COMRADARR_RUN_DB_PROBES_ON_STARTUP": "true"}`` against a real
+    Postgres DSN.
     """
     env: dict[str, str] = {
         "COMRADARR_SECRET_KEY": STUB_SECRET_KEY,
         "DATABASE_URL": STUB_DATABASE_URL,
         "COMRADARR_AUDIT_ADMIN_PASSWORD": STUB_AUDIT_ADMIN_PASSWORD,
+        "COMRADARR_RUN_DB_PROBES_ON_STARTUP": "false",
     }
     if overrides:
         env.update(overrides)

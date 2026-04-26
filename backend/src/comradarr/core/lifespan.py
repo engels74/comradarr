@@ -211,15 +211,20 @@ async def db_lifespan(app: Litestar) -> AsyncGenerator[None]:
             await audit_admin_engine.dispose()
             raise
     else:
-        # No DB connection is attempted on this path — Phase 1's stub DSN
-        # survives boot because the flag defaults to False.
+        # No DDL is attempted on this path. Probes still run when
+        # ``comradarr_run_db_probes_on_startup`` is True — the flags decoupled
+        # so a deployment that runs migrations out-of-band still gets the
+        # SELECT 1 + enum-membership boot gate.
         _logger.info("db.lifespan.migrations.skipped", reason="flag_off")
 
-    if settings.comradarr_run_migrations_on_startup:
-        # Boot probes only fire on the migration-gated path because the
-        # flag-off path never connects to the database (Phase 1 stub-DSN
-        # contract). When the flag is ON the probes run AFTER migrations
-        # so the enum-membership check sees the post-upgrade state.
+    if settings.comradarr_run_db_probes_on_startup:
+        # Boot probes are independent of the migrations flag (architect feedback,
+        # Phase 3 §5.3.5 Iter 1 Critic): a deployment that runs migrations via
+        # an init container or a one-shot job still wants the SELECT 1 + enum
+        # gate at app boot. The Phase 1 stub-DSN tests opt out by setting
+        # COMRADARR_RUN_DB_PROBES_ON_STARTUP=false in stub_settings().
+        # When migrations ran above, the probes run AFTER so the enum check
+        # observes the post-upgrade state.
         try:
             await _probe_engine(engine, role="app")
             await _probe_engine(audit_admin_engine, role="audit_admin")
@@ -241,12 +246,20 @@ async def db_lifespan(app: Litestar) -> AsyncGenerator[None]:
 def _make_vacuum_done_callback(app: Litestar) -> Callable[[asyncio.Task[object]], None]:
     """Build the done-callback that flips audit_retention_vacuum_health on crash.
 
-    Iter 1 Amendment 2: the callback must (a) flip ``app.state`` to
-    ``"crashed"`` so Phase 6's ``/health`` endpoint surfaces the failure
-    AND (b) re-raise the underlying exception into the lifespan task so
-    boot fails loudly rather than silently degrading.
-    ``asyncio.CancelledError`` is the lifespan-teardown path and is NOT a
-    crash.
+    Architect rework (Phase 3 §5.3.5 Iter 1 Critic): re-raising from an
+    asyncio done-callback is silently consumed by the loop's exception
+    handler, so the original "raise into the lifespan task" plan never
+    actually surfaced the failure. Instead, the callback now:
+
+    * flips ``app.state.audit_retention_vacuum_health`` to ``"crashed"``;
+    * stashes the exception on ``app.state.audit_retention_vacuum_error``
+      so Phase 6's ``/health`` endpoint can render the cause without
+      reaching back into the (already-finished) task;
+    * logs ``lifespan.services.vacuum_crashed`` at error severity so
+      operators see the failure even when ``/health`` is unavailable.
+
+    ``asyncio.CancelledError`` is the lifespan-teardown path and is NOT
+    treated as a crash.
     """
 
     def _on_done(task: asyncio.Task[object]) -> None:
@@ -256,9 +269,30 @@ def _make_vacuum_done_callback(app: Litestar) -> Callable[[asyncio.Task[object]]
         if exc is None:
             return
         app.state.audit_retention_vacuum_health = "crashed"
-        raise exc
+        app.state.audit_retention_vacuum_error = exc
+        _logger.error(
+            "lifespan.services.vacuum_crashed",
+            error=str(exc),
+            error_type=type(exc).__name__,
+        )
 
     return _on_done
+
+
+def _initial_vacuum_health(horizon_set: bool) -> AuditRetentionVacuumHealth:
+    """Pick the initial health state from whether the retention horizon is set.
+
+    Architect rework (Phase 3 §5.3.5 Iter 1 Critic): the previous code
+    hard-coded ``"skipped_indefinite"`` regardless of horizon, so a
+    deployment with retention enabled would still report the no-op state
+    until the loop crashed. The state machine has only two pre-crash
+    settled values, so we pick them up-front:
+
+    * horizon set         → ``"running"`` (loop will DELETE on each tick).
+    * horizon ``None``    → ``"skipped_indefinite"`` (loop emits the
+      skip event each tick, never DELETEs).
+    """
+    return "running" if horizon_set else "skipped_indefinite"
 
 
 @asynccontextmanager
@@ -269,17 +303,18 @@ async def services_lifespan(app: Litestar) -> AsyncGenerator[None]:
     app.state.crypto = CryptoService(settings)
     app.state.audit_writer = AuditWriter(app.state.db_sessionmaker)
 
-    initial_health: AuditRetentionVacuumHealth = "skipped_indefinite"
-    app.state.audit_retention_vacuum_health = initial_health
+    horizon = settings.audit_retention_timedelta()
+    app.state.audit_retention_vacuum_health = _initial_vacuum_health(horizon is not None)
+    app.state.audit_retention_vacuum_error = None
     vacuum = AuditRetentionVacuum(
         app.state.audit_admin_sessionmaker,
-        horizon=settings.audit_retention_timedelta(),
+        horizon=horizon,
         interval=settings.comradarr_audit_vacuum_interval_seconds,
     )
     app.state.audit_retention_vacuum = vacuum
 
     vacuum_task: asyncio.Task[object] = asyncio.create_task(
-        vacuum.run(),  # type: ignore[arg-type]
+        vacuum.run(),
         name="audit_retention_vacuum",
     )
     vacuum_task.add_done_callback(_make_vacuum_done_callback(app))
@@ -298,7 +333,7 @@ async def services_lifespan(app: Litestar) -> AsyncGenerator[None]:
             _ = vacuum_task.cancel()
         try:
             await asyncio.wait_for(vacuum_task, timeout=_VACUUM_TEARDOWN_TIMEOUT_SECONDS)
-        except TimeoutError, asyncio.CancelledError:  # noqa: PERF203 — explicit teardown branches
+        except TimeoutError, asyncio.CancelledError:
             pass
-        except Exception as exc:  # noqa: BLE001 — done-callback already re-raised; swallow on teardown
+        except Exception as exc:  # noqa: BLE001 — done-callback already recorded the error; swallow on teardown
             _logger.warning("lifespan.services.vacuum_teardown_error", error=str(exc))
