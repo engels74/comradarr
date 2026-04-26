@@ -43,7 +43,7 @@ def main() -> None:
         "--workers-lifetime",
         "21600",
         "--respawn-failed-workers",
-        "--log-access",
+        "--access-log",
     ]
 
     if run_mode == "dev":
