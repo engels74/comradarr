@@ -1,0 +1,75 @@
+# Phase 2 integration CI — Postgres 16 service container + tests/db/ suite
+# (plan §5.0.4 line 149 / phase-2 plan §1 "CI + docs" line 47).
+#
+# Why a separate workflow from `ci.yml`:
+# * The fast lane (`ci.yml`) targets <2 min warm-cache turnaround per PRD §23
+#   and runs unit-only pytest. Integration tests need a live Postgres service,
+#   role creation, and the alembic baseline applied — that doesn't fit the
+#   <2 min budget. Splitting keeps the fast lane fast for non-DB PRs.
+# * `tests/db/` is gated by `pytest.mark.integration`; this workflow opts the
+#   marker in. The fast lane in `ci.yml` runs `pytest -q -n auto` against the
+#   default deselected-by-marker config so it never tries to connect to a DB.
+#
+# Action pinning: tag-pinned per PRD §23 line 1775; same posture as ci.yml.
+name: integration
+on: [push, pull_request]
+permissions:
+  contents: read
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  backend-integration:
+    runs-on: ubuntu-latest
+    services:
+      # Postgres 16: matches PRD §8 minimum + plan §2 prerequisite.
+      # The default `postgres` superuser holds CREATEROLE, which the v1
+      # baseline migration's `_create_roles_idempotent()` requires for the
+      # three-role separation. Managed-Postgres deployments without
+      # CREATEROLE follow `docs/runbook/postgres-roles.md` instead.
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      # conftest.py reads TEST_DATABASE_URL; superuser path lets the
+      # per-worker schema fixture CREATE/DROP schemas without a managed-PG
+      # role pre-step.
+      TEST_DATABASE_URL: postgresql+asyncpg://postgres:postgres@localhost:5432/postgres
+      # The E2E boot smoke creates a fresh per-test database via CREATE
+      # DATABASE; the superuser already has that privilege.
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6   # reads .tool-versions
+      - uses: astral-sh/setup-uv@v6
+      - name: Sync deps
+        working-directory: backend
+        run: uv sync --frozen
+      - name: Integration suite (parallel, e2e excluded)
+        working-directory: backend
+        # `-n auto` lights up xdist + the per-worker `wid_<worker_id>` schema
+        # fixture. `--deselect tests/db/test_e2e_boot.py` keeps the
+        # port-bound E2E test out of the parallel pass — it runs in the next
+        # step under a single worker. The marker filter `not e2e` is a
+        # belt-and-braces guard (the deselect alone is sufficient today; the
+        # marker excludes any future e2e tests added without an explicit
+        # path-level entry here).
+        run: |
+          uv run pytest tests/ -n auto -m "not e2e" \
+            --deselect tests/db/test_e2e_boot.py \
+            -q
+      - name: E2E boot smoke (single-worker, port-bound)
+        working-directory: backend
+        # Granian binds the hardcoded port 8000 (see comradarr/__main__.py
+        # dev-mode block); xdist parallelism would race on the bind. The
+        # explicit `-n 0` opts out of any xdist auto-discovery.
+        run: |
+          uv run pytest tests/db/test_e2e_boot.py -n 0 -q

@@ -53,3 +53,17 @@ repo = "local"
 hooks = [
   { id = "check-bun-pin-parity", name = "check bun pin parity", entry = "tools/lint/check-bun-pin-parity.sh", language = "system", files = "^(frontend/package\\.json|frontend/bunfig\\.toml|\\.tool-versions)$", pass_filenames = false },
 ]
+
+# Project-local — Alembic autogenerate drift (manual-stage opt-in).
+# Excluded from the default commit run because `alembic check` opens a live
+# Postgres connection (slow + dependency-heavy). CI covers the gate via
+# `tests/db/test_alembic_baseline.py` against the integration service
+# container. Developers with a local Postgres can run it explicitly via
+# `prek run --hook-stage manual check-alembic-clean`. See
+# `docs/runbook/postgres-roles.md` §"Local development setup" for the
+# DATABASE_URL prerequisite.
+[[repos]]
+repo = "local"
+hooks = [
+  { id = "check-alembic-clean", name = "alembic check (manual)", entry = "tools/lint/check_alembic_clean.sh", language = "system", stages = ["manual"], pass_filenames = false, always_run = true },
+]

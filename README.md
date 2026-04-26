@@ -117,6 +117,50 @@ tools/lint/no_future_annotations.sh                                             
 > Setting `COMRADARR_RUN_MODE=dev` binds `127.0.0.1:8000` instead — use that
 > mode for any local development against an untrusted LAN.
 
+## Definition of Done — Phase 2
+
+A third-party deterministic "Phase 2 done" check (plan §3 Milestone 12, phase-2 plan §6):
+
+```sh
+prek run --all-files                                                                              # exits 0
+( cd backend \
+  && uv sync --frozen \
+  && uv run ruff check . \
+  && uv run ruff format --check . \
+  && uv run basedpyright \
+  && ../tools/lint/run-pip-audit.sh )                                                             # exits 0
+# Integration suite — needs a live Postgres 16. The CI service container in
+# .github/workflows/integration.yaml exposes port 5432 with the `postgres`
+# superuser; locally, follow `docs/runbook/postgres-roles.md` §"Local
+# development setup" for the equivalent docker run command.
+export TEST_DATABASE_URL='postgresql+asyncpg://postgres:postgres@localhost:5432/postgres'
+( cd backend \
+  && uv run pytest tests/ -n auto -m "not e2e" --deselect tests/db/test_e2e_boot.py -q \
+  && uv run pytest tests/db/test_e2e_boot.py -n 0 -q )                                            # exits 0
+# Alembic upgrade/downgrade roundtrip + autogenerate-clean check — covered by
+# tests/db/test_alembic_baseline.py inside the suite above. The manual-stage
+# `check-alembic-clean` prek hook (opt-in: `prek run --hook-stage manual
+# check-alembic-clean`) gives developers a fast local equivalent.
+( cd backend \
+  && export DATABASE_URL="$TEST_DATABASE_URL" \
+  && uv run alembic upgrade head \
+  && uv run alembic downgrade base \
+  && uv run alembic upgrade head )                                                                # exits 0
+# `migrate` console-script smoke (plan §3 Milestone 9): runs the same
+# pre-flight + alembic upgrade as the CLI subcommand, then exits 0.
+( cd backend && uv run migrate )                                                                  # exits 0
+```
+
+> **Operator note — managed Postgres without CREATEROLE:**
+> The v1 baseline migration creates three NOLOGIN roles (`comradarr_migration`,
+> `comradarr_app`, `comradarr_audit_admin`) and applies a per-table GRANT matrix
+> per PRD §8. On managed Postgres providers that deny `CREATEROLE` to the
+> connect user (RDS, Cloud SQL, Heroku, Supabase, Neon), an operator with
+> elevated credentials must pre-create the roles before `alembic upgrade head`.
+> See [`docs/runbook/postgres-roles.md`](docs/runbook/postgres-roles.md) for the
+> idempotent SQL block and the pre-flight check that converts mid-migration
+> `InsufficientPrivilege` failures into a clear configuration error.
+
 ## License
 
 [AGPL-3.0-or-later](LICENSE).
