@@ -32,12 +32,18 @@ Highlights:
   — the advisory lock needs an outer transaction to attach to).
 """
 
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 import structlog
 from sqlalchemy import text
 
 from comradarr.errors.configuration import ConfigurationError
+
+# Computed at import time so the async lifespan path doesn't pay the
+# ``Path.resolve`` syscall (and so async-lint stays clean). ``__file__`` here
+# is backend/src/comradarr/db/migrations.py — parents[3] == backend/.
+_SCRIPT_LOCATION: str = str(Path(__file__).resolve().parents[3] / "migrations")
 
 if TYPE_CHECKING:
     from sqlalchemy.engine import Connection
@@ -152,17 +158,41 @@ async def run_migrations_in_lifespan(engine: AsyncEngine) -> None:
 
     1. :func:`preflight_role_check` raises a structured error early when the
        roles are missing, instead of letting the migration body explode.
-    2. ``async with engine.begin() as conn`` opens an *outer* transaction —
-       crucial because :func:`do_run_migrations` acquires
-       ``pg_advisory_xact_lock`` and that lock needs a transaction to attach
-       to (``engine.connect()`` would auto-commit and lose the lock).
-    3. ``await conn.run_sync(do_run_migrations)`` bridges async → sync.
+    2. Build an :class:`EnvironmentContext` with an explicit
+       ``upgrade`` migration function (mirrors ``alembic.command.upgrade``'s
+       internal closure) so Alembic's ``context.configure`` proxy and its
+       ``run_migrations`` dispatcher are both wired before
+       :func:`do_run_migrations` runs.
+    3. ``async with engine.begin() as conn`` opens an *outer* transaction so
+       :func:`do_run_migrations` can attach ``pg_advisory_xact_lock`` to it.
+    4. ``await conn.run_sync(_do_run_with_env)`` bridges async → sync.
 
     Concurrency: the advisory lock guarantees that N replicas calling this
     in parallel serialize. Non-winners observe ``head == current`` and exit
     cleanly — Alembic's own no-op fast path runs once they get the lock.
     """
+    from alembic.config import Config as AlembicConfig  # noqa: PLC0415
+    from alembic.runtime.environment import EnvironmentContext  # noqa: PLC0415
+    from alembic.script import ScriptDirectory  # noqa: PLC0415
+
     await preflight_role_check(engine)
+
+    # Build a minimal Alembic Config + ScriptDirectory pointing at backend/migrations.
+    alembic_config = AlembicConfig()
+    alembic_config.set_main_option("script_location", _SCRIPT_LOCATION)
+    script_directory = ScriptDirectory.from_config(alembic_config)
+
+    # Mirror of ``alembic.command.upgrade``'s internal ``upgrade(rev, context)``
+    # closure — returns the list of migration steps from the DB's current
+    # revision up to ``head``. Wiring this through ``EnvironmentContext(fn=...)``
+    # is what makes ``context.run_migrations()`` actually execute scripts.
+    def _upgrade_to_head(rev: object, _ctx: object) -> object:
+        return script_directory._upgrade_revs("head", rev)  # noqa: SLF001 # pyright: ignore[reportPrivateUsage,reportArgumentType]
+
+    def _do_run_with_env(connection: Connection) -> None:
+        with EnvironmentContext(alembic_config, script_directory, fn=_upgrade_to_head):
+            do_run_migrations(connection)
+
     async with engine.begin() as conn:
-        await conn.run_sync(do_run_migrations)
+        await conn.run_sync(_do_run_with_env)
     _logger.info("migrations.lifespan.complete")
