@@ -5,3 +5,15 @@ declarative metadata via the ``Base`` subclass side effect. Alembic's
 autogenerate and the migration runner both rely on this package being
 imported once before they consult ``Base.metadata``.
 """
+
+from . import api_key as _api_key  # noqa: F401  # pyright: ignore[reportUnusedImport]
+from . import api_key_scope as _api_key_scope  # noqa: F401  # pyright: ignore[reportUnusedImport]
+from . import (
+    auth_rate_limit as _auth_rate_limit,  # noqa: F401  # pyright: ignore[reportUnusedImport]
+)
+from . import oidc_provider as _oidc_provider  # noqa: F401  # pyright: ignore[reportUnusedImport]
+from . import (
+    role_permission as _role_permission,  # noqa: F401  # pyright: ignore[reportUnusedImport]
+)
+from . import session as _session  # noqa: F401  # pyright: ignore[reportUnusedImport]
+from . import user as _user  # noqa: F401  # pyright: ignore[reportUnusedImport]
