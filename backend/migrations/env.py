@@ -64,11 +64,29 @@ async def run_async_migrations() -> None:
     lock + transactional DDL). RECIPE-ALEMBIC-ASYNC pitfall avoidance: the
     ``import comradarr.db.models`` at module top is what makes autogenerate
     see the ORM graph.
+
+    ``SEARCH_PATH`` env-var pin: asyncpg ignores libpq's ``PGOPTIONS`` /
+    ``?options=`` channel, so per-test schema isolation cannot ride the
+    standard env vars. The migration-lock test (``alembic check`` parity
+    probe) sets ``SEARCH_PATH=<per-test-schema>`` and relies on env.py
+    forwarding it as asyncpg ``server_settings`` so the autogenerate diff
+    runs against the right schema. Production callers leave it unset and
+    asyncpg defaults to the role's ``search_path`` (typically ``public``).
     """
+    engine_kwargs: dict[str, object] = {}
+    search_path = os.environ.get("SEARCH_PATH")
+    if search_path:
+        # asyncpg session-parameter pin — equivalent to ``SET search_path``
+        # immediately after connect. Applied to every pooled connection;
+        # ``NullPool`` below disables pooling so the cost is one SET per
+        # subprocess connection (negligible).
+        engine_kwargs["connect_args"] = {"server_settings": {"search_path": search_path}}
+
     connectable = async_engine_from_config(
         config.get_section(config.config_ini_section, {}),
         prefix="sqlalchemy.",
         poolclass=pool.NullPool,
+        **engine_kwargs,
     )
     async with connectable.begin() as connection:
         await connection.run_sync(do_run_migrations)

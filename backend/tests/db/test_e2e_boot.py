@@ -69,7 +69,11 @@ _BOOT_TIMEOUT_SECONDS = 10.0
 _HEALTH_POLL_INTERVAL_SECONDS = 0.2
 _TERM_TIMEOUT_SECONDS = 5.0
 _GRANIAN_PORT = 8000  # hardcoded in comradarr/__main__.py
-_HEAD_REVISION = "361c239a829d"
+# Phase 3 advanced ``head`` past the v1 baseline: the chain is
+# ``361c239a829d → a1b2c3d4e5f6 → b2c3d4e5f6a7``. The smoke asserts the
+# applied event names the *current* head, so this constant moves with each
+# new revision.
+_HEAD_REVISION = "b2c3d4e5f6a7"
 # 32-byte secret key (64 hex chars) bound to version 1 via the suffix-less
 # ``COMRADARR_SECRET_KEY`` env var (plan §5.1.1 Step 2.5). The hex string is
 # decoded by :func:`_read_secret_bytes` into 32 high-entropy bytes — meeting
@@ -173,9 +177,22 @@ def test_boot_applies_migrations_and_serves_health(
         "PATH": os.environ.get("PATH", ""),
         "HOME": os.environ.get("HOME", ""),
         "DATABASE_URL": fresh_e2e_dsn,
+        # The lifespan now constructs an audit-admin engine unconditionally and
+        # would otherwise call :func:`_derive_audit_admin_url`, which requires
+        # the app DSN to start with ``comradarr_app`` userinfo. The Phase 2
+        # worker DSN uses the ``comradarr`` superuser instead, so we forward
+        # an explicit override pointing at the same database — the e2e smoke
+        # only asserts that the lifespan boots and serves /health, not the
+        # role-isolation contract enforced in production.
+        "AUDIT_ADMIN_DATABASE_URL": fresh_e2e_dsn,
         "COMRADARR_RUN_MIGRATIONS_ON_STARTUP": "1",
         "COMRADARR_RUN_MODE": "dev",  # 127.0.0.1 binding; safe for tests.
         "COMRADARR_SECRET_KEY": _E2E_SECRET_HEX,
+        # Phase 3 §5.3.1 made COMRADARR_AUDIT_ADMIN_PASSWORD a required input
+        # to load_settings() (≥32 chars). The smoke spawns granian without
+        # inheriting os.environ to keep operator secrets out of subprocess
+        # stdout, so the password has to be seeded explicitly here.
+        "COMRADARR_AUDIT_ADMIN_PASSWORD": secrets.token_urlsafe(48),
     }
 
     proc = subprocess.Popen(  # noqa: S603 — fixed argv, no shell

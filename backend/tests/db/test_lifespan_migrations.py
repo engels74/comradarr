@@ -51,7 +51,12 @@ from comradarr.db.migrations import run_migrations_in_lifespan
 pytestmark = pytest.mark.integration
 
 
-_HEAD_REVISION = "361c239a829d"
+# Phase 3 advanced ``head`` past the v1 baseline. Order is:
+#   361c239a829d (v1 baseline) → a1b2c3d4e5f6 (audit_action enum extensions)
+#   → b2c3d4e5f6a7 (audit-admin NOLOGIN→LOGIN). Update this constant whenever a
+# new migration lands; ``run_migrations_in_lifespan`` reports the post-upgrade
+# head, and the test asserts equality to catch missing/stale revisions.
+_HEAD_REVISION = "b2c3d4e5f6a7"
 
 
 _StubSettingsFactory = Callable[..., Settings]
@@ -62,15 +67,25 @@ def _build_settings(
     database_url: str,
     run_migrations: bool,
     stub_settings_factory: _StubSettingsFactory,
+    audit_admin_database_url: str | None = None,
 ) -> Settings:
     """Build a frozen Settings via the ``stub_settings`` fixture's overrides path.
 
     Tests receive the conftest's :func:`stub_settings` factory as a fixture and
     forward overrides through it so we go through ``load_settings`` (R7) — a
     direct ``Settings(...)`` would skip validation.
+
+    ``audit_admin_database_url`` defaults to the same DSN as ``database_url`` —
+    the lifespan now constructs an audit-admin engine unconditionally and would
+    otherwise call :func:`_derive_audit_admin_url`, which requires the app DSN
+    to begin with ``comradarr_app`` userinfo. The Phase 2 worker DSN uses the
+    ``comradarr`` superuser instead, so we forward an explicit override and
+    let the test's monkeypatched ``build_engine`` route both engines through
+    the same fresh schema.
     """
     overrides: dict[str, str] = {
         "DATABASE_URL": database_url,
+        "AUDIT_ADMIN_DATABASE_URL": audit_admin_database_url or database_url,
         "COMRADARR_RUN_MIGRATIONS_ON_STARTUP": "true" if run_migrations else "false",
     }
     return stub_settings_factory(overrides=overrides)
@@ -82,6 +97,23 @@ def _stub_settings_factory_fixture() -> _StubSettingsFactory:  # pyright: ignore
     from tests.conftest import stub_settings  # noqa: PLC0415
 
     return stub_settings
+
+
+@pytest.fixture(autouse=True)
+def _reset_structlog_cache(monkeypatch: pytest.MonkeyPatch) -> None:  # pyright: ignore[reportUnusedFunction]
+    """Re-bind ``lifespan_module._logger`` to a fresh proxy for every branch test.
+
+    Litestar's ``StructlogPlugin`` boot path (exercised by sibling
+    ``test_app_boot.py``) caches a ``BoundLogger`` against Litestar's processor
+    chain on first use. After the plugin tears down, ``capture_logs()`` mutates
+    a *new* default-config processor list — which the cached BoundLogger does
+    not point at, so emitted events bypass capture and the four branches see
+    an empty ``captured`` list. Replacing the module-level ``_logger`` with a
+    fresh proxy forces re-resolution against ``get_config()["processors"]``,
+    the same list ``capture_logs()`` mutates in-place.
+    """
+    fresh_logger = structlog.stdlib.get_logger("comradarr.core.lifespan")
+    monkeypatch.setattr(lifespan_module, "_logger", fresh_logger)
 
 
 @pytest.fixture(name="fresh_schema")
@@ -237,7 +269,7 @@ async def test_branch_3_flag_off_emits_skipped_and_skips_db(
     so the lifespan opens cleanly with the unreachable DSN.
     """
     settings = _build_settings(
-        database_url="postgresql+asyncpg://stub:stub@localhost:1/stub",
+        database_url="postgresql+asyncpg://comradarr_app:stub@localhost:1/stub",
         run_migrations=False,
         stub_settings_factory=stub_settings_factory,
     )
@@ -271,7 +303,7 @@ async def test_branch_4_failure_path_emits_failed_and_reraises(
     with the stringified exception, disposes the engine, and re-raises.
     """
     settings = _build_settings(
-        database_url="postgresql+asyncpg://stub:stub@localhost:1/stub",
+        database_url="postgresql+asyncpg://comradarr_app:stub@localhost:1/stub",
         run_migrations=True,
         stub_settings_factory=stub_settings_factory,
     )

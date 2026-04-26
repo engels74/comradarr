@@ -4,7 +4,8 @@
 Defines the canonical processor chain — ``merge_contextvars`` →
 ``add_logger_name`` → ``add_log_level`` → ``StackInfoRenderer`` →
 ``format_exc_info`` → :func:`header_redaction_processor` →
-:func:`secret_pattern_redaction_processor` → :func:`dedup_throttle_processor`
+:func:`secret_pattern_redaction_processor` →
+:func:`secret_aware_redaction_processor` → :func:`dedup_throttle_processor`
 → ``TimeStamper`` → ``JSONRenderer`` (json) or ``ConsoleRenderer`` (console)
 — and two entrypoints:
 
@@ -22,11 +23,13 @@ import logging
 import re
 import threading
 import time
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 import structlog
 from litestar.logging.config import StructLoggingConfig
 from litestar.plugins.structlog import StructlogConfig
+
+from comradarr.core.types import redact_secrets
 
 if TYPE_CHECKING:
     from structlog.types import EventDict, Processor, WrappedLogger
@@ -58,9 +61,13 @@ def header_redaction_processor(
     return event_dict
 
 
-# TODO(Phase 3): integrate Secret[T] type-aware redaction once §5.3.1 lands.
 # These patterns redact the entire matching value (never a substring). Each
 # pattern is applied independently; order is irrelevant.
+#
+# The pattern processor is a fail-safe net for stringified secrets that escape
+# the type system (e.g. an Argon2 hash that was never wrapped in Secret[str]).
+# The Secret-aware processor below is the primary defense; patterns catch
+# everything else.
 _SECRET_VALUE_PATTERNS: tuple[re.Pattern[str], ...] = (
     # Argon2id hash header: $argon2id$v=19$m=...,t=...,p=...$<salt>$<hash>
     re.compile(r"^\$argon2id\$"),
@@ -81,6 +88,26 @@ def secret_pattern_redaction_processor(
         if isinstance(value, str) and any(p.search(value) for p in _SECRET_VALUE_PATTERNS):
             event_dict[key] = _REDACTED
     return event_dict
+
+
+def secret_aware_redaction_processor(
+    _logger: WrappedLogger, _method_name: str, event_dict: EventDict
+) -> EventDict:
+    """Type-driven Secret[T] redaction (§5.3.3); delegates to redact_secrets.
+
+    The walker in :func:`comradarr.core.types.redact_secrets` is the single
+    source of truth for Secret-aware redaction across the structlog chain
+    and the M5 :class:`AuditWriter` context. Centralizing the logic here
+    prevents drift between the two surfaces.
+
+    Inserted AFTER :func:`secret_pattern_redaction_processor` in the chain
+    so a Secret-wrapped value whose underlying payload happens to match a
+    pattern (e.g. ``Secret[str]("$argon2id$...")``) renders as ``"<Secret>"``
+    rather than ``"<redacted>"``: the pattern processor's ``isinstance(value,
+    str)`` guard skips ``Secret`` instances (they are not ``str`` subclasses
+    and ``__bytes__`` raises), so the type-aware processor wins outright.
+    """
+    return cast("EventDict", redact_secrets(event_dict))
 
 
 class _Bucket:
@@ -159,6 +186,7 @@ def _build_processor_chain(log_format: str) -> list[Processor]:
         structlog.processors.format_exc_info,
         header_redaction_processor,
         secret_pattern_redaction_processor,
+        secret_aware_redaction_processor,
         dedup_throttle_processor,
         structlog.processors.TimeStamper(fmt="iso", utc=True),
     ]

@@ -5,12 +5,14 @@ plus the encrypted-column-free connector ``pause`` toggle (plan §6 P4).
 """
 
 from comradarr.repositories._pagination import Cursor
+from comradarr.repositories.app_secrets import AppSecretsRepository
 from comradarr.repositories.auth import AuthRepository
 from comradarr.repositories.base import BaseRepository
 from comradarr.repositories.connector import ConnectorRepository
 from comradarr.repositories.content import ContentRepository
 
 __all__ = [
+    "AppSecretsRepository",
     "AuthRepository",
     "BaseRepository",
     "ConnectorRepository",

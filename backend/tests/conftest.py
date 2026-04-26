@@ -65,13 +65,30 @@ from sqlalchemy.sql import text
 # Stable, high-entropy stub secret key for the *whole* test session — generated
 # once at import-time so each worker observes a consistent value across xdist
 # fan-out. Real Phase 2 DB tests re-seed per worker via _seed_db_env() below.
-_STUB_SECRET_KEY: str = secrets.token_urlsafe(48)
-_STUB_DATABASE_URL: str = "postgresql+asyncpg://stub:stub@localhost:1/stub"
+#
+# ``token_hex(32)`` is REQUIRED (not ``token_urlsafe``): Phase 3 wires the stub
+# into ``CryptoService(settings)`` which constructs ``AESGCM(key)`` over the
+# parsed bytes. AESGCM accepts only 128/192/256-bit keys, so the registry must
+# decode to exactly 32 raw bytes. ``_read_secret_bytes`` first tries
+# ``bytes.fromhex(inline)`` — a 64-char hex literal decodes cleanly; a
+# ``token_urlsafe(48)`` ~64-char ASCII string falls through to ``encode()``
+# and yields ~64 bytes that pass the 32-byte ``validate_secret_key`` floor
+# but trip AESGCM's exact-length gate at runtime.
+STUB_SECRET_KEY: str = secrets.token_hex(32)
+# Userinfo MUST begin with ``comradarr_app`` so ``_derive_audit_admin_url``
+# can rewrite it into a sibling ``comradarr_audit_admin`` DSN; the audit-admin
+# engine is built unconditionally in db_lifespan.
+STUB_DATABASE_URL: str = "postgresql+asyncpg://comradarr_app:stub@localhost:1/stub"
+# Phase 3 §5.3.5 introduces the ``comradarr_audit_admin`` LOGIN role and
+# requires COMRADARR_AUDIT_ADMIN_PASSWORD (>= 32 chars) at load_settings()
+# time. token_urlsafe(48) is ~64 chars, comfortably over the floor.
+STUB_AUDIT_ADMIN_PASSWORD: str = secrets.token_urlsafe(48)
 
 # Seed env BEFORE first comradarr.* import so the module-level
 # ``app = create_app()`` in comradarr/app.py sees a valid Settings.
-_ = os.environ.setdefault("COMRADARR_SECRET_KEY", _STUB_SECRET_KEY)
-_ = os.environ.setdefault("DATABASE_URL", _STUB_DATABASE_URL)
+_ = os.environ.setdefault("COMRADARR_SECRET_KEY", STUB_SECRET_KEY)
+_ = os.environ.setdefault("DATABASE_URL", STUB_DATABASE_URL)
+_ = os.environ.setdefault("COMRADARR_AUDIT_ADMIN_PASSWORD", STUB_AUDIT_ADMIN_PASSWORD)
 
 from comradarr.config import Settings, load_settings  # noqa: E402  — env seed must precede
 
@@ -126,8 +143,9 @@ def stub_settings(
     individual fields without leaking real process env vars.
     """
     env: dict[str, str] = {
-        "COMRADARR_SECRET_KEY": _STUB_SECRET_KEY,
-        "DATABASE_URL": _STUB_DATABASE_URL,
+        "COMRADARR_SECRET_KEY": STUB_SECRET_KEY,
+        "DATABASE_URL": STUB_DATABASE_URL,
+        "COMRADARR_AUDIT_ADMIN_PASSWORD": STUB_AUDIT_ADMIN_PASSWORD,
     }
     if overrides:
         env.update(overrides)

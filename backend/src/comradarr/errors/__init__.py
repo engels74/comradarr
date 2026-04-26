@@ -23,6 +23,11 @@ from comradarr.errors.connector import (
     ConnectorUnavailable,
     ConnectorUrlRejected,
 )
+from comradarr.errors.crypto import (
+    CryptoAuthenticationFailed,
+    CryptoError,
+    CryptoUnknownKeyVersion,
+)
 from comradarr.errors.internal import InternalUnexpected
 from comradarr.errors.validation import ValidationError
 
@@ -38,6 +43,9 @@ __all__ = [
     "ConnectorError",
     "ConnectorUnavailable",
     "ConnectorUrlRejected",
+    "CryptoAuthenticationFailed",
+    "CryptoError",
+    "CryptoUnknownKeyVersion",
     "InternalUnexpected",
     "ValidationError",
 ]

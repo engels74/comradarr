@@ -1,0 +1,11 @@
+{
+  "typeCheckingMode": "recommended",
+  "pythonVersion": "3.14",
+  "include": ["."],
+  "executionEnvironments": [
+    {
+      "root": ".",
+      "extraPaths": ["../../src"]
+    }
+  ]
+}

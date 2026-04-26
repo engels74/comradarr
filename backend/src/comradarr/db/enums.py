@@ -115,6 +115,25 @@ class AuditAction(enum.StrEnum):
     SETUP_CLAIMED = "setup.claimed"
     SEARCH_PRIORITY_QUEUED = "search.priority_queued"
     SEARCH_RAN = "search.ran"
+    # Phase 3 §5.3 additions — bootstrap, setup-claim, login lifecycle, manual
+    # operator triggers, and snapshot import/export. Migration
+    # ``phase3_audit_action_extensions.py`` ALTERs the PG ``audit_action``
+    # enum to include each value via ``ADD VALUE IF NOT EXISTS`` (the only
+    # additive enum-extension form Postgres supports outside a transaction).
+    BOOTSTRAP_TOKEN_GENERATED = "bootstrap_token.generated"  # noqa: S105 — audit code
+    SETUP_CLAIM_GRANTED = "setup_claim.granted"
+    SETUP_CLAIM_REJECTED = "setup_claim.rejected"
+    ADMIN_ACCOUNT_CREATED = "admin_account.created"
+    SETUP_COMPLETED = "setup.completed"
+    LOGIN_SUCCESS = "login.success"
+    LOGIN_FAILED = "login.failed"
+    PASSWORD_CHANGED = "password.changed"  # noqa: S105 — audit code, not a credential
+    API_KEY_FIRST_USED = "api_key.first_used"
+    HTTP_BOUNDARY_CHANGED = "http_boundary.changed"
+    MANUAL_SEARCH_TRIGGERED = "manual_search.triggered"
+    MANUAL_SYNC_TRIGGERED = "manual_sync.triggered"
+    SNAPSHOT_EXPORTED = "snapshot.exported"
+    SNAPSHOT_IMPORTED = "snapshot.imported"
 
 
 class SyncStatus(enum.StrEnum):

@@ -110,7 +110,10 @@ def _head_revision(config: AlembicConfig) -> str | None:
 async def _async_main() -> int:
     """Async core invoked under the CLI's own ``asyncio.run`` — returns the exit code."""
     settings = load_settings()
-    engine = create_async_engine(settings.database_url)
+    # Phase 3 §5.3.1 wraps database_url in Secret[str]; .expose() at the engine
+    # construction site keeps the unwrap auditable via grep.
+    database_url = settings.database_url.expose()
+    engine = create_async_engine(database_url)
     try:
         # Hard preflight gate — fails fast with a structured ConfigurationError
         # when the three Comradarr roles are missing AND the connect user lacks
@@ -122,13 +125,13 @@ async def _async_main() -> int:
             _logger.error("cli.migrate.preflight_failed", error=str(exc))
             return 1
 
-        config = _build_alembic_config(settings.database_url)
+        config = _build_alembic_config(database_url)
         from_revision = await _current_revision(engine)
         to_revision = _head_revision(config)
 
         _logger.info(
             "cli.migrate.begin",
-            database_url_redacted=_redact_dsn(settings.database_url),
+            database_url_redacted=_redact_dsn(database_url),
             current_revision=from_revision,
         )
 

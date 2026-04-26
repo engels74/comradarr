@@ -77,7 +77,11 @@ from sqlalchemy.sql import text
 pytestmark = pytest.mark.integration
 
 
-_HEAD_REVISION = "361c239a829d"
+# Phase 3 advanced ``head`` past the v1 baseline: the chain is
+# ``361c239a829d → a1b2c3d4e5f6 → b2c3d4e5f6a7``. The advisory-lock test
+# parses the harness's ``{"from": ..., "to": ...}`` JSON and asserts the
+# applied head matches this constant; bump on every new revision.
+_HEAD_REVISION = "b2c3d4e5f6a7"
 _N_CONCURRENT = 4
 _SUBPROCESS_TIMEOUT_SECONDS = 60
 
@@ -168,6 +172,9 @@ def _spawn_migration_subprocess(base_url: str, schema: str) -> subprocess.Popen[
         "DATABASE_URL": base_url,
         "SEARCH_PATH": schema,
         "COMRADARR_SECRET_KEY": secrets.token_hex(32),
+        # Phase 3 §5.3.1 made COMRADARR_AUDIT_ADMIN_PASSWORD a required input;
+        # the harness imports comradarr.config so it must be seeded here.
+        "COMRADARR_AUDIT_ADMIN_PASSWORD": secrets.token_urlsafe(48),
     }
     return subprocess.Popen(  # noqa: S603 — fixed argv, no shell
         [sys.executable, "-c", _HARNESS_SCRIPT],
@@ -295,13 +302,14 @@ async def test_concurrent_migrations_alembic_clean(fresh_schema: tuple[str, str]
     non-empty diff means concurrent runners corrupted the schema (e.g.
     partial application before the lock arrived).
 
-    ``PGOPTIONS=-csearch_path=<schema>`` pins libpq-driven connections
-    to the per-test schema. Alembic's ``env.py`` uses asyncpg which
-    ignores ``PGOPTIONS``, but the alembic CLI itself uses libpq for some
-    bookkeeping (``alembic check``'s autogenerate diff path) — combined
-    with the ``DATABASE_URL`` carrying the asyncpg DSN and the alembic
-    ``env.py`` reading it directly, this is sufficient for the diff
-    comparison to land in the right schema.
+    Search-path pinning takes a two-pronged approach because asyncpg (used
+    by ``migrations/env.py``) ignores libpq's ``PGOPTIONS`` and ``?options=``:
+
+    * ``SEARCH_PATH=<schema>`` — read by env.py and forwarded to asyncpg as
+      ``connect_args.server_settings.search_path``. This is what makes the
+      ``alembic check`` autogenerate diff land in the per-test schema.
+    * ``PGOPTIONS=-csearch_path=<schema>`` — kept for any libpq-driven
+      bookkeeping the alembic CLI might do outside env.py.
     """
     base_url, schema = fresh_schema
 
@@ -327,8 +335,15 @@ async def test_concurrent_migrations_alembic_clean(fresh_schema: tuple[str, str]
             "PATH": os.environ.get("PATH", ""),
             "HOME": os.environ.get("HOME", ""),
             "DATABASE_URL": base_url,
+            # SEARCH_PATH is the asyncpg-honored channel (env.py forwards it
+            # via connect_args.server_settings); PGOPTIONS is the libpq belt
+            # for any non-env.py invocations the alembic CLI may make.
+            "SEARCH_PATH": schema,
             "PGOPTIONS": f"-csearch_path={schema}",
             "COMRADARR_SECRET_KEY": secrets.token_hex(32),
+            # Phase 3 §5.3.1 made COMRADARR_AUDIT_ADMIN_PASSWORD a required
+            # input; alembic check imports comradarr.config so it must be set.
+            "COMRADARR_AUDIT_ADMIN_PASSWORD": secrets.token_urlsafe(48),
         },
     )
     assert proc.returncode == 0, (

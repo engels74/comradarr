@@ -20,6 +20,13 @@ dependencies = [
   "structlog>=25.5",
   # advanced-alchemy carries no upper pin per plan — track upstream stability.
   "advanced-alchemy",
+  # Phase 3 (§5.3) crypto + audit primitives. The cryptography lower bound is
+  # pinned at >=46.0.7 because the 45.x line and 46.0–46.0.6 carry three
+  # fixed CVEs (CVE-2026-26007 fix in 46.0.5, CVE-2026-34073 fix in 46.0.6,
+  # CVE-2026-39892 fix in 46.0.7); cp314 wheels are available across the
+  # whole 46.x series. The upper bound <47 caps the next major.
+  "cryptography>=46.0.7,<47",
+  "argon2-cffi>=23,<26",
 ]
 
 [project.scripts]
@@ -88,6 +95,10 @@ typeCheckingMode = "recommended"
 pythonVersion = "3.14"
 # Phase 1 (F-4 burndown) flips `tests/` into the typecheck surface alongside `src/`.
 include = ["src", "tests"]
+# tests/typecheck/ holds intentional Secret-misuse fixtures (Phase 3 §5.3.6)
+# consumed by tests/test_secret_typecheck.py via subprocess. They MUST trip
+# basedpyright as part of the gate, so the suite-wide pass excludes them.
+exclude = ["tests/typecheck"]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"

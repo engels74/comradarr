@@ -11,6 +11,7 @@ Failures raise :class:`ConfigurationError` BEFORE Litestar lifespan begins
 import os
 import pathlib
 import re
+from datetime import timedelta
 from typing import TYPE_CHECKING, Final, Literal
 
 import msgspec
@@ -19,6 +20,7 @@ import structlog
 if TYPE_CHECKING:
     from collections.abc import Mapping
 
+from comradarr.core.types import Secret
 from comradarr.errors.configuration import ConfigurationError
 from comradarr.security.secret_key import validate_secret_key
 
@@ -36,6 +38,18 @@ _REQUIRED_DSN_PREFIX: Final = "postgresql+asyncpg://"
 # 1024 is generous compared to any plausible rotation cadence (a key-per-day
 # rotation lasts ~3 years before hitting the ceiling).
 _MAX_KEY_VERSION: Final = 1024
+# Phase 3 §5.3.5: minimum length for the operator-supplied audit-admin password.
+# Matches the master-secret-key length floor; this is the password used by the
+# ``comradarr_audit_admin`` LOGIN role created in the v1 baseline (NOLOGIN at
+# baseline; flipped to LOGIN by the Phase 3 audit-admin migration).
+_MIN_AUDIT_ADMIN_PASSWORD_LEN: Final = 32
+# Pattern for the DSN userinfo block we substitute into when deriving the
+# audit-admin DSN from the app DSN. Anchored on ``comradarr_app`` so an
+# operator who already typed an audit-admin URL (or a non-standard role
+# name) gets a loud ConfigurationError instead of a silent passthrough.
+_DSN_APP_USERINFO_RE: Final = re.compile(
+    r"^(?P<scheme>[^:]+://)comradarr_app(?::[^@]*)?@(?P<rest>.+)$"
+)
 
 # Field-name → expected env-var-suffix table for OIDC providers. Matches the
 # per-provider env pattern documented in PRD §19 and plan §5.1.1 Step 2.2.
@@ -73,14 +87,20 @@ class Settings(msgspec.Struct, frozen=True, kw_only=True):
     ``database_url`` is the lone exception (mirrors PRD §19 line 1482).
     """
 
-    # TODO(Phase 3): wrap in Secret[bytes] once §5.3.1 lands. Until then the
-    # structlog secret_pattern_redaction_processor masks the field value when
-    # it appears inside a log event.
     comradarr_secret_key: bytes | None
     secret_key_versions: dict[int, bytes]
     current_key_version: int
 
-    database_url: str
+    # Phase 3 §5.3.1: every secret-bearing field is wrapped in Secret[T]. The
+    # repr of a frozen msgspec.Struct calls repr() on each field, so wrapping
+    # database_url + audit_admin_password here is what makes
+    # ``test_settings_repr_does_not_leak_secrets`` pass.
+    database_url: Secret[str]
+    audit_admin_database_url: Secret[str] | None = None
+    audit_admin_password: Secret[str] = Secret("")  # noqa: S106 — placeholder; real value loaded by load_settings
+
+    comradarr_audit_retention_days: int | None = None
+    comradarr_audit_vacuum_interval_seconds: int = 3600
 
     comradarr_insecure_cookies: bool = False
     comradarr_csp_report_only: bool = False
@@ -93,6 +113,16 @@ class Settings(msgspec.Struct, frozen=True, kw_only=True):
     comradarr_run_migrations_on_startup: bool = False
 
     oidc_providers: dict[str, OIDCProviderSettings] = msgspec.field(default_factory=dict)
+
+    def audit_retention_timedelta(self) -> timedelta | None:
+        """Return the audit retention horizon as a timedelta, or None for indefinite.
+
+        ``None`` means *retain forever* — the AuditRetentionVacuum loop emits
+        ``audit.retention.skipped`` and never issues a DELETE.
+        """
+        if self.comradarr_audit_retention_days is None:
+            return None
+        return timedelta(days=self.comradarr_audit_retention_days)
 
 
 def _read_secret_bytes(inline: str | None, file_path: str | None, *, var_name: str) -> bytes | None:
@@ -246,6 +276,30 @@ def _parse_log_format(env: Mapping[str, str]) -> LogFormat:
     return raw
 
 
+def derive_audit_admin_url(app_url: Secret[str], password: Secret[str]) -> str:
+    """Derive the comradarr_audit_admin DSN from the comradarr_app DSN.
+
+    Substitutes ``comradarr_app[:any-password]`` with
+    ``comradarr_audit_admin:<audit_admin_password>`` in the userinfo block.
+    Raises :class:`ConfigurationError` when the app DSN doesn't begin with
+    ``comradarr_app`` userinfo — that shape mismatch means the operator
+    must supply ``AUDIT_ADMIN_DATABASE_URL`` explicitly.
+
+    The Secret wrappers are exposed locally because the asyncpg driver needs
+    a plain string DSN; the result is intentionally returned as ``str`` to
+    match the :func:`comradarr.core.lifespan.build_engine` signature.
+    """
+    raw = app_url.expose()
+    match = _DSN_APP_USERINFO_RE.match(raw)
+    if match is None:
+        raise ConfigurationError(
+            "DATABASE_URL: cannot derive audit-admin DSN — userinfo must "
+            + "start with 'comradarr_app' (or set AUDIT_ADMIN_DATABASE_URL "
+            + "explicitly to override)"
+        )
+    return f"{match['scheme']}comradarr_audit_admin:{password.expose()}@{match['rest']}"
+
+
 def load_settings(env: Mapping[str, str] | None = None) -> Settings:
     """Load and validate frozen :class:`Settings` from environment.
 
@@ -277,11 +331,44 @@ def load_settings(env: Mapping[str, str] | None = None) -> Settings:
             f"DATABASE_URL must use the {_REQUIRED_DSN_PREFIX} driver (RULE-DB-002)"
         )
 
+    audit_admin_url_raw = source.get("AUDIT_ADMIN_DATABASE_URL")
+    if audit_admin_url_raw is not None and not audit_admin_url_raw.startswith(_REQUIRED_DSN_PREFIX):
+        raise ConfigurationError(
+            f"AUDIT_ADMIN_DATABASE_URL must use the {_REQUIRED_DSN_PREFIX} driver"
+        )
+
+    audit_admin_password_raw = source.get("COMRADARR_AUDIT_ADMIN_PASSWORD")
+    if not audit_admin_password_raw:
+        raise ConfigurationError("COMRADARR_AUDIT_ADMIN_PASSWORD is required")
+    if len(audit_admin_password_raw) < _MIN_AUDIT_ADMIN_PASSWORD_LEN:
+        raise ConfigurationError(
+            "COMRADARR_AUDIT_ADMIN_PASSWORD: must be at least "
+            + f"{_MIN_AUDIT_ADMIN_PASSWORD_LEN} characters"
+        )
+
+    # Retention: explicit env wins; ``0`` is normalized to ``None`` (indefinite)
+    # so the AuditRetentionVacuum loop emits the ``audit.retention.skipped``
+    # event instead of a 0-day DELETE that would purge the table on every tick.
+    retention_raw = source.get("COMRADARR_AUDIT_RETENTION_DAYS")
+    if retention_raw is None or not retention_raw.strip():
+        audit_retention_days: int | None = None
+    else:
+        parsed = _parse_int(source, "COMRADARR_AUDIT_RETENTION_DAYS", default=0)
+        audit_retention_days = parsed if parsed > 0 else None
+
     return Settings(
         comradarr_secret_key=versions[current_version],
         secret_key_versions=versions,
         current_key_version=current_version,
-        database_url=database_url,
+        database_url=Secret(database_url),
+        audit_admin_database_url=(
+            Secret(audit_admin_url_raw) if audit_admin_url_raw is not None else None
+        ),
+        audit_admin_password=Secret(audit_admin_password_raw),
+        comradarr_audit_retention_days=audit_retention_days,
+        comradarr_audit_vacuum_interval_seconds=_parse_int(
+            source, "COMRADARR_AUDIT_VACUUM_INTERVAL_SECONDS", default=3600
+        ),
         comradarr_insecure_cookies=_parse_bool(source, "COMRADARR_INSECURE_COOKIES", default=False),
         comradarr_csp_report_only=_parse_bool(source, "COMRADARR_CSP_REPORT_ONLY", default=False),
         comradarr_log_level=source.get("COMRADARR_LOG_LEVEL", "INFO"),

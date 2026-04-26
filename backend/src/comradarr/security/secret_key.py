@@ -101,3 +101,30 @@ def validate_secret_key(key: bytes) -> None:
         )
     if key in _load_denylist():
         raise ConfigurationError("secret key denylist: matches a known leaked key")
+
+
+def validate_secret_key_registry(versions: dict[int, bytes], current_version: int) -> None:
+    """Validate the **current** key against denylist + entropy gates.
+
+    Phase 3 §5.3 + Iter 1 Critic C1: only ``versions[current_version]`` is
+    re-validated here. Retired keys are decryption-only and intentionally
+    skip the entropy/denylist gates so a key that was acceptable on the day
+    it was minted but later landed on the denylist (e.g. corpus growth)
+    still decrypts old rows. Phase 30 owns the full-registry sweep that
+    triggers re-encryption to retire such keys safely.
+
+    Raises :class:`ConfigurationError` when ``current_version`` is missing
+    from ``versions``, or when the current key fails any
+    :func:`validate_secret_key` gate.
+    """
+    if current_version not in versions:
+        raise ConfigurationError(
+            f"secret key registry: current_version={current_version} not present in versions"
+        )
+    current_key = versions[current_version]
+    try:
+        validate_secret_key(current_key)
+    except ConfigurationError as exc:
+        raise ConfigurationError(
+            f"secret key registry: current key (v{current_version}) failed validation: {exc}"
+        ) from exc

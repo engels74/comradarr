@@ -47,6 +47,7 @@ from comradarr.api.middleware.correlation import correlation_id_middleware
 from comradarr.config import Settings, load_settings
 from comradarr.core.lifespan import db_lifespan, services_lifespan
 from comradarr.core.logging import build_structlog_config
+from comradarr.core.types import Secret, secret_msgspec_encoder
 from comradarr.errors import ComradarrError
 from comradarr.errors.handlers import (
     comradarr_error_handler,
@@ -66,7 +67,7 @@ def create_app(settings: Settings | None = None) -> Litestar:
         settings = load_settings()
 
     db_config = SQLAlchemyAsyncConfig(
-        connection_string=settings.database_url,
+        connection_string=settings.database_url.expose(),
         session_config=AsyncSessionConfig(expire_on_commit=False),
         before_send_handler="autocommit",
         create_all=False,
@@ -117,6 +118,10 @@ def create_app(settings: Settings | None = None) -> Litestar:
         },
         openapi_config=openapi_config,
         state=app_state,
+        # Phase 3 §5.3.4: any Secret-bearing DTO that crosses the HTTP boundary
+        # serializes via the redaction marker rather than leaking through
+        # msgspec's default field repr.
+        type_encoders={Secret: secret_msgspec_encoder},
         debug=(settings.comradarr_log_format == "console"),
     )
 

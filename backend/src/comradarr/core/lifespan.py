@@ -39,29 +39,42 @@ RULE-LOG-001 attestation: every log line goes through
 (which would bypass the structlog formatter).
 """
 
+import asyncio
 import time
 from contextlib import asynccontextmanager
 from typing import TYPE_CHECKING
 
 import structlog
+from sqlalchemy import text
 from sqlalchemy.ext.asyncio import (
     AsyncEngine,
     async_sessionmaker,
     create_async_engine,
 )
 
+from comradarr.config import derive_audit_admin_url
+from comradarr.core.crypto import CryptoService
+from comradarr.db.enums import AuditAction
 from comradarr.db.migrations import run_migrations_in_lifespan
+from comradarr.errors.configuration import ConfigurationError
+from comradarr.services.audit import AuditRetentionVacuum, AuditWriter
 
 if TYPE_CHECKING:
-    from collections.abc import AsyncGenerator
+    from collections.abc import AsyncGenerator, Callable
 
     from litestar import Litestar
     from sqlalchemy.engine import Connection
 
     from comradarr.config import Settings
+    from comradarr.services.audit import AuditRetentionVacuumHealth
 
 
 _logger = structlog.stdlib.get_logger(__name__)
+
+# Lifespan teardown timeout for the retention vacuum task — long enough to
+# unwind a single in-flight DELETE batch, short enough that boot loops
+# don't pin the worker on shutdown.
+_VACUUM_TEARDOWN_TIMEOUT_SECONDS: float = 5.0
 
 
 def build_engine(database_url: str) -> AsyncEngine:
@@ -131,14 +144,63 @@ async def _run_migrations_branch(engine: AsyncEngine) -> None:
     )
 
 
+def _resolve_audit_admin_url(settings: Settings) -> str:
+    """Pick the audit-admin DSN — explicit env wins; otherwise derive from app DSN."""
+    if settings.audit_admin_database_url is not None:
+        return settings.audit_admin_database_url.expose()
+    return derive_audit_admin_url(settings.database_url, settings.audit_admin_password)
+
+
+async def _probe_engine(engine: AsyncEngine, *, role: str) -> None:
+    """Authenticate ``engine`` with a ``SELECT 1`` and a structured failure mode."""
+    try:
+        async with engine.connect() as conn:
+            _ = await conn.execute(text("SELECT 1"))
+    except Exception as exc:
+        if role == "audit_admin":
+            raise ConfigurationError(
+                "audit-admin engine cannot authenticate; check "
+                + "COMRADARR_AUDIT_ADMIN_PASSWORD and the LOGIN migration"
+            ) from exc
+        raise ConfigurationError(f"{role} engine cannot authenticate") from exc
+
+
+async def _probe_audit_action_enum(engine: AsyncEngine) -> None:
+    """Verify the PG ``audit_action`` enum contains every Python enum member.
+
+    Iter 1 Independent #1: a missed ``ALTER TYPE ADD VALUE`` migration would
+    otherwise let writes for the new code raise ``InvalidTextRepresentation``
+    deep inside :class:`AuditWriter.record` — the boot probe surfaces the
+    drift up-front with the exact missing-member list.
+    """
+    async with engine.connect() as conn:
+        result = await conn.execute(text("SELECT enum_range(NULL::audit_action)"))
+        row = result.first()
+    if row is None or row[0] is None:
+        raise ConfigurationError("audit_action enum is unreachable in the database")
+    pg_members = set(row[0])
+    py_members = {m.value for m in AuditAction}
+    missing = sorted(py_members - pg_members)
+    if missing:
+        raise ConfigurationError(
+            f"audit_action enum is missing expected members: {missing}; run pending migrations"
+        )
+
+
 @asynccontextmanager
 async def db_lifespan(app: Litestar) -> AsyncGenerator[None]:
     """Engine + sessionmaker ownership; runs the migration gate; disposes on teardown."""
     settings: Settings = app.state.settings  # set by create_app()
-    engine = build_engine(settings.database_url)
+
+    engine = build_engine(settings.database_url.expose())
     sessionmaker = async_sessionmaker(engine, expire_on_commit=False)
     app.state.db_engine = engine
     app.state.db_sessionmaker = sessionmaker
+
+    audit_admin_engine = build_engine(_resolve_audit_admin_url(settings))
+    audit_admin_sessionmaker = async_sessionmaker(audit_admin_engine, expire_on_commit=False)
+    app.state.audit_admin_engine = audit_admin_engine
+    app.state.audit_admin_sessionmaker = audit_admin_sessionmaker
 
     if settings.comradarr_run_migrations_on_startup:
         try:
@@ -146,36 +208,97 @@ async def db_lifespan(app: Litestar) -> AsyncGenerator[None]:
         except Exception as exc:
             _logger.error("db.lifespan.migrations.failed", error=str(exc))
             await engine.dispose()
+            await audit_admin_engine.dispose()
             raise
     else:
         # No DB connection is attempted on this path — Phase 1's stub DSN
         # survives boot because the flag defaults to False.
         _logger.info("db.lifespan.migrations.skipped", reason="flag_off")
 
+    if settings.comradarr_run_migrations_on_startup:
+        # Boot probes only fire on the migration-gated path because the
+        # flag-off path never connects to the database (Phase 1 stub-DSN
+        # contract). When the flag is ON the probes run AFTER migrations
+        # so the enum-membership check sees the post-upgrade state.
+        try:
+            await _probe_engine(engine, role="app")
+            await _probe_engine(audit_admin_engine, role="audit_admin")
+            await _probe_audit_action_enum(engine)
+        except Exception:
+            await engine.dispose()
+            await audit_admin_engine.dispose()
+            raise
+
     _logger.info("lifespan.db.ready", run_migrations=settings.comradarr_run_migrations_on_startup)
     try:
         yield
     finally:
         await engine.dispose()
+        await audit_admin_engine.dispose()
         _logger.info("lifespan.db.disposed")
 
 
-@asynccontextmanager
-async def services_lifespan(_app: Litestar) -> AsyncGenerator[None]:
-    """No-op service composer — Phase N slot comments document attachment points.
+def _make_vacuum_done_callback(app: Litestar) -> Callable[[asyncio.Task[object]], None]:
+    """Build the done-callback that flips audit_retention_vacuum_health on crash.
 
-    Phase 9 introduces ``async with asyncio.TaskGroup() as tg:`` here AND
-    registers ``exception_handlers[BaseExceptionGroup] = exception_group_handler``
-    in :mod:`comradarr.app` so PEP 654 wrapping never bypasses the RFC 9457
-    envelope contract. Phase 1 keeps the body bare so ``BaseExceptionGroup``
-    has no surface area until there is a real failure path to handle.
+    Iter 1 Amendment 2: the callback must (a) flip ``app.state`` to
+    ``"crashed"`` so Phase 6's ``/health`` endpoint surfaces the failure
+    AND (b) re-raise the underlying exception into the lifespan task so
+    boot fails loudly rather than silently degrading.
+    ``asyncio.CancelledError`` is the lifespan-teardown path and is NOT a
+    crash.
     """
+
+    def _on_done(task: asyncio.Task[object]) -> None:
+        if task.cancelled():
+            return
+        exc = task.exception()
+        if exc is None:
+            return
+        app.state.audit_retention_vacuum_health = "crashed"
+        raise exc
+
+    return _on_done
+
+
+@asynccontextmanager
+async def services_lifespan(app: Litestar) -> AsyncGenerator[None]:
+    """Compose the cross-phase services. Phase 3 wires crypto + audit + vacuum."""
+    settings: Settings = app.state.settings
+
+    app.state.crypto = CryptoService(settings)
+    app.state.audit_writer = AuditWriter(app.state.db_sessionmaker)
+
+    initial_health: AuditRetentionVacuumHealth = "skipped_indefinite"
+    app.state.audit_retention_vacuum_health = initial_health
+    vacuum = AuditRetentionVacuum(
+        app.state.audit_admin_sessionmaker,
+        horizon=settings.audit_retention_timedelta(),
+        interval=settings.comradarr_audit_vacuum_interval_seconds,
+    )
+    app.state.audit_retention_vacuum = vacuum
+
+    vacuum_task: asyncio.Task[object] = asyncio.create_task(
+        vacuum.run(),  # type: ignore[arg-type]
+        name="audit_retention_vacuum",
+    )
+    vacuum_task.add_done_callback(_make_vacuum_done_callback(app))
+    app.state.audit_retention_vacuum_task = vacuum_task
+
     # Phase 11: app.state.event_bus = EventBus(); tg.create_task(app.state.event_bus.run())
-    # Phase 3:  app.state.crypto = CryptoService(settings)
     # Phase 7:  app.state.client_factory = ClientFactory(...)  # httpx[http2] lands Phase 7 per Q6
     # Phase 9:  app.state.sync_coordinator = ...; tg.create_task(app.state.sync_coordinator.run())
     # Phase 10: app.state.rotation_engine = ...; tg.create_task(app.state.rotation_engine.run())
     # Phase 12: app.state.notification_dispatcher = ...
     # Phase 8:  app.state.prowlarr_health_monitor = ...; tg.create_task(...)
-    # Phase 3:  app.state.audit_retention_vacuum = ...; tg.create_task(...)
-    yield
+    try:
+        yield
+    finally:
+        if not vacuum_task.done():
+            _ = vacuum_task.cancel()
+        try:
+            await asyncio.wait_for(vacuum_task, timeout=_VACUUM_TEARDOWN_TIMEOUT_SECONDS)
+        except TimeoutError, asyncio.CancelledError:  # noqa: PERF203 — explicit teardown branches
+            pass
+        except Exception as exc:  # noqa: BLE001 — done-callback already re-raised; swallow on teardown
+            _logger.warning("lifespan.services.vacuum_teardown_error", error=str(exc))
