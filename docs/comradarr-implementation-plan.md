@@ -82,7 +82,7 @@ Phases are ordered so each one's outputs unblock the next. Workstreams (B = Back
 
 - [x] **Phase 0 — Foundations.** Repo scaffold, tooling, CI fast lane, `prek.toml`, lockfiles, license, license headers (S, I, Q).
 - [x] **Phase 1 — Backend skeleton.** Litestar app factory, lifespan, settings, structlog, exceptions module, Problem Details handler, health endpoint, Alembic async env (B).
-- [ ] **Phase 2 — Database, roles, models.** Models for every table in Appendix B; Alembic baseline with migration / application / audit-admin GRANTs; UUIDv7 PK helper; encrypted-field Mapped types (B).
+- [x] **Phase 2 — Database, roles, models.** Models for every table in Appendix B; Alembic baseline with migration / application / audit-admin GRANTs; UUIDv7 PK helper; encrypted-field Mapped types (B).
 - [ ] **Phase 3 — Crypto, Secret type, audit log primitives.** `Secret[T]` wrapper, msgspec hook, structlog redaction, AES-256-GCM service with key versioning + AAD, master-key validation + denylist, audit log writer, retention vacuum (B, S).
 - [ ] **Phase 4 — Auth providers, sessions, API keys, rate limits.** LocalPasswordProvider (Argon2id), TrustedHeaderProvider, OIDCProvider with PKCE + JWKS cache + replay window, session model, API keys + scopes, persistent rate limits, login flow (B).
 - [ ] **Phase 5 — Setup gate + bootstrap + setup wizard backend.** Setup gate middleware allowlist, bootstrap token printer + consumer, setup-claim cookie, admin account creation, wizard endpoints for HTTP boundary verification (B, S).
