@@ -11,6 +11,8 @@ from . import api_key_scope as _api_key_scope  # noqa: F401  # pyright: ignore[r
 from . import (
     auth_rate_limit as _auth_rate_limit,  # noqa: F401  # pyright: ignore[reportUnusedImport]
 )
+from . import connector as _connector  # noqa: F401  # pyright: ignore[reportUnusedImport]
+from . import mirror as _mirror  # noqa: F401  # pyright: ignore[reportUnusedImport]
 from . import oidc_provider as _oidc_provider  # noqa: F401  # pyright: ignore[reportUnusedImport]
 from . import (
     role_permission as _role_permission,  # noqa: F401  # pyright: ignore[reportUnusedImport]
