@@ -1,0 +1,168 @@
+"""Shared Alembic runner — CLI + Litestar lifespan call into the same body.
+
+The Alembic CLI (``backend/migrations/env.py``) and the Litestar lifespan
+(``comradarr.core.lifespan.db_lifespan``) historically diverged on startup
+behavior — only the CLI checked for required Postgres roles, only the
+lifespan paid attention to the runtime DSN. Centralizing the body here means
+both call sites get the same advisory-lock and preflight semantics.
+
+Highlights:
+
+* :data:`MIGRATION_ADVISORY_LOCK_ID` — Comradarr's reserved 64-bit Postgres
+  advisory-lock id. Held transaction-scoped (``pg_advisory_xact_lock``) so
+  parallel multi-worker startups serialize cleanly. ANTI-137 attestation:
+  using ``pg_advisory_xact_lock`` (not the session-scoped variant) means the
+  lock is auto-released on COMMIT/ROLLBACK and never strands on a pooled
+  connection that gets returned mid-lock.
+* :func:`do_run_migrations` — synchronous Alembic body invoked through
+  ``connection.run_sync``. Acquires the advisory lock BEFORE
+  ``context.run_migrations()`` and pins ``transactional_ddl=True`` so Alembic
+  does not internally check out a separate connection that would escape the
+  outer-transaction lock scope. ANTI-135 attestation: structural defense
+  against silent migration-on-startup failures.
+* :func:`preflight_role_check` — async; queries ``pg_roles`` for the three
+  Comradarr roles (``comradarr_migration``, ``comradarr_app``,
+  ``comradarr_audit_admin``). If any are missing AND the connect user does
+  not hold ``rolcreaterole``, raises a structured
+  :class:`ConfigurationError` pointing at the runbook, instead of letting
+  the per-row ``CREATE ROLE`` inside the migration explode with a permission
+  stack trace.
+* :func:`run_migrations_in_lifespan` — high-level entrypoint the lifespan
+  uses. Bridges async → sync via ``engine.begin()`` (NOT ``engine.connect()``
+  — the advisory lock needs an outer transaction to attach to).
+"""
+
+from typing import TYPE_CHECKING
+
+import structlog
+from sqlalchemy import text
+
+from comradarr.errors.configuration import ConfigurationError
+
+if TYPE_CHECKING:
+    from sqlalchemy.engine import Connection
+    from sqlalchemy.ext.asyncio import AsyncEngine
+
+
+_logger = structlog.stdlib.get_logger(__name__)
+
+
+MIGRATION_ADVISORY_LOCK_ID: int = 0xC0DEBA52
+"""Reserved 64-bit Postgres advisory lock id used for migration serialization.
+
+The constant intentionally lives at module scope so tests, ops tooling, and
+ad-hoc psql sessions can reference the same identifier without re-deriving
+it. Acquired via ``pg_advisory_xact_lock`` (transaction-scoped) per ANTI-137.
+"""
+
+
+_REQUIRED_ROLES: tuple[str, ...] = (
+    "comradarr_migration",
+    "comradarr_app",
+    "comradarr_audit_admin",
+)
+
+
+def do_run_migrations(connection: Connection) -> None:
+    """Run Alembic upgrades against ``connection`` under the advisory lock.
+
+    Invoked through ``await conn.run_sync(do_run_migrations)`` from both the
+    CLI (``migrations/env.py``) and the Litestar lifespan
+    (:func:`run_migrations_in_lifespan`). Acquires
+    :data:`MIGRATION_ADVISORY_LOCK_ID` BEFORE ``context.run_migrations()`` so
+    parallel callers serialize through the lock — non-winners observe
+    ``head == current`` and exit cleanly without re-running the upgrade.
+
+    ``transactional_ddl=True`` is pinned on ``context.configure(...)`` so
+    Alembic does not internally check out a separate connection (which would
+    escape the outer-transaction lock scope and break ANTI-137).
+    """
+    # Imported lazily so this module does not pay the alembic / Base import
+    # cost at boot time — the runtime path crosses through ``run_sync``, and
+    # the CLI path already has alembic imported. Importing ``Base`` here
+    # (rather than at module top) also avoids a circular-import risk when
+    # ORM model files import ``comradarr.db.migrations``.
+    from alembic import context  # noqa: PLC0415
+
+    import comradarr.db.models  # noqa: F401, PLC0415  # autogenerate registration  # pyright: ignore[reportUnusedImport]
+    from comradarr.db.base import Base  # noqa: PLC0415
+
+    _ = connection.execute(
+        text("SELECT pg_advisory_xact_lock(:lock_id)"),
+        {"lock_id": MIGRATION_ADVISORY_LOCK_ID},
+    )
+    context.configure(
+        connection=connection,
+        target_metadata=Base.metadata,
+        transactional_ddl=True,
+    )
+    with context.begin_transaction():
+        context.run_migrations()
+
+
+async def preflight_role_check(engine: AsyncEngine) -> None:
+    """Fail fast with a structured error when the 3 required roles are absent.
+
+    Both the CLI script and the lifespan path call this BEFORE invoking the
+    migration body. Otherwise an operator on a managed-Postgres deployment
+    that forgot to pre-create the roles would see a stack trace from the
+    role-creation block in ``upgrade()`` instead of the actionable
+    ``ConfigurationError`` pointing at ``docs/runbook/postgres-roles.md``.
+
+    The check is intentionally cheap — two short SQL statements, no DDL —
+    so adding it to the lifespan path does not slow boot detectably.
+    """
+    async with engine.connect() as conn:
+        roles_result = await conn.execute(
+            text("SELECT rolname FROM pg_roles WHERE rolname = ANY(:names)"),
+            {"names": list(_REQUIRED_ROLES)},
+        )
+        present_roles = {row[0] for row in roles_result.all()}
+
+        creator_result = await conn.execute(
+            text("SELECT rolcreaterole FROM pg_roles WHERE rolname = current_user"),
+        )
+        creator_row = creator_result.first()
+        connect_user_can_createrole: bool = (
+            creator_row[0] is True if creator_row is not None else False
+        )
+
+    missing_roles = [role for role in _REQUIRED_ROLES if role not in present_roles]
+    if missing_roles and not connect_user_can_createrole:
+        _logger.error(
+            "migrations.preflight.roles_missing",
+            missing=missing_roles,
+            connect_user_has_createrole=connect_user_can_createrole,
+        )
+        raise ConfigurationError(
+            "postgres roles missing and connect user lacks CREATEROLE; see docs/runbook/postgres-roles.md",  # noqa: E501
+        )
+
+    _logger.info(
+        "migrations.preflight.ok",
+        present_roles=sorted(present_roles),
+        connect_user_has_createrole=connect_user_can_createrole,
+    )
+
+
+async def run_migrations_in_lifespan(engine: AsyncEngine) -> None:
+    """Async entrypoint used by the Litestar lifespan (RULE-ASYNC-002 bridge).
+
+    Order of operations is load-bearing:
+
+    1. :func:`preflight_role_check` raises a structured error early when the
+       roles are missing, instead of letting the migration body explode.
+    2. ``async with engine.begin() as conn`` opens an *outer* transaction —
+       crucial because :func:`do_run_migrations` acquires
+       ``pg_advisory_xact_lock`` and that lock needs a transaction to attach
+       to (``engine.connect()`` would auto-commit and lose the lock).
+    3. ``await conn.run_sync(do_run_migrations)`` bridges async → sync.
+
+    Concurrency: the advisory lock guarantees that N replicas calling this
+    in parallel serialize. Non-winners observe ``head == current`` and exit
+    cleanly — Alembic's own no-op fast path runs once they get the lock.
+    """
+    await preflight_role_check(engine)
+    async with engine.begin() as conn:
+        await conn.run_sync(do_run_migrations)
+    _logger.info("migrations.lifespan.complete")

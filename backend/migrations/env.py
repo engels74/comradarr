@@ -23,17 +23,15 @@ Customizations vs. the stock ``alembic init -t async`` template:
 
 import asyncio
 import os
-from typing import TYPE_CHECKING
 
 from alembic import context
 from sqlalchemy import pool
 from sqlalchemy.ext.asyncio import async_engine_from_config
 
+import comradarr.db.models  # noqa: F401  # registers ORM models for autogenerate  # pyright: ignore[reportUnusedImport]
 from comradarr.db.base import Base
+from comradarr.db.migrations import do_run_migrations
 from comradarr.errors.configuration import ConfigurationError
-
-if TYPE_CHECKING:
-    from sqlalchemy.engine import Connection
 
 # Alembic Config object: provides access to the .ini file's [alembic] section
 # and the runtime context flags (offline mode, x-arguments, etc.).
@@ -52,26 +50,27 @@ except KeyError as exc:
 # runtime-resolved value before async_engine_from_config reads the section.
 config.set_main_option("sqlalchemy.url", _DATABASE_URL)
 
-# Phase 2 lands the first revision; the Base import keeps autogenerate working
-# the moment models exist. ``target_metadata`` is the autogenerate hook.
+# Phase 2 lands the first revision; the Base import (alongside the explicit
+# ``import comradarr.db.models`` registration above) keeps autogenerate seeing
+# the full model graph. ``target_metadata`` is the autogenerate hook.
 target_metadata = Base.metadata
 
 
-def do_run_migrations(connection: Connection) -> None:
-    """Bind Alembic context to a sync-style ``Connection`` and run upgrades."""
-    context.configure(connection=connection, target_metadata=target_metadata)
-    with context.begin_transaction():
-        context.run_migrations()
-
-
 async def run_async_migrations() -> None:
-    """Build an async engine, run migrations through ``run_sync``, dispose."""
+    """Build an async engine, run migrations through ``run_sync``, dispose.
+
+    The migration body itself lives in :func:`comradarr.db.migrations.do_run_migrations`
+    so the CLI and the Litestar lifespan share a single code path (advisory
+    lock + transactional DDL). RECIPE-ALEMBIC-ASYNC pitfall avoidance: the
+    ``import comradarr.db.models`` at module top is what makes autogenerate
+    see the ORM graph.
+    """
     connectable = async_engine_from_config(
         config.get_section(config.config_ini_section, {}),
         prefix="sqlalchemy.",
         poolclass=pool.NullPool,
     )
-    async with connectable.connect() as connection:
+    async with connectable.begin() as connection:
         await connection.run_sync(do_run_migrations)
     await connectable.dispose()
 
