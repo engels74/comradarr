@@ -33,7 +33,7 @@ Highlights:
 """
 
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
 import structlog
 from sqlalchemy import text
@@ -69,6 +69,56 @@ _REQUIRED_ROLES: tuple[str, ...] = (
 )
 
 
+# Tight allowlist of (table_name, index_name) pairs that autogenerate cannot
+# round-trip cleanly. Two failure modes are covered:
+#
+# * **Partial indexes** — Postgres canonicalizes the WHERE clause
+#   (``status = 'pending'`` → ``status = 'pending'::command_status``) which
+#   autogenerate sees as a non-empty diff against the model's literal text.
+# * **DESC-ordered indexes** — DB-side introspection returns a
+#   ``UnaryExpression`` placeholder for the descending column, hiding the
+#   underlying column reference from ``compare_metadata``; the model side
+#   reports the raw column. Autogenerate emits a spurious remove+add pair.
+#
+# The companion ``test_partial_indexes.py`` introspects ``pg_indexes`` to
+# assert the actual WHERE clauses are present — so the substitute coverage
+# from plan §6 R2 is preserved despite the allowlist. Adding a third entry
+# requires an explicit review against R2.
+AUTOGEN_DRIFT_ALLOWLIST: tuple[tuple[str, str], ...] = (
+    ("search_schedule", "ix_search_schedule_active"),
+    ("planned_commands", "ix_planned_commands_pending"),
+    ("audit_log", "ix_audit_log_action_timestamp_desc"),
+    ("audit_log", "ix_audit_log_timestamp_desc"),
+)
+
+
+def filter_autogen_drift(
+    obj: object,
+    name: str | None,
+    type_: str,
+    _reflected: bool,  # noqa: FBT001  # alembic API shape; underscore = unused
+    _compare_to: object,
+) -> bool:
+    """Exclude allowlisted indexes from autogenerate diffs.
+
+    Wired into ``context.configure(include_object=...)`` from both the
+    runtime path (``do_run_migrations`` — covers ``alembic check``) and
+    the in-process test path (``test_alembic_baseline.py``) so the two
+    autogenerate surfaces produce identical diff lists. Returning
+    ``False`` skips the index entirely from the diff.
+    """
+    if type_ != "index":
+        return True
+    table = cast("object", getattr(obj, "table", None))
+    table_name: str | None = (
+        cast("str | None", getattr(table, "name", None)) if table is not None else None
+    )
+    for allowed_table, allowed_index in AUTOGEN_DRIFT_ALLOWLIST:
+        if name == allowed_index and (table_name is None or table_name == allowed_table):
+            return False
+    return True
+
+
 def do_run_migrations(connection: Connection) -> None:
     """Run Alembic upgrades against ``connection`` under the advisory lock.
 
@@ -101,6 +151,12 @@ def do_run_migrations(connection: Connection) -> None:
         connection=connection,
         target_metadata=Base.metadata,
         transactional_ddl=True,
+        # ``include_object`` is consulted only by autogenerate
+        # (``alembic check`` / ``alembic revision --autogenerate``); it is a
+        # no-op for ``alembic upgrade``. Wiring it here makes ``alembic check``
+        # honor the same allowlist the in-process tests apply, so a
+        # successful check in the suite implies a clean operator-side check.
+        include_object=filter_autogen_drift,
     )
     with context.begin_transaction():
         context.run_migrations()

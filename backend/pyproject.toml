@@ -59,6 +59,17 @@ select = [
 [tool.ruff.lint.per-file-ignores]
 # Tests use `assert` (S101) freely.
 "tests/**" = ["S101"]
+# Role-permission matrix tests parametrize over Base.metadata.tables.keys()
+# (a trusted internal Python tuple of identifiers, not external input) and
+# build per-table privilege-check SQL via f-strings. S608 is a false positive
+# in this single file — the equivalent of `format` here is a quoted identifier
+# from a curated allowlist.
+"tests/db/test_role_permissions.py" = ["S101", "S608"]
+# Partial-index introspection assembles a fully static pg_indexes query via
+# multi-line ``+`` concatenation (the only dynamic pieces are SQLAlchemy
+# bound parameters ``:tablename`` / ``:indexname``). S608 fires on the
+# multi-line concat shape but no identifier interpolation occurs.
+"tests/db/test_partial_indexes.py" = ["S101", "S608"]
 # Alembic env.py is import-by-side-effect; relax secret/credential heuristics.
 "migrations/env.py" = ["S105", "S106"]
 # PRD §21 fixes the exception class names (AuthenticationInvalidCredentials,
@@ -85,4 +96,5 @@ asyncio_default_test_loop_scope = "session"
 testpaths = ["tests"]
 markers = [
   "integration: requires a live Postgres + the per-worker schema fixture (RECIPE-PYTEST-DB)",
+  "e2e: launches a real Granian subprocess and binds the hardcoded port (single-worker pass)",
 ]

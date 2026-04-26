@@ -203,11 +203,34 @@ async def db_engine(worker_id: str) -> AsyncIterator[AsyncEngine]:
     # Step 1-2: schema setup via a one-shot admin engine. Using a separate
     # engine for the bootstrap keeps the long-lived test engine's pool
     # clean of administrative state.
+    #
+    # Schema-level USAGE: the production migration grants ``USAGE ON SCHEMA
+    # public`` to the three application roles. Phase-2 tests redirect DDL into
+    # the per-worker ``wid_<worker>`` schema via ``search_path``, so the
+    # migration's table-level GRANTs land on tables inside this schema — but
+    # the migration's ``GRANT USAGE ON SCHEMA public`` line targets ``public``
+    # specifically and does NOT reach ``wid_<worker>``. Without USAGE on the
+    # worker schema, every role-restricted lookup raises ``relation "..." does
+    # not exist`` because the role can't see into the schema. We bridge the
+    # gap here, in test scaffolding only — production rolls migrations into
+    # the default ``public`` schema where the migration's USAGE grant applies
+    # directly.
     admin_engine = create_async_engine(base_url, isolation_level="AUTOCOMMIT")
     try:
         async with admin_engine.connect() as admin_conn:
             await _sweep_stale_schemas(admin_conn)
             _ = await admin_conn.execute(text(f'CREATE SCHEMA IF NOT EXISTS "{schema}"'))
+            for role in ("comradarr_migration", "comradarr_app", "comradarr_audit_admin"):
+                _ = await admin_conn.execute(
+                    text(f'GRANT USAGE ON SCHEMA "{schema}" TO "{role}"'),
+                )
+            # The migration role also CREATEs tables inside the schema during
+            # ``alembic upgrade head`` — without ``CREATE`` on the worker
+            # schema it would fall back to ``public`` and miss the test's
+            # search_path pin entirely.
+            _ = await admin_conn.execute(
+                text(f'GRANT CREATE ON SCHEMA "{schema}" TO "comradarr_migration"'),
+            )
     finally:
         await admin_engine.dispose()
 
@@ -234,6 +257,30 @@ async def db_engine(worker_id: str) -> AsyncIterator[AsyncEngine]:
     )
 
     await run_migrations_in_lifespan(engine)
+
+    # Post-migration grant fix-up: the production migration runs
+    # ``GRANT ALL ON ALL TABLES IN SCHEMA public TO comradarr_migration``,
+    # but ``ALL TABLES IN SCHEMA <name>`` is hard-pinned to ``<name>`` and
+    # does NOT follow ``search_path``. The per-table app/audit grants
+    # (``GRANT ... ON "users"``) are unqualified so they DO follow
+    # search_path and land on ``wid_<worker>.users`` correctly — but the
+    # migration role's ALL-TABLES grant misses every table in the worker
+    # schema. We replay the migration role's table + sequence grants here
+    # against ``wid_<worker>`` so role-permission tests that
+    # ``SET LOCAL ROLE comradarr_migration`` can still UPDATE/DELETE.
+    grant_engine = create_async_engine(base_url, isolation_level="AUTOCOMMIT")
+    try:
+        async with grant_engine.connect() as grant_conn:
+            _ = await grant_conn.execute(
+                text(f'GRANT ALL ON ALL TABLES IN SCHEMA "{schema}" TO "comradarr_migration"'),
+            )
+            _ = await grant_conn.execute(
+                text(
+                    f'GRANT ALL ON ALL SEQUENCES IN SCHEMA "{schema}" TO "comradarr_migration"',
+                ),
+            )
+    finally:
+        await grant_engine.dispose()
 
     try:
         yield engine
