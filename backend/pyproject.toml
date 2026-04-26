@@ -24,9 +24,10 @@ dependencies = [
 
 [project.scripts]
 # `uv run comradarr` (post-install) launches the canonical Granian process.
-# A `migrate` script entry is intentionally deferred to Phase 2 — Phase 1 has
-# no migrations, an unguarded entry would be a footgun (plan Step 8.4).
+# `uv run migrate` (Phase 2 onward) applies Alembic migrations to head; the
+# CLI owns its own asyncio loop and is exempt from RULE-ASYNC-002.
 comradarr = "comradarr.__main__:main"
+migrate = "comradarr.cli.migrate:main"
 
 [build-system]
 requires = ["uv_build>=0.11.7,<0.12.0"]
