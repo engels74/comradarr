@@ -45,7 +45,12 @@ class NotificationChannel(Base):
     )
     name: Mapped[str] = mapped_column(String, nullable=False)
     kind: Mapped[ChannelKind] = mapped_column(
-        SAEnum(ChannelKind, native_enum=True, name="channel_kind"),
+        SAEnum(
+            ChannelKind,
+            native_enum=True,
+            name="channel_kind",
+            values_callable=lambda e: [m.value for m in e],  # pyright: ignore[reportUnknownLambdaType, reportUnknownMemberType, reportUnknownVariableType]
+        ),
         nullable=False,
     )
     enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
@@ -74,7 +79,12 @@ class NotificationChannel(Base):
     tls_ca_bundle_path: Mapped[str | None] = mapped_column(String, nullable=True)
     last_tested_at: Mapped[datetime | None] = mapped_column(nullable=True)
     last_test_status: Mapped[ChannelTestStatus] = mapped_column(
-        SAEnum(ChannelTestStatus, native_enum=True, name="channel_test_status"),
+        SAEnum(
+            ChannelTestStatus,
+            native_enum=True,
+            name="channel_test_status",
+            values_callable=lambda e: [m.value for m in e],  # pyright: ignore[reportUnknownLambdaType, reportUnknownMemberType, reportUnknownVariableType]
+        ),
         nullable=False,
         default=ChannelTestStatus.UNTESTED,
     )
@@ -126,7 +136,12 @@ class NotificationTemplate(Base):
     )
     event_type: Mapped[str] = mapped_column(String, primary_key=True)
     channel_kind: Mapped[ChannelKind] = mapped_column(
-        SAEnum(ChannelKind, native_enum=True, name="channel_kind"),
+        SAEnum(
+            ChannelKind,
+            native_enum=True,
+            name="channel_kind",
+            values_callable=lambda e: [m.value for m in e],  # pyright: ignore[reportUnknownLambdaType, reportUnknownMemberType, reportUnknownVariableType]
+        ),
         primary_key=True,
     )
     subject_template: Mapped[str] = mapped_column(String, nullable=False)

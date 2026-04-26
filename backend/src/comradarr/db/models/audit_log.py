@@ -50,7 +50,12 @@ class AuditLog(Base):
     )
     timestamp: Mapped[datetime] = mapped_column(nullable=False)
     action: Mapped[AuditAction] = mapped_column(
-        SAEnum(AuditAction, native_enum=True, name="audit_action"),
+        SAEnum(
+            AuditAction,
+            native_enum=True,
+            name="audit_action",
+            values_callable=lambda e: [m.value for m in e],  # pyright: ignore[reportUnknownLambdaType, reportUnknownMemberType, reportUnknownVariableType]
+        ),
         nullable=False,
     )
     # SET NULL — preserve audit history past user deletion (Phase 2 plan §6 R6/Q3).

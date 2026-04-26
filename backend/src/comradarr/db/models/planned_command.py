@@ -55,7 +55,12 @@ class PlannedCommand(Base):
         default=dict,
     )
     status: Mapped[CommandStatus] = mapped_column(
-        SAEnum(CommandStatus, native_enum=True, name="command_status"),
+        SAEnum(
+            CommandStatus,
+            native_enum=True,
+            name="command_status",
+            values_callable=lambda e: [m.value for m in e],  # pyright: ignore[reportUnknownLambdaType, reportUnknownMemberType, reportUnknownVariableType]
+        ),
         nullable=False,
         default=CommandStatus.PENDING,
     )

@@ -37,7 +37,12 @@ class Connector(Base):
     )
     name: Mapped[str] = mapped_column(String, unique=True, nullable=False)
     type: Mapped[ConnectorType] = mapped_column(
-        SAEnum(ConnectorType, native_enum=True, name="connector_type"),
+        SAEnum(
+            ConnectorType,
+            native_enum=True,
+            name="connector_type",
+            values_callable=lambda e: [m.value for m in e],  # pyright: ignore[reportUnknownLambdaType, reportUnknownMemberType, reportUnknownVariableType]
+        ),
         nullable=False,
     )
     url: Mapped[str] = mapped_column(String, nullable=False)

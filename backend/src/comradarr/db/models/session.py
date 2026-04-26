@@ -47,7 +47,12 @@ class Session(Base):
         nullable=False,
     )
     auth_provider: Mapped[AuthProvider] = mapped_column(
-        SAEnum(AuthProvider, native_enum=True, name="auth_provider"),
+        SAEnum(
+            AuthProvider,
+            native_enum=True,
+            name="auth_provider",
+            values_callable=lambda e: [m.value for m in e],  # pyright: ignore[reportUnknownLambdaType, reportUnknownMemberType, reportUnknownVariableType]
+        ),
         nullable=False,
     )
     # Lazy match against `oidc_providers.short_name` — no FK by design (Q8).

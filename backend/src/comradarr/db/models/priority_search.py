@@ -37,7 +37,12 @@ class PrioritySearch(Base):
         nullable=False,
     )
     content_type: Mapped[ContentType] = mapped_column(
-        SAEnum(ContentType, native_enum=True, name="content_type"),
+        SAEnum(
+            ContentType,
+            native_enum=True,
+            name="content_type",
+            values_callable=lambda e: [m.value for m in e],  # pyright: ignore[reportUnknownLambdaType, reportUnknownMemberType, reportUnknownVariableType]
+        ),
         nullable=False,
     )
     content_arr_id: Mapped[int] = mapped_column(nullable=False)

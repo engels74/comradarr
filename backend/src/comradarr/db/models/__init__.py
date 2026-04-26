@@ -35,3 +35,33 @@ from . import user as _user  # noqa: F401  # pyright: ignore[reportUnusedImport]
 from . import (
     user_preference as _user_preference,  # noqa: F401  # pyright: ignore[reportUnusedImport]
 )
+
+# Canonical 22-table set (PRD §8 Appendix B). Read by Wave 4's role-permission
+# matrix test, the alembic-clean linter, and the GRANT-list extension contract
+# inside ``backend/migrations/versions/361c239a829d_v1_baseline_schema.py``.
+# These are TABLE names (PRD spec), not module names — the ``__all__`` shape is
+# documentation-only here, so suppress the dunder-all entry checks per-line.
+__all__: tuple[str, ...] = (
+    "users",  # pyright: ignore[reportUnsupportedDunderAll]
+    "sessions",  # pyright: ignore[reportUnsupportedDunderAll]
+    "api_keys",  # pyright: ignore[reportUnsupportedDunderAll]
+    "auth_rate_limits",  # pyright: ignore[reportUnsupportedDunderAll]
+    "oidc_providers",  # pyright: ignore[reportUnsupportedDunderAll]
+    "role_permissions",  # pyright: ignore[reportUnsupportedDunderAll]
+    "api_key_scopes",  # pyright: ignore[reportUnsupportedDunderAll]
+    "connectors",  # pyright: ignore[reportUnsupportedDunderAll]
+    "mirror_series",  # pyright: ignore[reportUnsupportedDunderAll]
+    "mirror_episodes",  # pyright: ignore[reportUnsupportedDunderAll]
+    "mirror_movies",  # pyright: ignore[reportUnsupportedDunderAll]
+    "search_schedule",  # pyright: ignore[reportUnsupportedDunderAll]
+    "planned_commands",  # pyright: ignore[reportUnsupportedDunderAll]
+    "priority_searches",  # pyright: ignore[reportUnsupportedDunderAll]
+    "sync_state",  # pyright: ignore[reportUnsupportedDunderAll]
+    "app_config",  # pyright: ignore[reportUnsupportedDunderAll]
+    "app_secrets",  # pyright: ignore[reportUnsupportedDunderAll]
+    "user_preferences",  # pyright: ignore[reportUnsupportedDunderAll]
+    "notification_channels",  # pyright: ignore[reportUnsupportedDunderAll]
+    "notification_routes",  # pyright: ignore[reportUnsupportedDunderAll]
+    "notification_templates",  # pyright: ignore[reportUnsupportedDunderAll]
+    "audit_log",  # pyright: ignore[reportUnsupportedDunderAll]
+)

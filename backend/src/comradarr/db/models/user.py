@@ -35,7 +35,12 @@ class User(Base):
     email: Mapped[str] = mapped_column(String, unique=True, index=True)
     username: Mapped[str] = mapped_column(String, unique=True, index=True)
     role: Mapped[UserRole] = mapped_column(
-        SAEnum(UserRole, native_enum=True, name="user_role"),
+        SAEnum(
+            UserRole,
+            native_enum=True,
+            name="user_role",
+            values_callable=lambda e: [m.value for m in e],  # pyright: ignore[reportUnknownLambdaType, reportUnknownMemberType, reportUnknownVariableType]
+        ),
         nullable=False,
         default=UserRole.VIEWER,
     )
@@ -44,7 +49,12 @@ class User(Base):
     # Phase 4 provisioning code lands.
     password_hash: Mapped[str | None] = mapped_column(String, nullable=True)
     provisioning_provider: Mapped[ProvisioningProvider] = mapped_column(
-        SAEnum(ProvisioningProvider, native_enum=True, name="provisioning_provider"),
+        SAEnum(
+            ProvisioningProvider,
+            native_enum=True,
+            name="provisioning_provider",
+            values_callable=lambda e: [m.value for m in e],  # pyright: ignore[reportUnknownLambdaType, reportUnknownMemberType, reportUnknownVariableType]
+        ),
         nullable=False,
         default=ProvisioningProvider.LOCAL,
     )

@@ -42,7 +42,12 @@ class SyncState(Base):
         default=dict,
     )
     status: Mapped[SyncStatus] = mapped_column(
-        SAEnum(SyncStatus, native_enum=True, name="sync_status"),
+        SAEnum(
+            SyncStatus,
+            native_enum=True,
+            name="sync_status",
+            values_callable=lambda e: [m.value for m in e],  # pyright: ignore[reportUnknownLambdaType, reportUnknownMemberType, reportUnknownVariableType]
+        ),
         nullable=False,
         default=SyncStatus.IDLE,
     )
