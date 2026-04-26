@@ -44,11 +44,19 @@ fi
 # embeds the literal `from __future__ import` substring (e.g. when a test file
 # constructs the string at runtime to assert its absence elsewhere) and would
 # otherwise produce a spurious match every time pytest's bytecode cache exists.
+#
+# Regex anchor `^[[:space:]]*from __future__ import` matches only actual import
+# *statements* (start-of-line + optional indentation for nested imports inside
+# functions). This rules out the substring appearing inside comments (which
+# always start with `#`) and inside docstrings/markdown bullets (which start
+# with whitespace + `*`/digits/quotes, not the literal `from`). Plan-§3
+# documentation referencing the rule by name (e.g. `forbids \`from __future__
+# import annotations\``) would otherwise produce false positives.
 if matches=$(grep -RnE \
     --include='*.py' \
     --exclude-dir='__pycache__' \
     --binary-files='without-match' \
-    'from __future__ import' "${existing_targets[@]}" 2>/dev/null); then
+    '^[[:space:]]*from __future__ import' "${existing_targets[@]}" 2>/dev/null); then
   printf 'forbidden: `from __future__ import` (RULE-PY-002)\n' >&2
   printf '%s\n' "${matches}" >&2
   exit 1
