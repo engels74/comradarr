@@ -17,13 +17,18 @@ async fixtures:
   silently breaks the moment a test commits), yields a session, and
   rolls back at teardown. Test bodies see a clean schema every time.
 
-The session-scope engine fixture also performs a **startup sweep** that drops
-any leftover ``wid_*`` schemas older than 1 hour. This is the R4 mitigation
-from plan §6: a crashed worker that died before the CASCADE-drop finalizer
-ran would otherwise pollute the test DB indefinitely. The 1-hour threshold
-is wide enough to leave concurrent worker schemas alone (a long pytest run
-finishes in single-digit minutes) but tight enough to keep stale state from
-accumulating across CI days.
+The session-scope engine fixture **resets its own worker schema** on entry
+via ``DROP SCHEMA IF EXISTS ... CASCADE; CREATE SCHEMA ...`` (R4 mitigation
+from plan §6). A crashed worker that died before the CASCADE-drop finalizer
+ran is self-healed by the next session's drop-and-recreate of *its own*
+worker id. Cross-worker sweep was removed because the
+``application_name='test_<worker_id>'`` predicate raced with peer schema
+creation under high xdist parallelism (the long-lived test engine registers
+the application_name *after* schema creation, leaving a window where a
+sibling worker's sweep would drop the peer's freshly-created schema). Stale
+schemas from worker ids absent in the current run accumulate harmlessly —
+the next run targeting that id resets it; otherwise they're tiny pg_namespace
+bloat and operators can drop them manually if desired.
 
 DSN resolution:
 
@@ -50,7 +55,6 @@ from typing import TYPE_CHECKING, cast
 import pytest
 import pytest_asyncio
 from sqlalchemy.ext.asyncio import (
-    AsyncConnection,
     AsyncEngine,
     AsyncSession,
     async_sessionmaker,
@@ -143,50 +147,16 @@ def _schema_for(worker: str) -> str:
     return f"{_WID_SCHEMA_PREFIX}{worker}"
 
 
-async def _sweep_stale_schemas(conn: AsyncConnection) -> None:
-    """Drop any leftover ``wid_*`` schemas (plan §6 R4 mitigation).
-
-    A worker that died after creating its schema but before the
-    ``DROP SCHEMA CASCADE`` finalizer ran would leave behind a ``wid_*``
-    schema indefinitely. The startup sweep clears them on every new test
-    session so the test DB does not accumulate carcasses across CI days.
-
-    PostgreSQL does not expose schema-creation timestamps and the
-    pg_class.xmin → pg_xact_commit_timestamp path requires
-    ``track_commit_timestamp = on`` plus a non-trivial xid cast that breaks
-    on PG14+. We instead drop *every* ``wid_*`` schema unconditionally — the
-    per-session ``CREATE SCHEMA IF NOT EXISTS`` immediately afterwards is
-    idempotent, and concurrent xdist workers each own a distinct schema, so
-    the only thing we ever delete is genuine stale state.
-    """
-    # Drop wid_* schemas whose corresponding test_<worker> application_name
-    # has no live row in pg_stat_activity — i.e. nobody owns them anymore.
-    # _WID_SCHEMA_PREFIX is a module constant; ruff S608 is a false positive.
-    sweep_sql = (
-        f"SELECT n.nspname FROM pg_namespace n "  # noqa: S608
-        f"WHERE n.nspname LIKE '{_WID_SCHEMA_PREFIX}%' "
-        f"  AND NOT EXISTS ("
-        f"    SELECT 1 FROM pg_stat_activity a "
-        f"    WHERE a.application_name = "
-        f"      'test_' || substring(n.nspname FROM length('{_WID_SCHEMA_PREFIX}') + 1)"
-        f"  )"
-    )
-    rows = await conn.execute(text(sweep_sql))
-    stale: list[str] = [cast("str", row[0]) for row in rows.all()]
-    for schema in stale:
-        # Best-effort: a concurrent session may already be dropping it.
-        with contextlib.suppress(Exception):
-            _ = await conn.execute(text(f'DROP SCHEMA "{schema}" CASCADE'))
-
-
 @pytest_asyncio.fixture(scope="session", loop_scope="session")
 async def db_engine(worker_id: str) -> AsyncIterator[AsyncEngine]:
     """Per-worker engine pinned to ``wid_<worker>`` schema with alembic head.
 
     Lifecycle:
 
-    1. Connect superuser-style to the test DB; run the stale-schema sweep.
-    2. ``CREATE SCHEMA IF NOT EXISTS wid_<worker>``.
+    1. Connect superuser-style to the test DB.
+    2. ``DROP SCHEMA IF EXISTS wid_<worker> CASCADE`` followed by
+       ``CREATE SCHEMA wid_<worker>`` — peer-isolated reset (each worker
+       only touches its own schema, so cross-worker races are impossible).
     3. Build the engine with ``connect_args.server_settings.search_path``
        pinned to the worker schema so every connection from this engine
        sees the schema as the default.
@@ -196,11 +166,20 @@ async def db_engine(worker_id: str) -> AsyncIterator[AsyncEngine]:
        ``search_path``).
     5. ``yield`` the engine for the whole session.
     6. ``DROP SCHEMA wid_<worker> CASCADE`` in try/except; dispose engine.
+
+    Earlier revisions ran a startup sweep that dropped *every* ``wid_*``
+    schema whose ``application_name='test_<id>'`` was absent from
+    ``pg_stat_activity``. Under ``-n auto`` on many-core hosts (10+ xdist
+    workers) the sweep raced with peers: a peer's ``wid_<id>`` exists in
+    ``pg_namespace`` immediately after step 2 but its long-lived test engine
+    (which sets ``application_name``) hasn't connected yet, so a sibling
+    worker's sweep would drop the peer's freshly-created schema. The
+    drop-and-recreate-own-schema approach used here is race-free.
     """
     schema = _schema_for(worker_id)
     base_url = worker_database_url(worker_id)
 
-    # Step 1-2: schema setup via a one-shot admin engine. Using a separate
+    # Step 1-2: schema reset via a one-shot admin engine. Using a separate
     # engine for the bootstrap keeps the long-lived test engine's pool
     # clean of administrative state.
     #
@@ -218,8 +197,11 @@ async def db_engine(worker_id: str) -> AsyncIterator[AsyncEngine]:
     admin_engine = create_async_engine(base_url, isolation_level="AUTOCOMMIT")
     try:
         async with admin_engine.connect() as admin_conn:
-            await _sweep_stale_schemas(admin_conn)
-            _ = await admin_conn.execute(text(f'CREATE SCHEMA IF NOT EXISTS "{schema}"'))
+            # Self-isolating reset: only this worker's schema is touched.
+            _ = await admin_conn.execute(
+                text(f'DROP SCHEMA IF EXISTS "{schema}" CASCADE'),
+            )
+            _ = await admin_conn.execute(text(f'CREATE SCHEMA "{schema}"'))
             for role in ("comradarr_migration", "comradarr_app", "comradarr_audit_admin"):
                 _ = await admin_conn.execute(
                     text(f'GRANT USAGE ON SCHEMA "{schema}" TO "{role}"'),
