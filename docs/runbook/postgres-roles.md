@@ -199,12 +199,95 @@ recovery is needed.
 
 ---
 
+## Phase 3 — `comradarr_audit_admin` LOGIN + dedicated engine
+
+Phase 2 created `comradarr_audit_admin` as `NOLOGIN`. Phase 3 (plan §5.3.3,
+migration `b2c3d4e5f6a7_phase3_audit_admin_login`) flips it to `LOGIN` so the
+retention-vacuum task can authenticate as the only role with `DELETE` on
+`audit_log`. The application keeps writing under `comradarr_app` (still no
+UPDATE/DELETE on the audit table — the carve-out is unchanged).
+
+### Required environment (Phase 3+)
+
+* **`COMRADARR_AUDIT_ADMIN_PASSWORD`** *(required, ≥32 characters)* — the
+  password Postgres assigns to `comradarr_audit_admin` during the LOGIN
+  migration **and** the credential the retention-vacuum engine presents at
+  connect time. Lifespan boot raises `ConfigurationError` and refuses to
+  serve traffic if the value is missing or shorter than 32 characters.
+  Password rotation is operator-driven: update the env var, re-run the
+  LOGIN migration to refresh the role, then redeploy. Full rotation
+  tooling (zero-downtime, multi-version registry) is deferred to Phase 30.
+* **`COMRADARR_AUDIT_ADMIN_PASSWORD_FILE`** *(optional)* — Docker/Compose
+  secret-file pattern: when set, the application reads the password from
+  the path and unsets the inline env var. Same length floor applies.
+* **`AUDIT_ADMIN_DATABASE_URL`** *(optional)* — explicit asyncpg DSN for
+  the audit-admin engine, used when the audit role lives on a separate
+  Postgres host (uncommon). When unset, the application derives the DSN
+  by substituting `comradarr_app` → `comradarr_audit_admin` in the userinfo
+  of `DATABASE_URL` and injecting `COMRADARR_AUDIT_ADMIN_PASSWORD`. A DSN
+  shape mismatch (no `comradarr_app` in userinfo) raises
+  `ConfigurationError` early.
+* **`AUDIT_ADMIN_DATABASE_URL_FILE`** *(optional)* — secret-file twin of the
+  inline DSN.
+
+### Why the role started as NOLOGIN
+
+The v1 baseline migration (`361c239a829d`, lines 627–629) created
+`comradarr_audit_admin` as `NOLOGIN` because Phase 2 had no caller that
+needed to authenticate as it — the schema-level GRANT (`SELECT, DELETE ON
+audit_log`) was wired up but no engine connected as the role. Phase 3
+introduces the retention vacuum, which is the first caller. Splitting
+LOGIN out of the v1 baseline keeps the v1 schema independently rerunnable
+on operators who haven't yet rotated the audit password into their env.
+
+### Operator workflow — LOGIN migration / password rotation
+
+```sh
+# 1. Generate a fresh ≥32-char password (high entropy; do NOT reuse the app password).
+export COMRADARR_AUDIT_ADMIN_PASSWORD="$(python -c 'import secrets;print(secrets.token_urlsafe(48))')"
+
+# 2. Run the LOGIN migration. The migration reads
+#    COMRADARR_AUDIT_ADMIN_PASSWORD from the environment at upgrade time
+#    and writes ALTER ROLE comradarr_audit_admin LOGIN PASSWORD '<value>'
+#    via op.execute() — the password NEVER lands in the alembic history
+#    or in source control.
+( cd backend && uv run alembic upgrade head )
+
+# 3. Restart the application so the new env var is bound to the audit-admin engine.
+#    Lifespan boot probes SELECT 1 against the audit-admin DSN and raises
+#    ConfigurationError if authentication fails.
+```
+
+Rotation is the same flow: set a new value into
+`COMRADARR_AUDIT_ADMIN_PASSWORD` and re-run `uv run alembic upgrade head`.
+The migration's upgrade body is idempotent and re-issues the `ALTER ROLE …
+PASSWORD '…'` so the running role takes the new value. Phase 30 will add
+zero-downtime multi-secret rotation; until then the operator schedules a
+brief restart window.
+
+### Why the password isn't in the migration history
+
+Alembic upgrade scripts are committed to the repo. Inlining a password
+literal would land it in version control. Reading from
+`os.environ["COMRADARR_AUDIT_ADMIN_PASSWORD"]` at migration-run time keeps
+the secret off-disk and makes the migration safe to re-share across
+operators (each one supplies their own value). The migration raises a
+clear error if the env var is unset.
+
+---
+
 ## Cross-references
 
 * PRD §8 — three-role separation rationale.
-* Plan §3 Milestone 7 step 25–26 — the migration helpers.
+* Plan §3 Milestone 7 step 25–26 — the migration helpers (Phase 2 v1 baseline).
+* Plan §5.3.3 — Phase 3 audit writer + retention vacuum (this runbook's LOGIN flip).
 * Plan §6 R1 — risk write-up that this runbook closes.
+* `backend/migrations/versions/b2c3d4e5f6a7_phase3_audit_admin_login.py` —
+  the LOGIN migration body.
 * `backend/tests/db/test_role_permissions.py` — the security gate that
   exercises this matrix on every CI run.
+* `backend/tests/test_audit_writer.py` + `tests/test_audit_retention_vacuum.py`
+  — Phase 3 behavioral coverage proving the LOGIN-bound vacuum can DELETE
+  while the app role still cannot.
 * `tools/lint/check_alembic_clean.sh` — local-only autogenerate-clean
   check; the CI equivalent is `test_alembic_baseline.py`.
