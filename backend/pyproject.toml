@@ -27,6 +27,8 @@ dependencies = [
   # whole 46.x series. The upper bound <47 caps the next major.
   "cryptography>=46.0.7,<47",
   "argon2-cffi>=23,<26",
+  "authlib>=1.4,<2",
+  "httpx[http2]>=0.28,<0.29",
 ]
 
 [project.scripts]
@@ -48,6 +50,7 @@ dev = [
   "pytest-asyncio",
   "pytest-xdist",
   "pip-audit",
+  "hypothesis>=6.152.3",
 ]
 
 [tool.uv.build-backend]

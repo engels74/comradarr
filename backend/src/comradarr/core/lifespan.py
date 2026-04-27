@@ -48,11 +48,23 @@ import structlog
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import (
     AsyncEngine,
+    AsyncSession,
     async_sessionmaker,
     create_async_engine,
 )
 
 from comradarr.config import derive_audit_admin_url
+from comradarr.core.auth import AuthProviderRegistry
+from comradarr.core.auth.api_keys import ApiKeyService
+from comradarr.core.auth.local import LocalPasswordProvider
+from comradarr.core.auth.oidc import OIDCService
+from comradarr.core.auth.rate_limit import RateLimiter
+from comradarr.core.auth.sessions import SessionService
+from comradarr.core.auth.trusted_header import (
+    TrustedHeaderProvider,
+    emit_startup_warnings,
+    parse_cidr_allowlist,
+)
 from comradarr.core.crypto import CryptoService
 from comradarr.db.enums import AuditAction
 from comradarr.db.migrations import run_migrations_in_lifespan
@@ -243,6 +255,20 @@ async def db_lifespan(app: Litestar) -> AsyncGenerator[None]:
         _logger.info("lifespan.db.disposed")
 
 
+def _jwks_done_callback(task: asyncio.Task[object]) -> None:
+    """Log a crashed JWKS refresher task. ``CancelledError`` = clean shutdown."""
+    if task.cancelled():
+        return
+    exc = task.exception()
+    if exc is None:
+        return
+    _logger.error(
+        "lifespan.services.jwks_refresher_crashed",
+        error=str(exc),
+        error_type=type(exc).__name__,
+    )
+
+
 def _make_vacuum_done_callback(app: Litestar) -> Callable[[asyncio.Task[object]], None]:
     """Build the done-callback that flips audit_retention_vacuum_health on crash.
 
@@ -297,11 +323,13 @@ def _initial_vacuum_health(horizon_set: bool) -> AuditRetentionVacuumHealth:
 
 @asynccontextmanager
 async def services_lifespan(app: Litestar) -> AsyncGenerator[None]:
-    """Compose the cross-phase services. Phase 3 wires crypto + audit + vacuum."""
+    """Compose the cross-phase services. Phase 4 extends Phase 3 with auth services."""
     settings: Settings = app.state.settings
+    db_sessionmaker: async_sessionmaker[AsyncSession] = app.state.db_sessionmaker
 
     app.state.crypto = CryptoService(settings)
-    app.state.audit_writer = AuditWriter(app.state.db_sessionmaker)
+    audit = AuditWriter(db_sessionmaker)
+    app.state.audit_writer = audit
 
     horizon = settings.audit_retention_timedelta()
     app.state.audit_retention_vacuum_health = _initial_vacuum_health(horizon is not None)
@@ -320,6 +348,44 @@ async def services_lifespan(app: Litestar) -> AsyncGenerator[None]:
     vacuum_task.add_done_callback(_make_vacuum_done_callback(app))
     app.state.audit_retention_vacuum_task = vacuum_task
 
+    # Phase 4: auth services.
+    # RateLimiter opens a fresh session per hit so concurrent requests don't
+    # race on a shared AsyncSession. Each call commits its own transaction.
+    rate_limiter = RateLimiter(db_sessionmaker)
+    app.state.rate_limiter = rate_limiter
+
+    session_service = SessionService(db_sessionmaker, settings, audit)
+    app.state.session_service = session_service
+
+    api_key_service = ApiKeyService(db_sessionmaker, audit)
+    app.state.api_key_service = api_key_service
+
+    local_provider = LocalPasswordProvider(settings, audit, rate_limiter)
+    app.state.local_provider = local_provider
+
+    oidc_providers = settings.oidc_providers if settings.oidc_providers else {}
+    oidc_service = OIDCService(oidc_providers, app.state.crypto, db_sessionmaker, audit, settings)
+    app.state.oidc_service = oidc_service
+
+    allowlist = parse_cidr_allowlist(settings.trusted_header_auth_proxy_ips)
+    trusted_header_provider = TrustedHeaderProvider(settings, audit, allowlist, db_sessionmaker)
+    app.state.trusted_header_provider = trusted_header_provider
+
+    auth_registry = AuthProviderRegistry([local_provider, trusted_header_provider])
+    app.state.auth_registry = auth_registry
+
+    # Startup warnings for operator misconfiguration (trusted header).
+    emit_startup_warnings(settings)
+    app.state.startup_warnings = True
+
+    jwks_task: asyncio.Task[object] | None = None
+    if oidc_providers:
+        jwks_task = asyncio.create_task(
+            oidc_service.run_jwks_refresher(),
+            name="jwks_refresher",
+        )
+        jwks_task.add_done_callback(_jwks_done_callback)
+
     # Phase 11: app.state.event_bus = EventBus(); tg.create_task(app.state.event_bus.run())
     # Phase 7:  app.state.client_factory = ClientFactory(...)  # httpx[http2] lands Phase 7 per Q6
     # Phase 9:  app.state.sync_coordinator = ...; tg.create_task(app.state.sync_coordinator.run())
@@ -329,8 +395,17 @@ async def services_lifespan(app: Litestar) -> AsyncGenerator[None]:
     try:
         yield
     finally:
+        if jwks_task is not None and not jwks_task.done():
+            _ = jwks_task.cancel()
         if not vacuum_task.done():
             _ = vacuum_task.cancel()
+        if jwks_task is not None:
+            try:
+                await asyncio.wait_for(jwks_task, timeout=_VACUUM_TEARDOWN_TIMEOUT_SECONDS)
+            except TimeoutError, asyncio.CancelledError:
+                pass
+            except Exception as exc:  # noqa: BLE001
+                _logger.warning("lifespan.services.jwks_teardown_error", error=str(exc))
         try:
             await asyncio.wait_for(vacuum_task, timeout=_VACUUM_TEARDOWN_TIMEOUT_SECONDS)
         except TimeoutError, asyncio.CancelledError:

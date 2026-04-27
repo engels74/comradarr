@@ -58,6 +58,8 @@ class User(Base):
         nullable=False,
         default=ProvisioningProvider.LOCAL,
     )
+    # Populated by Phase 4 OIDC linkage (Slice G); NULL for local/trusted-header rows.
+    oidc_subject: Mapped[str | None] = mapped_column(String, nullable=True)
     created_at: Mapped[datetime] = mapped_column(nullable=False)
     updated_at: Mapped[datetime] = mapped_column(nullable=False)
     last_login_at: Mapped[datetime | None] = mapped_column(nullable=True)

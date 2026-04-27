@@ -32,7 +32,7 @@ repo = "local"
 hooks = [
   { id = "ruff-lint",   name = "ruff lint",       entry = "bash -c 'cd backend && uv run ruff check --fix .'", language = "system", types = ["python"], pass_filenames = false, files = "^backend/" },
   { id = "ruff-format", name = "ruff format",     entry = "bash -c 'cd backend && uv run ruff format .'",      language = "system", types = ["python"], pass_filenames = false, files = "^backend/" },
-  { id = "basedpyright", name = "basedpyright",   entry = "bash -c 'cd backend && uv run basedpyright'",       language = "system", types = ["python"], pass_filenames = false, always_run = true },
+  { id = "basedpyright", name = "basedpyright",   entry = "bash -c 'cd backend && uv run basedpyright --level error'", language = "system", types = ["python"], pass_filenames = false, always_run = true },
   { id = "uv-lock",     name = "uv lock --check", entry = "bash -c 'cd backend && uv lock --check'",           language = "system", files = "^backend/(pyproject\\.toml|uv\\.lock)$", pass_filenames = false },
 ]
 

@@ -53,10 +53,11 @@ pytestmark = pytest.mark.integration
 
 # Phase 3 advanced ``head`` past the v1 baseline. Order is:
 #   361c239a829d (v1 baseline) → a1b2c3d4e5f6 (audit_action enum extensions)
-#   → b2c3d4e5f6a7 (audit-admin NOLOGIN→LOGIN). Update this constant whenever a
-# new migration lands; ``run_migrations_in_lifespan`` reports the post-upgrade
-# head, and the test asserts equality to catch missing/stale revisions.
-_HEAD_REVISION = "b2c3d4e5f6a7"
+#   → b2c3d4e5f6a7 (audit-admin NOLOGIN→LOGIN) → 1d8a2c6dcc5d (phase4 oidc_subject).
+# Update this constant whenever a new migration lands;
+# ``run_migrations_in_lifespan`` reports the post-upgrade head, and the test
+# asserts equality to catch missing/stale revisions.
+_HEAD_REVISION = "1d8a2c6dcc5d"
 
 
 _StubSettingsFactory = Callable[..., Settings]

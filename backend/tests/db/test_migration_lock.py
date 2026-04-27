@@ -77,11 +77,11 @@ from sqlalchemy.sql import text
 pytestmark = pytest.mark.integration
 
 
-# Phase 3 advanced ``head`` past the v1 baseline: the chain is
-# ``361c239a829d → a1b2c3d4e5f6 → b2c3d4e5f6a7``. The advisory-lock test
-# parses the harness's ``{"from": ..., "to": ...}`` JSON and asserts the
-# applied head matches this constant; bump on every new revision.
-_HEAD_REVISION = "b2c3d4e5f6a7"
+# Phase 4 advanced ``head`` past phase 3: the chain is
+# ``361c239a829d → a1b2c3d4e5f6 → b2c3d4e5f6a7 → 1d8a2c6dcc5d``. The
+# advisory-lock test parses the harness's ``{"from": ..., "to": ...}`` JSON
+# and asserts the applied head matches this constant; bump on every new revision.
+_HEAD_REVISION = "1d8a2c6dcc5d"
 _N_CONCURRENT = 4
 _SUBPROCESS_TIMEOUT_SECONDS = 60
 

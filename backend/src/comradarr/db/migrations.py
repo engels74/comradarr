@@ -89,6 +89,10 @@ AUTOGEN_DRIFT_ALLOWLIST: tuple[tuple[str, str], ...] = (
     ("planned_commands", "ix_planned_commands_pending"),
     ("audit_log", "ix_audit_log_action_timestamp_desc"),
     ("audit_log", "ix_audit_log_timestamp_desc"),
+    # Phase 4 partial unique index — Postgres canonicalizes the WHERE clause to
+    # include an explicit cast (``'oidc'::provisioning_provider``) that
+    # autogenerate cannot round-trip against the model's literal text.
+    ("users", "ix_users_oidc_subject_where_oidc"),
 )
 
 

@@ -72,7 +72,7 @@ pytestmark = pytest.mark.integration
 # (2 partial + 2 DESC-ordered). Any future addition must come with both an
 # explicit edit to comradarr.db.migrations.AUTOGEN_DRIFT_ALLOWLIST AND a bump
 # to this constant — the discipline is a security gate per plan §6 R2.
-_EXPECTED_ALLOWLIST_SIZE = 4
+_EXPECTED_ALLOWLIST_SIZE = 5
 
 
 def test_autogen_drift_allowlist_size_sentinel() -> None:

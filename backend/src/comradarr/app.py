@@ -37,7 +37,10 @@ from litestar.openapi.plugins import (
 from litestar.plugins.structlog import StructlogPlugin
 
 from comradarr import __version__
+from comradarr.api.controllers.api_keys import ApiKeysController
+from comradarr.api.controllers.auth import AuthController
 from comradarr.api.controllers.health import HealthController
+from comradarr.api.middleware.auth import auth_middleware
 from comradarr.api.middleware.correlation import correlation_id_middleware
 
 # Settings imported at runtime (not TYPE_CHECKING-only): PEP 749 lazy
@@ -83,8 +86,8 @@ def create_app(settings: Settings | None = None) -> Litestar:
         # Phase 6: cors_middleware
         # Phase 6: csrf_middleware
         # Phase 6: security_headers_middleware
-        # Phase 4: auth_middleware
-        # Phase 4: permission_check_middleware
+        auth_middleware,
+        # Phase 4: requires_permission applied per-handler via guards=[requires_permission(...)]
     ]
 
     # Phase 4/5: gate behind auth + apply schema_ip rate limit (10 req/hr/IP).
@@ -108,7 +111,7 @@ def create_app(settings: Settings | None = None) -> Litestar:
     app_state = State({"settings": settings})
 
     return Litestar(
-        route_handlers=[HealthController],
+        route_handlers=[HealthController, AuthController, ApiKeysController],
         plugins=[sqlalchemy_plugin, structlog_plugin],
         middleware=middleware,
         lifespan=[db_lifespan, services_lifespan],

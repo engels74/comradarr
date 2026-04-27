@@ -7,8 +7,10 @@ canonical code and HTTP-status table.
 """
 
 from comradarr.errors.authentication import (
+    AuthenticationAccountLinkingBlocked,
     AuthenticationApiKeyRevoked,
     AuthenticationInvalidCredentials,
+    AuthenticationLocalLoginDisabled,
     AuthenticationSessionExpired,
 )
 from comradarr.errors.authorization import (
@@ -29,11 +31,14 @@ from comradarr.errors.crypto import (
     CryptoUnknownKeyVersion,
 )
 from comradarr.errors.internal import InternalUnexpected
+from comradarr.errors.rate_limiting import RateLimitExceeded
 from comradarr.errors.validation import ValidationError
 
 __all__ = [
+    "AuthenticationAccountLinkingBlocked",
     "AuthenticationApiKeyRevoked",
     "AuthenticationInvalidCredentials",
+    "AuthenticationLocalLoginDisabled",
     "AuthenticationSessionExpired",
     "AuthorizationForbidden",
     "AuthorizationPermissionRequired",
@@ -47,5 +52,6 @@ __all__ = [
     "CryptoError",
     "CryptoUnknownKeyVersion",
     "InternalUnexpected",
+    "RateLimitExceeded",
     "ValidationError",
 ]

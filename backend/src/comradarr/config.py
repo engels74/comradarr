@@ -60,6 +60,7 @@ _OIDC_FIELD_MAP: Final[Mapping[str, str]] = {
     "REDIRECT_URI": "redirect_uri",
     "SCOPES": "scopes",
     "LINK_POLICY": "link_policy",
+    "INSECURE_DISCOVERY": "insecure_discovery",
 }
 
 
@@ -118,6 +119,25 @@ class Settings(msgspec.Struct, frozen=True, kw_only=True):
     comradarr_run_db_probes_on_startup: bool = True
 
     oidc_providers: dict[str, OIDCProviderSettings] = msgspec.field(default_factory=dict)
+    # Per-provider insecure-discovery opt-in: set of provider short_names for which
+    # http:// discovery URLs are permitted. Operator must explicitly name each provider;
+    # there is no global flag. Populated from COMRADARR_OIDC_<PROVIDER>_INSECURE_DISCOVERY=true.
+    oidc_insecure_discovery_providers: frozenset[str] = frozenset()
+
+    # --- Phase 4 Slice B additions ---
+    comradarr_session_idle_days: int = 7
+    comradarr_session_absolute_days: int = 30
+
+    # --- Phase 4 Slice F additions ---
+    trusted_header_auth_enabled: bool = False
+    trusted_header_auth_proxy_ips: list[str] = msgspec.field(default_factory=list)
+    trusted_header_auth_username_header: str = "Remote-User"
+    trusted_header_auth_email_header: str = "Remote-Email"
+    trusted_header_auth_provision_policy: Literal["auto_provision", "strict_match"] = (
+        "auto_provision"
+    )
+    trusted_header_auth_logout_url: str = ""
+    trusted_header_auth_typed_confirmation: str = ""
 
     def audit_retention_timedelta(self) -> timedelta | None:
         """Return the audit retention horizon as a timedelta, or None for indefinite.
@@ -189,12 +209,16 @@ def _parse_secret_key_registry(env: Mapping[str, str]) -> dict[int, bytes]:
     return result
 
 
-def _parse_oidc_providers(env: Mapping[str, str]) -> dict[str, OIDCProviderSettings]:
+def _parse_oidc_providers(
+    env: Mapping[str, str],
+) -> tuple[dict[str, OIDCProviderSettings], frozenset[str]]:
     """Parse ``COMRADARR_OIDC_<PROVIDER>_<FIELD>[_FILE]`` env vars.
 
     Each provider must minimally supply ``CLIENT_ID``, ``DISCOVERY_URL``,
     ``REDIRECT_URI``, and either ``CLIENT_SECRET`` or ``CLIENT_SECRET_FILE``.
     Missing-but-mentioned providers raise :class:`ConfigurationError`.
+
+    Returns ``(providers_dict, insecure_discovery_set)``.
     """
     raw: dict[str, dict[str, dict[str, str]]] = {}
 
@@ -210,6 +234,7 @@ def _parse_oidc_providers(env: Mapping[str, str]) -> dict[str, OIDCProviderSetti
         raw.setdefault(provider, {}).setdefault(field, {})[slot] = value
 
     providers: dict[str, OIDCProviderSettings] = {}
+    insecure_discovery: set[str] = set()
     for provider, fields in sorted(raw.items()):
         try:
             client_id = fields["CLIENT_ID"]["inline"]
@@ -241,6 +266,10 @@ def _parse_oidc_providers(env: Mapping[str, str]) -> dict[str, OIDCProviderSetti
                 + "must be 'link' or 'require_separate'"
             )
 
+        insecure_raw = fields.get("INSECURE_DISCOVERY", {}).get("inline", "").strip().lower()
+        if insecure_raw in ("1", "true", "yes", "on"):
+            insecure_discovery.add(provider)
+
         providers[provider] = OIDCProviderSettings(
             client_id=client_id,
             client_secret_path=pathlib.Path(secret_file),
@@ -249,7 +278,7 @@ def _parse_oidc_providers(env: Mapping[str, str]) -> dict[str, OIDCProviderSetti
             scopes=scopes,
             link_policy=link_raw,
         )
-    return providers
+    return providers, frozenset(insecure_discovery)
 
 
 def _parse_bool(env: Mapping[str, str], name: str, *, default: bool) -> bool:
@@ -279,6 +308,25 @@ def _parse_log_format(env: Mapping[str, str]) -> LogFormat:
     if raw not in ("json", "console"):
         raise ConfigurationError("COMRADARR_LOG_FORMAT: must be 'json' or 'console'")
     return raw
+
+
+def _parse_str_list(env: Mapping[str, str], name: str) -> list[str]:
+    """Parse a comma-separated env var into a list of stripped non-empty strings."""
+    raw = env.get(name, "")
+    if not raw.strip():
+        return []
+    return [s.strip() for s in raw.split(",") if s.strip()]
+
+
+def _parse_provision_policy(
+    env: Mapping[str, str],
+) -> Literal["auto_provision", "strict_match"]:
+    raw = env.get("TRUSTED_HEADER_AUTH_PROVISION_POLICY", "auto_provision").strip()
+    if raw not in ("auto_provision", "strict_match"):
+        raise ConfigurationError(
+            "TRUSTED_HEADER_AUTH_PROVISION_POLICY: must be 'auto_provision' or 'strict_match'"
+        )
+    return raw  # type: ignore[return-value]
 
 
 def derive_audit_admin_url(app_url: Secret[str], password: Secret[str]) -> str:
@@ -395,5 +443,27 @@ def load_settings(env: Mapping[str, str] | None = None) -> Settings:
         comradarr_run_db_probes_on_startup=_parse_bool(
             source, "COMRADARR_RUN_DB_PROBES_ON_STARTUP", default=True
         ),
-        oidc_providers=_parse_oidc_providers(source),
+        oidc_providers=(_oidc_parsed := _parse_oidc_providers(source))[0],
+        oidc_insecure_discovery_providers=_oidc_parsed[1],
+        # --- Phase 4 Slice B additions ---
+        comradarr_session_idle_days=_parse_int(source, "COMRADARR_SESSION_IDLE_DAYS", default=7),
+        comradarr_session_absolute_days=_parse_int(
+            source, "COMRADARR_SESSION_ABSOLUTE_DAYS", default=30
+        ),
+        # --- Phase 4 Slice F additions ---
+        trusted_header_auth_enabled=_parse_bool(
+            source, "TRUSTED_HEADER_AUTH_ENABLED", default=False
+        ),
+        trusted_header_auth_proxy_ips=_parse_str_list(source, "TRUSTED_HEADER_AUTH_PROXY_IPS"),
+        trusted_header_auth_username_header=source.get(
+            "TRUSTED_HEADER_AUTH_USERNAME_HEADER", "Remote-User"
+        ),
+        trusted_header_auth_email_header=source.get(
+            "TRUSTED_HEADER_AUTH_EMAIL_HEADER", "Remote-Email"
+        ),
+        trusted_header_auth_provision_policy=_parse_provision_policy(source),
+        trusted_header_auth_logout_url=source.get("TRUSTED_HEADER_AUTH_LOGOUT_URL", ""),
+        trusted_header_auth_typed_confirmation=source.get(
+            "TRUSTED_HEADER_AUTH_TYPED_CONFIRMATION", ""
+        ),
     )
