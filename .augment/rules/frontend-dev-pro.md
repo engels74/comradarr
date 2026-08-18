@@ -55,7 +55,7 @@ Stack-specific search examples:
 | API types | `openapi-typescript` | 7.x | OpenAPI 3.x → TypeScript types ([Source](https://openapi-ts.dev/cli)) |
 | API client | `openapi-fetch` | current | Thin typed `fetch` wrapper driven by generated types ([Source](https://openapi-ts.dev/openapi-fetch/)) |
 | Backend (spec source) | Litestar | 2.x | OpenAPI 3.1 schema served at `/schema/openapi.json` ([Source](https://docs.litestar.dev/2/usage/openapi/schema_generation.html)) |
-| Linter + formatter | Biome | 2.4.x | Single Rust-native tool for JS/TS/CSS/JSON and Svelte `<script>`/`<style>` blocks; replaces Prettier and ESLint ([Source](https://biomejs.dev/internals/language-support/#html-super-languages-support)) |
+| Linter + formatter | Biome | 2.4.x | Single Rust-native tool for JS/TS/CSS/JSON and Svelte `<script>`/`<style>` blocks ([Source](https://biomejs.dev/internals/language-support/#html-super-languages-support)) |
 
 ## 2. Status & Adoption Policy
 
@@ -774,7 +774,7 @@ export const actions: Actions = {
   bunx svelte-kit sync && bunx svelte-check --tsconfig ./tsconfig.json
   ```
   Exposed as `"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json"` and run as `bun run check`. Must be green before merging. ([Source](https://socket.dev/npm/package/svelte-check/overview/1.2.5))
-- **VERIFY-LINT-001 — Biome (lint + format).** `bun run check` runs `biome check --files-ignore-unknown=true --no-errors-on-unmatched`; `bun run format` runs `biome format --write .`; `bun run lint` runs `biome lint --write .`. Biome replaces Prettier *and* ESLint — install only `@biomejs/biome` as a dev dep. For `.svelte` files, Biome formats and lints the `<script>` and `<style>` blocks; template markup (`{#if}`, bindings, slots) is covered by `svelte-check` (VERIFY-CHECK-001), not Biome. Tailwind/UnoCSS class sorting is enabled via the nursery rule `useSortedClasses` at `warn` level. ([Source](https://biomejs.dev/internals/language-support/#html-super-languages-support))
+- **VERIFY-LINT-001 — Biome (lint + format).** `bun run check` runs `biome check --files-ignore-unknown=true --no-errors-on-unmatched`; `bun run format` runs `biome format --write .`; `bun run lint` runs `biome lint --write .`. Install only `@biomejs/biome` as a dev dep; it is the whole lint and format toolchain. For `.svelte` files, Biome formats and lints the `<script>` and `<style>` blocks; template markup (`{#if}`, bindings, slots) is covered by `svelte-check` (VERIFY-CHECK-001), not Biome. Tailwind/UnoCSS class sorting is enabled via the nursery rule `useSortedClasses` at `warn` level. ([Source](https://biomejs.dev/internals/language-support/#html-super-languages-support))
 - **VERIFY-BUILD-001 — Production build.** `bun run build`. Confirms `svelte-adapter-bun` emits `build/index.js`. ([Source](https://www.npmjs.com/package/svelte-adapter-bun))
 - **VERIFY-RUN-001 — Smoke run.** `ORIGIN=http://localhost:3000 bun ./build/index.js`; expect a 200 on `/` and correct form action behavior. ([Source](https://www.npmjs.com/package/svelte-adapter-bun))
 - **VERIFY-API-001 — Regenerate API types.** `bun run api:sync` (see `RECIPE-OAPI-CLIENT`). Follow with `bun run check`. ([Source](https://openapi-ts.dev/cli))
